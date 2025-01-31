@@ -174,13 +174,13 @@ def load_zinc(base_output_path:str, zinc2d=True, zinc3d=True, verbose=False):
         zinc = ZincMols()
     
         if zinc2d:
-            zinc_output_path = f'{base_output_path}/ZINC/2D/'
+            zinc_output_path = f'{base_output_path}/ZINC/'
             zinc.set_uri_inputpath(f'{base_output_path}/ZINC/zinc_2d.uri')
             zinc.set_outputpath(zinc_output_path)
             zinc.search(output_filename='ZINC2D', verbose=verbose)
             
         if zinc3d:
-            zinc_output_path = f'{base_output_path}/ZINC/3D/'
+            zinc_output_path = f'{base_output_path}/ZINC/'
             zinc.set_uri_inputpath(f'{base_output_path}/ZINC/zinc_3d.uri')
             zinc.set_outputpath(zinc_output_path)
             zinc.search(output_filename='ZINC3D', verbose=verbose)
