@@ -71,7 +71,7 @@ Focusing on the most significant connected component allows for a more robust an
 > 5. **Scaffold Exploration**:   Analyzing each cluster's maximum common scaffold (i.e., centroid) introduces an added virtual screening level to understand compounds investigated in the data domain space.
 
 
-# 🎯 How to Configuring BioMolExplorer on Linux Systems
+# 🎯 How to BioMolExplorer on Linux Systems
 
 BioMolExplorer is designed to execute on Linux machines. Thus, the installation process presented uses directives associated with that operation system. 
 
