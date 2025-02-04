@@ -142,7 +142,8 @@ class Descriptors():
                     tmp = {'molecule_chembl_id':s[0]}
                     mol = Chem.MolFromSmiles(s[1])
 
-                    morgan_fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius, nBits=morgan_n_bits)
+                    morgan_fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius, nBits=morgan_n_bits,
+                                                                      useChirality=True, useBondTypes=False, useFeatures=True)
                     morgan_bin = np.array(morgan_fp)
                     tmp.update({'col_{}'.format(i):val for i, val in enumerate(morgan_bin)})
                     fingerprints.append(tmp)
