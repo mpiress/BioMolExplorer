@@ -280,7 +280,7 @@ class GraphAnalysis():
         
         try:
 
-            drugbank   = fileHandling(input_path=self.__inputpath)
+            drugbank   = fileHandling(input_path=self.__inputpath, output_path=self.__inputpath + 'Molecules/')
             similarity = fileHandling(input_path=self.__inputpath + 'Similarity/')
             smiles2D   = fileHandling(output_path=self.__outputpath+'centroids/')
             maxcomp    = fileHandling(input_path=self.__inputpath, output_path=self.__outputpath + 'data/maxcomp/')
@@ -289,8 +289,9 @@ class GraphAnalysis():
 
 
             prefix = metric.value + '_' + fp.value + '_'
-            data     = [f.rsplit('.')[0] for f in os.listdir(self.__inputpath[1:] + 'Similarity/') if f.endswith('.csv') and f.startswith(prefix)]
+            data   = [f.rsplit('.')[0] for f in os.listdir(self.__inputpath[1:] + 'Similarity/') if f.endswith('.csv') and f.startswith(prefix)]
             
+            molecules = DataFrame(columns=['molecule_chembl_id', 'canonical_smiles']) 
             
             centroids  = {}
             for filename in data:
@@ -310,10 +311,15 @@ class GraphAnalysis():
                 self.plot_statistical_degree_analysis(G[3], G[0], file_name=filename+'.png', output_path=self.__path + self.__outputpath + 'plots/')
                 maxcomp.dataframe_to_csv(filename, G[2])
                 
+                molecules = concat([molecules, dataset[dataset['molecule_chembl_id'].isin(G[1]['molecule_chembl_id'].tolist())]])
 
             if len(centroids) > 0:
                 df = DataFrame(centroids.items(), columns=['id', 'smiles'])
                 smiles2D.dataframe_to_csv('smiles', df) 
+
+            molecules = molecules[['molecule_chembl_id', 'canonical_smiles']]
+            molecules.drop_duplicates(subset=['molecule_chembl_id'], inplace=True)
+            drugbank.dataframe_to_csv('molecules', molecules)
 
         
         except Exception as e:

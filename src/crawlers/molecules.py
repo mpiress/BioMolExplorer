@@ -108,11 +108,11 @@ class Molecule(CrawlerSettings, MyMolecules):
             filter_params['molecule_chembl_id'] = molecule_id
             
             molecule = files.csv_to_dataframe(molecule_id) if infile else self.__molecule.filter(**filter_params)
-
-            if len(molecule) > 0:
+            
+            try:
                 molecule = DataFrame.from_records(molecule)
                 molecule.drop_duplicates(subset='molecule_chembl_id', inplace=True, ignore_index=True)
-            else:
+            except:
                 molecule = DataFrame()
             
             self.save_molecule(molecule, molecule_id) if molecule.shape[0] > 0 else None
@@ -180,7 +180,7 @@ class SimilarMols(CrawlerSettings, MyMolecules):
             
       
              
-    def __search_similar_mols(self, molecule_id:str, filter_params:dict) -> None:
+    def __search_similar_mols(self, molecule_id:str, filter_params:dict, np_filter:int, mol_filter:str) -> None:
         
         try:
             files   = fileHandling(input_path=self.__outputpath, ext=self.__extension)
@@ -190,9 +190,19 @@ class SimilarMols(CrawlerSettings, MyMolecules):
             
             molecules = files.csv_to_dataframe(molecule_id) if infile else self.__similarity.filter(**filter_params)
             
-            if len(molecules) > 0:
+            try:
+                
                 molecules = DataFrame.from_records(molecules)
-            else:
+                molecules['molecule_type'] = molecules['molecule_type'].astype(str).str.lower()
+                molecules['natural_product'] = molecules['natural_product'].fillna(-1).astype(int)
+                molecules['natural_product'] = molecules['natural_product'].astype(int)
+
+                if np_filter == 0:
+                    molecules = molecules[molecules['natural_product'] == np_filter]
+                if mol_filter:
+                    molecules = molecules[molecules['molecule_type'] == mol_filter]
+
+            except:
                 molecules = DataFrame()
 
             self.save_molecule(molecules, molecule_id)
@@ -211,7 +221,6 @@ class SimilarMols(CrawlerSettings, MyMolecules):
 
 
 
-
     def search(self, filter_params:dict) -> None:
         
         f1    = fileHandling(input_path=self.__bioactivitypath, ext=self.__extension)
@@ -222,9 +231,14 @@ class SimilarMols(CrawlerSettings, MyMolecules):
             tmp  = f1.csv_to_dataframe(file)
             mols  = mols + tmp['molecule_chembl_id'].tolist()
         
-        
+        np_filter  = filter_params.pop('natural_product', None)
+        np_filter  = int(np_filter) if np_filter != None else None
+
+        mol_filter = filter_params.pop('molecule_type', None)
+        mol_filter = mol_filter.lower() if mol_filter != None else None
+
         with futures.ThreadPoolExecutor(max_workers=10) as executor:
-            pool = {executor.submit(self.__search_similar_mols, mol, filter_params) : mol for mol in mols}
+            pool = {executor.submit(self.__search_similar_mols, mol, filter_params, np_filter, mol_filter) : mol for mol in mols}
 
         [future.result() for future in pool]
         

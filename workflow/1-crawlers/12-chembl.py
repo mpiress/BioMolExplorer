@@ -69,8 +69,8 @@ if __name__ == "__main__":
                 base_output_path='/datasets') 
     
     #----------------------------------------------------------------------------------------------
-    # Example 1: Retrival information from ChEMBL database for Acetylcholinesterase
-    # @param target_name: str = 'Acetylcholinesterase' - specific target name defined by ChEMBL
+    # Example 1: Retrival information from ChEMBL database for Butyrylcholinesterase
+    # @param target_name: str = 'Butyrylcholinesterase' - specific target name defined by ChEMBL
     # @param base_output_path: str = '/datasets' - base path to save the output files
     # @obs: Filters to compose retrieval information from ChEMBL database are defined by the
     # scripts in the scripts folder located in the src > scripts > crawlers folder.
@@ -79,8 +79,8 @@ if __name__ == "__main__":
                 base_output_path='/datasets')
      
     #----------------------------------------------------------------------------------------------
-    # Example 1: Retrival information from ChEMBL database for Acetylcholinesterase
-    # @param target_name: str = 'Acetylcholinesterase' - specific target name defined by ChEMBL
+    # Example 1: Retrival information from ChEMBL database for Beta-secretase 1
+    # @param target_name: str = 'Beta-secretase 1' - specific target name defined by ChEMBL
     # @param base_output_path: str = '/datasets' - base path to save the output files
     # @obs: Filters to compose retrieval information from ChEMBL database are defined by the
     # scripts in the scripts folder located in the src > scripts > crawlers folder.

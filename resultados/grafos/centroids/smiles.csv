@@ -1,7 +1,7 @@
 id,smiles
-Tanimoto_morgan_Acetylcholinesterase_MOLS,COC1:C:C2:C(:C:C:1OC)C(=O)CC2
-Tanimoto_morgan_Butyrylcholinesterase_MOLS,O=CN1C2:C:C:C:C:C:2SC2:C:C:C:C:C:21
-Tanimoto_morgan_Acetylcholinesterase_SIMS,CCC(:C):C:C:C:C:C:C:C
-Tanimoto_morgan_Beta-secretase 1_MOLS,CCNC:C:C:C:CC
-Tanimoto_morgan_Butyrylcholinesterase_SIMS,C:C:C:CC1:C:C(=O):C2:C:C:C:C:C:2:O:1
-Tanimoto_morgan_Beta-secretase 1_SIMS,CCC(NC(=O)C(C)N)C(=O)NC(C)C
+Tanimoto_morgan_Beta-secretase 1_MOLS,CNCCC:C:C:C
+Tanimoto_morgan_Butyrylcholinesterase_SIMS,CCC1:C:C2:C:C:C:C:C:2:N:C:1C
+Tanimoto_morgan_Beta-secretase 1_SIMS,C:C(:C)CC(CO)NC(=O)C(CC)NC(=O)C(C)NCCC
+Tanimoto_morgan_Acetylcholinesterase_MOLS,O=C1CCC2:C:C:C:C:C:21
+Tanimoto_morgan_Butyrylcholinesterase_MOLS,COC(=O)N1C2:C:C:C:C:C:2SC2:C:C:C:C:C:21
+Tanimoto_morgan_Acetylcholinesterase_SIMS,CCC1:C:C2:C:C:C:C:C:2:N:C:1C

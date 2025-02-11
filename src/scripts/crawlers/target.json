@@ -1,4 +1,5 @@
 {
     "organism": "Homo sapiens",
-    "type": "SINGLE PROTEIN"
+    "type__in": ["SINGLE PROTEIN"],
+    "relationship_type": "DIRECT"
 }
