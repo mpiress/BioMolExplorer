@@ -52,7 +52,8 @@ from pandas import DataFrame, concat
 from concurrent import futures
 from threading import Lock
 from pathlib import Path
-from typing import Optional, Dict, List
+from typing import Optional
+import ast
 #----------------------------------------------------------------------------------------------
 
 #----------------------------------------------------------------------------------------------
@@ -98,8 +99,28 @@ class Molecule(CrawlerSettings, MyMolecules):
             os.makedirs(self.get_path() + self.__outputpath, exist_ok=True)
             
      
-            
-    def __search_mol(self, molecule_id:str, filter_params:dict) -> None:
+    def str_to_dict(self, value):
+        if isinstance(value, dict):  
+            converted = value  
+        elif isinstance(value, str):  
+            try:
+                converted = ast.literal_eval(value)  
+            except (SyntaxError, ValueError):
+                return {}  
+        else:
+            return {}  
+
+        if 'full_mwt' in converted:
+            try:
+                converted['full_mwt'] = float(converted['full_mwt'])
+            except (ValueError, TypeError):
+                converted['full_mwt'] = float('inf')
+
+        return converted 
+
+
+
+    def __search_mol(self, molecule_id:str, filter_params:dict, np_filter:int, mol_filter:str, mwt_filter:float) -> None:
         
         try:
             files   = fileHandling(input_path=self.__outputpath, ext=self.__extension)
@@ -112,7 +133,24 @@ class Molecule(CrawlerSettings, MyMolecules):
             try:
                 molecule = DataFrame.from_records(molecule)
                 molecule.drop_duplicates(subset='molecule_chembl_id', inplace=True, ignore_index=True)
-            except:
+                
+                molecule['molecule_type']   = molecule['molecule_type'].astype(str).str.lower()
+                molecule['natural_product'] = molecule['natural_product'].fillna(-1).astype(int)
+                molecule['natural_product'] = molecule['natural_product'].astype(int)
+                molecule['molecule_properties'] = molecule['molecule_properties'].apply(self.str_to_dict)
+                
+
+                if np_filter == 0:
+                    molecule = molecule[molecule['natural_product'] == np_filter]
+                if mol_filter:
+                    molecule = molecule[molecule['molecule_type'] == mol_filter]
+                if mwt_filter:
+                    molecule = molecule[molecule['molecule_properties'].apply(lambda x: x.get('full_mwt', float('inf')) <= mwt_filter)]
+                
+                    
+
+            except Exception as e:
+                self.logger.error(f'Error during to perform {molecule_id} molecule in __search_mol function', exc_info=True)
                 molecule = DataFrame()
             
             self.save_molecule(molecule, molecule_id) if molecule.shape[0] > 0 else None
@@ -142,9 +180,18 @@ class Molecule(CrawlerSettings, MyMolecules):
             tmp  = f1.csv_to_dataframe(file)
             mols  = mols + tmp['molecule_chembl_id'].tolist()
         
+        np_filter  = filter_params.pop('natural_product', None)
+        np_filter  = int(np_filter) if np_filter != None else None
+
+        mol_filter = filter_params.pop('molecule_type', None)
+        mol_filter = mol_filter.lower() if mol_filter != None else None
+
+        mwt_filter = filter_params.pop('molecule_weight', None)
+        mwt_filter = float(mwt_filter) if mwt_filter != None else None
+        
         
         with futures.ThreadPoolExecutor(max_workers=10) as executor:
-            pool = {executor.submit(self.__search_mol, mol, filter_params) : mol for mol in mols}
+            pool = {executor.submit(self.__search_mol, mol, filter_params, np_filter, mol_filter, mwt_filter) : mol for mol in mols}
 
         [future.result() for future in pool]
         
@@ -179,8 +226,27 @@ class SimilarMols(CrawlerSettings, MyMolecules):
             os.makedirs(self.get_path() + self.__outputpath, exist_ok=True)
             
       
-             
-    def __search_similar_mols(self, molecule_id:str, filter_params:dict, np_filter:int, mol_filter:str) -> None:
+    def str_to_dict(self, value):
+        if isinstance(value, dict):  
+            converted = value  
+        elif isinstance(value, str):  
+            try:
+                converted = ast.literal_eval(value)  
+            except (SyntaxError, ValueError):
+                return {}  
+        else:
+            return {}  
+
+        if 'full_mwt' in converted:
+            try:
+                converted['full_mwt'] = float(converted['full_mwt'])
+            except (ValueError, TypeError):
+                converted['full_mwt'] = float('inf')
+
+        return converted 
+
+
+    def __search_similar_mols(self, molecule_id:str, filter_params:dict, np_filter:int, mol_filter:str, mwt_filter:float) -> None:
         
         try:
             files   = fileHandling(input_path=self.__outputpath, ext=self.__extension)
@@ -196,16 +262,20 @@ class SimilarMols(CrawlerSettings, MyMolecules):
                 molecules['molecule_type'] = molecules['molecule_type'].astype(str).str.lower()
                 molecules['natural_product'] = molecules['natural_product'].fillna(-1).astype(int)
                 molecules['natural_product'] = molecules['natural_product'].astype(int)
+                molecules['molecule_properties'] = molecules['molecule_properties'].apply(self.str_to_dict)
+                
 
                 if np_filter == 0:
                     molecules = molecules[molecules['natural_product'] == np_filter]
                 if mol_filter:
                     molecules = molecules[molecules['molecule_type'] == mol_filter]
+                if mwt_filter:
+                    molecules = molecules[molecules['molecule_properties'].apply(lambda x: x.get('full_mwt', float('inf')) <= mwt_filter)]
 
             except:
                 molecules = DataFrame()
 
-            self.save_molecule(molecules, molecule_id)
+            self.save_molecule(molecules, molecule_id) if molecules.shape[0] > 0 else None
             
         except Exception as e:
             self.logger.error(f'Error during to perform {molecule_id} molecule in __search_similar_mols function', exc_info=True)
@@ -237,8 +307,11 @@ class SimilarMols(CrawlerSettings, MyMolecules):
         mol_filter = filter_params.pop('molecule_type', None)
         mol_filter = mol_filter.lower() if mol_filter != None else None
 
+        mwt_filter = filter_params.pop('molecule_weight', None)
+        mwt_filter = float(mwt_filter) if mwt_filter != None else None
+
         with futures.ThreadPoolExecutor(max_workers=10) as executor:
-            pool = {executor.submit(self.__search_similar_mols, mol, filter_params, np_filter, mol_filter) : mol for mol in mols}
+            pool = {executor.submit(self.__search_similar_mols, mol, filter_params, np_filter, mol_filter, mwt_filter) : mol for mol in mols}
 
         [future.result() for future in pool]
         
