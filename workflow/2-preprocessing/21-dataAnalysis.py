@@ -69,7 +69,7 @@ if __name__ == "__main__":
     #----------------------------------------------------------------------------------------------
     generate_fingerprints(base_input_path='/datasets/ChEMBL/DrugBank',
                           amputate=False,
-                          morgan=True, maccs=False, pharmacophore=False
+                          morgan=False, maccs=True, pharmacophore=True
     )
     
     #----------------------------------------------------------------------------------------------
