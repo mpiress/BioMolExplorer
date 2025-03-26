@@ -58,6 +58,7 @@ from caad.complex_network import GraphAnalysis
 from kernel.descriptors import similarityFunctions, fingerprints
 from kernel.loggers import LoggerManager
 from kernel.descriptors import Descriptors
+from kernel.utilities import fileHandling
 #----------------------------------------------------------------------------------------------
 
 
@@ -145,19 +146,38 @@ def filter_mutagenic_tumorigenic(base_input_path:str, base_output_path:str, data
 
 
 def generate_fingerprints(base_input_path:str, morgan_n_bits:Optional[int]=2048, radius:Optional[int]=2,
-                          morgan:Optional[bool]=True, maccs:Optional[bool]=True, pharmacophore:Optional[bool]=True,
-                          amputate:Optional[bool]=False):
+                          morgan:Optional[bool]=True, maccs:Optional[bool]=True, pharmacophore:Optional[bool]=True):
 
     try:
 
         base_output_path  = f'{base_input_path}/Fingerprints/'
         base_input_path  = f'{base_input_path}/'
-        fingerprints = Descriptors(inputpath=base_input_path, outputpath=base_output_path)
+
+        f1 = fileHandling(input_path=base_input_path, output_path=base_output_path)
+        ds = Descriptors(inputpath=base_input_path, outputpath=base_output_path)
                 
         files = [f for f in os.listdir(base_input_path[1:]) if f.endswith('_MOLS.csv') or f.endswith('_SIMS.csv')]
         for filename in files:
-            fingerprints.get_fingerprints(filename=filename, morgan_n_bits=morgan_n_bits, radius=radius, morgan=morgan,
-                                           maccs=maccs, pharmacophore=pharmacophore, amputate=amputate)
+            filename = filename.split('.')[0]
+            data = f1.csv_to_dataframe(filename)
+            data.rename(columns={'canonical_smiles': 'smiles'}, inplace=True)
+            data = data[['molecule_chembl_id','smiles']]
+            
+            if morgan:
+                fingerprints = ds.get_fingerprints(smiles_df=data, morgan=True, morgan_n_bits=morgan_n_bits, radius=radius,
+                                                   maccs=False, pharmacophore=False)
+                
+                f1.dataframe_to_csv('morgan_'+filename, fingerprints)
+            
+            if maccs:
+                fingerprints = ds.get_fingerprints(smiles_df=data, morgan=False, maccs=True, pharmacophore=False)
+                
+                f1.dataframe_to_csv('maccs_'+filename, fingerprints)
+            
+            if pharmacophore:
+                fingerprints = ds.get_fingerprints(smiles_df=data, morgan=False, maccs=False, pharmacophore=True)
+                
+                f1.dataframe_to_csv('pharmacophore_'+filename, fingerprints)
 
     except Exception as e:
         logger.error(f'Error during to perform the wrapper generate_fingerprints function', exc_info=True)

@@ -68,8 +68,9 @@ if __name__ == "__main__":
     load_chembl(target_name='Acetylcholinesterase',
                 base_output_path='/datasets') 
     
+
     #----------------------------------------------------------------------------------------------
-    # Example 1: Retrival information from ChEMBL database for Butyrylcholinesterase
+    # Example 2: Retrival information from ChEMBL database for Butyrylcholinesterase
     # @param target_name: str = 'Butyrylcholinesterase' - specific target name defined by ChEMBL
     # @param base_output_path: str = '/datasets' - base path to save the output files
     # @obs: Filters to compose retrieval information from ChEMBL database are defined by the
@@ -78,8 +79,9 @@ if __name__ == "__main__":
     load_chembl(target_name='Butyrylcholinesterase',
                 base_output_path='/datasets')
      
+
     #----------------------------------------------------------------------------------------------
-    # Example 1: Retrival information from ChEMBL database for Beta-secretase 1
+    # Example 3: Retrival information from ChEMBL database for Beta-secretase 1
     # @param target_name: str = 'Beta-secretase 1' - specific target name defined by ChEMBL
     # @param base_output_path: str = '/datasets' - base path to save the output files
     # @obs: Filters to compose retrieval information from ChEMBL database are defined by the

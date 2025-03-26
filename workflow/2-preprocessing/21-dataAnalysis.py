@@ -68,8 +68,7 @@ if __name__ == "__main__":
     # @param pharmacophore: If True, the pharmacophore fingerprint is generated.
     #----------------------------------------------------------------------------------------------
     generate_fingerprints(base_input_path='/datasets/ChEMBL/DrugBank',
-                          amputate=False,
-                          morgan=False, maccs=True, pharmacophore=True
+                          morgan=True, maccs=True, pharmacophore=True
     )
     
     #----------------------------------------------------------------------------------------------

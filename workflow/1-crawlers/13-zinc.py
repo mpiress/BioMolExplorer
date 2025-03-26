@@ -67,7 +67,7 @@ if __name__ == "__main__":
     # @param verbose: bool = True  - if True, print the progress in the console
     #----------------------------------------------------------------------------------------------
     load_zinc(base_output_path='/datasets',
-              zinc2d=False, zinc3d=True,
+              zinc2d=True, zinc3d=False,
               verbose=True) 
     
     

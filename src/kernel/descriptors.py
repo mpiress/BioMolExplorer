@@ -58,10 +58,11 @@ import os
 import numpy as np
 
 from pandas import DataFrame, concat
-from typing import Optional
+from typing import Optional, Dict
 from pathlib import Path
 from multiprocessing import Pool
 from enum import Enum
+import multiprocessing as mp
 #----------------------------------------------------------------------------------------------
 
 #----------------------------------------------------------------------------------------------
@@ -126,84 +127,71 @@ class Descriptors():
            
     
      
-    def get_fingerprints(self, filename:str, morgan_n_bits:Optional[int]=2048, radius:Optional[int]=2, morgan:Optional[bool]=True,
-                         maccs:Optional[bool]=True, pharmacophore:Optional[bool]=True, amputate:Optional[bool]=False) -> None:
+    def get_fingerprints(self, smiles_df:DataFrame, morgan_n_bits: Optional[int] = 2048, radius: Optional[int] = 2,
+                         morgan: Optional[bool] = True, maccs: Optional[bool] = True, pharmacophore: Optional[bool] = True) -> None:
         
         try:
             
-            filename = filename.rsplit('.')[0]
-            f1 = fileHandling(input_path=self.__inputpath, output_path=self.__outputpath)
-            
-            smiles = f1.csv_to_dataframe(filename)
-            
             if morgan:
-                fingerprints = []
-                for s in smiles.values:
-                    tmp = {'molecule_chembl_id':s[0]}
-                    mol = Chem.MolFromSmiles(s[1])
+                return self.compute_morgan_fingerprints(smiles_df, radius, morgan_n_bits)
 
-                    morgan_fp = AllChem.GetMorganFingerprintAsBitVect(mol, radius, nBits=morgan_n_bits,
-                                                                      useChirality=True, useBondTypes=False, useFeatures=True)
-                    morgan_bin = np.array(morgan_fp)
-                    tmp.update({'col_{}'.format(i):val for i, val in enumerate(morgan_bin)})
-                    fingerprints.append(tmp)
-            
-                fingerprints = DataFrame(fingerprints)
-                
-                if amputate:
-                    cols_filter = fingerprints.filter(like='col_').columns
-                    cols_to_drop = [col for col in cols_filter if fingerprints[col].nunique() == 1]
-                    fingerprints.drop(columns=cols_to_drop, inplace=True)
-
-                f1.dataframe_to_csv('morgan_'+filename, fingerprints)
-                
-                
             if maccs:
-                fingerprints = []
-                for s in smiles.values:
-                    tmp = {'molecule_chembl_id':s[0]}
-                    mol = Chem.MolFromSmiles(s[1])
+                return self.compute_maccs_fingerprints(smiles_df)
 
-                    maccs_fp = MACCSkeys.GenMACCSKeys(mol)
-                    maccs_bin = np.array(maccs_fp)
-                    tmp.update({'col_{}'.format(i):val for i, val in enumerate(maccs_bin)})
-                    fingerprints.append(tmp)
-            
-                fingerprints = DataFrame(fingerprints)
-                
-                if amputate:
-                    cols_filter = fingerprints.filter(like='col_').columns
-                    cols_to_drop = [col for col in cols_filter if fingerprints[col].nunique() == 1]
-                    fingerprints.drop(columns=cols_to_drop, inplace=True)
-
-                f1.dataframe_to_csv('maccs_'+filename, fingerprints)
-                    
-                
             if pharmacophore:
-                fingerprints = []
-                for s in smiles.values:
-                    tmp = {'molecule_chembl_id':s[0]}
-                    mol = Chem.MolFromSmiles(s[1])
+                return self.compute_pharmacophore_fingerprints(smiles_df)
 
-                    factory = Gobbi_Pharm2D.factory
-                    pharmacophore_fp = Generate.Gen2DFingerprint(mol, factory)
-                    pharmacophore_bin = np.array(pharmacophore_fp)
-                    tmp.update({'col_{}'.format(i):val for i, val in enumerate(pharmacophore_bin)})
-                    fingerprints.append(tmp)
-            
-                fingerprints = DataFrame(fingerprints)
-                
-                if amputate:
-                    cols_filter = fingerprints.filter(like='col_').columns
-                    cols_to_drop = [col for col in cols_filter if fingerprints[col].nunique() == 1]
-                    fingerprints.drop(columns=cols_to_drop, inplace=True)
 
-                f1.dataframe_to_csv('pharmacophore_'+filename, fingerprints)
-                    
-            
-            
         except Exception as e:
-            self.logger.error(f'Error during to perform {filename} in get_fingerprints function', exc_info=True)
+            self.logger.error(f'Error processing smiles in get_fingerprints function', exc_info=True)
+
+    
+
+    @staticmethod
+    def compute_morgan_fingerprints(smiles_df: DataFrame, radius: int, n_bits: int) -> DataFrame:
+        with mp.Pool(mp.cpu_count()) as pool:
+            results = pool.starmap(Descriptors.morgan_worker, [(row.smiles, row.molecule_chembl_id, radius, n_bits) for row in smiles_df.itertuples(index=False)])
+        return DataFrame(results)
+
+    
+    @staticmethod
+    def morgan_worker(smiles: str, molecule_chembl_id: str, radius: int, n_bits: int) -> Dict[str, str]:
+        mol = Chem.MolFromSmiles(smiles)
+        if mol:
+            return {"molecule_chembl_id": molecule_chembl_id,
+                    "fingerprint": list(AllChem.GetMorganFingerprintAsBitVect(mol, radius, nBits=n_bits, useChirality=True, useBondTypes=False, useFeatures=True))}
+        return {"molecule_chembl_id": molecule_chembl_id, "fingerprint": None}
+
+    
+    @staticmethod
+    def compute_maccs_fingerprints(smiles_df: DataFrame) -> DataFrame:
+        with mp.Pool(mp.cpu_count()) as pool:
+            results = pool.starmap(Descriptors.maccs_worker, [(row.smiles, row.molecule_chembl_id) for row in smiles_df.itertuples(index=False)])
+        return DataFrame(results)
+
+    
+    @staticmethod
+    def maccs_worker(smiles: str, molecule_chembl_id: str) -> Dict[str, str]:
+        mol = Chem.MolFromSmiles(smiles)
+        if mol:
+            return {"molecule_chembl_id": molecule_chembl_id, "fingerprint": list(MACCSkeys.GenMACCSKeys(mol))}
+        return {"molecule_chembl_id": molecule_chembl_id, "fingerprint": None}
+
+    
+    @staticmethod
+    def compute_pharmacophore_fingerprints(smiles_df: DataFrame) -> DataFrame:
+        with mp.Pool(mp.cpu_count()) as pool:
+            results = pool.starmap(Descriptors.pharmacophore_worker, [(row.smiles, row.molecule_chembl_id) for row in smiles_df.itertuples(index=False)])
+        return DataFrame(results)
+
+    
+    @staticmethod
+    def pharmacophore_worker(smiles: str, molecule_chembl_id: str) -> Dict[str, str]:
+        mol = Chem.MolFromSmiles(smiles)
+        factory = Gobbi_Pharm2D.factory
+        if mol:
+            return {"molecule_chembl_id": molecule_chembl_id, "fingerprint": list(Generate.Gen2DFingerprint(mol, factory))}
+        return {"molecule_chembl_id": molecule_chembl_id, "fingerprint": None}
         
         
     
@@ -381,9 +369,7 @@ class MolSimilarity():
             for filename in files:
 
                 df = data.csv_to_dataframe(filename)
-                combined_cols = [col for col in df.columns if col.startswith('col_')]
-                df[fp] = df[combined_cols].astype(str).agg(''.join, axis=1)
-                df.drop(columns=combined_cols, inplace=True)
+                df[fp] = df['fingerprint'].apply(lambda x: ''.join(map(str, eval(x))))
                 
                 self.clear_lsh()
                 for signature in df[fp].tolist():
