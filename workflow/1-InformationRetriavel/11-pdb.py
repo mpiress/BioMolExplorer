@@ -81,7 +81,7 @@ if __name__ == "__main__":
              ExperimentalMethodID=[ExperimentalMethod.X_RAY_DIFFRACTION],
              max_resolution=2.0, must_have_ligand=True)
     
-    
+
     #----------------------------------------------------------------------------------------------
     #EXAMPLE 2: Load PDBs for the target Butyrylcholinesterase
     # @param target: A reference name for the target, used to create the output folder
