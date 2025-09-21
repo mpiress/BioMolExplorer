@@ -14,6 +14,11 @@ ANACONDA_INSTALLER="./apps/Anaconda-latest-Linux-x86_64.sh"
 CONDA_ENV_NAME="BioMolExplorer"
 INSTALL_DIR="$HOME/progs"
 
+#Aplicações baixadas / existêntes na pasta apps
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CHIMERA_INSTALLER="${SCRIPT_DIR}/apps/chimera.bin"
+
+
 install_anaconda() {
 
     if ! command -v conda &> /dev/null; then
@@ -46,10 +51,34 @@ install_anaconda() {
 
 }
 
+install_chimera() {
+
+    if ! command -v chimera &> /dev/null; then
+        echo "[INFO] Chimera não detectado no PATH. Iniciando instalação..."
+
+        if [ ! -f "$CHIMERA_INSTALLER" ]; then
+            echo "[ERRO] Arquivo chimera.bin não encontrado em $CHIMERA_INSTALLER"
+            exit 1
+        fi
+
+        chmod +x "$CHIMERA_INSTALLER"
+        sudo "$CHIMERA_INSTALLER"
+
+        if command -v chimera &> /dev/null; then
+            echo "Chimera instalado com sucesso."
+        else
+            echo "[ERRO] Chimera não configurado no PATH após instalação."
+        fi
+
+    else
+        echo "Chimera já está instalado."
+    fi
+}
 
 if [ ! -d "$INSTALL_DIR" ]; then
     mkdir -p "$INSTALL_DIR"
 fi
 
 install_anaconda 
+install_chimera
 echo "Instalação completa."
