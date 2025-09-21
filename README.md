@@ -25,9 +25,11 @@ A Flexible Information Retrieval Architecture for Exploring and Assembling Molec
 
 <div align="justify">
 
-Managing the overwhelming amount of data required for analyzing the relationships between compounds and therapeutic targets is a growing challenge in computer-aided drug design. Large drug banks containing vast and diverse metadata impose significant limitations on traditional exploit strategies. Consequently, designing comprehensive and robust research datasets becomes costly and time-consuming. In such a context, establishing suitable methods for each drug-investigative project is particularly challenging because it requires defining rules for assessing the quality of retrieved information and evaluating missing, overlapping, and inconsistent data, which adds complexity to the process. BioMolExplorer's capabilities in data management provide a much-needed relief from this burden.
+Managing the vast and complex data involved in analyzing compound–target relationships has become a growing challenge in computer-aided drug design (CADD). Large drug repositories, enriched with heterogeneous and voluminous metadata, often exceed the capabilities of traditional exploration strategies. As a result, building comprehensive and reliable research datasets is both costly and time-consuming. Moreover, defining robust methodologies for each drug discovery project requires clear rules to assess data quality, while also addressing missing, redundant, or inconsistent information, which further complicates the process.
 
-BioMolExplorer is a powerful tool that efficiently addresses these challenges. It collects and standardizes data from well-known drug databases such as PDB, ChEMBL, and ZINC, ensuring solid datasets for exploration and research. Focusing on molecular entities based on predefined targets guarantees the retrieval of relevant information, making the research process more productive. This strategy retrieves bioactive molecules, structurally similar compounds (i.e., analogs), and enzyme complexes, all essential for drug discovery and repositioning methodologies. Diverse filtering methods further enhance the efficiency of the extracted information, aligning it with specific research requirements and the analyzed data domain.
+BioMolExplorer was developed to overcome these challenges by providing an efficient and systematic approach to data management. The tool integrates and standardizes information from widely used drug databases such as PDB, ChEMBL, and ZINC, ensuring the generation of well-structured and research-ready datasets. By focusing on molecular entities associated with predefined therapeutic targets, BioMolExplorer ensures the retrieval of relevant and high-value information, streamlining the overall research workflow.
+
+Its strategy enables the collection of bioactive molecules, structurally similar analogs, and enzyme complexes, all of which are essential for drug discovery and repositioning studies. Furthermore, its diverse filtering mechanisms allow researchers to tailor the extracted data to specific project requirements and scientific domains, significantly enhancing the precision and productivity of exploratory analyses. In addition, BioMolExplorer incorporates within its framework an automated redocking evaluation step within its framework, powered by the AutoDock Vina strategy, which enables a systematic assessment of the extracted proteins. This feature provides a curation layer for the downloaded PDB structures, ensuring validation of their quality and strengthening the reliability of downstream analyses.
 
 </div>
 
@@ -38,6 +40,7 @@ BioMolExplorer is a powerful tool that efficiently addresses these challenges. I
 > 3. **Streamlined Data Processing**: Minimizes the need for labor-intensive preliminary data evaluations, enabling researchers to engage directly with high-quality, pertinent data.
 > 4. **Support for Advanced Analytical Techniques**: The rich datasets support advanced analytical methods, enhancing drug discovery through predictive modeling and pattern recognition.
 > 5. **Custom filters**: Enables information retrieval based on specific research constraints, facilitating the composition of data domain spaces that align with research objectives.
+> 6. **Automated Redocking-Based Validation**: AutoDock Vina–based redocking module for protein quality assessment, ensuring reliable curation and reproducible datasets.
 
 <p> </p>
 <p> </p>
@@ -46,38 +49,38 @@ BioMolExplorer is a powerful tool that efficiently addresses these challenges. I
 
 <div align="justify">
 
-This stage focuses on structuring drug relationship networks and clustering based on models of molecular signature affinity. Signatures generated for each molecule enable the evaluation of these networks. By identifying the maximum connected component within each network and quantifying molecular similarity, BioMolExplorer facilitates the clustering and assessment of compounds with similar signatures, aiding in identifying potential scaffolds (i.e., common molecular fragments) and compound overlap constraints when a multi-target investigation is required. This approach enhances the capacity for developing sophisticated discovery and repositioning strategies. Figure 1 shows the maximum connected component research process and common molecular fragment identification.
+This stage is dedicated to structuring drug–relationship networks and performing clustering analyses based on molecular signature affinity models. The signatures generated for each molecule serve as descriptors for evaluating the connectivity and organization of these networks. By identifying the maximum connected component and quantifying molecular similarity, BioMolExplorer enables the clustering and systematic assessment of compounds with shared signatures. This process supports the recognition of potential scaffolds (i.e., common molecular fragments) and the management of compound overlap constraints, particularly relevant in multi-target investigations. Such an approach substantially strengthens the development of advanced strategies for both drug discovery and drug repositioning. Figure 1 illustrates the identification of maximum connected components and common molecular fragments within the research process.
 
 <div align="center">
 <img src="imgs/Fig1.png" width="50%" height="50%">
 </div>
 
 <h6 align="justify">
-Figure 1: An overview of the variance degrees representation of overlap in molecular structural features based on a network model. Node relevance (i.e., relevance of each molecule) is assessed about the therapeutic target and its most prominent clinical investigations recorded in the ChEMBL database. The in-degree rank plot depicts the relationship between nodes and their respective interaction counts within the graph. The degree histogram highlights the distribution of key nodes, while the complete graph analysis presents the overall degree distribution, emphasizing the significance of the most connected component.
+Figure 1: Representation of variance in molecular structural feature overlap within a network model. Node relevance (i.e., the importance of each molecule) is evaluated in relation to the therapeutic target and its most prominent clinical investigations, as reported in the ChEMBL database. The in-degree rank plot illustrates the relationship between nodes and their interaction counts, while the degree histogram shows the distribution of key nodes across the network. The complete graph analysis highlights the overall degree distribution, emphasizing the role of the maximum connected component in capturing the most significant structural relationships.
 </h6>
 
-The most considerable connected component approach amplifies the potential for overlap in the identification process, mainly when applying multi-target strategies. This method enables the identification of chemical signatures based on the most common chemical characteristics—the group of compounds with the highest chemical similarity that share relevant structural and functional properties. 
+The largest connected component approach strengthens the identification of overlapping molecular features, particularly when applying multi-target strategies. This method enables the extraction of chemical signatures based on shared structural and functional properties, highlighting groups of compounds with the highest chemical similarity.
 
-Focusing on the most significant connected component allows for a more robust analysis of compounds most likely to interact with biological targets or exhibit similar pharmacological properties. At the same time, it reduces noise in the explored chemical space and minimizes computational complexity. 
+By focusing on the most significant connected component, BioMolExplorer provides a more robust framework for analyzing compounds most likely to interact with therapeutic targets or exhibit similar pharmacological profiles. At the same time, this strategy reduces noise in the chemical space under investigation and mitigates computational complexity, improving both efficiency and interpretability.
 
 </div>
 
 #### Benefits:
 
-> 1. **Enhanced Data Organization**: Molecular data is organized into coherent clusters, facilitating efficient analysis and interpretation.
-> 2. **Identification of Key Molecular Interactions**: Analysis of bond coefficients helps identify crucial interactions for drug discovery and repositioning.
-> 3. **Efficient Drug Candidate Selection**: Clustering by molecular signature affinity streamlines the prioritization of drug candidates for further validation.
-> 4. **Support for Advanced Analytical Methods**: Structured data output enables the utilization of advanced analytical techniques, enhancing predictive capabilities.
-> 5. **Scaffold Exploration**:   Analyzing each cluster's maximum common scaffold (i.e., centroid) introduces an added virtual screening level to understand compounds investigated in the data domain space.
+> 1. **Enhanced Data Organization**: Molecular information is structured into coherent clusters, facilitating efficient interpretation and comparative analysis.
+> 2. **Identification of Key Molecular Interactions**: Evaluation of bond coefficients supports the detection of critical interactions relevant to drug discovery and repositioning.
+> 3. **Efficient Drug Candidate Selection**: Clustering by molecular signature affinity streamlines the prioritization of promising drug candidates for subsequent validation.
+> 4. **Support for Advanced Analytical Techniques**: Well-structured outputs enable the application of predictive modeling, pattern recognition, and other advanced computational approaches.
+> 5. **Scaffold-Centric Exploration**: Analysis of maximum common scaffolds (cluster centroids) introduces an additional level of virtual screening, aiding in the exploration of shared structural cores within the chemical space.
 
 
 # 🎯 How to BioMolExplorer on Linux Systems
 
-BioMolExplorer is designed to execute on Linux machines. Thus, the installation process presented uses directives associated with that operation system. 
+BioMolExplorer is designed to run in Linux environments, and its installation process relies on directives specific to this operating system. To accommodate different Linux distributions, we provide two installation methods. The first is a generic approach applicable across distributions, while the second is an automated method tailored to the Ubuntu 24.04 distribution.
 
-#### 1. Download and Install Dependencies
+#### 1. General installation dependencies
 
-1. ***Anaconda***
+1.1 ***Anaconda***
     - Download the latest version of Anaconda from the [Anaconda website](https://www.anaconda.com/download).
     - Make the downloaded installer executable with:
       ```bash
@@ -88,15 +91,34 @@ BioMolExplorer is designed to execute on Linux machines. Thus, the installation 
       ./<downloaded_file.sh>
       ```
 
-2. ***Create the Environment for BioMolExplorer***
+1.2 ***Create the Environment for BioMolExplorer***
     - Copy the BioMolExplorer folder to your preferred location on your system.
     - Navigate to the directory containing the `requirements.yml` file and create the conda environment with:
       ```bash
       conda env create -f environment.yml
       ```
 
-3. ***Alternative Method to Configure the Environment***
-    - Copy the BioMolExplorer folder to your preferred location on your system.
+1.1 ***Chimera***
+    - Download the latest version of Chimera from the [Chimera website](https://www.cgl.ucsf.edu/chimera/download.html).
+    - Make the downloaded installer executable with:
+      ```bash
+      chmod +x <downloaded_file.bin>
+      ```
+    - Install Chimera by running the installer script:
+      ```bash
+      ./<downloaded_file.bin>
+      ```
+
+
+#### 2. Ubuntu Linux distribution
+
+2.1 ***Download Anaconda and Chimera***
+    - Create an `apps` folder inside the main `BioMolExplorer` directory, if it does not already exist.
+    - Place the Anaconda and Chimera installers in the `apps` folder.
+    - Rename the Anaconda installer to `Anaconda-latest-Linux-x86_64.sh`.
+    - Rename the Chimera installer to `chimera.bin`.
+
+2.2 ***Alternative Method to Configure the Environment***
     - Navigate to the directory containing the `install.sh` file and perform:
       ```bash
       chmod +x install.sh
@@ -104,24 +126,29 @@ BioMolExplorer is designed to execute on Linux machines. Thus, the installation 
       ```
 
 
-#### 2. Running BioMolExplorer
+#### 3. Running BioMolExplorer
 
 1. ***Using Visual Studio Code (VSCode)***
     - Download and install Visual Studio Code from the Ubuntu Software Center or the [official website](https://code.visualstudio.com/).
 
-2. ****Configure VSCode****
+2. ***Configure VSCode***
     - Open VSCode and install the Python plugin from the Extensions marketplace.
     - Set the Python interpreter to the one associated with your Anaconda environment by selecting it from the Command Palette (`Ctrl+Shift+P`) and searching for "Python: Select Interpreter."
     - Locate BioMolExplorer in the presented list and select it.
 
 3. ***Execute BioMolExplorer Scripts***
-    - Open the BioMolExplorer project folder in VSCode.
-    - Run the Python scripts located in the workflow folder in the following sequence:
-      1. `crawler`: This stage involves data extraction from the PDB, ChEMBL, and ZINC datasets.
-      2. `preprocessing`: The data analysis stage consists of three phases: (a) generate fingerprints; (b) produce similarity references; and (c) analysis through complex networks.
+- Open the `BioMolExplorer` project folder in VSCode.
+- Run the Python scripts located in the `workflow` folder in the following sequence:
+
+  1. ***InformationRetrieval***: This stage performs data extraction from the **PDB**, **ChEMBL**, and **ZINC** datasets. For PDB, filters are applied through predefined functions. ChEMBL data is extracted using scripts and filters located in `src/scripts/crawlers`. Extraction from ZINC requires obtaining the dataset URIs from the official ZINC site and configuring their paths in BioMolExplorer to enable proper information retrieval.
+
+  2. **Analysis**: The data analysis stage consists of three phases:  
+     a) **Generate fingerprints** for molecular entities.  
+     b) **Produce similarity references** based on molecular signatures.  
+     c) **Analyze complex networks** to identify relationships and clustering patterns.  
+     
+     Additionally, the **redocking step** allows evaluation of PDB structures, providing a quality assessment of the extracted proteins.
       
-
-
 
 ## Authors
 
