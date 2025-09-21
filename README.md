@@ -98,7 +98,7 @@ BioMolExplorer is designed to run in Linux environments, and its installation pr
       conda env create -f environment.yml
       ```
 
-1.1 ***Chimera***
+1.3 ***Chimera***
     - Download the latest version of Chimera from the [Chimera website](https://www.cgl.ucsf.edu/chimera/download.html).
     - Make the downloaded installer executable with:
       ```bash
@@ -126,7 +126,7 @@ BioMolExplorer is designed to run in Linux environments, and its installation pr
       ```
 
 
-#### 3. Running BioMolExplorer
+## 3. Running BioMolExplorer
 
 1. ***Using Visual Studio Code (VSCode)***
     - Download and install Visual Studio Code from the Ubuntu Software Center or the [official website](https://code.visualstudio.com/).
