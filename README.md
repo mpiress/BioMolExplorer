@@ -4,7 +4,7 @@
 <p> </p>
 
 <h1 align="justify">
-A Flexible Information Retrieval Architecture for Exploring and Assembling Molecular Space Domains For Drug Discovery and Repositioning Based on Computer-Aided Drug Design Strategies.
+A Flexible Information Retrieval Architecture for Exploring and Assembling Molecular Space Domains For Drug Discovery Based on Computer-Aided Drug Design Strategies.
 </h1>
 
 <p> </p>
