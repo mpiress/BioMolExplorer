@@ -78,7 +78,7 @@ By focusing on the most significant connected component, BioMolExplorer provides
 
 BioMolExplorer is designed to run in Linux environments, and its installation process relies on directives specific to this operating system. To accommodate different Linux distributions, we provide two installation methods. The first is a generic approach applicable across distributions, while the second is an automated method tailored to the Ubuntu 24.04 distribution.
 
-#### 1. General installation dependencies
+## 1. General installation dependencies
 
 1.1 ***Anaconda***
     - Download the latest version of Anaconda from the [Anaconda website](https://www.anaconda.com/download).
@@ -110,7 +110,7 @@ BioMolExplorer is designed to run in Linux environments, and its installation pr
       ```
 
 
-#### 2. Ubuntu Linux distribution
+## 2. Ubuntu Linux distribution
 
 2.1 ***Download Anaconda and Chimera***
     - Create an `apps` folder inside the main `BioMolExplorer` directory, if it does not already exist.
