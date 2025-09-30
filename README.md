@@ -23,21 +23,6 @@ A Flexible Information Retrieval Architecture for Exploring and Assembling Molec
 <p> </p>
 <p> </p>
 
-## 📄 How to Cite Our Work
-
-If you use the data from this study in your research, please cite the dataset as follows:
-
-**Full Reference:**
-
-Pires da Silva, M., Alves de Oliveira, T., Habib Bechelane Maia, E., Oliveira Mendes, G., Cristina Moreira Damázio, L., Brito Barbosa, D., Andrade Leite, F. H., Falkoski, L., Flores de Souza Marra, I., Siqueira Valle, M., Silva Matos Andrade, L., Čmelo, I., Fayne, D., Batista de Carvalho, P., Marques da Silva, A., & Gutterres Taranto, A. (2025). *Data-driven chemical domain for polypharmacology agents: Focus on Alzheimer’s disease* (Version 3) [Data set]. Mendeley Data. https://doi.org/10.17632/5njg46dfj4.3
-
-**Example of in-text citation:**
-
-> (Pires da Silva et al., 2025)
-
-<p> </p>
-<p> </p>
-
 <div align="justify">
 
 Managing the vast and complex data involved in analyzing compound–target relationships has become a growing challenge in computer-aided drug design (CADD). Large drug repositories, enriched with heterogeneous and voluminous metadata, often exceed the capabilities of traditional exploration strategies. As a result, building comprehensive and reliable research datasets is both costly and time-consuming. Moreover, defining robust methodologies for each drug discovery project requires clear rules to assess data quality, while also addressing missing, redundant, or inconsistent information, which further complicates the process.
@@ -164,6 +149,21 @@ BioMolExplorer is designed to run in Linux environments, and its installation pr
      
      Additionally, the **redocking step** allows evaluation of PDB structures, providing a quality assessment of the extracted proteins.
       
+
+## 📄 How to Cite Our Work
+
+If you use the data from this study in your research, please cite the dataset as follows:
+
+**Full Reference:**
+
+Pires da Silva, M., Alves de Oliveira, T., Habib Bechelane Maia, E., Oliveira Mendes, G., Cristina Moreira Damázio, L., Brito Barbosa, D., Andrade Leite, F. H., Falkoski, L., Flores de Souza Marra, I., Siqueira Valle, M., Silva Matos Andrade, L., Čmelo, I., Fayne, D., Batista de Carvalho, P., Marques da Silva, A., & Gutterres Taranto, A. (2025). *Data-driven chemical domain for polypharmacology agents: Focus on Alzheimer’s disease* (Version 3) [Data set]. Mendeley Data. https://doi.org/10.17632/5njg46dfj4.3
+
+**Example of in-text citation:**
+
+> (Pires da Silva et al., 2025)
+
+<p> </p>
+<p> </p>
 
 ## Authors
 
