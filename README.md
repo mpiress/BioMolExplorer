@@ -150,7 +150,7 @@ BioMolExplorer is designed to run in Linux environments, and its installation pr
      Additionally, the **redocking step** allows evaluation of PDB structures, providing a quality assessment of the extracted proteins.
       
 
-## 📄 How to Cite Our Work
+# 📄 How to Cite Our Work
 
 If you use the data from this study in your research, please cite the dataset as follows:
 
