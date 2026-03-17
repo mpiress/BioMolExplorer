@@ -10,7 +10,7 @@ if [ ! -d "./apps" ]; then
     mkdir -p "./apps"
 fi
 
-ANACONDA_INSTALLER="./apps/Anaconda-latest-Linux-x86_64.sh"
+ANACONDA_INSTALLER="./apps/Anaconda.sh"
 CONDA_ENV_NAME="BioMolExplorer"
 INSTALL_DIR="$HOME/progs"
 
@@ -23,10 +23,7 @@ install_anaconda() {
 
     if ! command -v conda &> /dev/null; then
         echo "Instalando Anaconda..."
-        if [ ! -f "$ANACONDA_INSTALLER" ]; then
-            echo "Baixando Anaconda..."
-            wget "$ANACONDA_URL" -O "$ANACONDA_INSTALLER"
-        fi
+        
         chmod +x "$ANACONDA_INSTALLER"
         bash "$ANACONDA_INSTALLER" -b -p "$INSTALL_DIR/anaconda3"
         if ! grep -q "export PATH=\"$INSTALL_DIR/anaconda3/bin:\$PATH\"" ~/.bashrc; then
@@ -36,6 +33,11 @@ install_anaconda() {
         source "$HOME/.bashrc"
         echo "Anaconda instalado com sucesso."
     fi
+
+    # 2. RESOLUÇÃO DO ERRO: Aceitar os Termos de Serviço (ToS) de forma não interativa
+    echo "Aceitando Termos de Serviço da Anaconda..."
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main
+    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r
 
     if conda env list | grep -q "$CONDA_ENV_NAME"; then
         echo "O ambiente Conda '$CONDA_ENV_NAME' foi criado com sucesso."

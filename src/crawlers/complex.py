@@ -183,15 +183,22 @@ class PDBComplex():
 
                 for input, output, idx in zip(datain, dataout, pdb_codes): 
                     
-                    with open(input, 'r') as entrada, open(output, 'w') as saida:
-                        for linha in entrada:
-                            if not linha.startswith(('LINK', 'SSBOND')):
-                                saida.write(linha)
+                    if not os.path.exists(input):
+                        continue
+
+                    try:
+                        with open(input, 'r') as entrada, open(output, 'w') as saida:
+                            for linha in entrada:
+                                if not linha.startswith(('LINK', 'SSBOND')):
+                                    saida.write(linha)
+                        
+                        os.remove(input)
+                        tmp = self.__identify_ligands(output) 
+                        if tmp != None:
+                            codes[idx] = tmp
                     
-                    os.remove(input)
-                    tmp = self.__identify_ligands(output) 
-                    if tmp != None:
-                        codes[idx] = tmp
+                    except Exception as e:
+                        self.logger.error(f"[ERROR]: Erro ao processar o arquivo {idx}: {e}", exc_info=True)
                      
                 with open(self.__outputpath[1:] + 'pdb_codes.csv', 'w') as fp:
                     fp.write('PDB_CODE,LIGAND,RESNUM,CHAIN,RESOLUTION\n')
