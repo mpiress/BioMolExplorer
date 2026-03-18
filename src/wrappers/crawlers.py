@@ -167,23 +167,18 @@ def load_pdb(target:str, base_output_path:str, pdb_ec:Optional[str]=None, organi
 
 
 
-def load_zinc(base_output_path:str, zinc2d=True, zinc3d=True, verbose=False):
+def load_zinc(base_output_path:str, filename:str, verbose=False):
 
     try:
         
         zinc = ZincMols()
-    
-        if zinc2d:
-            zinc_output_path = f'{base_output_path}/ZINC/'
-            zinc.set_uri_inputpath(f'{base_output_path}/ZINC/zinc_2d.uri')
-            zinc.set_outputpath(zinc_output_path)
-            zinc.search(output_filename='ZINC2D', verbose=verbose)
-            
-        if zinc3d:
-            zinc_output_path = f'{base_output_path}/ZINC/'
-            zinc.set_uri_inputpath(f'{base_output_path}/ZINC/zinc_3d.uri')
-            zinc.set_outputpath(zinc_output_path)
-            zinc.search(output_filename='ZINC3D', verbose=verbose)
+        output = filename.split('.')[0]
 
+        zinc_output_path = f'{base_output_path}/'
+        zinc.set_uri_inputpath(f'{base_output_path}/{filename}')
+        zinc.set_outputpath(zinc_output_path)
+        zinc.search(output_filename=output, verbose=verbose)
+            
+        
     except Exception as e:
         logger.error(f'Error during to perform the wrapper load_zinc function', exc_info=True)

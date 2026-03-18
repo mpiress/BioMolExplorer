@@ -59,33 +59,25 @@ if __name__ == "__main__":
     
 
     #----------------------------------------------------------------------------------------------
-    # Example 1: Retrival information from ChEMBL database for Acetylcholinesterase
-    # @param target_name: str = 'Acetylcholinesterase' - specific target name defined by ChEMBL
+    # Example 1: Retrival information from ChEMBL database for monoamine oxidase
+    # @param target_name: str = 'monoamine oxidase' - specific target name defined by ChEMBL
     # @param base_output_path: str = '/datasets' - base path to save the output files
     # @obs: Filters to compose retrieval information from ChEMBL database are defined by the
     # scripts in the scripts folder located in the src > scripts > crawlers folder.
     #----------------------------------------------------------------------------------------------
-    load_chembl(target_name='Acetylcholinesterase',
+    load_chembl(target_name='monoamine oxidase',
                 base_output_path='/datasets') 
     
 
     #----------------------------------------------------------------------------------------------
-    # Example 2: Retrival information from ChEMBL database for Butyrylcholinesterase
-    # @param target_name: str = 'Butyrylcholinesterase' - specific target name defined by ChEMBL
-    # @param base_output_path: str = '/datasets' - base path to save the output files
-    # @obs: Filters to compose retrieval information from ChEMBL database are defined by the
+    # Example 2: Retrival information from ChEMBL database for Amine oxidase [flavin-containing] B
+    # @param target_name: str = 'Amine oxidase [flavin-containing] B' - specific target name 
+    # defined by ChEMBL @param base_output_path: str = '/datasets' - base path to save the output 
+    # files @obs: Filters to compose retrieval information from ChEMBL database are defined by the
     # scripts in the scripts folder located in the src > scripts > crawlers folder.
     #----------------------------------------------------------------------------------------------
-    load_chembl(target_name='Butyrylcholinesterase',
-                base_output_path='/datasets')
-     
+    load_chembl(target_name='Amine oxidase [flavin-containing] B',
+                base_output_path='/datasets') 
+    
 
-    #----------------------------------------------------------------------------------------------
-    # Example 3: Retrival information from ChEMBL database for Beta-secretase 1
-    # @param target_name: str = 'Beta-secretase 1' - specific target name defined by ChEMBL
-    # @param base_output_path: str = '/datasets' - base path to save the output files
-    # @obs: Filters to compose retrieval information from ChEMBL database are defined by the
-    # scripts in the scripts folder located in the src > scripts > crawlers folder.
-    #----------------------------------------------------------------------------------------------
-    load_chembl(target_name='Beta-secretase 1', 
-                base_output_path='/datasets')    
+    

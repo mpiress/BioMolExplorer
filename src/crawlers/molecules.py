@@ -62,6 +62,11 @@ from kernel.loggers import LoggerManager
 from crawlers.settings import CrawlerSettings
 #----------------------------------------------------------------------------------------------
 
+#----------------------------------------------------------------------------------------------
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+#----------------------------------------------------------------------------------------------
+
 
 class MyMolecules():
     
@@ -347,10 +352,27 @@ class ZincMols(MyMolecules):
         
         url = url.strip() 
         mol = DataFrame(columns=['smile', 'zinc_id'])
-            
+
+        # Configuração de Retentativas
+        retry_strategy = Retry(
+            total=5, # Tenta 5 vezes antes de desistir
+            backoff_factor=2, # Espera: 2s, 4s, 8s, 16s, 32s...
+            status_forcelist=[429, 500, 502, 503, 504], # Erros que disparam a retentativa
+            allowed_methods=["GET"]
+        )
+        
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        session = requests.Session()
+        session.mount("https://", adapter)
+        session.mount("http://", adapter)
+
+        # Adicionando Headers para evitar o 403
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        } 
+
         try:
-                
-            response = requests.get(url, timeout=120)
+            response = requests.get(url, headers=headers, timeout=320)
                 
             if response.status_code == 200:
                 conteudo = response.text.splitlines()[1:]
@@ -381,7 +403,7 @@ class ZincMols(MyMolecules):
             max_itens    = urls.get_size()
             processed    = 0
             
-            with futures.ThreadPoolExecutor(max_workers=os.cpu_count() - 1) as executor:
+            with futures.ThreadPoolExecutor(max_workers=1) as executor:
                 while(processed < max_itens):
                     data = urls.get_chunk(chunk_number, chunk_size)
                     chunk_number += 1
