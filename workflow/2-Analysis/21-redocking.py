@@ -52,18 +52,7 @@ if __name__ == "__main__":
     # REDOCKING EXPERIMENTS USING AUTODOCK VINA WITH COMPLEXES FROM PDB - RMSD CALCULATION
     #----------------------------------------------------------------------------------------------
     perform_redocking(base_input_path='/datasets/PDB',
-                      target='Acetylcholinesterase',
+                      target='MonoamineOxidaseB',
                       base_output_path='/resultados/redocking',
                       prepare_complex=True, charge_type='am1')
     
-    
-    perform_redocking(base_input_path='/datasets/PDB',
-                      target='Butyrylcholinesterase',
-                      base_output_path='/resultados/redocking',
-                      prepare_complex=True, charge_type='am1')
-    
-    
-    perform_redocking(base_input_path='/datasets/PDB',
-                      target='Beta-secretase1',
-                      base_output_path='/resultados/redocking',
-                      prepare_complex=True, charge_type='am1')

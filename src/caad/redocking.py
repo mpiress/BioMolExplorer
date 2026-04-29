@@ -495,13 +495,14 @@ class DockVina(Docking):
     
     def __init__(self, ligand_input_path:Optional[str]=None, receptor_input_path:Optional[str]=None, 
                  complex_input_path:Optional[str]=None, output_path:Optional[str]=None, mol_filename:Optional[str]='molecules',
-                 pdb_codes:Optional[Tuple[str, str, str, str]]=None, 
+                 pdb_codes:Optional[Tuple[str, str, str, str]]=None, centerofmasspath:Optional[str]=None, 
                  sizeof_box:Optional[List]=[24,24,24], exhaustiveness:Optional[int]=20, num_modes:Optional[int]=10) -> None:
         
 
         super().__init__(ligand_input_path, receptor_input_path, complex_input_path, output_path, mol_filename=mol_filename)
         
         self.__pdb_codes        = pdb_codes
+        self.__centerofmasspath = centerofmasspath
         self.__sizeof_box       = sizeof_box 
         self.__exhaustiveness   = exhaustiveness
         self.__num_modes        = num_modes
@@ -638,6 +639,76 @@ class DockVina(Docking):
                
         except Exception as e:
             self.logger.error('during to perform the docking function', exc_info=True)
+
+
+
+    def docking(self, base_selected_mols:str):
+
+        """
+        This function performs the docking analysis using the AutoDock Vina software. The analysis is conducted sequentially, considering the number of processes
+        available in the molecules.csv. The search box size is set to [24,24,24], the exhaustiveness is set to 20, and the number of result modes is set to 10. The parameters
+        can be modified based on user conditions, and results are stored in a series of PDBQT files, named according to the identifiers reported in molecules.csv.
+
+        Raises:
+            Exception: If any error occurs during the docking analysis, a log file will be created and posted in the log folder.
+
+        """
+
+        try:
+            
+            molecules = [f.rsplit('.lig.pdbqt')[0] for f in os.listdir(self.ligandpath[1:]) if f.endswith('.lig.pdbqt')]
+            
+            self.__pdb_codes   = [(pdb[0], pdb[1], pdb[2], pdb[3]) for pdb in self.__pdb_codes]
+            
+            for receptor, ligand, resnum, chain in self.__pdb_codes:
+                center    = self.retrieve_centerofmass_dataset(self.__centerofmasspath, receptor, ligand, resnum, chain)
+                tmp       = [f.replace('.lig.pdbqt','').replace(f'{receptor}_', '') for f in os.listdir(self.outputpath[1:]) if f.endswith('.lig.pdbqt')]
+                molecules = set(molecules) - set(tmp)
+               
+                for mol in molecules:
+                     self.generate_docking_script(input_template='src/scripts/vina/config.template',
+                                            output_script=self.outputpath[1:] + f'{receptor}_{mol}.vina',
+                                            receptor=self.path + self.receptorpath + f'{receptor}_{chain}' + '.dockprep.pdbqt',
+                                            ligand=self.path + self.ligandpath + mol + '.lig.pdbqt',
+                                            center_x=center[0],
+                                            center_y=center[1],
+                                            center_z=center[2],
+                                            size_x=self.__sizeof_box[0],
+                                            size_y=self.__sizeof_box[1],
+                                            size_z=self.__sizeof_box[2],
+                                            out=f'{receptor}_{mol}.lig.pdbqt',
+                                            exhaustiveness=self.__exhaustiveness,
+                                            num_modes=self.__num_modes)
+                     
+                     time.sleep(1)
+                     dir_fd = os.open(self.outputpath[1:], os.O_DIRECTORY)
+                     os.fsync(dir_fd)
+                     time.sleep(1)
+                     
+                     command  = f'vina --config {receptor}_{mol}.vina'
+                     validate = self.perform_subprocess(command, self.outputpath)
+                     
+                     if not validate:
+                         f1 = fileHandling(input_path=base_selected_mols, output_path=base_selected_mols)
+                         df = f1.csv_to_dataframe(self.mol_filename)
+                         df = df[df['molecule_chembl_id'] != mol]
+                         f1.dataframe_to_csv(self.mol_filename, df)
+                         os.remove(self.path + self.ligandpath + mol + '.lig.pdbqt') if os.path.isfile(self.ligandpath[1:] + mol + '.lig.pdbqt') else None
+                         
+
+        except Exception as e:
+            self.logger.error('during to perform the docking function', exc_info=True)
+            self.logger.error(f'STDERR: {e}', exc_info=True)
+
+        finally:
+            time.sleep(1)
+            dir_fd = os.open(self.outputpath[1:], os.O_DIRECTORY)
+            os.fsync(dir_fd)
+            time.sleep(1)
+
+            [os.remove(self.outputpath[1:] + file) for file in os.listdir(self.outputpath[1:]) if file.endswith('.vina')]
+            [os.remove(self.outputpath[1:] + file) for file in os.listdir(self.outputpath[1:]) if file.endswith('(2).pdbqt')]
+            self.centers = None
            
         
         
