@@ -150,6 +150,29 @@ BioMolExplorer is designed to run in Linux environments, and its installation pr
      Additionally, the **redocking step** allows evaluation of PDB structures, providing a quality assessment of the extracted proteins.
       
 
+## 4. How to use our solution
+
+To process your data, the project is organized into two main stages located in the `workflow` folder. Follow the order below to ensure data integrity and the correct generation of results.
+
+### 4.1. Retrieval Stage: `workflow/InformationRetrieval`
+
+This stage is responsible for the extraction and standardization of data from public databases. Execute the scripts in the following order:
+
+* **`11-pdb.py`**: Performs the loading of protein structures from the PDB. It allows filtering by Enzyme Commission (EC) number, resolution, and whether the presence of ligands in the complex is mandatory.
+* **`12-chembl.py`**: A crawler focused on extracting bioactivities and information on biological targets from the ChEMBL database.
+* **`13-zinc.py`**: Manages the collection of compound libraries based on configured URIs, focused on obtaining 3D structures for virtual screening.
+
+### 4.2. Analysis Stage: `workflow/Analysis`
+
+After retrieval, this stage processes the data, validates structures, and generates similarity models:
+
+* **`21-redocking.py`**: Executes the automated redocking process using **AutoDock Vina**. This script prepares the complexes and calculates the RMSD to validate the quality of the downloaded PDB structures, serving as an essential curation layer for subsequent analyses.
+* **`22-dataAnalysis.py`**: Performs advanced data processing in three phases:
+    1. **Fingerprint Generation**: Creates Morgan, MACCS, and Pharmacophore descriptors.
+    2. **Similarity Calculation**: Computes metrics (e.g., Tanimoto) to compare molecular entities.
+    3. **Network Analysis**: Constructs molecular affinity graphs, identifying connected components and common scaffolds, facilitating the identification of drug candidates.
+
+
 # 📄 How to Cite Our Work
 
 If you use the data from this study in your research, please cite the dataset as follows:
