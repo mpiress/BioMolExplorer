@@ -162,6 +162,8 @@ This stage is responsible for the extraction and standardization of data from pu
 * **`12-chembl.py`**: A crawler focused on extracting bioactivities and information on biological targets from the ChEMBL database.
 * **`13-zinc.py`**: Manages the collection of compound libraries based on configured URIs, focused on obtaining 3D structures for virtual screening.
 
+---
+
 #### 📦 PDB Download Configuration Guide
 
 This section describes how to configure and execute the following Python function:
@@ -182,7 +184,6 @@ load_pdb(
 
 The `load_pdb` function is designed to retrieve protein structures from the Protein Data Bank (PDB) according to user-defined criteria. Each parameter allows fine control over the type and quality of structural data being downloaded.
 
----
 
 ⚙️ Parameter Description
 
@@ -197,7 +198,6 @@ The `load_pdb` function is designed to retrieve protein structures from the Prot
 /datasets/Monoamine Oxidase B/
 ```
 
----
 
 **2. `pdb_ec` (Enzyme Commission Number)**
 
@@ -208,7 +208,6 @@ The `load_pdb` function is designed to retrieve protein structures from the Prot
 
 * `'1.4.3.1'` corresponds to Monoamine Oxidase enzymes.
 
----
 
 **3. `PolymerEntityTypeID`**
 
@@ -229,7 +228,6 @@ The `load_pdb` function is designed to retrieve protein structures from the Prot
 
 Only protein structures will be downloaded.
 
----
 
 **4. `ExperimentalMethodID`**
 
@@ -249,7 +247,6 @@ Only protein structures will be downloaded.
 
 Only structures solved via X-ray crystallography will be considered.
 
----
 
 **5. `max_resolution`**
 
@@ -264,7 +261,6 @@ max_resolution=2.0
 
 Only structures with resolution ≤ 2.0 Å will be downloaded.
 
----
 
 **6. `must_have_ligand`**
 
@@ -283,7 +279,6 @@ must_have_ligand=True
 
 Only ligand-bound structures will be retrieved.
 
----
 
 ▶️ How to Execute
 
@@ -294,23 +289,240 @@ Once the configuration is complete:
 3. Right-click on the file.
 4. Select the option to **run the script using Python via terminal**.
 
-💡 Alternatively, execution can be performed directly from a terminal:
+---
 
-```bash
-python your_script_name.py
+#### 🧪 ChEMBL Data Extraction Guide
+
+This section explains how to configure and run the following script to extract data from the ChEMBL database:
+
+```python
+load_chembl(
+    target_name='monoamine oxidase',
+    base_output_path='/datasets'
+)
 ```
+
+
+🔍 Overview
+
+The `load_chembl` function is responsible for retrieving chemical and bioactivity data associated with a specific biological target from the ChEMBL database. The process is customizable through predefined filters that control what type of data is collected.
+
+
+⚙️ Main Parameters
+
+**1. `target_name`**
+
+* Defines the **name of the biological target**.
+* ⚠️ This name must match exactly how the target is defined in the ChEMBL database.
+
+✔️ Example:
+
+```python
+target_name='monoamine oxidase'
+```
+
+
+**2. `base_output_path`**
+
+* Specifies the **directory where the extracted data will be stored**.
+
+📁 Example:
+
+```python
+base_output_path='/datasets'
+```
+
+
+🧩 Additional Extraction Scripts
+
+Beyond the main function, the system includes several auxiliary scripts located in:
+
+```
+src > scripts > crawlers
+```
+
+These scripts enable the extraction of different types of data using predefined filters, including:
+
+* Therapeutic targets
+* Bioactivity data
+* Molecules
+* Similar compounds
+
+
+🧬 Filter Configurations
+
+Below are the main filters used during the extraction process.
+
+
+**1. Therapeutic Target Filters**
+
+```json
+{
+    "organism": "Homo sapiens",
+    "type__in": ["SINGLE PROTEIN"],
+    "relationship_type": "DIRECT"
+}
+```
+
+**Explanation:**
+
+* `organism`: Selects targets from human organisms.
+* `type__in`: Filters for specific target types (e.g., single proteins).
+* `relationship_type`: Defines how the target relates to the `target_name` provided.
+
+
+**2. Bioactivity Filters**
+
+```json
+{
+    "standard_type__in": ["Ki", "IC50"],
+    "molecule_type": "small molecule",
+    "max_value_ref": 1000,
+    "standard_units": "nM"
+}
+```
+
+**Explanation:**
+
+* `standard_type__in`: Types of activity measurements (e.g., binding affinity).
+* `molecule_type`: Restricts to small molecules.
+* `max_value_ref`: Maximum accepted activity value.
+* `standard_units`: Unit of measurement (nanomolar).
+
+**3. Molecule Filters**
+
+```json
+{
+    "natural_product": 0
+}
+```
+
+**Explanation:**
+
+* `natural_product`:
+
+  * `1` → include natural products
+  * `0` → exclude natural products
+
+
+**4. Similar Compound Filters**
+
+```json
+{
+    "similarity": 60,
+    "natural_product": 0,
+    "molecule_type": "small molecule",
+    "molecule_weight": 500
+}
+```
+
+**Explanation:**
+
+* `similarity`: Minimum similarity percentage compared to retrieved molecules.
+* `natural_product`: Include or exclude natural products.
+* `molecule_type`: Restricts to small molecules.
+* `molecule_weight`: Maximum molecular weight allowed.
+
+
+▶️ How to Execute
+
+After configuring the parameters and filters:
+
+1. Save the script as a `.py` file.
+2. Navigate to the file location.
+3. Right-click on the file.
+4. Select the option to **run the script using Python via terminal**.
+
 
 ---
 
-✅ Summary
+#### 🧬 ZINC Data Extraction Guide
 
-This configuration ensures that:
+This section describes how to configure and execute the script used to retrieve molecular data from the ZINC database.
 
-* Only **protein structures** are retrieved
-* Structures are associated with a **specific enzyme class (EC number)**
-* Data is derived from **X-ray crystallography**
-* Only **high-resolution structures (≤ 2.0 Å)** are selected
-* All structures **contain bound ligands**
+```python
+load_zinc(
+    base_output_path='/datasets/ZINC',
+    filename='ZINC2D.uri',
+    verbose=True
+)
+```
+
+🔍 Overview
+
+The `load_zinc` function processes a file containing **URIs for SMILES strings** obtained from the ZINC database. These URIs are used to download molecular structures and organize them locally.
+
+⚠️ **Important:** Before running this script, the URI file must be downloaded manually from the ZINC database.
+
+
+⚙️ Parameters
+
+**1. `base_output_path`**
+
+* Specifies the **directory where the URI file is located** and where the downloaded data will be stored.
+
+📁 Example:
+
+```python
+base_output_path='/datasets/ZINC'
+```
+
+
+**2. `filename`**
+
+* Defines the **name of the URI file** downloaded from ZINC.
+* This file contains links that point to molecular data (SMILES format).
+
+📄 Example:
+
+```python
+filename='ZINC2D.uri'
+```
+
+
+### **3. `verbose`**
+
+* Controls whether the script displays progress information in the terminal during execution.
+
+⚖️ Options:
+
+* `True` → Displays detailed progress (recommended for monitoring)
+* `False` → Runs silently without output
+
+✔️ Example:
+
+```python
+verbose=True
+```
+
+
+▶️ How to Use
+
+**Step 1 — Download the URI File**
+
+* Access the ZINC database and download a file containing URIs for SMILES data (e.g., `ZINC2D.uri`).
+* Save this file in your desired directory.
+
+
+**Step 2 — Configure the Script**
+
+* Set `base_output_path` to the directory where the file is located
+* Provide the correct `filename`
+* Choose whether to enable progress visualization using `verbose`
+
+
+
+▶️ How to Execute
+
+After configuring the parameters and filters:
+
+1. Save the script as a `.py` file.
+2. Navigate to the file location.
+3. Right-click on the file.
+4. Select the option to **run the script using Python via terminal**.
+
+
+
 
 
 
