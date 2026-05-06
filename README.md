@@ -491,22 +491,6 @@ verbose=True
 * Choose whether to enable progress visualization using `verbose`
 
 
---- 
-
-▶️ How to Execute PDB, ChEMBL and ZINC Python scripts
-
-After configuring the parameters and filters:
-
-1. Save the script as a `.py` file.
-2. Navigate to the file location.
-3. Right-click on the file.
-4. Select the option to **run the script using Python via terminal**.
-
-
-
-
-
-
 ### 4.2. Analysis Stage: `workflow/Analysis`
 
 After retrieval, this stage processes the data, validates structures, and generates similarity models:
@@ -516,6 +500,275 @@ After retrieval, this stage processes the data, validates structures, and genera
     1. **Fingerprint Generation**: Creates Morgan, MACCS, and Pharmacophore descriptors.
     2. **Similarity Calculation**: Computes metrics (e.g., Tanimoto) to compare molecular entities.
     3. **Network Analysis**: Constructs molecular affinity graphs, identifying connected components and common scaffolds, facilitating the identification of drug candidates.
+
+
+#### 🔁 Redocking Procedure Guide
+
+This section explains how to configure and execute the redocking process using the following script:
+
+```python
+perform_redocking(
+    base_input_path='/datasets/PDB',
+    target='MonoamineOxidaseB',
+    base_output_path='/resultados/redocking',
+    prepare_complex=True,
+    charge_type='am1'
+)
+```
+
+🔍 Overview
+
+The `perform_redocking` function performs a **redocking workflow**, in which previously known protein–ligand complexes are reprocessed and docked again to validate docking protocols or assess reproducibility.
+
+The script operates on a set of Protein Data Bank (PDB) structures and optionally prepares the molecular complexes prior to docking.
+
+
+⚙️ Parameters
+
+### **1. `base_input_path`**
+
+* Defines the **root directory containing the PDB structures** to be used in the redocking process.
+
+📁 Example:
+
+```python
+base_input_path='/datasets/PDB'
+```
+
+**2. `target`**
+
+* Specifies the **target of interest**, corresponding to a subdirectory inside `base_input_path`.
+
+📁 Example:
+
+```python
+target='MonoamineOxidaseB'
+```
+
+✔️ Expected structure:
+
+```
+/datasets/PDB/MonoamineOxidaseB/
+```
+
+**3. `base_output_path`**
+
+* Defines the **directory where all redocking results will be stored**.
+
+📁 Example:
+
+```python
+base_output_path='/resultados/redocking'
+```
+
+**4. `prepare_complex`**
+
+* Determines whether the protein–ligand complexes should be **prepared before docking**.
+
+⚖️ Options:
+
+* `True` → Enables preparation (recommended)
+* `False` → Skips preparation
+
+✔️ When enabled:
+
+* A subfolder named `Prepared` is created inside the target directory
+* Receptor and ligand preprocessing is performed automatically
+
+
+**5. `charge_type`**
+
+* Specifies the **charge model** applied during ligand preparation.
+
+⚡ Example:
+
+```python
+charge_type='am1'
+```
+
+* Commonly used for semi-empirical charge assignment
+
+
+🧩 Complex Preparation Workflow
+
+When `prepare_complex=True`, the system uses auxiliary scripts located at:
+
+```
+src > scripts > chimera
+```
+
+These scripts rely on command-line operations from **UCSF Chimera** to process molecular structures in the background.
+
+
+🧬 Template Script for Complex Preparation
+
+The main preparation logic is defined in the following template:
+
+```bash
+open {input_complex}.pdb
+delete solvent
+delete element.H
+select #0:.{chain} | :FAD
+select invert
+delete selected
+write format pdb #0 {output_complex}.complex.pdb
+close session
+close all
+```
+
+✏️ Customization Guidelines
+
+**Editable Section**
+
+It is recommended to modify **only the following line**:
+
+```bash
+select #0:.{chain} | :FAD
+```
+
+* This line defines which parts of the structure are retained.
+* `| :FAD` indicates inclusion of a **cofactor (FAD)**.
+
+**Examples:**
+
+✔️ Include cofactor:
+
+```bash
+select #0:.{chain} | :FAD
+```
+
+✔️ Exclude cofactor:
+
+```bash
+select #0:.{chain}
+```
+
+### ⚠️ Important Notes
+
+* All other commands in the script should be kept **unchanged** to ensure correct processing.
+* Advanced users familiar with **Chimera terminal commands** may extend or modify the scripts.
+* The system is designed to execute these commands **in the background**, following Chimera’s syntax and behavior.
+
+--- 
+
+#### 📊 Data Analysis Workflow Guide
+
+This section describes the main steps implemented in the `dataAnalysis.py` script, located in the `workflow` folder. The workflow is responsible for transforming molecular data into meaningful similarity relationships and graph-based representations.
+
+🔍 Overview
+
+The analysis pipeline is composed of three main stages:
+
+1. **Fingerprint generation**
+2. **Similarity computation**
+3. **Graph-based analysis**
+
+Each stage builds upon the previous one, forming a structured workflow for molecular comparison and exploration.
+
+
+🧬 1. Fingerprint Generation
+
+```python
+generate_fingerprints(
+    base_input_path='/datasets/ChEMBL/DrugBank',
+    morgan=True,
+    maccs=True,
+    pharmacophore=True
+)
+```
+
+**Purpose**
+
+This function converts molecular structures into **numerical representations (fingerprints)**, which are essential for computational comparison.
+
+**Parameters**
+
+* `base_input_path`: Directory containing molecular file defined by a csv description.
+* `morgan`: Enables generation of **Morgan fingerprints** (circular fingerprints widely used in cheminformatics).
+* `maccs`: Enables generation of **MACCS keys** (predefined structural keys).
+* `pharmacophore`: Enables generation of **pharmacophore fingerprints** (captures functional features relevant for biological activity).
+
+**Notes**
+
+* Multiple fingerprint types can be generated simultaneously.
+* These representations are stored in a subfolder (typically named `Fingerprints`) for subsequent analysis.
+
+
+🔗 2. Similarity Computation
+
+```python
+compute_similarity(
+    base_input_path='/datasets/ChEMBL/DrugBank/Fingerprints',
+    base_output_path='/datasets/ChEMBL/DrugBank',
+    metric=similarityFunctions.TanimotoSimilarity,
+    fingerprint=fingerprints.Morgan                  
+)
+```
+
+**Purpose**
+
+This step computes **pairwise similarity scores** between molecules based on their fingerprints.
+
+**Parameters**
+
+* `base_input_path`: Directory containing previously generated fingerprints.
+* `base_output_path`: Directory where similarity results will be saved.
+* `metric`: Mathematical function used to compute similarity.
+
+  * Common options: **Tanimoto**, Dice, Cosine.
+* `fingerprint`: Specifies which fingerprint type to use in the comparison.
+
+**Notes**
+
+* The **Tanimoto similarity** is the most commonly used metric in cheminformatics.
+* Results are typically stored in a `Similarity` folder.
+
+
+🕸️ 3. Graph-Based Analysis
+
+```python
+analyze_graphs(
+    base_input_path='/datasets/ChEMBL/DrugBank',
+    base_output_path='/resultados/grafos',
+    metric=similarityFunctions.TanimotoSimilarity,
+    fingerprint=fingerprints.Morgan
+)
+```
+
+**Purpose**
+
+This function constructs **graph representations** of molecular relationships based on similarity values.
+
+**Concept**
+
+* Each molecule is represented as a **node**
+* Similarity relationships above a given threshold form **edges**
+
+This approach enables identification of:
+
+* Molecular clusters
+* Structural analogs
+* Key compounds within a network
+
+**Parameters**
+
+* `base_input_path`: Directory containing similarity results.
+* `base_output_path`: Directory where graph outputs will be stored.
+* `metric`: Similarity metric used to define relationships.
+* `fingerprint`: Fingerprint type used in the analysis.
+
+---
+
+# ▶️ How to Execute scripts in workflow folder
+
+After configuring the parameters and filters:
+
+1. Save the script as a `.py` file.
+2. Navigate to the file location.
+3. Right-click on the file.
+4. Select the option to **run the script using Python via terminal**.
+
+---
 
 
 # 📄 How to Cite Our Work
