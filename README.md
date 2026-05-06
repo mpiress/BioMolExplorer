@@ -279,16 +279,6 @@ must_have_ligand=True
 
 Only ligand-bound structures will be retrieved.
 
-
-▶️ How to Execute
-
-Once the configuration is complete:
-
-1. Save the script as a `.py` file.
-2. Navigate to the file location.
-3. Right-click on the file.
-4. Select the option to **run the script using Python via terminal**.
-
 ---
 
 #### 🧪 ChEMBL Data Extraction Guide
@@ -424,16 +414,6 @@ Below are the main filters used during the extraction process.
 * `molecule_weight`: Maximum molecular weight allowed.
 
 
-▶️ How to Execute
-
-After configuring the parameters and filters:
-
-1. Save the script as a `.py` file.
-2. Navigate to the file location.
-3. Right-click on the file.
-4. Select the option to **run the script using Python via terminal**.
-
-
 ---
 
 #### 🧬 ZINC Data Extraction Guide
@@ -511,8 +491,9 @@ verbose=True
 * Choose whether to enable progress visualization using `verbose`
 
 
+--- 
 
-▶️ How to Execute
+▶️ How to Execute PDB, ChEMBL and ZINC Python scripts
 
 After configuring the parameters and filters:
 
