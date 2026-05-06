@@ -150,7 +150,7 @@ BioMolExplorer is designed to run in Linux environments, and its installation pr
      Additionally, the **redocking step** allows evaluation of PDB structures, providing a quality assessment of the extracted proteins.
       
 
-## 4. How to use our solution
+## 4. How to configure BioMolExplorer for a specific target
 
 To process your data, the project is organized into two main stages located in the `workflow` folder. Follow the order below to ensure data integrity and the correct generation of results.
 
@@ -161,6 +161,158 @@ This stage is responsible for the extraction and standardization of data from pu
 * **`11-pdb.py`**: Performs the loading of protein structures from the PDB. It allows filtering by Enzyme Commission (EC) number, resolution, and whether the presence of ligands in the complex is mandatory.
 * **`12-chembl.py`**: A crawler focused on extracting bioactivities and information on biological targets from the ChEMBL database.
 * **`13-zinc.py`**: Manages the collection of compound libraries based on configured URIs, focused on obtaining 3D structures for virtual screening.
+
+#### 📦 PDB Download Configuration Guide
+
+This section describes how to configure and execute the following Python function:
+
+```python
+load_pdb(
+    target='Monoamine Oxidase B', 
+    base_output_path='/datasets', 
+    pdb_ec='1.4.3.1',
+    PolymerEntityTypeID=[PolymerEntityType.PROTEIN],
+    ExperimentalMethodID=[ExperimentalMethod.X_RAY_DIFFRACTION],
+    max_resolution=2.0, 
+    must_have_ligand=True
+)
+```
+
+🔍 Overview
+
+The `load_pdb` function is designed to retrieve protein structures from the Protein Data Bank (PDB) according to user-defined criteria. Each parameter allows fine control over the type and quality of structural data being downloaded.
+
+---
+
+⚙️ Parameter Description
+
+**1. `target` and `base_output_path`**
+
+* `target`: Defines the name of the main folder where the downloaded data will be stored.
+* `base_output_path`: Specifies the root directory in which the folder defined by `target` will be created.
+
+📁 **Resulting structure example:**
+
+```
+/datasets/Monoamine Oxidase B/
+```
+
+---
+
+**2. `pdb_ec` (Enzyme Commission Number)**
+
+* This parameter specifies the **Enzyme Commission (EC) number**, which uniquely identifies enzyme classes based on the reactions they catalyze.
+* The EC number is obtained from the Protein Data Bank (PDB) or related biochemical databases.
+
+🔬 **Example:**
+
+* `'1.4.3.1'` corresponds to Monoamine Oxidase enzymes.
+
+---
+
+**3. `PolymerEntityTypeID`**
+
+* Defines the **type of macromolecule** to be retrieved.
+* This helps restrict the search to specific biological entities.
+
+🧬 **Common options include:**
+
+* `PROTEIN` → protein structures
+* `DNA` → DNA molecules
+* `RNA` → RNA molecules
+
+✔️ In this example:
+
+```python
+[PolymerEntityType.PROTEIN]
+```
+
+Only protein structures will be downloaded.
+
+---
+
+**4. `ExperimentalMethodID`**
+
+* Specifies the **experimental technique** used to determine the structure.
+
+🔬 **Common methods include:**
+
+* `X_RAY_DIFFRACTION`
+* `NMR`
+* `CRYO_EM`
+
+✔️ In this case:
+
+```python
+[ExperimentalMethod.X_RAY_DIFFRACTION]
+```
+
+Only structures solved via X-ray crystallography will be considered.
+
+---
+
+**5. `max_resolution`**
+
+* Defines the **maximum resolution (in Ångströms)** allowed for the selected structures.
+* Lower values correspond to **higher structural quality**.
+
+📏 **Example:**
+
+```python
+max_resolution=2.0
+```
+
+Only structures with resolution ≤ 2.0 Å will be downloaded.
+
+---
+
+**6. `must_have_ligand`**
+
+* Indicates whether the retrieved structures must contain a **bound ligand**.
+
+⚖️ Options:
+
+* `True` → Only structures with ligands are included
+* `False` → Structures without ligands are also allowed
+
+✔️ In this example:
+
+```python
+must_have_ligand=True
+```
+
+Only ligand-bound structures will be retrieved.
+
+---
+
+▶️ How to Execute
+
+Once the configuration is complete:
+
+1. Save the script as a `.py` file.
+2. Navigate to the file location.
+3. Right-click on the file.
+4. Select the option to **run the script using Python via terminal**.
+
+💡 Alternatively, execution can be performed directly from a terminal:
+
+```bash
+python your_script_name.py
+```
+
+---
+
+✅ Summary
+
+This configuration ensures that:
+
+* Only **protein structures** are retrieved
+* Structures are associated with a **specific enzyme class (EC number)**
+* Data is derived from **X-ray crystallography**
+* Only **high-resolution structures (≤ 2.0 Å)** are selected
+* All structures **contain bound ligands**
+
+
 
 ### 4.2. Analysis Stage: `workflow/Analysis`
 
