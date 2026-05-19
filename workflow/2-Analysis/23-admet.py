@@ -11,7 +11,7 @@ __doc__ = HeaderBuilder.build(
     module_title="ADMET analysis",
 
     module_description=(
-    "Main functions for managing and integrating redocking " 
+    "Main functions for managing and integrating ADMET " 
     "analysis available in the src/caad directory"
 ),
 
@@ -20,18 +20,25 @@ __doc__ = HeaderBuilder.build(
 #----------------------------------------------------------------------------------------------
 
 #----------------------------------------------------------------------------------------------
-from wrappers.redocking import perform_redocking
+from wrappers.admet import ADMETWrapper
 #----------------------------------------------------------------------------------------------
-
-
-
+    
 if __name__ == "__main__":
 
-    #----------------------------------------------------------------------------------------------
-    # REDOCKING EXPERIMENTS USING AUTODOCK VINA WITH COMPLEXES FROM PDB - RMSD CALCULATION
-    #----------------------------------------------------------------------------------------------
-    perform_redocking(base_input_path='/datasets/PDB',
-                      target='MonoamineOxidaseB',
-                      base_output_path='/resultados/redocking',
-                      prepare_complex=True, charge_type='am1')
+    adme_pipeline = ADMETWrapper(base_input_file='/datasets/ChEMBL/DrugBank/Molecules',
+                                 input_file='molecules.csv')
     
+    adme_pipeline.run_pipeline()
+    
+    adme_pipeline.export_results(
+        output_based_path = '/resultados/admet',
+        csv_path='all_properties.csv',
+        bbb_pos_path='bbb_positive.smi',
+        bbb_neg_path='bbb_negative.smi',
+        hia_pos_path='hia_positive.smi'
+    )
+    
+    adme_pipeline.generate_plot(output_path='/resultados/admet/plots',
+                                output_image_file='adme_boiled_egg.png')
+    
+    adme_pipeline.print_summary()
