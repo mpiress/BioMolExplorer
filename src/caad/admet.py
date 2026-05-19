@@ -87,7 +87,8 @@ class BoiledEggPlotter:
     
     @staticmethod
     def plot(df, output_path, output_image_file):
-        path = str(Path.cwd()) + output_path + '/' + output_image_file
+        path =  str(Path.cwd()) + output_path + output_image_file
+        
         fig, ax = plt.subplots(figsize=(11, 8))
         ax.set_facecolor('#d9d9d9')
 

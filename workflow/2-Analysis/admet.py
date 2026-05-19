@@ -25,20 +25,8 @@ from wrappers.admet import ADMETWrapper
     
 if __name__ == "__main__":
 
-    adme_pipeline = ADMETWrapper(base_path='/datasets/ChEMBL/DrugBank/Molecules',
-                                 input_file='molecules.csv')
+    adme_pipeline = ADMETWrapper(base_input_path='/datasets/ChEMBL/DrugBank/',
+                                 base_output_path='/datasets/ChEMBL/DrugBank/ADMET/',
+                                 verbose=True)
     
     adme_pipeline.run_pipeline()
-    
-    adme_pipeline.export_results(
-        output_based_path = '/resultados/admet',
-        csv_path='all_properties.csv',
-        bbb_pos_path='bbb_positive.smi',
-        bbb_neg_path='bbb_negative.smi',
-        hia_pos_path='hia_positive.smi'
-    )
-    
-    adme_pipeline.generate_plot(output_path='/resultados/admet/plots',
-                                output_image_file='adme_boiled_egg.png')
-    
-    adme_pipeline.print_summary()
