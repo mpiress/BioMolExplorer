@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+        name="description"
+        content="BioMolExplorer is a computational molecular exploration and information retrieval platform designed for computer-aided drug design, molecular similarity analysis, virtual screening, and automated redocking validation workflows."
+    />
+
+    <title>BioMolExplorer | Computational Molecular Intelligence Platform</title>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif']
+                    },
+                    colors: {
+                        brand: {
+                            dark: '#07111f',
+                            darker: '#020617',
+                            primary: '#00c389',
+                            secondary: '#0ea5e9',
+                            muted: '#94a3b8',
+                            panel: '#0f172a'
+                        }
+                    },
+                    boxShadow: {
+                        glow: '0 0 40px rgba(0, 195, 137, 0.25)',
+                        card: '0 20px 40px rgba(15, 23, 42, 0.08)'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background: #f8fafc;
+        }
+
+        .hero-gradient {
+            background:
+                radial-gradient(circle at top right, rgba(14,165,233,0.18), transparent 25%),
+                radial-gradient(circle at left, rgba(0,195,137,0.16), transparent 30%),
+                linear-gradient(135deg, #020617 0%, #07111f 40%, #0f172a 100%);
+        }
+
+        .glass {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(148, 163, 184, 0.15);
+        }
+
+        .grid-pattern {
+            background-image:
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .section-title::after {
+            content: '';
+            display: block;
+            width: 80px;
+            height: 4px;
+            border-radius: 999px;
+            margin-top: 12px;
+            background: linear-gradient(90deg, #00c389, #0ea5e9);
+        }
+
+        .card-hover {
+            transition: all .3s ease;
+        }
+
+        .card-hover:hover {
+            transform: translateY(-8px);
+        }
+
+        .code-block {
+            background: #020617;
+            border: 1px solid rgba(148, 163, 184, 0.15);
+        }
+    </style>
+</head>
+
+<body class="text-slate-800 antialiased">
+
+    <!-- NAVBAR -->
+    <header class="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-slate-950/70 backdrop-blur-lg">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <img src="imgs/logo.png" alt="BioMolExplorer Logo" class="w-11 h-11 object-contain">
+                <div>
+                    <h1 class="text-white text-lg font-bold tracking-wide">BioMolExplorer</h1>
+                    <p class="text-xs text-slate-400">Computational Molecular Intelligence</p>
+                </div>
+            </div>
+
+            <nav class="hidden lg:flex items-center gap-8 text-sm text-slate-300">
+                <a href="#overview" class="hover:text-white transition">Overview</a>
+                <a href="#capabilities" class="hover:text-white transition">Capabilities</a>
+                <a href="#workflow" class="hover:text-white transition">Workflow</a>
+                <a href="#installation" class="hover:text-white transition">Installation</a>
+                <a href="#analysis" class="hover:text-white transition">Analysis</a>
+                <a href="#citation" class="hover:text-white transition">Citation</a>
+            </nav>
+
+            <a href="#installation"
+               class="hidden md:inline-flex items-center gap-2 bg-brand-primary hover:bg-emerald-400 transition text-slate-950 px-5 py-2.5 rounded-xl font-semibold shadow-glow">
+                <i class="fa-solid fa-terminal"></i>
+                Get Started
+            </a>
+        </div>
+    </header>
+
+    <!-- HERO -->
+    <section class="hero-gradient grid-pattern min-h-screen flex items-center relative overflow-hidden">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.04)_0,transparent_60%)]"></div>
+
+        <div class="max-w-7xl mx-auto px-6 pt-32 pb-20 relative z-10">
+            <div class="grid lg:grid-cols-2 gap-16 items-center">
+
+                <div>
+                    <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-xs uppercase tracking-[0.2em] text-brand-primary mb-8">
+                        <i class="fa-solid fa-dna"></i>
+                        Computer-Aided Drug Design Platform
+                    </div>
+
+                    <h1 class="text-5xl md:text-6xl xl:text-7xl font-black text-black leading-tight">
+                        Molecular Data Exploration for
+                        <span class="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
+                            Intelligent Drug Discovery
+                        </span>
+                    </h1>
+
+                    <p class="mt-8 text-lg text-slate-400 leading-relaxed max-w-3xl text-justify">
+                        BioMolExplorer is a robust computational architecture designed to automate information retrieval,
+                        molecular similarity analysis, redocking validation, and graph-based exploration workflows for
+                        modern computer-aided drug design (CADD) initiatives.
+                    </p>
+
+                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+    
+                    <div class="w-full bg-slate-100 rounded-lg px-4 py-3 text-sm font-mono text-slate-900 border border-slate-200 flex items-center justify-start hover:bg-slate-200 transition duration-300 shadow-sm">
+                        <i class="fab fa-python text-brand-primary mr-3 text-base shrink-0"></i>
+                        <span>Python Ecosystem</span>
+                    </div>
+
+                    <div class="w-full bg-slate-100 rounded-lg px-4 py-3 text-sm font-mono text-slate-900 border border-slate-200 flex items-center justify-start hover:bg-slate-200 transition duration-300 shadow-sm">
+                        <i class="fa-solid fa-network-wired text-brand-primary mr-3 text-base shrink-0"></i>
+                        <span>Graph-Based Analysis</span>
+                    </div>
+
+                    <div class="w-full bg-slate-100 rounded-lg px-4 py-3 text-sm font-mono text-slate-900 border border-slate-200 flex items-center justify-start hover:bg-slate-200 transition duration-300 shadow-sm">
+                        <i class="fa-solid fa-flask-vial text-brand-primary mr-3 text-base shrink-0"></i>
+                        <span>Virtual Screening</span>
+                    </div>
+
+                    <div class="w-full bg-slate-100 rounded-lg px-4 py-3 text-sm font-mono text-slate-900 border border-slate-200 flex items-center justify-start hover:bg-slate-200 transition duration-300 shadow-sm">
+                        <i class="fa-solid fa-shield-halved text-brand-primary mr-3 text-base shrink-0"></i>
+                        <span>GPLv3 Licensed</span>
+                    </div>
+
+                </div>
+
+                    
+                </div>
+
+                <div class="relative">
+                    <div class="absolute -inset-10 bg-emerald-400/10 blur-3xl rounded-full"></div>
+
+                    <div class="glass rounded-[2rem] p-10 relative shadow-glow">
+                    
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            
+                            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 hover:border-brand-primary/30 transition duration-300">
+                                <div class="text-3xl font-black text-brand-primary">PDB</div>
+                                <p class="text-sm text-slate-400 mt-2">Protein structure retrieval and filtering</p>
+                            </div>
+
+                            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 hover:border-brand-secondary/30 transition duration-300">
+                                <div class="text-3xl font-black text-brand-secondary">ChEMBL</div>
+                                <p class="text-sm text-slate-400 mt-2">Bioactivity and target extraction</p>
+                            </div>
+
+                            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 hover:border-emerald-500/30 transition duration-300">
+                                <div class="text-3xl font-black text-emerald-400">ZINC</div>
+                                <p class="text-sm text-slate-400 mt-2">Large-scale compound libraries</p>
+                            </div>
+
+                            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 hover:border-white/20 transition duration-300">
+                                <div class="text-3xl font-black text-white">Vina</div>
+                                <p class="text-sm text-slate-400 mt-2">Automated redocking validation</p>
+                            </div>
+
+                            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 hover:border-indigo-500/30 transition duration-300">
+                                <div class="text-3xl font-black text-indigo-400">Dock6+Vina</div>
+                                <p class="text-sm text-slate-400 mt-2">Consensus docking score integration for advanced ranking</p>
+                            </div>
+
+                            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 hover:border-violet-500/30 transition duration-300">
+                                <div class="text-3xl font-black text-violet-400">ADMET</div>
+                                <p class="text-sm text-slate-400 mt-2">Early-stage absorption, distribution, and toxicity profiling</p>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- OVERVIEW -->
+    <section id="overview" class="py-24 bg-white">
+        <div class="max-w-7xl mx-auto px-6">
+
+            <div class="max-w-4xl">
+                <span class="text-brand-primary font-semibold uppercase tracking-widest text-sm">Platform Overview</span>
+                <h2 class="section-title text-4xl font-black text-slate-900 mt-3">
+                    Enterprise-Grade Molecular Information Retrieval and Analysis
+                </h2>
+            </div>
+
+            <div class="grid lg:grid-cols-2 gap-14 mt-16 items-start">
+
+                <div class="space-y-6 text-slate-600 leading-relaxed text-justify">
+                    <p>
+                        Managing high-volume heterogeneous molecular repositories remains one of the principal
+                        challenges in modern computer-aided drug design workflows. Public biological repositories
+                        frequently contain inconsistent metadata, incomplete experimental information, duplicated
+                        records, and structures with varying levels of quality.
+                    </p>
+
+                    <p>
+                        BioMolExplorer was designed to address these limitations through a flexible information
+                        retrieval architecture capable of integrating and standardizing datasets originating from
+                        PDB, ChEMBL, and ZINC. The platform enables the automated generation of research-ready
+                        molecular datasets suitable for computational pharmacology, virtual screening, network
+                        analysis, and molecular similarity investigations.
+                    </p>
+
+                    <p>
+                        The framework additionally incorporates an automated redocking validation stage based on
+                        AutoDock Vina, introducing a structural curation layer that evaluates protein quality,
+                        ligand consistency, and reproducibility before downstream analysis.
+                    </p>
+                </div>
+
+                <div class="grid gap-5">
+
+                    <div class="bg-slate-50 border border-slate-200 rounded-3xl p-7 shadow-card card-hover">
+                        <div class="flex items-start gap-4">
+                            <div class="w-14 h-14 rounded-2xl bg-emerald-100 flex items-center justify-center text-brand-primary text-xl">
+                                <i class="fa-solid fa-database"></i>
+                            </div>
+
+                            <div>
+                                <h3 class="text-xl font-bold text-slate-900">Unified Data Integration</h3>
+                                <p class="text-slate-600 mt-2 text-sm leading-relaxed">
+                                    Standardized integration pipelines for biological, chemical, and structural data.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 border border-slate-200 rounded-3xl p-7 shadow-card card-hover">
+                        <div class="flex items-start gap-4">
+                            <div class="w-14 h-14 rounded-2xl bg-sky-100 flex items-center justify-center text-sky-600 text-xl">
+                                <i class="fa-solid fa-magnifying-glass-chart"></i>
+                            </div>
+
+                            <div>
+                                <h3 class="text-xl font-bold text-slate-900">Target-Oriented Exploration</h3>
+                                <p class="text-slate-600 mt-2 text-sm leading-relaxed">
+                                    Extraction and filtering strategies aligned with therapeutic target investigation.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-50 border border-slate-200 rounded-3xl p-7 shadow-card card-hover">
+                        <div class="flex items-start gap-4">
+                            <div class="w-14 h-14 rounded-2xl bg-purple-100 flex items-center justify-center text-purple-600 text-xl">
+                                <i class="fa-solid fa-diagram-project"></i>
+                            </div>
+
+                            <div>
+                                <h3 class="text-xl font-bold text-slate-900">Graph-Based Intelligence</h3>
+                                <p class="text-slate-600 mt-2 text-sm leading-relaxed">
+                                    Construction of molecular affinity networks and connected component analysis.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CAPABILITIES -->
+    <section id="capabilities" class="py-24 bg-slate-100 border-y border-slate-200">
+        <div class="max-w-7xl mx-auto px-6">
+
+            <div class="text-center max-w-4xl mx-auto">
+                <span class="text-brand-primary font-semibold uppercase tracking-widest text-sm">Core Capabilities</span>
+                <h2 class="text-4xl font-black text-slate-900 mt-3">
+                    Designed for Scalable Computational Drug Discovery
+                </h2>
+                <p class="text-slate-600 mt-6 leading-relaxed">
+                    BioMolExplorer combines automated retrieval pipelines, molecular fingerprinting, graph analysis,
+                    and redocking validation into a unified computational ecosystem.
+                </p>
+            </div>
+
+            <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-8 mt-16">
+
+                <div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-card card-hover">
+                    <div class="w-16 h-16 rounded-2xl bg-emerald-100 text-brand-primary flex items-center justify-center text-2xl mb-6">
+                        <i class="fa-solid fa-cloud-arrow-down"></i>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-slate-900 mb-4">Comprehensive Data Retrieval</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed">
+                        Automated extraction pipelines for PDB, ChEMBL, and ZINC repositories supporting large-scale
+                        computational screening initiatives.
+                    </p>
+                </div>
+
+                <div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-card card-hover">
+                    <div class="w-16 h-16 rounded-2xl bg-cyan-100 text-cyan-700 flex items-center justify-center text-2xl mb-6">
+                        <i class="fa-solid fa-filter-circle-dollar"></i>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-slate-900 mb-4">Custom Filtering Framework</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed">
+                        Configurable filters for EC number, bioactivity thresholds, molecule type, similarity score,
+                        molecular weight, experimental method, and structural quality.
+                    </p>
+                </div>
+
+                <div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-card card-hover">
+                    <div class="w-16 h-16 rounded-2xl bg-violet-100 text-violet-700 flex items-center justify-center text-2xl mb-6">
+                        <i class="fa-solid fa-fingerprint"></i>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-slate-900 mb-4">Fingerprint Generation</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed">
+                        Native support for Morgan, MACCS, and pharmacophore fingerprint generation workflows.
+                    </p>
+                </div>
+
+                <div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-card card-hover">
+                    <div class="w-16 h-16 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-2xl mb-6">
+                        <i class="fa-solid fa-bezier-curve"></i>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-slate-900 mb-4">Similarity Modeling</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed">
+                        Tanimoto-based molecular similarity analysis for clustering, scaffold identification,
+                        and candidate prioritization.
+                    </p>
+                </div>
+
+                <div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-card card-hover">
+                    <div class="w-16 h-16 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center text-2xl mb-6">
+                        <i class="fa-solid fa-microscope"></i>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-slate-900 mb-4">Automated Redocking</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed">
+                        AutoDock Vina-based validation strategies for assessing structural consistency and docking reproducibility.
+                    </p>
+                </div>
+
+                <div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-card card-hover">
+                    <div class="w-16 h-16 rounded-2xl bg-slate-200 text-slate-700 flex items-center justify-center text-2xl mb-6">
+                        <i class="fa-solid fa-network-wired"></i>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-slate-900 mb-4">Network Intelligence</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed">
+                        Graph-centric analysis for detecting molecular communities, connected components,
+                        and common scaffolds.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- WORKFLOW -->
+    <section id="workflow" class="py-24 bg-white">
+        <div class="max-w-7xl mx-auto px-6">
+
+            <div class="max-w-4xl mb-16">
+                <span class="text-brand-primary font-semibold uppercase tracking-widest text-sm">Workflow Architecture</span>
+                <h2 class="section-title text-4xl font-black text-slate-900 mt-3">
+                    End-to-End Computational Pipeline
+                </h2>
+            </div>
+
+            <div class="grid lg:grid-cols-2 gap-10">
+
+                <div class="bg-slate-950 rounded-[2rem] p-10 text-white relative overflow-hidden border border-slate-800">
+                    <div class="absolute top-0 right-0 w-52 h-52 bg-emerald-500/10 blur-3xl rounded-full"></div>
+
+                    <div class="relative z-10">
+                        <div class="inline-flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full px-4 py-2 text-xs uppercase tracking-widest mb-6">
+                            Retrieval Stage
+                        </div>
+
+                        <h3 class="text-3xl font-black mb-4">workflow/InformationRetrieval</h3>
+
+                        <p class="text-slate-300 leading-relaxed mb-8">
+                            Responsible for data extraction, normalization, and integration across molecular,
+                            structural, and bioactivity repositories.
+                        </p>
+
+                        <div class="space-y-5">
+
+                            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="font-bold text-emerald-400">11-pdb.py</h4>
+                                    <span class="text-xs text-slate-500">PDB Integration</span>
+                                </div>
+                                <p class="text-sm text-slate-400 mt-3 leading-relaxed">
+                                    Downloads protein structures using EC number, resolution threshold,
+                                    ligand presence, polymer entity, and experimental method filters.
+                                </p>
+                            </div>
+
+                            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="font-bold text-emerald-400">12-chembl.py</h4>
+                                    <span class="text-xs text-slate-500">ChEMBL Crawlers</span>
+                                </div>
+                                <p class="text-sm text-slate-400 mt-3 leading-relaxed">
+                                    Retrieves bioactivities, therapeutic targets, molecular entities,
+                                    and similarity-based compound relationships.
+                                </p>
+                            </div>
+
+                            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="font-bold text-emerald-400">13-zinc.py</h4>
+                                    <span class="text-xs text-slate-500">ZINC Streaming</span>
+                                </div>
+                                <p class="text-sm text-slate-400 mt-3 leading-relaxed">
+                                    Handles large-scale URI-based molecular library acquisition workflows
+                                    for virtual screening applications.
+                                </p>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-950 rounded-[2rem] p-10 text-white relative overflow-hidden border border-slate-800">
+                    <div class="absolute bottom-0 left-0 w-52 h-52 bg-cyan-500/10 blur-3xl rounded-full"></div>
+
+                    <div class="relative z-10">
+                        <div class="inline-flex items-center gap-2 bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 rounded-full px-4 py-2 text-xs uppercase tracking-widest mb-6">
+                            Analysis Stage
+                        </div>
+
+                        <h3 class="text-3xl font-black mb-4">workflow/Analysis</h3>
+
+                        <p class="text-slate-300 leading-relaxed mb-8">
+                            Responsible for fingerprint generation, similarity modeling,
+                            graph analysis, and automated redocking validation.
+                        </p>
+
+                        <div class="space-y-5">
+
+                            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="font-bold text-cyan-400">21-redocking.py</h4>
+                                    <span class="text-xs text-slate-500">AutoDock Vina</span>
+                                </div>
+                                <p class="text-sm text-slate-400 mt-3 leading-relaxed">
+                                    Executes automated redocking pipelines and RMSD-based validation procedures
+                                    for structural curation.
+                                </p>
+                            </div>
+
+                            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="font-bold text-cyan-400">22-dataAnalysis.py</h4>
+                                    <span class="text-xs text-slate-500">Network Analytics</span>
+                                </div>
+                                <p class="text-sm text-slate-400 mt-3 leading-relaxed">
+                                    Generates molecular fingerprints, computes similarity matrices,
+                                    and identifies connected molecular components.
+                                </p>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- INSTALLATION -->
+    <section id="installation" class="py-24 bg-slate-950 text-white">
+        <div class="max-w-7xl mx-auto px-6">
+
+            <div class="max-w-4xl mb-16">
+                <span class="text-brand-primary font-semibold uppercase tracking-widest text-sm">Environment Setup</span>
+                <h2 class="section-title text-4xl font-black text-white mt-3">
+                    Linux Installation and Deployment
+                </h2>
+            </div>
+
+            <div class="grid lg:grid-cols-2 gap-10">
+
+                <div class="bg-slate-900 border border-slate-800 rounded-[2rem] p-8">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-brand-primary text-2xl">
+                            <i class="fa-brands fa-linux"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-black">General Linux Installation</h3>
+                            <p class="text-slate-400 text-sm">Cross-distribution environment configuration</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+
+                        <div>
+                            <h4 class="font-semibold text-brand-primary mb-3">1. Install Anaconda</h4>
+                            <div class="code-block rounded-2xl p-5 overflow-x-auto text-sm text-slate-300">
+<pre><code>chmod +x &lt;downloaded_file.sh&gt;
+./&lt;downloaded_file.sh&gt;</code></pre>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 class="font-semibold text-brand-primary mb-3">2. Create BioMolExplorer Environment</h4>
+                            <div class="code-block rounded-2xl p-5 overflow-x-auto text-sm text-slate-300">
+<pre><code>conda env create -f environment.yml</code></pre>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 class="font-semibold text-brand-primary mb-3">3. Install UCSF Chimera</h4>
+                            <div class="code-block rounded-2xl p-5 overflow-x-auto text-sm text-slate-300">
+<pre><code>chmod +x &lt;downloaded_file.bin&gt;
+./&lt;downloaded_file.bin&gt;</code></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 rounded-[2rem] p-8">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="w-14 h-14 rounded-2xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 text-2xl">
+                            <i class="fa-brands fa-ubuntu"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-2xl font-black">Ubuntu 24.04 Automated Setup</h3>
+                            <p class="text-slate-400 text-sm">Automated installation pipeline</p>
+                        </div>
+                    </div>
+
+                    <div class="space-y-6">
+                        <div class="bg-slate-950 rounded-2xl border border-slate-800 p-6">
+                            <ol class="space-y-3 text-sm text-slate-300 leading-relaxed list-decimal list-inside">
+                                <li>Create an <code>apps/</code> folder inside the project root.</li>
+                                <li>Insert Anaconda and Chimera installers.</li>
+                                <li>Rename installers to:
+                                    <ul class="list-disc list-inside mt-2 text-slate-400 ml-4">
+                                        <li>Anaconda-latest-Linux-x86_64.sh</li>
+                                        <li>chimera.bin</li>
+                                    </ul>
+                                </li>
+                            </ol>
+                        </div>
+
+                        <div>
+                            <h4 class="font-semibold text-cyan-400 mb-3">Execute the Automated Script</h4>
+                            <div class="code-block rounded-2xl p-5 overflow-x-auto text-sm text-slate-300">
+<pre><code>chmod +x install.sh
+./install.sh</code></pre>
+                            </div>
+                        </div>
+
+                        <div class="bg-cyan-500/10 border border-cyan-500/20 rounded-2xl p-5 text-sm text-slate-300 leading-relaxed">
+                            <i class="fa-solid fa-lightbulb text-cyan-400 mr-2"></i>
+                            Configure the Python interpreter in VSCode using the generated Conda environment before executing workflow scripts.
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- ANALYSIS -->
+    <section id="analysis" class="py-24 bg-white">
+        <div class="max-w-7xl mx-auto px-6">
+
+            <div class="grid lg:grid-cols-2 gap-14 items-center">
+
+                <div>
+                    <span class="text-brand-primary font-semibold uppercase tracking-widest text-sm">Molecular Analysis</span>
+                    <h2 class="section-title text-4xl font-black text-slate-900 mt-3">
+                        Graph-Centric Molecular Similarity Intelligence
+                    </h2>
+
+                    <div class="space-y-6 mt-10 text-slate-600 leading-relaxed text-justify">
+                        <p>
+                            BioMolExplorer structures molecular relationship networks through graph-based similarity
+                            analysis and connected component identification. Molecular fingerprints are transformed
+                            into similarity references capable of revealing scaffold overlap, cluster organization,
+                            and affinity relationships.
+                        </p>
+
+                        <p>
+                            By focusing on the maximum connected component, the platform reduces chemical noise,
+                            enhances interpretability, and prioritizes compounds with stronger structural and
+                            pharmacological relevance.
+                        </p>
+
+                        <div class="grid md:grid-cols-2 gap-4 pt-4">
+
+                            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5">
+                                <div class="text-brand-primary text-xl mb-3">
+                                    <i class="fa-solid fa-cubes-stacked"></i>
+                                </div>
+                                <h4 class="font-bold text-slate-900">Scaffold Exploration</h4>
+                                <p class="text-sm text-slate-600 mt-2">
+                                    Identification of common molecular fragments and affinity patterns.
+                                </p>
+                            </div>
+
+                            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5">
+                                <div class="text-cyan-600 text-xl mb-3">
+                                    <i class="fa-solid fa-chart-line"></i>
+                                </div>
+                                <h4 class="font-bold text-slate-900">Predictive Modeling Support</h4>
+                                <p class="text-sm text-slate-600 mt-2">
+                                    Structured outputs suitable for machine learning and advanced analytics.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 border border-slate-200 rounded-[2rem] p-8 shadow-card">
+                    <img
+                        src="imgs/Fig1.png"
+                        alt="Molecular Graph Analysis"
+                        class="w-full rounded-2xl border border-slate-200"
+                    >
+
+                    <div class="mt-6 bg-white border border-slate-200 rounded-2xl p-5 text-sm text-slate-600 leading-relaxed">
+                        <strong class="text-slate-900">Figure Summary:</strong>
+                        Representation of variance in molecular structural feature overlap within a graph-based
+                        network model, highlighting node importance, interaction degree, and connected components.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CITATION -->
+    <section id="citation" class="py-24 bg-slate-100 border-t border-slate-200">
+        <div class="max-w-5xl mx-auto px-6 text-center">
+
+            <span class="text-brand-primary font-semibold uppercase tracking-widest text-sm">Scientific Attribution</span>
+            <h2 class="text-4xl font-black text-slate-900 mt-3">
+                How to Cite BioMolExplorer
+            </h2>
+
+            <p class="text-slate-600 mt-6 leading-relaxed">
+                If BioMolExplorer or derived datasets contribute to your research,
+                please provide proper academic attribution.
+            </p>
+
+            <div class="mt-12 bg-white border border-slate-200 rounded-[2rem] p-10 shadow-card text-left">
+                <div class="flex items-center gap-3 mb-6 text-brand-primary">
+                    <i class="fa-solid fa-book-open text-2xl"></i>
+                    <h3 class="text-2xl font-black text-slate-900">Recommended Citation</h3>
+                </div>
+
+                <p class="text-slate-700 leading-relaxed text-justify">
+                    Pires da Silva, M., Alves de Oliveira, T., Habib Bechelane Maia, E., Oliveira Mendes, G.,
+                    Cristina Moreira Damázio, L., Brito Barbosa, D., Andrade Leite, F. H., Falkoski, L.,
+                    Flores de Souza Marra, I., Siqueira Valle, M., Silva Matos Andrade, L., Čmelo, I.,
+                    Fayne, D., Batista de Carvalho, P., Marques da Silva, A., & Gutterres Taranto, A. (2025).
+                    <em>Data-driven chemical domain for polypharmacology agents: Focus on Alzheimer’s disease</em>.
+                    Mendeley Data. https://doi.org/10.17632/5njg46dfj4.3
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <!-- AUTHORS -->
+    <section class="py-24 bg-white">
+        <div class="max-w-7xl mx-auto px-6 text-center">
+
+            <span class="text-brand-primary font-semibold uppercase tracking-widest text-sm">Core Team</span>
+            <h2 class="text-4xl font-black text-slate-900 mt-3 mb-16">
+                Scientific Leadership
+            </h2>
+
+            <div class="grid md:grid-cols-3 gap-8">
+
+                <div class="bg-slate-50 border border-slate-200 rounded-[2rem] p-8 shadow-card card-hover">
+                    <img src="imgs/michel.jpg"
+                         alt="Michel Pires da Silva"
+                         class="w-32 h-32 rounded-full object-cover mx-auto border-4 border-white shadow-lg">
+
+                    <h3 class="text-xl font-bold text-slate-900 mt-6">Michel Pires da Silva</h3>
+                    <p class="text-brand-primary text-sm mt-2">Computational Intelligence & Bioengineering</p>
+
+                    <a href="http://lattes.cnpq.br/1449902596670082"
+                       target="_blank"
+                       class="inline-flex items-center gap-2 mt-6 text-sm text-slate-700 hover:text-brand-primary transition">
+                        <i class="fa-solid fa-address-card"></i>
+                        Currículo Lattes
+                    </a>
+                </div>
+
+                <div class="bg-slate-50 border border-slate-200 rounded-[2rem] p-8 shadow-card card-hover">
+                    <img src="imgs/alisson.png"
+                         alt="Alisson Marques da Silva"
+                         class="w-32 h-32 rounded-full object-cover mx-auto border-4 border-white shadow-lg">
+
+                    <h3 class="text-xl font-bold text-slate-900 mt-6">Alisson Marques da Silva</h3>
+                    <p class="text-cyan-600 text-sm mt-2">Computational Molecular Analysis</p>
+
+                    <a href="http://lattes.cnpq.br/3856358583630209"
+                       target="_blank"
+                       class="inline-flex items-center gap-2 mt-6 text-sm text-slate-700 hover:text-brand-primary transition">
+                        <i class="fa-solid fa-address-card"></i>
+                        Currículo Lattes
+                    </a>
+                </div>
+
+                <div class="bg-slate-50 border border-slate-200 rounded-[2rem] p-8 shadow-card card-hover">
+                    <img src="imgs/alex.png"
+                         alt="Alex Gutterres Taranto"
+                         class="w-32 h-32 rounded-full object-cover mx-auto border-4 border-white shadow-lg">
+
+                    <h3 class="text-xl font-bold text-slate-900 mt-6">Alex Gutterres Taranto</h3>
+                    <p class="text-violet-600 text-sm mt-2">Drug Discovery & Molecular Modeling</p>
+
+                    <a href="http://lattes.cnpq.br/4759006674013596"
+                       target="_blank"
+                       class="inline-flex items-center gap-2 mt-6 text-sm text-slate-700 hover:text-brand-primary transition">
+                        <i class="fa-solid fa-address-card"></i>
+                        Currículo Lattes
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="bg-slate-950 border-t border-slate-800 py-12">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="flex flex-col lg:flex-row items-center justify-between gap-8">
+
+                <div class="flex items-center gap-4">
+                    <img src="logo.png" alt="BioMolExplorer" class="w-12 h-12 object-contain">
+                    <div>
+                        <h3 class="text-white font-bold">BioMolExplorer</h3>
+                        <p class="text-sm text-slate-400">
+                            Flexible Information Retrieval Architecture for Drug Discovery
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap justify-center gap-4 text-sm text-slate-400">
+                    <span class="bg-slate-900 border border-slate-800 rounded-full px-4 py-2">
+                        Python-Based Architecture
+                    </span>
+                    <span class="bg-slate-900 border border-slate-800 rounded-full px-4 py-2">
+                        AutoDock Vina Integration
+                    </span>
+                    <span class="bg-slate-900 border border-slate-800 rounded-full px-4 py-2">
+                        Graph Analytics
+                    </span>
+                </div>
+            </div>
+
+            <div class="border-t border-slate-800 mt-10 pt-8 text-center text-sm text-slate-500">
+                © 2026 BioMolExplorer. Distributed under GPLv3 License.
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>
+

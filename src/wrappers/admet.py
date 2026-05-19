@@ -24,9 +24,8 @@ from src.caad.admet import MoleculeEvaluator, BoiledEggPlotter
 
 class ADMETWrapper:
     
-    def __init__(self, base_path, input_file):
-        self.set_path(str(Path.cwd()) + base_path)
-        self.input_file = input_file
+    def __init__(self, base_output_path, base_input_path=None, input_file=None):
+        self.set_path(str(Path.cwd()) + base_output_path)
         self.evaluator = MoleculeEvaluator()
         self.df_results = None
         self.excluded_count = 0

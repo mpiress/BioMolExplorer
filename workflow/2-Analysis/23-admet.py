@@ -25,7 +25,7 @@ from wrappers.admet import ADMETWrapper
     
 if __name__ == "__main__":
 
-    adme_pipeline = ADMETWrapper(base_input_file='/datasets/ChEMBL/DrugBank/Molecules',
+    adme_pipeline = ADMETWrapper(base_path='/datasets/ChEMBL/DrugBank/Molecules',
                                  input_file='molecules.csv')
     
     adme_pipeline.run_pipeline()
