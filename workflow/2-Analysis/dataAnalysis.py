@@ -23,13 +23,11 @@ __doc__ = HeaderBuilder.build(
 from wrappers.molecular_analyzer import compute_similarity, analyze_graphs
 from kernel.descriptors import similarityFunctions, fingerprints
 from wrappers.molecular_analyzer import generate_fingerprints
-from wrappers.admet import ADMETWrapper
 #----------------------------------------------------------------------------------------------
 
 
 if __name__ == "__main__":
     
-    adme_pipeline = ADMETWrapper(base_path='/datasets/ChEMBL/DrugBank/')
     #----------------------------------------------------------------------------------------------
     # PREPARE FINGERPRINTS FOR EACH MOL AND SIM FILES AVAILABLE IN THE DRUGBANK FOLDER.
     # @param base_input_path: The path to the folder containing the MOL and SIM files.
