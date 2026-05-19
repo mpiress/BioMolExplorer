@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
         name="description"
-        content="BioMolExplorer is a computational molecular exploration and information retrieval platform designed for computer-aided drug design, molecular similarity analysis, virtual screening, and automated redocking validation workflows."
+        content="BioMolExplorer is an integrated computational platform for molecular exploration and information retrieval, specifically designed to support computer-aided drug discovery through molecular similarity analysis, virtual screening, and automated redocking validation workflows."
     />
 
     <title>BioMolExplorer | Computational Molecular Intelligence Platform</title>
@@ -147,9 +147,10 @@
                     </h1>
 
                     <p class="mt-8 text-lg text-slate-400 leading-relaxed max-w-3xl text-justify">
-                        BioMolExplorer is a robust computational architecture designed to automate information retrieval,
-                        molecular similarity analysis, redocking validation, and graph-based exploration workflows for
-                        modern computer-aided drug design (CADD) initiatives.
+                        BioMolExplorer is a robust and extensible computational framework designed to streamline 
+                        workflows for information retrieval, molecular similarity analysis, docking, redocking validation,
+                        graph-based molecular exploration, and ADMET evaluation, thereby supporting advanced computer-aided 
+                        drug design (CADD) and computational drug discovery initiatives.
                     </p>
 
                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -171,7 +172,7 @@
 
                     <div class="w-full bg-slate-100 rounded-lg px-4 py-3 text-sm font-mono text-slate-900 border border-slate-200 flex items-center justify-start hover:bg-slate-200 transition duration-300 shadow-sm">
                         <i class="fa-solid fa-shield-halved text-brand-primary mr-3 text-base shrink-0"></i>
-                        <span>GPLv3 Licensed</span>
+                        <span>MIT Licensed</span>
                     </div>
 
                 </div>
@@ -198,7 +199,7 @@
 
                             <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 hover:border-emerald-500/30 transition duration-300">
                                 <div class="text-3xl font-black text-emerald-400">ZINC</div>
-                                <p class="text-sm text-slate-400 mt-2">Large-scale compound libraries</p>
+                                <p class="text-sm text-slate-400 mt-2">Large-scale compound libraries evaluation</p>
                             </div>
 
                             <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 hover:border-white/20 transition duration-300">
@@ -236,26 +237,30 @@
 
             <div class="grid lg:grid-cols-2 gap-14 mt-16 items-start">
 
-                <div class="space-y-6 text-slate-600 leading-relaxed text-justify">
+                <div class="space-y-6 text-slate-600 leading-relaxed text-justify text-sm md:text-base">
+                    <p></p>
                     <p>
                         Managing high-volume heterogeneous molecular repositories remains one of the principal
-                        challenges in modern computer-aided drug design workflows. Public biological repositories
-                        frequently contain inconsistent metadata, incomplete experimental information, duplicated
-                        records, and structures with varying levels of quality.
+                        challenges in modern computer-aided drug design (CADD) workflows. Public biological repositories
+                        often contain inconsistent metadata, incomplete experimental information, duplicate records,
+                        and records with varying levels of quality.
                     </p>
 
                     <p>
-                        BioMolExplorer was designed to address these limitations through a flexible information
-                        retrieval architecture capable of integrating and standardizing datasets originating from
-                        PDB, ChEMBL, and ZINC. The platform enables the automated generation of research-ready
-                        molecular datasets suitable for computational pharmacology, virtual screening, network
-                        analysis, and molecular similarity investigations.
+                        BioMolExplorer was designed to address these limitations through a flexible information retrieval
+                        architecture that integrates and standardizes datasets from PDB, ChEMBL, and ZINC. The platform 
+                        enables the automated generation of research-ready molecular datasets suitable for computational 
+                        pharmacology, high-throughput virtual screening, network analysis, and comprehensive molecular similarity 
+                        investigations.
                     </p>
 
                     <p>
-                        The framework additionally incorporates an automated redocking validation stage based on
-                        AutoDock Vina, introducing a structural curation layer that evaluates protein quality,
-                        ligand consistency, and reproducibility before downstream analysis.
+                        To ensure maximum precision, the framework incorporates an advanced structural curation layer that uses 
+                        a consensus docking approach integrating AutoDock Vina and Dock6. This method combines distinct algorithmic 
+                        scoring functions to deliver superior binding pose validation, minimize false positives, and evaluate protein-ligand 
+                        reproducibility. Furthermore, the system introduces an early-stage ADMET profiling pipeline that allows researchers 
+                        to automatically evaluate the absorption, distribution, metabolism, excretion, and toxicity parameters of extracted 
+                        compounds before committing to downstream analytical steps.
                     </p>
                 </div>
 
@@ -304,6 +309,21 @@
                                 </p>
                             </div>
                         </div>
+                    </div> 
+
+                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 shadow-card card-hover">
+                        <div class="flex items-start gap-4">
+                            <div class="w-12 h-12 shrink-0 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center text-lg">
+                                <i class="fa-solid fa-heart-pulse"></i>
+                            </div>
+
+                            <div>
+                                <h3 class="text-md font-bold text-slate-900">ADMET Profiling</h3>
+                                <p class="text-slate-500 mt-1.5 text-xs leading-relaxed text-justify">
+                                    Early-stage evaluation of absorption, distribution, metabolism, excretion, and toxicity properties for strategic candidate screening.
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                 </div>
@@ -326,15 +346,15 @@
                 </p>
             </div>
 
-            <div class="grid md:grid-cols-2 xl:grid-cols-3 gap-8 mt-16">
+            <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-6 mt-16">
 
                 <div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-card card-hover">
-                    <div class="w-16 h-16 rounded-2xl bg-emerald-100 text-brand-primary flex items-center justify-center text-2xl mb-6">
+                    <div class="w-16 h-20 rounded-2xl bg-emerald-100 text-brand-primary flex items-center justify-center text-2xl mb-6">
                         <i class="fa-solid fa-cloud-arrow-down"></i>
                     </div>
 
                     <h3 class="text-xl font-bold text-slate-900 mb-4">Comprehensive Data Retrieval</h3>
-                    <p class="text-slate-600 text-sm leading-relaxed">
+                    <p class="text-slate-600 text-sm leading-relaxed text-justify">
                         Automated extraction pipelines for PDB, ChEMBL, and ZINC repositories supporting large-scale
                         computational screening initiatives.
                     </p>
@@ -346,7 +366,7 @@
                     </div>
 
                     <h3 class="text-xl font-bold text-slate-900 mb-4">Custom Filtering Framework</h3>
-                    <p class="text-slate-600 text-sm leading-relaxed">
+                    <p class="text-slate-600 text-sm leading-relaxed text-justify">
                         Configurable filters for EC number, bioactivity thresholds, molecule type, similarity score,
                         molecular weight, experimental method, and structural quality.
                     </p>
@@ -358,7 +378,7 @@
                     </div>
 
                     <h3 class="text-xl font-bold text-slate-900 mb-4">Fingerprint Generation</h3>
-                    <p class="text-slate-600 text-sm leading-relaxed">
+                    <p class="text-slate-600 text-sm leading-relaxed text-justify">
                         Native support for Morgan, MACCS, and pharmacophore fingerprint generation workflows.
                     </p>
                 </div>
@@ -369,7 +389,7 @@
                     </div>
 
                     <h3 class="text-xl font-bold text-slate-900 mb-4">Similarity Modeling</h3>
-                    <p class="text-slate-600 text-sm leading-relaxed">
+                    <p class="text-slate-600 text-sm leading-relaxed text-justify">
                         Tanimoto-based molecular similarity analysis for clustering, scaffold identification,
                         and candidate prioritization.
                     </p>
@@ -381,7 +401,7 @@
                     </div>
 
                     <h3 class="text-xl font-bold text-slate-900 mb-4">Automated Redocking</h3>
-                    <p class="text-slate-600 text-sm leading-relaxed">
+                    <p class="text-slate-600 text-sm leading-relaxed text-justify">
                         AutoDock Vina-based validation strategies for assessing structural consistency and docking reproducibility.
                     </p>
                 </div>
@@ -392,11 +412,34 @@
                     </div>
 
                     <h3 class="text-xl font-bold text-slate-900 mb-4">Network Intelligence</h3>
-                    <p class="text-slate-600 text-sm leading-relaxed">
+                    <p class="text-slate-600 text-sm leading-relaxed text-justify">
                         Graph-centric analysis for detecting molecular communities, connected components,
                         and common scaffolds.
                     </p>
                 </div>
+
+                <div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-card card-hover">
+                    <div class="w-16 h-16 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-2xl mb-6">
+                        <i class="fa-solid fa-object-group"></i>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-slate-900 mb-4">Consensus Docking</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed text-justify">
+                        Synergistic combination of AutoDock Vina and Dock6 engines to establish optimized cross-scoring metrics and improved binding pose ranking.
+                    </p>
+                </div>
+
+                <div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-card card-hover">
+                    <div class="w-16 h-16 rounded-2xl bg-fuchsia-100 text-fuchsia-700 flex items-center justify-center text-2xl mb-6">
+                        <i class="fa-solid fa-heart-pulse"></i>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-slate-900 mb-4">ADMET Profiling</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed text-justify">
+                        Early-stage prediction of absorption, distribution, metabolism, excretion, and toxicity variables directly from compiled chemical domains.
+                    </p>
+                </div>
+
             </div>
         </div>
     </section>
@@ -433,7 +476,7 @@
 
                             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
                                 <div class="flex items-center justify-between">
-                                    <h4 class="font-bold text-emerald-400">11-pdb.py</h4>
+                                    <h4 class="font-bold text-emerald-400">pdb.py</h4>
                                     <span class="text-xs text-slate-500">PDB Integration</span>
                                 </div>
                                 <p class="text-sm text-slate-400 mt-3 leading-relaxed">
@@ -444,7 +487,7 @@
 
                             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
                                 <div class="flex items-center justify-between">
-                                    <h4 class="font-bold text-emerald-400">12-chembl.py</h4>
+                                    <h4 class="font-bold text-emerald-400">chembl.py</h4>
                                     <span class="text-xs text-slate-500">ChEMBL Crawlers</span>
                                 </div>
                                 <p class="text-sm text-slate-400 mt-3 leading-relaxed">
@@ -455,7 +498,7 @@
 
                             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
                                 <div class="flex items-center justify-between">
-                                    <h4 class="font-bold text-emerald-400">13-zinc.py</h4>
+                                    <h4 class="font-bold text-emerald-400">zinc.py</h4>
                                     <span class="text-xs text-slate-500">ZINC Streaming</span>
                                 </div>
                                 <p class="text-sm text-slate-400 mt-3 leading-relaxed">
@@ -487,18 +530,29 @@
 
                             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
                                 <div class="flex items-center justify-between">
-                                    <h4 class="font-bold text-cyan-400">21-redocking.py</h4>
-                                    <span class="text-xs text-slate-500">AutoDock Vina</span>
+                                    <h4 class="font-bold text-cyan-400">docking. py and redocking.py</h4>
+                                    <span class="text-xs text-slate-500">Docking Analysis</span>
                                 </div>
                                 <p class="text-sm text-slate-400 mt-3 leading-relaxed">
-                                    Executes automated redocking pipelines and RMSD-based validation procedures
+                                    Executes automated docking, redocking pipelines, and RMSD-based validation procedures
                                     for structural curation.
                                 </p>
                             </div>
 
                             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
                                 <div class="flex items-center justify-between">
-                                    <h4 class="font-bold text-cyan-400">22-dataAnalysis.py</h4>
+                                    <h4 class="font-bold text-cyan-400">admet.py</h4>
+                                    <span class="text-xs text-slate-500">ADMET profiling</span>
+                                </div>
+                                <p class="text-sm text-slate-400 mt-3 leading-relaxed">
+                                    Early-stage prediction of absorption, distribution, metabolism,
+                                    excretion, and toxicity variables directly from compiled chemical domains.
+                                </p>
+                            </div>
+
+                            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+                                <div class="flex items-center justify-between">
+                                    <h4 class="font-bold text-cyan-400">dataAnalysis.py</h4>
                                     <span class="text-xs text-slate-500">Network Analytics</span>
                                 </div>
                                 <p class="text-sm text-slate-400 mt-3 leading-relaxed">
@@ -563,6 +617,11 @@
                             </div>
                         </div>
                     </div>
+                    <p class="h-4"></p>
+                    <div class="bg-cyan-500/10 border border-cyan-500/20 rounded-2xl p-5 text-sm text-slate-300 leading-relaxed">
+                            <i class="fa-solid fa-lightbulb text-cyan-400 mr-2"></i>
+                            Configure the Python interpreter in VSCode using the generated Conda environment before executing workflow scripts.
+                        </div>
                 </div>
 
                 <div class="bg-slate-900 border border-slate-800 rounded-[2rem] p-8">
@@ -597,6 +656,8 @@
 ./install.sh</code></pre>
                             </div>
                         </div>
+
+                        <p class="h-4"></p>
 
                         <div class="bg-cyan-500/10 border border-cyan-500/20 rounded-2xl p-5 text-sm text-slate-300 leading-relaxed">
                             <i class="fa-solid fa-lightbulb text-cyan-400 mr-2"></i>
@@ -635,6 +696,8 @@
                             pharmacological relevance.
                         </p>
 
+                        <p class="h-4"></p>
+
                         <div class="grid md:grid-cols-2 gap-4 pt-4">
 
                             <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5">
@@ -667,7 +730,7 @@
                         class="w-full rounded-2xl border border-slate-200"
                     >
 
-                    <div class="mt-6 bg-white border border-slate-200 rounded-2xl p-5 text-sm text-slate-600 leading-relaxed">
+                    <div class="mt-6 bg-white border border-slate-200 rounded-2xl p-5 text-sm text-slate-600 leading-relaxed text-justify">
                         <strong class="text-slate-900">Figure Summary:</strong>
                         Representation of variance in molecular structural feature overlap within a graph-based
                         network model, highlighting node importance, interaction degree, and connected components.
@@ -778,7 +841,7 @@
             <div class="flex flex-col lg:flex-row items-center justify-between gap-8">
 
                 <div class="flex items-center gap-4">
-                    <img src="logo.png" alt="BioMolExplorer" class="w-12 h-12 object-contain">
+                    <img src="imgs/logo.png" alt="BioMolExplorer" class="w-12 h-12 object-contain">
                     <div>
                         <h3 class="text-white font-bold">BioMolExplorer</h3>
                         <p class="text-sm text-slate-400">
@@ -789,10 +852,13 @@
 
                 <div class="flex flex-wrap justify-center gap-4 text-sm text-slate-400">
                     <span class="bg-slate-900 border border-slate-800 rounded-full px-4 py-2">
-                        Python-Based Architecture
+                        Python Ecosystem
                     </span>
                     <span class="bg-slate-900 border border-slate-800 rounded-full px-4 py-2">
-                        AutoDock Vina Integration
+                        Docking by Consensus
+                    </span>
+                    <span class="bg-slate-900 border border-slate-800 rounded-full px-4 py-2">
+                       ADMET profiling
                     </span>
                     <span class="bg-slate-900 border border-slate-800 rounded-full px-4 py-2">
                         Graph Analytics
@@ -801,7 +867,7 @@
             </div>
 
             <div class="border-t border-slate-800 mt-10 pt-8 text-center text-sm text-slate-500">
-                © 2026 BioMolExplorer. Distributed under GPLv3 License.
+                © 2026 BioMolExplorer. Distributed under MIT License.
             </div>
         </div>
     </footer>
