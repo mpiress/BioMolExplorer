@@ -41,7 +41,6 @@ from networkx import Graph
 from kernel.utilities import fileHandling
 from kernel.descriptors import Descriptors, similarityFunctions, fingerprints
 from kernel.loggers import LoggerManager
-from kernel.utilities import MolExplorer
 #----------------------------------------------------------------------------------------------
 
 

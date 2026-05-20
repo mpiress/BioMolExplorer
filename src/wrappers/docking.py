@@ -1,3 +1,10 @@
+#----------------------------------------------------------------------------------------------
+#Configure PYTHONPATH to perform execution using the project classes
+import sys 
+sys.path.append("src")
+#----------------------------------------------------------------------------------------------
+
+#----------------------------------------------------------------------------------------------
 from kernel.header_builder import HeaderBuilder
 
 __doc__ = HeaderBuilder.build(
@@ -6,17 +13,13 @@ __doc__ = HeaderBuilder.build(
 
     module_description=(
     "Wrapper module for managing and integrating molecular " 
-    "analysis available in the src/caad directory"
+    "analysis available by consensus docking strategy"
 ),
 
     module_version="1.0.0"
 )
+#----------------------------------------------------------------------------------------------
 
-#----------------------------------------------------------------------------------------------
-#Configure PYTHONPATH to perform execution using the project classes
-import sys 
-sys.path.append("src")
-#----------------------------------------------------------------------------------------------
 
 #----------------------------------------------------------------------------------------------
 from typing import Optional, List, Tuple, Literal
