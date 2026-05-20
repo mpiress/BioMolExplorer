@@ -24,7 +24,7 @@ from pathlib import Path
 from pandas import DataFrame
 import os
 
-from caad.redocking import DockVina, Docking
+from caad.docking import DockVina, Docking
 from kernel.loggers import LoggerManager
 from kernel.utilities import fileHandling
 #----------------------------------------------------------------------------------------------
