@@ -312,7 +312,7 @@ def perform_consensus(base_input_path:str, target:str, base_output_path:str, bas
                              sizeof_box=sizeof_box, exhaustiveness=exhaustiveness, num_modes=num_modes,
                              mol_filename=mol_filename)
         
-        exit(1)
+        
         time.sleep(10)
         dir_fd = os.open(output_path[1:] + '/Vina/', os.O_DIRECTORY)
         os.fsync(dir_fd)

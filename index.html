@@ -525,7 +525,7 @@
 
                             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
                                 <div class="flex items-center justify-between">
-                                    <h4 class="font-bold text-cyan-400">docking. py and redocking.py</h4>
+                                    <h4 class="font-bold text-cyan-400">docking.py and redocking.py</h4>
                                     <span class="text-xs text-slate-500">Docking Analysis</span>
                                 </div>
                                 <p class="text-sm text-slate-400 mt-3 leading-relaxed">
@@ -573,7 +573,49 @@
                 </h2>
             </div>
 
-            <div class="grid lg:grid-cols-2 gap-10">
+            <div class="space-y-12">
+                
+                <div class="bg-slate-900 border border-slate-800 rounded-[2rem] p-8">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                        <div class="flex items-center gap-4">
+                            <div class="w-14 h-14 rounded-2xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 text-2xl">
+                                <i class="fa-brands fa-ubuntu"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-2xl font-black">Ubuntu 24.04 Automated Setup</h3>
+                                <p class="text-slate-400 text-sm">Automated installation pipeline using integrated scripts</p>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-slate-950 px-5 py-3 rounded-xl border border-slate-800 shrink-0">
+                            <h4 class="font-mono text-xs text-cyan-400 mb-1">Execute the Automated Script</h4>
+                            <pre class="text-xs text-slate-300"><code>chmod +x install.sh && ./install.sh</code></pre>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="bg-slate-950 p-5 rounded-2xl border border-white/5">
+                            <span class="text-xs text-slate-500 font-mono block mb-1">STEP 01</span>
+                            <h5 class="text-sm font-bold text-white mb-2">Create Root Folder</h5>
+                            <p class="text-xs text-slate-400">Create an <code>apps/</code> folder inside the project root.</p>
+                        </div>
+                        <div class="bg-slate-950 p-5 rounded-2xl border border-white/5">
+                            <span class="text-xs text-slate-500 font-mono block mb-1">STEP 02</span>
+                            <h5 class="text-sm font-bold text-white mb-2">Collect Installers</h5>
+                            <p class="text-xs text-slate-400">Insert Anaconda, Chimera, DMS and Dock6 installers inside.</p>
+                        </div>
+                        <div class="bg-slate-950 p-5 rounded-2xl border border-white/5">
+                            <span class="text-xs text-slate-500 font-mono block mb-1">STEP 03</span>
+                            <h5 class="text-sm font-bold text-white mb-2">Exact Naming Mapping</h5>
+                            <p class="text-xs text-slate-400">Rename payloads exactly to: <code>Anaconda.sh</code> and <code>chimera.bin</code>.</p>
+                        </div>
+                        <div class="bg-slate-950 p-5 rounded-2xl border border-white/5">
+                            <span class="text-xs text-slate-500 font-mono block mb-1">STEP 04</span>
+                            <h5 class="text-sm font-bold text-white mb-2">New Tool Bundles</h5>
+                            <p class="text-xs text-slate-400">Include <code>dms.zip</code> and <code>dock6.tgz</code> to complete deployment.</p>
+                        </div>
+                    </div>
+                </div>
 
                 <div class="bg-slate-900 border border-slate-800 rounded-[2rem] p-8">
                     <div class="flex items-center gap-4 mb-8">
@@ -582,107 +624,87 @@
                         </div>
                         <div>
                             <h3 class="text-2xl font-black">General Linux Installation</h3>
-                            <p class="text-slate-400 text-sm">Cross-distribution environment configuration</p>
+                            <p class="text-slate-400 text-sm">Cross-distribution step-by-step environment configuration (Self-adjusting Layout)</p>
                         </div>
                     </div>
 
-                    <div class="space-y-6">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                        
+                        <div class="space-y-6">
+                            <div class="bg-slate-950 p-6 rounded-2xl border border-white/5 block">
+                                <h4 class="font-semibold text-brand-primary text-sm flex items-center gap-2 mb-2">
+                                    <span class="bg-brand-primary/10 text-brand-primary w-5 h-5 rounded-md flex items-center justify-center text-xs">1</span>
+                                    Install Anaconda
+                                </h4>
+                                <p class="text-xs text-slate-400 mb-4">Grant execution permissions and build base management paths.</p>
+                                <div class="code-block rounded-xl p-4 overflow-x-auto text-xs text-slate-300 font-mono">
+<pre class="whitespace-pre-wrap break-all"><code>chmod +x &lt;file.sh&gt;
+./&lt;file.sh&gt;</code></pre>
+                                </div>
+                            </div>
 
-                        <div>
-                            <h4 class="font-semibold text-brand-primary mb-3">1. Install Anaconda</h4>
-                            <div class="code-block rounded-2xl p-5 overflow-x-auto text-sm text-slate-300">
-<pre><code>chmod +x &lt;downloaded_file.sh&gt;
-./&lt;downloaded_file.sh&gt;</code></pre>
+                            <div class="bg-slate-950 p-6 rounded-2xl border border-white/5 block">
+                                <h4 class="font-semibold text-brand-primary text-sm flex items-center gap-2 mb-2">
+                                    <span class="bg-brand-primary/10 text-brand-primary w-5 h-5 rounded-md flex items-center justify-center text-xs">2</span>
+                                    Create Conda Environment
+                                </h4>
+                                <p class="text-xs text-slate-400 mb-4">Generate dependencies automatically using definition mapping.</p>
+                                <div class="code-block rounded-xl p-4 overflow-x-auto text-xs text-slate-300 font-mono">
+<pre class="whitespace-pre-wrap break-all"><code>conda env create -f environment.yml</code></pre>
+                                </div>
+                            </div>
+
+                            <div class="bg-slate-950 p-6 rounded-2xl border border-white/5 block">
+                                <h4 class="font-semibold text-brand-primary text-sm flex items-center gap-2 mb-2">
+                                    <span class="bg-brand-primary/10 text-brand-primary w-5 h-5 rounded-md flex items-center justify-center text-xs">3</span>
+                                    Install UCSF Chimera
+                                </h4>
+                                <p class="text-xs text-slate-400 mb-4">Initialize target binary structures configuration routines.</p>
+                                <div class="code-block rounded-xl p-4 overflow-x-auto text-xs text-slate-300 font-mono">
+<pre class="whitespace-pre-wrap break-all"><code>chmod +x &lt;file.bin&gt;
+./&lt;file.bin&gt;</code></pre>
+                                </div>
                             </div>
                         </div>
 
-                        <div>
-                            <h4 class="font-semibold text-brand-primary mb-3">2. Create BioMolExplorer Environment</h4>
-                            <div class="code-block rounded-2xl p-5 overflow-x-auto text-sm text-slate-300">
-<pre><code>conda env create -f environment.yml</code></pre>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h4 class="font-semibold text-brand-primary mb-3">3. Install UCSF Chimera</h4>
-                            <div class="code-block rounded-2xl p-5 overflow-x-auto text-sm text-slate-300">
-<pre><code>chmod +x &lt;downloaded_file.bin&gt;
-./&lt;downloaded_file.bin&gt;</code></pre>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h4 class="font-semibold text-brand-primary mb-3">4. Install DMS (Molecular Surface)</h4>
-                            <div class="code-block rounded-2xl p-5 overflow-x-auto text-sm text-slate-300">
-<pre><code>unzip dms.zip -d $HOME/progs
+                        <div class="space-y-6">
+                            <div class="bg-slate-950 p-6 rounded-2xl border border-white/5 block">
+                                <h4 class="font-semibold text-brand-primary text-sm flex items-center gap-2 mb-2">
+                                    <span class="bg-brand-primary/10 text-brand-primary w-5 h-5 rounded-md flex items-center justify-center text-xs">4</span>
+                                    Install DMS Tool
+                                </h4>
+                                <p class="text-xs text-slate-400 mb-4">Unpack molecular surface source records and compile target package.</p>
+                                <div class="code-block rounded-xl p-4 overflow-x-auto text-xs text-slate-300 font-mono">
+<pre class="whitespace-pre-wrap break-all"><code>unzip dms.zip -d $HOME/progs
 cd $HOME/progs/dms*
-make
-sudo make install</code></pre>
+make && sudo make install</code></pre>
+                                </div>
                             </div>
-                        </div>
 
-                        <div>
-                            <h4 class="font-semibold text-brand-primary mb-3">5. Install UCSF Dock6</h4>
-                            <div class="code-block rounded-2xl p-5 overflow-x-auto text-sm text-slate-300">
-<pre><code>sudo apt update && sudo apt install build-essential zlib1g-dev flex gfortran yacc -y
-tar -zxvf dock6.tgz -with -C $HOME/progs
+                            <div class="bg-slate-950 p-6 rounded-2xl border border-white/5 block">
+                                <h4 class="font-semibold text-brand-primary text-sm flex items-center gap-2 mb-2">
+                                    <span class="bg-brand-primary/10 text-brand-primary w-5 h-5 rounded-md flex items-center justify-center text-xs">5</span>
+                                    Install Dock6
+                                </h4>
+                                <p class="text-xs text-slate-400 mb-4">Compile advanced scoring infrastructure tools from source packages.</p>
+                                <div class="code-block rounded-xl p-4 text-xs text-slate-300 font-mono">
+<pre class="whitespace-pre-wrap break-all leading-relaxed"><code>sudo apt update && \
+sudo apt install build-essential \
+zlib1g-dev flex gfortran yacc -y
+tar -zxvf dock6.tgz -C $HOME/progs
 cd $HOME/progs/dock6*/install
-./configure gnu
-make all
+./configure gnu && make all
 echo 'export PATH="$PATH:$HOME/progs/dock6/bin"' >> ~/.bashrc
 source ~/.bashrc</code></pre>
-                            </div>
-                        </div>
-                        
-                    </div>
-                    <p class="h-4"></p>
-                    <div class="bg-cyan-500/10 border border-cyan-500/20 rounded-2xl p-5 text-sm text-slate-300 leading-relaxed">
-                            <i class="fa-solid fa-lightbulb text-cyan-400 mr-2"></i>
-                            Configure the Python interpreter in VSCode using the generated Conda environment before executing workflow scripts.
-                        </div>
-                </div>
-
-                <div class="bg-slate-900 border border-slate-800 rounded-[2rem] p-8">
-                    <div class="flex items-center gap-4 mb-8">
-                        <div class="w-14 h-14 rounded-2xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 text-2xl">
-                            <i class="fa-brands fa-ubuntu"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-2xl font-black">Ubuntu 24.04 Automated Setup</h3>
-                            <p class="text-slate-400 text-sm">Automated installation pipeline</p>
-                        </div>
-                    </div>
-
-                    <div class="space-y-6">
-                        <div class="bg-slate-950 rounded-2xl border border-slate-800 p-6">
-                            <ol class="space-y-3 text-sm text-slate-300 leading-relaxed list-decimal list-inside">
-                                <li>Create an <code>apps/</code> folder inside the project root.</li>
-                                <li>Insert Anaconda, Chimera, DMS and Dock6 installers.</li>
-                                <li>Rename installers to exactly:
-                                    <ul class="list-disc list-inside mt-2 text-slate-400 ml-4">
-                                        <li>Anaconda.sh</li>
-                                        <li>chimera.bin</li>
-                                        <li>dms.zip</li>
-                                        <li>dock6.tgz</li>
-                                    </ul>
-                                </li>
-                            </ol>
-                        </div>
-
-                        <div>
-                            <h4 class="font-semibold text-cyan-400 mb-3">Execute the Automated Script</h4>
-                            <div class="code-block rounded-2xl p-5 overflow-x-auto text-sm text-slate-300">
-<pre><code>chmod +x install.sh
-./install.sh</code></pre>
+                                </div>
                             </div>
                         </div>
 
-                        <p class="h-4"></p>
+                    </div>
 
-                        <div class="bg-cyan-500/10 border border-cyan-500/20 rounded-2xl p-5 text-sm text-slate-300 leading-relaxed">
-                            <i class="fa-solid fa-lightbulb text-cyan-400 mr-2"></i>
-                            Configure the Python interpreter in VSCode using the generated Conda environment before executing workflow scripts.
-                        </div>
+                    <div class="mt-8 bg-cyan-500/10 border border-cyan-500/20 rounded-2xl p-5 text-sm text-slate-300 flex items-center gap-3">
+                        <i class="fa-solid fa-lightbulb text-cyan-400 text-lg shrink-0"></i>
+                        <span>Before executing target workflow modules, verify that the active workspace interpreter points directly to the newly constructed <strong>BioMolExplorer</strong> Conda environment path inside VSCode.</span>
                     </div>
                 </div>
 
