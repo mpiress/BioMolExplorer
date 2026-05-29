@@ -307,10 +307,10 @@ def perform_consensus(base_input_path:str, target:str, base_output_path:str, bas
             del dock
 
         
-        perform_docking_vina(base_input_path=base_input_path, target=target, base_output_path=base_output_path,
-                             base_selected_mols=base_selected_mols, pdb_code=pdb_codes, pH=pH,
-                             sizeof_box=sizeof_box, exhaustiveness=exhaustiveness, num_modes=num_modes,
-                             mol_filename=mol_filename)
+        #perform_docking_vina(base_input_path=base_input_path, target=target, base_output_path=base_output_path,
+        #                     base_selected_mols=base_selected_mols, pdb_code=pdb_codes, pH=pH,
+        #                     sizeof_box=sizeof_box, exhaustiveness=exhaustiveness, num_modes=num_modes,
+        #                     mol_filename=mol_filename)
         
         
         time.sleep(10)

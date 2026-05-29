@@ -23,6 +23,7 @@ matplotlib.use('agg')
 #----------------------------------------------------------------------------------------------
 import os
 import ast
+from io import StringIO
 
 from pathlib import Path
 from pandas import read_csv, DataFrame, concat, notna
@@ -356,6 +357,44 @@ class MolConverter(MyUtilities):
             
         except Exception as e:
             self.logger.error(f'Error during to perform {smiles} smiles in save_smiles_to_png function', exc_info=True)
+
+
+
+    def extract_pdb_to_pdbqt(self, pdbqt_filename:str, pdb_filename:Optional[str]=None, start_index:Optional[str]=None, end_index:Optional[str]=None):
+
+        try:
+            input_path = self.path + self.inputpath
+            output_path = self.path + self.outputpath
+
+            with open(input_path + pdbqt_filename, 'r') as f:
+                content = f.read()
+            
+            start   = content.find(start_index) if start_index != None else 0
+            end     = content.find(end_index, start) if end_index != None else None
+            content = content[start:end] if end != None else content[start:]
+            
+            pdbqt_file = StringIO(content)
+            
+            pdb_content = []
+            for line in pdbqt_file:
+                if line.startswith(("ATOM", "HETATM", "CONECT")):
+                    pdb_content.append(line[:66] + "\n")
+                
+            
+            pdb_content_str = ''.join(pdb_content)
+            if pdb_filename != None:
+                with open(output_path + pdb_filename, 'w') as pdb_out:
+                    pdb_out.write(pdb_content_str)
+            
+            
+            return pdb_content_str
+        
+        except Exception as e:
+            self.logger.error(f'Error during to perform {pdbqt_filename} in convert_pdbqt_to_pdb function', exc_info=True)
+        
+        finally:
+            dir_fd = os.open(output_path, os.O_DIRECTORY)
+            os.fsync(dir_fd)
 
 
 

@@ -28,6 +28,7 @@ from wrappers.docking import perform_consensus
 
 if __name__ == "__main__":
 
+
     perform_consensus(base_input_path='/datasets/PDB',
                       target='Butyrylcholinesterase',
                       pdb_code=('7AWG', 'S6Q', 605, 'A'),
