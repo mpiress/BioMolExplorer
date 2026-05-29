@@ -584,6 +584,7 @@ class DockVina(Docking):
 
             f1 = fileHandling(input_path=self.ligandpath, output_path=self.ligandpath)
             df = f1.csv_to_dataframe(self.mol_filename)
+            
             df['molecule_chembl_id'] = df['molecule_chembl_id'].astype(str)
             data = df[['molecule_chembl_id', 'canonical_smiles']].to_records(index=False)
             

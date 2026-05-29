@@ -98,7 +98,6 @@
 
 <body class="text-slate-800 antialiased">
 
-    <!-- NAVBAR -->
     <header class="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-slate-950/70 backdrop-blur-lg">
         <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
             <div class="flex items-center gap-4">
@@ -126,7 +125,6 @@
         </div>
     </header>
 
-    <!-- HERO -->
     <section class="hero-gradient grid-pattern min-h-screen flex items-center relative overflow-hidden">
         <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.04)_0,transparent_60%)]"></div>
 
@@ -224,7 +222,6 @@
         </div>
     </section>
 
-    <!-- OVERVIEW -->
     <section id="overview" class="py-24 bg-white">
         <div class="max-w-7xl mx-auto px-6">
 
@@ -331,7 +328,6 @@
         </div>
     </section>
 
-    <!-- CAPABILITIES -->
     <section id="capabilities" class="py-24 bg-slate-100 border-y border-slate-200">
         <div class="max-w-7xl mx-auto px-6">
 
@@ -444,7 +440,6 @@
         </div>
     </section>
 
-    <!-- WORKFLOW -->
     <section id="workflow" class="py-24 bg-white">
         <div class="max-w-7xl mx-auto px-6">
 
@@ -568,7 +563,6 @@
         </div>
     </section>
 
-    <!-- INSTALLATION -->
     <section id="installation" class="py-24 bg-slate-950 text-white">
         <div class="max-w-7xl mx-auto px-6">
 
@@ -616,6 +610,30 @@
 ./&lt;downloaded_file.bin&gt;</code></pre>
                             </div>
                         </div>
+
+                        <div>
+                            <h4 class="font-semibold text-brand-primary mb-3">4. Install DMS (Molecular Surface)</h4>
+                            <div class="code-block rounded-2xl p-5 overflow-x-auto text-sm text-slate-300">
+<pre><code>unzip dms.zip -d $HOME/progs
+cd $HOME/progs/dms*
+make
+sudo make install</code></pre>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 class="font-semibold text-brand-primary mb-3">5. Install UCSF Dock6</h4>
+                            <div class="code-block rounded-2xl p-5 overflow-x-auto text-sm text-slate-300">
+<pre><code>sudo apt update && sudo apt install build-essential zlib1g-dev flex gfortran yacc -y
+tar -zxvf dock6.tgz -with -C $HOME/progs
+cd $HOME/progs/dock6*/install
+./configure gnu
+make all
+echo 'export PATH="$PATH:$HOME/progs/dock6/bin"' >> ~/.bashrc
+source ~/.bashrc</code></pre>
+                            </div>
+                        </div>
+                        
                     </div>
                     <p class="h-4"></p>
                     <div class="bg-cyan-500/10 border border-cyan-500/20 rounded-2xl p-5 text-sm text-slate-300 leading-relaxed">
@@ -639,11 +657,13 @@
                         <div class="bg-slate-950 rounded-2xl border border-slate-800 p-6">
                             <ol class="space-y-3 text-sm text-slate-300 leading-relaxed list-decimal list-inside">
                                 <li>Create an <code>apps/</code> folder inside the project root.</li>
-                                <li>Insert Anaconda and Chimera installers.</li>
-                                <li>Rename installers to:
+                                <li>Insert Anaconda, Chimera, DMS and Dock6 installers.</li>
+                                <li>Rename installers to exactly:
                                     <ul class="list-disc list-inside mt-2 text-slate-400 ml-4">
-                                        <li>Anaconda-latest-Linux-x86_64.sh</li>
+                                        <li>Anaconda.sh</li>
                                         <li>chimera.bin</li>
+                                        <li>dms.zip</li>
+                                        <li>dock6.tgz</li>
                                     </ul>
                                 </li>
                             </ol>
@@ -670,7 +690,6 @@
         </div>
     </section>
 
-    <!-- ANALYSIS -->
     <section id="analysis" class="py-24 bg-white">
         <div class="max-w-7xl mx-auto px-6">
 
@@ -740,7 +759,6 @@
         </div>
     </section>
 
-    <!-- CITATION -->
     <section id="citation" class="py-24 bg-slate-100 border-t border-slate-200">
         <div class="max-w-5xl mx-auto px-6 text-center">
 
@@ -772,7 +790,6 @@
         </div>
     </section>
 
-    <!-- AUTHORS -->
     <section class="py-24 bg-white">
         <div class="max-w-7xl mx-auto px-6 text-center">
 
@@ -835,7 +852,6 @@
         </div>
     </section>
 
-    <!-- FOOTER -->
     <footer class="bg-slate-950 border-t border-slate-800 py-12">
         <div class="max-w-7xl mx-auto px-6">
             <div class="flex flex-col lg:flex-row items-center justify-between gap-8">
@@ -874,4 +890,3 @@
 
 </body>
 </html>
-

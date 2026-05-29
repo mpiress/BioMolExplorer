@@ -36,9 +36,11 @@ if __name__ == "__main__":
     # @param maccs: If True, the MACCS fingerprint is generated.
     # @param pharmacophore: If True, the pharmacophore fingerprint is generated.
     #----------------------------------------------------------------------------------------------
-    generate_fingerprints(base_input_path='/datasets/ChEMBL/DrugBank',
+    generate_fingerprints(base_input_path='/datasets/ChEMBL/DrugBank/ADMET',
+                          files=['CHEMBL1914_FULL_BBB+.csv'],
                           morgan=True, maccs=True, pharmacophore=True
     )
+    
     
     #----------------------------------------------------------------------------------------------
     # COMPUTE THE SIMILARITY BETWEEN THE MOLECULES BASED ON THE FINGERPRINTS GENERATED.
@@ -47,12 +49,12 @@ if __name__ == "__main__":
     # @param metric: The similarity metric to be used (Tanimoto, Dice, Cosine, etc).
     # @param fingerprint: The fingerprint to be used (Morgan, MACCS, and Pharmacophore).
     #----------------------------------------------------------------------------------------------
-    compute_similarity(base_input_path='/datasets/ChEMBL/DrugBank/Fingerprints',
-                       base_output_path='/datasets/ChEMBL/DrugBank',
+    compute_similarity(base_input_path='/datasets/ChEMBL/DrugBank/ADMET/Fingerprints',
+                       base_output_path='/datasets/ChEMBL/DrugBank/ADMET',
                        metric=similarityFunctions.TanimotoSimilarity,
                        fingerprint=fingerprints.Morgan                  
     )
-
+    
     #----------------------------------------------------------------------------------------------
     # COMPUTE THE RELATIONSHIP BETWEEN THE MOLECULES BASED ON THE SIMILARITY VALUES COMPUTED. THE GRAPH
     # REPRESENTATION IS USED TO IDENTIFY RELEVANT CHARACTERISTICS IN MOLECULES AND ANALOGS STRUCTURES.
@@ -61,9 +63,10 @@ if __name__ == "__main__":
     # @param metric: The similarity metric to be considered in this step (Tanimoto, Dice, Cosine, etc).
     # @param fingerprint: The fingerprint to be considered in this step (Morgan, MACCS, and Pharmacophore).
     #----------------------------------------------------------------------------------------------
-    analyze_graphs(base_input_path='/datasets/ChEMBL/DrugBank',
+    analyze_graphs(base_input_path='/datasets/ChEMBL/DrugBank/ADMET',
                     base_output_path='/resultados/grafos',
                     metric=similarityFunctions.TanimotoSimilarity,
                     fingerprint=fingerprints.Morgan
     )
+    
     

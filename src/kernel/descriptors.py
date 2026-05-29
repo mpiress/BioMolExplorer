@@ -31,6 +31,8 @@ from pathlib import Path
 from multiprocessing import Pool
 from enum import Enum
 import multiprocessing as mp
+
+from pymol import cmd
 #----------------------------------------------------------------------------------------------
 
 #----------------------------------------------------------------------------------------------
@@ -184,7 +186,25 @@ class Descriptors():
         except Exception as e:
             self.logger.error(f'Error during to perform the max_common_substructure function', exc_info=True)   
         
+    
+    def calcRMSD(self, ligand_pdbqt:str, vina_pdbqt:str):
         
+        try:
+            
+            cmd.reinitialize()
+            cmd.load(ligand_pdbqt, "ligand")
+            cmd.load(vina_pdbqt, "vina")
+            
+            pose_number = 1
+            pose_name = f"vina_{pose_number}"
+            cmd.create(pose_name, "vina", pose_number, 1)
+            rmsd = cmd.rms_cur(pose_name, "ligand")
+            
+            return rmsd 
+
+        except Exception as e:
+            self.logger.error(f'Error during to perform {ligand_pdbqt} and {vina_pdbqt} in calcRMSD function', exc_info=True)
+  
 
                     
 class MolSimilarity():
@@ -332,7 +352,8 @@ class MolSimilarity():
             
             data = fileHandling(input_path=self.__inputpath, output_path=self.__outputpath)
             files = [f.rsplit('.')[0] for f in os.listdir(self.__inputpath[1:])
-                     if f.endswith('.csv') and f.startswith(fp) and (f.endswith('MOLS.csv') or f.endswith('SIMS.csv'))] if filename == None else [filename.rsplit('.')[0]]
+                     if f.endswith('.csv') and f.startswith(fp)] if filename == None else [filename.rsplit('.')[0]]
+            
             
             for filename in files:
 

@@ -28,11 +28,11 @@ from wrappers.docking import perform_consensus
 
 if __name__ == "__main__":
 
-    perform_consensus(base_input_path='/datasets_ieee/PDB',
-                      target='Acetylcholinesterase',
-                      pdb_code=('4M0E', '1YL', 604, 'A'),
-                      base_output_path='/resultados_ieee/docking',
-                      base_selected_mols='/datasets_ieee/ChEMBL',
+    perform_consensus(base_input_path='/datasets/PDB',
+                      target='Butyrylcholinesterase',
+                      pdb_code=('7AWG', 'S6Q', 605, 'A'),
+                      base_output_path='/resultados/docking',
+                      base_selected_mols='/datasets/ChEMBL/DrugBank/ADMET/Molecules',
                       mol_filename='molecules',
                       dock6_app_path='/home/michel/progs/dock6/',
                       prepare_complex=False, charge_type='am1')

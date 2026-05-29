@@ -47,13 +47,13 @@ def read_filters(path:str):
 
 
 
-def load_chembl(target_name:str, base_output_path:str):
+def load_chembl(search_term:str, base_output_path:str):
 
     try:
         target_output_path = f'{base_output_path}/ChEMBL/targets/'
-        bioactivity_output_path = f'{base_output_path}/ChEMBL/bioactivity/{target_name.replace(' ','')}/'
-        molecule_output_path = f'{base_output_path}/ChEMBL/molecules/{target_name.replace(' ','')}/'
-        similar_output_path = f'{base_output_path}/ChEMBL/similars/{target_name.replace(' ','')}/'
+        bioactivity_output_path = f'{base_output_path}/ChEMBL/bioactivity/{search_term.replace(' ','')}/'
+        molecule_output_path = f'{base_output_path}/ChEMBL/molecules/{search_term.replace(' ','')}/'
+        similar_output_path = f'{base_output_path}/ChEMBL/similars/{search_term.replace(' ','')}/'
         
 
         target = Targets()
@@ -64,13 +64,13 @@ def load_chembl(target_name:str, base_output_path:str):
         script_path = '/src/scripts/crawlers/target.json'
         filters = read_filters(script_path)
         target.set_outputpath(target_output_path)
-        target.search(target_name, filters)
+        target.search(search_term, filters)
 
         script_path = '/src/scripts/crawlers/bioactivity.json'
         filters = read_filters(script_path)
         bioact.set_outputpath(bioactivity_output_path)
         bioact.set_targetpath(target_output_path)
-        bioact.search(target_name, filters)
+        bioact.search(search_term, filters)
 
         script_path = '/src/scripts/crawlers/molecules.json'
         filters = read_filters(script_path)
@@ -88,12 +88,12 @@ def load_chembl(target_name:str, base_output_path:str):
         drugbank_output_path = f'{base_output_path}/ChEMBL/DrugBank/'
         molecules = fileHandling(output_path=drugbank_output_path)
 
-        molecules.prepare_datamols(target=target_name,
+        molecules.prepare_datamols(target=search_term,
                                    inputpath_mols=molecule_output_path,
                                    inputpath_similars=similar_output_path)
     
     except Exception as e:
-        logger.error(f'Error during to perform {target_name} in load_chembl wrapper function', exc_info=True)
+        logger.error(f'Error during to perform {search_term} in load_chembl wrapper function', exc_info=True)
 
 
 

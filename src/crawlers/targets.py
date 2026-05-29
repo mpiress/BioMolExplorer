@@ -44,30 +44,56 @@ class Targets(CrawlerSettings):
       
      
        
-    def search(self, target_name:str, filter_params:dict) -> None:
-        
+    def search(self, search_term:str, filter_params:dict) -> None:
         try:
-            files   = fileHandling(input_path=self.__outputpath, ext=self.__extension)
-            target_name = target_name.upper()
-            infile  =  files.isFile(target_name)[0]
+            if filter_params is None:
+                filter_params = {}
+                
+            files = fileHandling(input_path=self.__outputpath, ext=self.__extension)
+            search_term_upper = search_term.upper()
+            
+            # O nome do arquivo salvo ainda pode ser baseado no termo de busca
+            infile = files.isFile(search_term_upper)[0]
             columns = ['pref_name', 'target_chembl_id', 'target_components', 'target_type']
 
-            filter_params["pref_name__iexact"] =  target_name
-            
-            target = files.csv_to_dataframe(target_name) if infile else self.__target.filter(**filter_params).only(columns)
-            
+            # Se o arquivo local já existe, lê do CSV, senão busca na API do ChEMBL
+            if infile:
+                target = files.csv_to_dataframe(search_term_upper)
+            else:
+                # 1. Se parecer um ChEMBL ID (ex: CHEMBL240)
+                if search_term_upper.startswith("CHEMBL"):
+                    filter_params["target_chembl_id"] = search_term_upper
+                
+                # 2. Se parecer um ID de Acesso do UniProt (ex: P00533 - geralmente 6 ou 10 caracteres alfanuméricos)
+                elif len(search_term) in [6, 10] and any(char.isdigit() for char in search_term):
+                    filter_params["target_components__accession"] = search_term_upper
+                
+                # 3. Se for um nome de texto, usamos "__icontains" para busca parcial (ou mantém iexact se preferir)
+                else:
+                    filter_params["pref_name__icontains"] = search_term
 
+                # Executa o filtro na API do ChEMBL
+                target = self.__target.filter(**filter_params).only(columns)
+
+            # Processamento dos dados retornados
             if len(target) > 0:
-                target = DataFrame.from_records(target)
+                # Se veio da API, convertemos o query result para DataFrame
+                if not infile:
+                    target = DataFrame.from_records(target)
+                
                 target.drop_duplicates(subset='target_chembl_id', inplace=True, ignore_index=True)
-                target = target[columns] if infile and len(columns) > 0 else target
+                
+                # Garante que o DataFrame final tenha as colunas desejadas (se existirem)
+                available_cols = [col for col in columns if col in target.columns]
+                target = target[available_cols]
             else:
                 target = DataFrame()
             
-            self.save_target(target, target_name) if self.__outputpath != None else None
-            
+            if self.__outputpath is not None:
+                self.save_target(target, search_term_upper)
+                
         except Exception as e:
-            self.logger.error(f'Error during to perform {target_name} target in search function', exc_info=True)
+            self.logger.error(f'Error during search for target "{search_term}"', exc_info=True)
             
     
      

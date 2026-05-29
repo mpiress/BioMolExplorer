@@ -53,7 +53,7 @@ def compute_similarity(base_input_path:str, base_output_path:str,
         
         base_input_path  = f'{base_input_path}/'
         base_output_path = f'{base_output_path}/Similarity/'
-
+        
         script_path = '/src/scripts/crawlers/similarmols.json'
         filters = read_filters(script_path)
         threshold = int(filters['similarity']) / 100 if threshold is None else threshold / 100
@@ -113,7 +113,7 @@ def filter_mutagenic_tumorigenic(base_input_path:str, base_output_path:str, data
 
 
 
-def generate_fingerprints(base_input_path:str, morgan_n_bits:Optional[int]=2048, radius:Optional[int]=2,
+def generate_fingerprints(base_input_path:str, morgan_n_bits:Optional[int]=2048, radius:Optional[int]=2, files:Optional[List]=None,
                           morgan:Optional[bool]=True, maccs:Optional[bool]=True, pharmacophore:Optional[bool]=True):
 
     try:
@@ -124,7 +124,9 @@ def generate_fingerprints(base_input_path:str, morgan_n_bits:Optional[int]=2048,
         f1 = fileHandling(input_path=base_input_path, output_path=base_output_path)
         ds = Descriptors(inputpath=base_input_path, outputpath=base_output_path)
                 
-        files = [f for f in os.listdir(base_input_path[1:]) if f.endswith('_MOLS.csv') or f.endswith('_SIMS.csv')]
+        if files is None:
+            files = [f for f in os.listdir(base_input_path[1:]) if f.endswith('_MOLS.csv') or f.endswith('_SIMS.csv')]
+            
         for filename in files:
             filename = filename.split('.')[0]
             data = f1.csv_to_dataframe(filename)

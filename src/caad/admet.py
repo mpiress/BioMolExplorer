@@ -104,7 +104,7 @@ class BoiledEggPlotter:
     
     @staticmethod
     def plot(df, output_path, output_image_file):
-        logger = LoggerManager.get_logger(self.__class__.__name__, log_file='logs/admet.log')
+        logger = LoggerManager.get_logger(__class__.__name__, log_file='logs/admet.log')
         
         try:
             path =  str(Path.cwd()) + output_path + output_image_file

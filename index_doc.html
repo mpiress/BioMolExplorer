@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BioMolExplorer - Documentation Portal</title>
+    <title>BioMolExplorer - Portal de Documentação Oficial</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
@@ -47,7 +47,7 @@
                 <i class="fab fa-linux mr-1"></i> Linux Environment
             </span>
             <span class="bg-slate-800 text-xs text-slate-300 border border-slate-700 px-2.5 py-1 rounded-full">
-                License: GPLv3
+                Licença: GPLv3
             </span>
         </div>
     </nav>
@@ -65,38 +65,50 @@
             </div>
 
             <div>
-                <p class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Instalação</p>
+                <p class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Configuração de Ambiente</p>
                 <nav class="space-y-1">
                     <button onclick="switchTab('install-general')" id="btn-install-general" class="sidebar-link w-full text-left px-3 py-2 rounded text-sm font-medium flex items-center transition-colors hover:bg-slate-800 hover:text-white">
-                        <i class="fa-solid fa-cubes mr-2.5 w-4 text-center"></i> Instalação Geral
+                        <i class="fa-solid fa-cubes mr-2.5 w-4 text-center"></i> Dependências Gerais
                     </button>
                     <button onclick="switchTab('install-ubuntu')" id="btn-install-ubuntu" class="sidebar-link w-full text-left px-3 py-2 rounded text-sm font-medium flex items-center transition-colors hover:bg-slate-800 hover:text-white">
                         <i class="fab fa-ubuntu mr-2.5 w-4 text-center"></i> Script para Ubuntu
+                    </button>
+                    <button onclick="switchTab('config-vscode')" id="btn-config-vscode" class="sidebar-link w-full text-left px-3 py-2 rounded text-sm font-medium flex items-center transition-colors hover:bg-slate-800 hover:text-white">
+                        <i class="fa-solid fa-code mr-2.5 w-4 text-center"></i> Configuração no VSCode
                     </button>
                 </nav>
             </div>
 
             <div>
-                <p class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Exemplos de Uso</p>
+                <p class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Etapa 1: Recuperação (IR)</p>
                 <nav class="space-y-1">
                     <button onclick="switchTab('use-pdb')" id="btn-use-pdb" class="sidebar-link w-full text-left px-3 py-2 rounded text-sm font-medium flex items-center transition-colors hover:bg-slate-800 hover:text-white">
-                        <i class="fa-solid fa-dna mr-2.5 w-4 text-center"></i> 1. PDB Extraction
+                        <i class="fa-solid fa-dna mr-2.5 w-4 text-center"></i> 1.1 Extração PDB
                     </button>
                     <button onclick="switchTab('use-chembl')" id="btn-use-chembl" class="sidebar-link w-full text-left px-3 py-2 rounded text-sm font-medium flex items-center transition-colors hover:bg-slate-800 hover:text-white">
-                        <i class="fa-solid fa-vial mr-2.5 w-4 text-center"></i> 2. ChEMBL Crawler
+                        <i class="fa-solid fa-vial mr-2.5 w-4 text-center"></i> 1.2 Crawler ChEMBL
                     </button>
                     <button onclick="switchTab('use-zinc')" id="btn-use-zinc" class="sidebar-link w-full text-left px-3 py-2 rounded text-sm font-medium flex items-center transition-colors hover:bg-slate-800 hover:text-white">
-                        <i class="fa-solid fa-database mr-2.5 w-4 text-center"></i> 3. ZINC Pipelines
+                        <i class="fa-solid fa-database mr-2.5 w-4 text-center"></i> 1.3 Pipelines ZINC
+                    </button>
+                </nav>
+            </div>
+
+            <div>
+                <p class="px-3 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">Etapa 2: Análise & Curação</p>
+                <nav class="space-y-1">
+                    <button onclick="switchTab('use-redocking')" id="btn-use-redocking" class="sidebar-link w-full text-left px-3 py-2 rounded text-sm font-medium flex items-center transition-colors hover:bg-slate-800 hover:text-white">
+                        <i class="fa-solid fa-arrows-spin mr-2.5 w-4 text-center"></i> 2.1 Curação e Redocking
                     </button>
                     <button onclick="switchTab('use-analysis')" id="btn-use-analysis" class="sidebar-link w-full text-left px-3 py-2 rounded text-sm font-medium flex items-center transition-colors hover:bg-slate-800 hover:text-white">
-                        <i class="fa-solid fa-chart-network mr-2.5 w-4 text-center"></i> 4. Analysis & Redocking
+                        <i class="fa-solid fa-chart-network mr-2.5 w-4 text-center"></i> 2.2 Fingerprints e Redes
                     </button>
                 </nav>
             </div>
 
             <div class="pt-4 border-t border-slate-800">
                 <button onclick="switchTab('citation')" id="btn-citation" class="sidebar-link w-full text-left px-3 py-2 rounded text-sm font-medium flex items-center transition-colors hover:bg-slate-800 hover:text-white">
-                    <i class="fa-solid fa-quote-left mr-2.5 w-4 text-center"></i> Como Citar
+                    <i class="fa-solid fa-quote-left mr-2.5 w-4 text-center"></i> Como Citar & Autores
                 </button>
             </div>
         </aside>
@@ -106,84 +118,100 @@
             <div id="tab-overview" class="tab-content space-y-8 animate-fadeIn">
                 <div>
                     <h1 class="text-3xl font-extrabold text-brand-dark tracking-tight mb-4">A Flexible Information Retrieval Architecture for Exploring and Assembling Molecular Space Domains For Drug Discovery Based on Computer-Aided Drug Design Strategies</h1>
-                    <p class="text-lg text-slate-600 font-light leading-relaxed">
-                        Gerenciar a vasta complexidade das relações composto-alvo tornou-se um desafio crescente no planejamento de fármacos auxiliado por computador (CADD). O <strong>BioMolExplorer</strong> foi projetado para integrar, padronizar e automatizar pipelines complexos usando bases de dados de alta relevância científica.
+                    <p class="text-lg text-slate-600 font-light leading-relaxed align-justify">
+                        Gerenciar a vasta complexidade das relações composto-alvo tornou-se um desafio crescente no planejamento de fármacos auxiliado por computador (CADD). Repositórios de fármacos enriquecidos com metadados heterogêneos frequentemente excedem os limites das estratégias tradicionais. O <strong>BioMolExplorer</strong> foi projetado para integrar, padronizar e automatizar esses pipelines complexos, estruturando redes de relacionamento fármaco-alvo e limpando ruídos computacionais.
                     </p>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-xs">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                         <h3 class="text-md font-bold text-brand-dark mb-3 flex items-center"><i class="fa-solid fa-layer-group text-brand-emerald mr-2"></i> Bancos Integrados</h3>
-                        <p class="text-sm text-slate-600 leading-relaxed">Extração robusta e padronizada de estruturas tridimensionais, dados farmacológicos e bibliotecas virtuais via <strong>PDB, ChEMBL e ZINC</strong>.</p>
+                        <p class="text-sm text-slate-600 leading-relaxed">Extração robusta, padronizada e unificada de estruturas tridimensionais, dados farmacológicos e bibliotecas virtuais via <strong>PDB, ChEMBL e ZINC</strong>.</p>
                     </div>
-                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-xs">
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
                         <h3 class="text-md font-bold text-brand-dark mb-3 flex items-center"><i class="fa-solid fa-shield-virus text-brand-emerald mr-2"></i> Camada de Curação</h3>
-                        <p class="text-sm text-slate-600 leading-relaxed">Validação automatizada de complexos por meio de rotinas de redocking acopladas ao motor do <strong>AutoDock Vina</strong> e controle de RMSD.</p>
+                        <p class="text-sm text-slate-600 leading-relaxed">Validação sistemática de complexos através de rotinas automáticas de redocking baseadas no motor <strong>AutoDock Vina</strong> e cálculo de RMSD.</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                        <h3 class="text-md font-bold text-brand-dark mb-3 flex items-center"><i class="fa-solid fa-circle-nodes text-brand-emerald mr-2"></i> Análise de Grafos</h3>
+                        <p class="text-sm text-slate-600 leading-relaxed">Mapeamento do espaço químico focando na <strong>Componente Conectada Máxima</strong> para identificar andaimes estruturais (scaffolds) comuns.</p>
                     </div>
                 </div>
 
                 <div class="border-t pt-6">
-                    <h2 class="text-xl font-bold text-brand-dark mb-4">Principais Vantagens</h2>
-                    <ul class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-600">
-                        <li class="flex items-start"><i class="fa-solid fa-circle-check text-brand-emerald mt-1 mr-2 shrink-0"></i> Recuperação abrangente de dados biológicos.</li>
-                        <li class="flex items-start"><i class="fa-solid fa-circle-check text-brand-emerald mt-1 mr-2 shrink-0"></i> Análises focadas em alvos terapêuticos específicos.</li>
-                        <li class="flex items-start"><i class="fa-solid fa-circle-check text-brand-emerald mt-1 mr-2 shrink-0"></i> Minimização de etapas manuais e exaustivas de curadoria.</li>
-                        <li class="flex items-start"><i class="fa-solid fa-circle-check text-brand-emerald mt-1 mr-2 shrink-0"></i> Geração de conjuntos de dados prontos para Machine Learning.</li>
-                    </ul>
+                    <h2 class="text-xl font-bold text-brand-dark mb-4">Vantagens Estratégicas</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-slate-600">
+                        <div class="flex items-start"><i class="fa-solid fa-circle-check text-brand-emerald mt-1 mr-2 shrink-0"></i> <span><strong>Recuperação Abrangente:</strong> Acesso unificado a extensos bancos de bioatividades para triagem virtual.</span></div>
+                        <div class="flex items-start"><i class="fa-solid fa-circle-check text-brand-emerald mt-1 mr-2 shrink-0"></i> <span><strong>Filtros Customizados:</strong> Restrição total orientada ao domínio científico e restrições do projeto de pesquisa.</span></div>
+                        <div class="flex items-start"><i class="fa-solid fa-circle-check text-brand-emerald mt-1 mr-2 shrink-0"></i> <span><strong>Minimização de Etapas Manuais:</strong> Automação completa de tarefas exaustivas de curadoria preliminar de dados.</span></div>
+                        <div class="flex items-start"><i class="fa-solid fa-circle-check text-brand-emerald mt-1 mr-2 shrink-0"></i> <span><strong>Modelos Baseados em Assinaturas:</strong> Agrupamento molecular por afinidade estrutural ideal para Machine Learning e Redes de Polifarmacologia.</span></div>
+                    </div>
                 </div>
             </div>
 
             <div id="tab-install-general" class="tab-content space-y-6 hidden">
-                <h2 class="text-2xl font-bold text-brand-dark border-b pb-2"><i class="fa-solid fa-cubes text-slate-500 mr-2"></i> Instalação Geral de Dependências</h2>
-                <p class="text-slate-600 text-sm">Siga os passos abaixo para configurar manualmente o ambiente em qualquer distribuição Linux de sua preferência:</p>
+                <h2 class="text-2xl font-bold text-brand-dark border-b pb-2"><i class="fa-solid fa-cubes text-slate-500 mr-2"></i> Instalação Geral de Dependências (Qualquer Linux)</h2>
+                <p class="text-slate-600 text-sm">BioMolExplorer opera nativamente em arquiteturas Linux. Siga o passo a passo rigoroso abaixo para provisionar as ferramentas necessárias de background:</p>
                 
                 <div class="space-y-6">
                     <div class="bg-white p-5 rounded-lg border border-slate-200">
-                        <span class="font-bold text-slate-700 text-sm block mb-2">Passo 1 — Instalação do Anaconda</span>
-                        <p class="text-xs text-slate-500 mb-3">Baixe o instalador oficial do site da Anaconda e execute no terminal:</p>
+                        <span class="font-bold text-slate-700 text-sm block mb-1">1. Instalação do Anaconda</span>
+                        <p class="text-xs text-slate-500 mb-3">Obtenha o instalador para Linux do site oficial e aplique as permissões de execução:</p>
                         <pre class="bg-slate-900 text-slate-200 p-3 rounded text-xs overflow-x-auto"><code>chmod +x Anaconda3-latest-Linux-x86_64.sh&#10;./Anaconda3-latest-Linux-x86_64.sh</code></pre>
                     </div>
 
                     <div class="bg-white p-5 rounded-lg border border-slate-200">
-                        <span class="font-bold text-slate-700 text-sm block mb-2">Passo 2 — Criação do Ambiente Conda</span>
-                        <p class="text-xs text-slate-500 mb-3">Navegue até a pasta raiz do projeto onde o arquivo <code class="bg-slate-100 px-1 rounded text-red-600">environment.yml</code> está localizado:</p>
+                        <span class="font-bold text-slate-700 text-sm block mb-1">2. Provisionamento do Ambiente Conda</span>
+                        <p class="text-xs text-slate-500 mb-3">Navegue até o diretório raiz clonado do projeto onde o arquivo <code class="bg-slate-100 px-1 rounded text-red-600">environment.yml</code> está situado:</p>
                         <pre class="bg-slate-900 text-slate-200 p-3 rounded text-xs overflow-x-auto"><code>conda env create -f environment.yml</code></pre>
                     </div>
 
                     <div class="bg-white p-5 rounded-lg border border-slate-200">
-                        <span class="font-bold text-slate-700 text-sm block mb-2">Passo 3 — Instalação do UCSF Chimera</span>
-                        <p class="text-xs text-slate-500 mb-3">O Chimera é mandatório para a etapa de limpeza e tratamento automatizado dos complexos moleculares proteicos:</p>
+                        <span class="font-bold text-slate-700 text-sm block mb-1">3. Instalação Externa do UCSF Chimera</span>
+                        <p class="text-xs text-slate-500 mb-3">Obrigatório para rotinas silenciosas de limpeza proteica e tratamento de cofactores. Obtenha a versão estável (.bin) e execute:</p>
                         <pre class="bg-slate-900 text-slate-200 p-3 rounded text-xs overflow-x-auto"><code>chmod +x chimera.bin&#10;./chimera.bin</code></pre>
                     </div>
                 </div>
             </div>
 
             <div id="tab-install-ubuntu" class="tab-content space-y-6 hidden">
-                <h2 class="text-2xl font-bold text-brand-dark border-b pb-2"><i class="fab fa-ubuntu text-orange-600 mr-2"></i> Instalação Automatizada (Ubuntu 24.04)</h2>
-                <p class="text-slate-600 text-sm">Se você utiliza o ecossistema Ubuntu Linux, o projeto oferece uma infraestrutura de script bash para automatizar as etapas de download e provisionamento das ferramentas básicas.</p>
+                <h2 class="text-2xl font-bold text-brand-dark border-b pb-2"><i class="fab fa-ubuntu text-orange-600 mr-2"></i> Provisionamento Automatizado (Ubuntu 24.04)</h2>
+                <p class="text-slate-600 text-sm">Se o ambiente operacional for Ubuntu Linux, você poderá fazer o upload prévio dos binários para que o script <code class="bg-slate-100 px-1 rounded">install.sh</code> orquestre a instalação completa.</p>
                 
-                <div class="bg-slate-900 text-slate-200 p-5 rounded-xl border border-slate-800 space-y-4">
-                    <p class="text-xs text-slate-400"><strong>Estrutura de Diretórios Recomendada:</strong> Para que o instalador automatizado opere de maneira correta, alinhe os binários conforme a árvore abaixo:</p>
-                    <pre class="text-emerald-400 font-mono text-xs">
+                <div class="bg-slate-900 text-slate-200 p-5 rounded-xl border border-slate-800 space-y-3">
+                    <p class="text-xs font-bold text-emerald-400">Árvore de Diretórios Exigida para Automação:</p>
+                    <pre class="text-slate-300 font-mono text-xs">
 BioMolExplorer/
 ├── apps/
-│   ├── Anaconda-latest-Linux-x86_64.sh
-│   └── chimera.bin
+│   ├── Anaconda-latest-Linux-x86_64.sh  &lt;-- Renomear arquivo baixado
+│   └── chimera.bin                      &lt;-- Renomear arquivo baixado
 ├── environment.yml
 └── install.sh</pre>
                 </div>
 
                 <div class="bg-white p-5 rounded-lg border border-slate-200">
-                    <span class="font-bold text-slate-700 text-sm block mb-2">Execução do Instalador:</span>
+                    <span class="font-bold text-slate-700 text-sm block mb-2">Comandos de Execução do Instalador:</span>
                     <pre class="bg-slate-900 text-slate-200 p-3 rounded text-xs overflow-x-auto"><code>chmod +x install.sh&#10;./install.sh</code></pre>
                 </div>
             </div>
 
-            <div id="tab-use-pdb" class="tab-content space-y-6 hidden">
-                <h2 class="text-2xl font-bold text-brand-dark border-b pb-2"><i class="fa-solid fa-dna text-brand-emerald mr-2"></i> Módulo de Download e Filtro do PDB</h2>
-                <p class="text-slate-600 text-sm">A função <code class="text-brand-emerald">load_pdb</code> foi projetada para recuperar estruturas macromoleculares do Protein Data Bank utilizando restrições estritas de controle de qualidade.</p>
+            <div id="tab-config-vscode" class="tab-content space-y-6 hidden">
+                <h2 class="text-2xl font-bold text-brand-dark border-b pb-2"><i class="fa-solid fa-code text-blue-600 mr-2"></i> Configuração do Ambiente de Execução no VSCode</h2>
+                <p class="text-slate-600 text-sm">Para monitorar e rodar o pipeline interativamente de forma correta, alinhe o interpretador Python da IDE seguindo estes passos:</p>
                 
-                <div class="bg-white border rounded-lg overflow-hidden shadow-xs">
+                <div class="bg-white p-6 rounded-lg border border-slate-200 space-y-4 text-sm text-slate-600">
+                    <div class="flex items-start"><span class="bg-slate-100 text-slate-800 font-bold px-2 py-0.5 rounded mr-3 text-xs">1</span> <div>Instale o plugin oficial <strong>Python Extension</strong> diretamente pelo Marketplace de Extensões do VSCode.</div></div>
+                    <div class="flex items-start"><span class="bg-slate-100 text-slate-800 font-bold px-2 py-0.5 rounded mr-3 text-xs">2</span> <div>Abra a pasta raiz do projeto <code class="bg-slate-50 px-1 rounded">BioMolExplorer/</code> no ambiente de trabalho.</div></div>
+                    <div class="flex items-start"><span class="bg-slate-100 text-slate-800 font-bold px-2 py-0.5 rounded mr-3 text-xs">3</span> <div>Abra a Paleta de Comandos usando o atalho <kbd class="bg-slate-100 border px-1.5 py-0.5 rounded shadow-xs text-xs">Ctrl + Shift + P</kbd>.</div></div>
+                    <div class="flex items-start"><span class="bg-slate-100 text-slate-800 font-bold px-2 py-0.5 rounded mr-3 text-xs">4</span> <div>Busque por <strong class="text-brand-dark">"Python: Select Interpreter"</strong>, localize e selecione a entrada correspondente ao ambiente Conda criado (BioMolExplorer).</div></div>
+                </div>
+            </div>
+
+            <div id="tab-use-pdb" class="tab-content space-y-6 hidden">
+                <h2 class="text-2xl font-bold text-brand-dark border-b pb-2"><i class="fa-solid fa-dna text-brand-emerald mr-2"></i> Módulo de Download e Filtro de Estruturas Proteicas (PDB)</h2>
+                <p class="text-slate-600 text-sm">O script <code class="text-slate-800 font-bold">11-pdb.py</code> realiza consultas automatizadas ao RCSB Protein Data Bank com base em parâmetros rígidos de qualidade estrutural.</p>
+                
+                <div class="bg-white border rounded-lg overflow-hidden shadow-sm">
                     <div class="bg-slate-800 p-3 text-slate-400 text-xs font-mono">workflow/InformationRetrieval/11-pdb.py</div>
                     <pre class="bg-slate-950 text-slate-200 p-4 text-xs overflow-x-auto"><code>from src.core.retrieval import load_pdb, PolymerEntityType, ExperimentalMethod
 
@@ -198,29 +226,32 @@ load_pdb(
 )</code></pre>
                 </div>
 
-                <div class="bg-slate-100 p-4 rounded-lg border border-slate-200">
-                    <h4 class="text-xs font-bold text-slate-700 uppercase mb-2">Parâmetros Explicados:</h4>
+                <div class="bg-white p-5 rounded-lg border border-slate-200">
+                    <h4 class="text-sm font-bold text-slate-700 uppercase mb-3">Detalhamento Técnico dos Parâmetros:</h4>
                     <table class="w-full text-xs text-left bg-white rounded border border-slate-200">
                         <thead>
                             <tr class="bg-slate-50 text-slate-600 border-b">
-                                <th class="p-2.5 font-semibold">Parâmetro</th>
-                                <th class="p-2.5 font-semibold">Definição Técnica</th>
+                                <th class="p-3 font-semibold">Parâmetro</th>
+                                <th class="p-3 font-semibold">Definição Técnica e Impacto no Filtro</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y text-slate-600">
-                            <tr><td class="p-2.5 font-mono text-emerald-600 font-bold">pdb_ec</td><td class="p-2.5">Número EC (Enzyme Commission) para rastrear reações catalíticas alvo. Ex: '1.4.3.1'</td></tr>
-                            <tr><td class="p-2.5 font-mono text-emerald-600 font-bold">max_resolution</td><td class="p-2.5">Filtro de Resolução em Ångströms (valores menores implicam maior qualidade).</td></tr>
-                            <tr><td class="p-2.5 font-mono text-emerald-600 font-bold">must_have_ligand</td><td class="p-2.5">Se True, ignora estruturas apoproteicas (sem ligantes complexados).</td></tr>
+                            <tr><td class="p-3 font-mono text-emerald-600 font-bold">target</td><td class="p-3">Nome da pasta de saída que será gerada no diretório raiz configurado. Ex: <code class="bg-slate-50 text-red-600 px-1 rounded">/datasets/Monoamine Oxidase B/</code></td></tr>
+                            <tr><td class="p-3 font-mono text-emerald-600 font-bold">pdb_ec</td><td class="p-3">Número Enzyme Commission. Mapeia estritamente classes enzimáticas pelas reações catalisadas. (Ex: '1.4.3.1')</td></tr>
+                            <tr><td class="p-3 font-mono text-emerald-600 font-bold">PolymerEntityTypeID</td><td class="p-3">Tipo da macromacromolécula biológica alvo. Suporta <code class="bg-slate-100 px-1">PROTEIN</code>, <code class="bg-slate-100 px-1">DNA</code>, ou <code class="bg-slate-100 px-1">RNA</code>.</td></tr>
+                            <tr><td class="p-3 font-mono text-emerald-600 font-bold">ExperimentalMethodID</td><td class="p-3">Técnica experimental aceita para resolução estrutural. Métodos válidos: <code class="bg-slate-100 px-1">X_RAY_DIFFRACTION</code>, <code class="bg-slate-100 px-1">NMR</code>, <code class="bg-slate-100 px-1">CRYO_EM</code>.</td></tr>
+                            <tr><td class="p-3 font-mono text-emerald-600 font-bold">max_resolution</td><td class="p-3">Teto limite de Resolução em Ångströms (Å). Valores mais baixos garantem densidades eletrônicas e posições atômicas mais precisas.</td></tr>
+                            <tr><td class="p-3 font-mono text-emerald-600 font-bold">must_have_ligand</td><td class="p-3">Filtro booleano. Se <code class="bg-slate-100 font-bold">True</code>, rejeita automaticamente apoproteínas (estruturas desprovidas de ligantes complexados).</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
             <div id="tab-use-chembl" class="tab-content space-y-6 hidden">
-                <h2 class="text-2xl font-bold text-brand-dark border-b pb-2"><i class="fa-solid fa-vial text-brand-emerald mr-2"></i> Módulo de Extração de Bioatividades (ChEMBL)</h2>
-                <p class="text-slate-600 text-sm">O pipeline do ChEMBL consome crawlers nativos localizados em <code class="bg-slate-100 px-1 rounded">src/scripts/crawlers</code> para raspar alvos biológicos, bioatividades (<math>IC_{50}</math>, <math>K_i</math>) e propriedades de pequenas moléculas.</p>
+                <h2 class="text-2xl font-bold text-brand-dark border-b pb-2"><i class="fa-solid fa-vial text-brand-emerald mr-2"></i> Módulo Crawler de Bioatividades (ChEMBL)</h2>
+                <p class="text-slate-600 text-sm">O módulo <code class="text-slate-800 font-bold">12-chembl.py</code> invoca crawlers em background localizados em <code class="bg-slate-100 px-1 rounded">src/scripts/crawlers</code> para minerar dados farmacológicos quantitativos.</p>
 
-                <div class="bg-white border rounded-lg overflow-hidden shadow-xs">
+                <div class="bg-white border rounded-lg overflow-hidden shadow-sm">
                     <div class="bg-slate-800 p-3 text-slate-400 text-xs font-mono">workflow/InformationRetrieval/12-chembl.py</div>
                     <pre class="bg-slate-950 text-slate-200 p-4 text-xs overflow-x-auto"><code>from src.scripts.crawlers import load_chembl
 
@@ -230,34 +261,49 @@ load_chembl(
 )</code></pre>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                    <div class="bg-white p-4 rounded-lg border border-slate-200">
-                        <span class="font-bold text-slate-700 block mb-2"><i class="fa-solid fa-filter mr-1 text-slate-400"></i> Filtro de Alvo Padrão (JSON)</span>
-                        <pre class="bg-slate-50 p-2.5 rounded text-slate-600 font-mono">
+                <div class="bg-slate-100 p-4 rounded-lg border">
+                    <h3 class="text-sm font-bold text-slate-800 mb-3"><i class="fa-solid fa-filter text-slate-500 mr-1"></i> Filtros Internos do Crawler Embutido</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-white p-4 rounded border shadow-xs">
+                            <span class="text-xs font-bold text-brand-emerald block mb-1">Filtro 1: Alvo Terapêutico (Target JSON)</span>
+                            <pre class="text-slate-600 font-mono text-xs bg-slate-50 p-2 rounded">
 {
   "organism": "Homo sapiens",
   "type__in": ["SINGLE PROTEIN"],
   "relationship_type": "DIRECT"
 }</pre>
-                    </div>
-                    <div class="bg-white p-4 rounded-lg border border-slate-200">
-                        <span class="font-bold text-slate-700 block mb-2"><i class="fa-solid fa-filter mr-1 text-slate-400"></i> Restrição de Bioatividade</span>
-                        <pre class="bg-slate-50 p-2.5 rounded text-slate-600 font-mono">
+                            <span class="text-[11px] text-slate-500 block mt-2">Garante a seleção exclusiva de proteínas isoladas humanas associadas diretamente à pesquisa.</span>
+                        </div>
+                        <div class="bg-white p-4 rounded border shadow-xs">
+                            <span class="text-xs font-bold text-brand-emerald block mb-1">Filtro 2: Restrição de Ensaios Biológicos</span>
+                            <pre class="text-slate-600 font-mono text-xs bg-slate-50 p-2 rounded">
 {
   "standard_type__in": ["Ki", "IC50"],
   "molecule_type": "small molecule",
   "max_value_ref": 1000,
-  "standard_units": "nM"
+  "standard_units": "nM",
+  "natural_product": 0
 }</pre>
+                            <span class="text-[11px] text-slate-500 block mt-2">Filtra afinidades em nM (teto 1000) de pequenas moléculas sintéticas, excluindo produtos naturais (<code class="bg-slate-50 px-0.5">natural_product: 0</code>).</span>
+                        </div>
                     </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-lg border">
+                    <span class="text-xs font-bold text-slate-700 block mb-1">Estrutura de Busca para Compostos Similares (Matriz Expandida):</span>
+                    <p class="text-xs text-slate-600 mb-2">Os scripts auxiliares também expandem a busca para análogos estruturais através das regras de corte:</p>
+                    <div class="bg-slate-900 text-emerald-400 p-3 rounded font-mono text-xs">
+                        { "similarity": 60, "molecule_weight": 500 }
+                    </div>
+                    <span class="text-[11px] text-slate-500 mt-1 block">Filtra por limite de similaridade estrutural mínima de 60% e peso molecular máximo limitado a 500 Da (Regra de Lipinski).</span>
                 </div>
             </div>
 
             <div id="tab-use-zinc" class="tab-content space-y-6 hidden">
-                <h2 class="text-2xl font-bold text-brand-dark border-b pb-2"><i class="fa-solid fa-database text-brand-emerald mr-2"></i> Integração com ZINC Database</h2>
-                <p class="text-slate-600 text-sm">O ZINC é utilizado para download em massa de estruturas químicas 3D mapeadas por strings SMILES. É obrigatório coletar previamente o arquivo de mapeamento de URIs diretamente no portal do ZINC.</p>
+                <h2 class="text-2xl font-bold text-brand-dark border-b pb-2"><i class="fa-solid fa-database text-brand-emerald mr-2"></i> Integração e Importação em Lote via ZINC Database</h2>
+                <p class="text-slate-600 text-sm">Destinado ao download massivo de estruturas químicas tridimensionais (strings SMILES). Diferente dos demais módulos, esta etapa requer uma ação manual preparatória.</p>
 
-                <div class="bg-white border rounded-lg overflow-hidden shadow-xs">
+                <div class="bg-white border rounded-lg overflow-hidden shadow-sm">
                     <div class="bg-slate-800 p-3 text-slate-400 text-xs font-mono">workflow/InformationRetrieval/13-zinc.py</div>
                     <pre class="bg-slate-950 text-slate-200 p-4 text-xs overflow-x-auto"><code>from src.core.retrieval import load_zinc
 
@@ -268,20 +314,25 @@ load_zinc(
 )</code></pre>
                 </div>
 
-                <div class="bg-amber-50 text-amber-900 border border-amber-200 rounded-lg p-4 text-xs flex items-start">
-                    <i class="fa-solid fa-triangle-exclamation text-amber-600 text-base mr-3 mt-0.5"></i>
-                    <div>
-                        <strong>Aviso Importante:</strong> Certifique-se de salvar o arquivo <code class="bg-amber-100 px-1 rounded">ZINC2D.uri</code> no mesmo caminho parametrizado em <code class="bg-amber-100 px-1 rounded">base_output_path</code> antes de submeter a execução ao terminal Linux.
+                <div class="bg-amber-50 text-amber-900 border border-amber-200 rounded-lg p-4 text-xs space-y-2">
+                    <div class="flex items-center font-bold text-amber-800 text-sm">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-600 text-base mr-2"></i>
+                        Diretrizes de Execução Obrigatórias (Protocolo ZINC)
                     </div>
+                    <ol class="list-decimal pl-4 space-y-1 text-slate-700">
+                        <li>Acesse o portal oficial do ZINC e baixe o arquivo de mapeamento contendo os URIs desejados em formato 2D/3D.</li>
+                        <li>Salve este arquivo com o nome exato definido no parâmetro (ex: <code class="bg-amber-100 font-mono text-red-700 px-1 rounded">ZINC2D.uri</code>).</li>
+                        <li>Insira o arquivo **dentro** da pasta definida na variável <code class="bg-amber-100 font-mono px-1 rounded">base_output_path</code> antes de rodar o script no terminal.</li>
+                    </ol>
                 </div>
             </div>
 
-            <div id="tab-use-analysis" class="tab-content space-y-6 hidden">
-                <h2 class="text-2xl font-bold text-brand-dark border-b pb-2"><i class="fa-solid fa-calculator text-brand-emerald mr-2"></i> Pipeline de Análise e Redocking</h2>
-                <p class="text-slate-600 text-sm">A etapa final de análise consiste na geração de descritores e na execução em background do motor AutoDock Vina utilizando o UCSF Chimera.</p>
+            <div id="tab-use-redocking" class="tab-content space-y-6 hidden">
+                <h2 class="text-2xl font-bold text-brand-dark border-b pb-2"><i class="fa-solid fa-arrows-spin text-brand-emerald mr-2"></i> Curação de Estruturas: Pipeline de Redocking Automático</h2>
+                <p class="text-slate-600 text-sm">Para certificar o alinhamento cristalográfico, o script <code class="text-slate-800 font-bold">21-redocking.py</code> limpa as estruturas nativas via UCSF Chimera e calcula o desvio quadrático médio (RMSD) através do AutoDock Vina.</p>
 
-                <div class="bg-white border rounded-lg overflow-hidden shadow-xs">
-                    <div class="bg-slate-800 p-3 text-slate-400 text-xs font-mono">workflow/Analysis/21-redocking.py (Curação Estrutural)</div>
+                <div class="bg-white border rounded-lg overflow-hidden shadow-sm">
+                    <div class="bg-slate-800 p-3 text-slate-400 text-xs font-mono">workflow/Analysis/21-redocking.py</div>
                     <pre class="bg-slate-950 text-slate-200 p-4 text-xs overflow-x-auto"><code>from src.core.analysis import perform_redocking
 
 perform_redocking(
@@ -293,27 +344,122 @@ perform_redocking(
 )</code></pre>
                 </div>
 
-                <div class="bg-white border rounded-lg overflow-hidden shadow-xs">
-                    <div class="bg-slate-800 p-3 text-slate-400 text-xs font-mono">workflow/Analysis/22-dataAnalysis.py (Fingerprints & Redes)</div>
-                    <pre class="bg-slate-950 text-slate-200 p-4 text-xs overflow-x-auto"><code>from src.core.math import generate_fingerprints, compute_similarity, analyze_graphs
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+                    <div class="bg-white p-5 rounded-lg border">
+                        <span class="font-bold text-slate-700 block mb-2"><i class="fa-solid fa-gears mr-1 text-slate-400"></i> Fluxo de Preparação (<code class="text-red-600">prepare_complex=True</code>)</span>
+                        <p class="text-slate-600 leading-relaxed mb-2">O pipeline gera em background uma pasta chamada <code class="bg-slate-50 px-1 font-mono rounded">Prepared/</code> e executa um script bash dinâmico no terminal do Chimera para expurgar moléculas indesejadas:</p>
+                        <pre class="bg-slate-900 text-slate-200 p-3 rounded font-mono">
+open {input_complex}.pdb
+delete solvent
+delete element.H
+select #0:.{chain} | :FAD
+select invert
+delete selected
+write format pdb #0 {output_complex}.complex.pdb
+close session</pre>
+                    </div>
 
-# 1. Geração de Fingerprints Multi-parâmetro
-generate_fingerprints(base_input_path='/datasets/ChEMBL/DrugBank', morgan=True, maccs=True, pharmacophore=True)
-
-# 2. Matriz de Similaridade Baseada em Distância Tanimoto
-compute_similarity(base_input_path='/datasets/ChEMBL/.../Fingerprints', base_output_path='/datasets/ChEMBL/DrugBank', metric=similarityFunctions.TanimotoSimilarity)
-
-# 3. Modelagem de Grafos e Componentes Conectados
-analyze_graphs(base_input_path='/datasets/ChEMBL/DrugBank', base_output_path='/resultados/grafos', metric=similarityFunctions.TanimotoSimilarity)</code></pre>
+                    <div class="bg-white p-5 rounded-lg border space-y-3">
+                        <span class="font-bold text-slate-700 block"><i class="fa-solid fa-pen-to-square mr-1 text-slate-400"></i> Guia de Edição do Script Chimera</span>
+                        <p class="text-slate-600 leading-relaxed">
+                            Para garantir a estabilidade do fluxo de background do software, recomenda-se alterar <strong>estritamente</strong> a linha de seleção de cofatores químicos. Mantendo todos os outros comandos estáticos.
+                        </p>
+                        <div class="bg-slate-50 p-3 rounded border font-mono">
+                            <span class="text-blue-600 font-bold">Incluir Cofator (Ex: FAD):</span><br>
+                            select #0:.{chain} | :FAD<br><br>
+                            <span class="text-red-600 font-bold">Ignorar / Excluir Cofatores:</span><br>
+                            select #0:.{chain}
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div id="tab-citation" class="tab-content space-y-4 hidden">
+            <div id="tab-use-analysis" class="tab-content space-y-6 hidden">
+                <h2 class="text-2xl font-bold text-brand-dark border-b pb-2"><i class="fa-solid fa-calculator text-brand-emerald mr-2"></i> Processamento Estatístico, Fingerprints e Análise de Redes</h2>
+                <p class="text-slate-600 text-sm">O módulo <code class="text-slate-800 font-bold">22-dataAnalysis.py</code> processa as matrizes de similaridade química e agrupa os compostos por assinatura de afinidade molecular.</p>
+
+                <div class="bg-white border rounded-lg overflow-hidden shadow-sm">
+                    <div class="bg-slate-800 p-3 text-slate-400 text-xs font-mono">workflow/Analysis/22-dataAnalysis.py</div>
+                    <pre class="bg-slate-950 text-slate-200 p-4 text-xs overflow-x-auto"><code>from src.core.math import generate_fingerprints, compute_similarity, analyze_graphs
+
+# Passo 1: Geração Simultânea de Descritores de Assinatura Química
+generate_fingerprints(base_input_path='/datasets/ChEMBL/DrugBank', morgan=True, maccs=True, pharmacophore=True)
+
+# Passo 2: Cálculo de Matriz Multiparâmetro via Distância de Tanimoto
+compute_similarity(
+    base_input_path='/datasets/ChEMBL/DrugBank/Fingerprints',
+    base_output_path='/datasets/ChEMBL/DrugBank',
+    metric=similarityFunctions.TanimotoSimilarity,
+    fingerprint=fingerprints.Morgan
+)
+
+# Passo 3: Modelagem Macroscópica de Grafos e Componentes Conectadas
+analyze_graphs(
+    base_input_path='/datasets/ChEMBL/DrugBank',
+    base_output_path='/resultados/grafos',
+    metric=similarityFunctions.TanimotoSimilarity,
+    fingerprint=fingerprints.Morgan
+)</code></pre>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                    <div class="bg-white p-4 rounded-lg border">
+                        <span class="font-bold text-brand-dark block mb-2">Fase 1: Descritores</span>
+                        <p class="text-slate-600">Converte dados tabulares em vetores matemáticos binários estruturados. Gera matrizes de <strong>Morgan</strong> (circulares), <strong>MACCS keys</strong> (chaves de fragmento fixas) e <strong>Pharmacophore</strong> simultaneamente.</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg border">
+                        <span class="font-bold text-brand-dark block mb-2">Fase 2: Similaridade</span>
+                        <p class="text-slate-600">Aplica funções lineares baseadas na métrica de <strong>Coeficiente de Tanimoto</strong> para comparar a similaridade de pares de fingerprints, salvando as referências em uma subpasta dedicada.</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg border">
+                        <span class="font-bold text-brand-dark block mb-2">Fase 3: Grafos Metodológicos</span>
+                        <p class="text-slate-600">Estabelece cada composto como um nó e conexões baseadas em limiares mínimos. Filtra ruídos isolando a <strong>Componente Conectada Máxima</strong> para obter os núcleos de andaimes (scaffolds) moleculares.</p>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 text-slate-200 p-4 rounded-xl text-xs space-y-1">
+                    <span class="font-bold text-brand-lightEmerald block"><i class="fa-solid fa-play mr-1"></i> Como Executar Qualquer Script do Pipeline no Linux</span>
+                    <p class="text-slate-400">1. Alinhe os parâmetros desejados nos blocos internos das funções do arquivo script .py.</p>
+                    <p class="text-slate-400">2. Abra o terminal integrado, navegue até a pasta do arquivo e execute via linha de comando:</p>
+                    <pre class="text-emerald-400 font-mono mt-2 bg-slate-950 p-2 rounded">python nome_do_script.py</pre>
+                </div>
+            </div>
+
+            <div id="tab-citation" class="tab-content space-y-6 hidden">
                 <h2 class="text-2xl font-bold text-brand-dark border-b pb-2"><i class="fa-solid fa-quote-left text-brand-emerald mr-2"></i> Atribuição e Citação Acadêmica</h2>
-                <p class="text-slate-600 text-sm">Caso utilize os submódulos de mineração de dados ou redes complexas do BioMolExplorer, por favor referencie a publicação base conforme as diretrizes abaixo:</p>
+                <p class="text-slate-600 text-sm">Caso os módulos de recuperação de dados quimioinformáticos ou as modelagens de redes complexas geradas pelo BioMolExplorer auxiliem o desenvolvimento de sua pesquisa, por favor referencie a publicação base de dados oficial:</p>
                 
-                <div class="bg-white p-6 rounded-xl border border-slate-200 font-serif text-sm text-slate-700 leading-relaxed shadow-xs">
-                    Pires da Silva, M., Alves de Oliveira, T., Habib Bechelane Maia, E., Oliveira Mendes, G., Cristina Moreira Damázio, L., Brito Barbosa, D., Andrade Leite, F. H., Falkoski, L., Flores de Souza Marra, I., Siqueira Valle, M., Silva Matos Andrade, L., Čmelo, I., Fayne, D., Batista de Carvalho, P., Marques da Silva, A., & Gutterres Taranto, A. (2025). <em>Data-driven chemical domain for polypharmacology agents: Focus on Alzheimer’s disease</em>. Mendeley Data. <a href="https://doi.org/10.17632/5njg46dfj4.3" target="_blank" class="text-brand-emerald underline font-sans text-xs inline-block ml-1">https://doi.org/10.17632/5njg46dfj4.3</a>
+                <div class="bg-white p-6 rounded-xl border border-slate-200 font-serif text-sm text-slate-700 leading-relaxed shadow-sm space-y-3">
+                    <p>
+                        Pires da Silva, M., Alves de Oliveira, T., Habib Bechelane Maia, E., Oliveira Mendes, G., Cristina Moreira Damázio, L., Brito Barbosa, D., Andrade Leite, F. H., Falkoski, L., Flores de Souza Marra, I., Siqueira Valle, M., Silva Matos Andrade, L., Čmelo, I., Fayne, D., Batista de Carvalho, P., Marques da Silva, A., & Gutterres Taranto, A. (2025). <em>Data-driven chemical domain for polypharmacology agents: Focus on Alzheimer’s disease</em>. Mendeley Data. 
+                    </p>
+                    <a href="https://doi.org/10.17632/5njg46dfj4.3" target="_blank" class="text-brand-emerald font-bold underline font-sans text-xs inline-block"><i class="fa-solid fa-arrow-up-right-from-square mr-1"></i> Identificador Digital DOI (Acesso Direto)</a>
+                </div>
+
+                <div class="bg-slate-100 p-4 rounded border text-xs">
+                    <strong class="text-slate-700 block mb-1">Citação Embutida In-Text (Padrão APA):</strong>
+                    <span class="font-mono text-slate-600 bg-white px-2 py-1 rounded border inline-block">(Pires da Silva et al., 2025)</span>
+                </div>
+
+                <div class="border-t pt-6">
+                    <h3 class="text-lg font-bold text-brand-dark mb-4 text-center">Equipe de Desenvolvimento e Autores Core</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+                        <div class="bg-white p-4 rounded-lg border shadow-xs flex flex-col items-center">
+                            <div class="w-20 h-20 bg-slate-200 rounded-full mb-3 flex items-center justify-center text-slate-500 font-bold text-xl">MPS</div>
+                            <span class="font-bold text-slate-800 text-sm block">Michel Pires da Silva</span>
+                            <a href="http://lattes.cnpq.br/1449902596670082" target="_blank" class="text-xs text-brand-emerald underline mt-1"><i class="fa-solid fa-id-card mr-1"></i> Currículo Lattes</a>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg border shadow-xs flex flex-col items-center">
+                            <div class="w-20 h-20 bg-slate-200 rounded-full mb-3 flex items-center justify-center text-slate-500 font-bold text-xl">AMS</div>
+                            <span class="font-bold text-slate-800 text-sm block">Alisson Marques da Silva</span>
+                            <a href="http://lattes.cnpq.br/3856358583630209" target="_blank" class="text-xs text-brand-emerald underline mt-1"><i class="fa-solid fa-id-card mr-1"></i> Currículo Lattes</a>
+                        </div>
+                        <div class="bg-white p-4 rounded-lg border shadow-xs flex flex-col items-center">
+                            <div class="w-20 h-20 bg-slate-200 rounded-full mb-3 flex items-center justify-center text-slate-500 font-bold text-xl">AGT</div>
+                            <span class="font-bold text-slate-800 text-sm block">Alex Gutterres Taranto</span>
+                            <a href="http://lattes.cnpq.br/4759006674013596" target="_blank" class="text-xs text-brand-emerald underline mt-1"><i class="fa-solid fa-id-card mr-1"></i> Currículo Lattes</a>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -326,21 +472,21 @@ analyze_graphs(base_input_path='/datasets/ChEMBL/DrugBank', base_output_path='/r
 
     <script>
         function switchTab(tabId) {
-            // Esconde todo o conteúdo de abas
+            // Oculta todos os blocos de conteúdo
             const contents = document.querySelectorAll('.tab-content');
             contents.forEach(content => content.classList.add('hidden'));
 
-            // Remove o estado ativo de todos os botões da barra lateral
+            // Remove o estado visual ativo dos botões da sidebar
             const links = document.querySelectorAll('.sidebar-link');
             links.forEach(link => link.classList.remove('active'));
 
-            // Mostra o painel selecionado pelo usuário
+            // Exibe a aba atual clicada pelo usuário
             document.getElementById(`tab-${tabId}`).classList.remove('hidden');
 
-            // Aplica a classe de ativação visual ao botão clicado
+            // Aplica realce visual no link selecionado
             document.getElementById(`btn-${tabId}`).classList.add('active');
 
-            // Garante o retorno do scroll para o topo do documento
+            // Retorna o foco de rolagem para o topo do documento
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     </script>

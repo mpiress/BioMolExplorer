@@ -29,24 +29,14 @@ if __name__ == "__main__":
 
     #----------------------------------------------------------------------------------------------
     # Example 1: Retrival information from ChEMBL database for monoamine oxidase
-    # @param target_name: str = 'monoamine oxidase' - specific target name defined by ChEMBL
+    # @param search_term: str = specific target name defined by ChEMBL or ChEMBL_ID reference
     # @param base_output_path: str = '/datasets' - base path to save the output files
     # @obs: Filters to compose retrieval information from ChEMBL database are defined by the
     # scripts in the scripts folder located in the src > scripts > crawlers folder.
     #----------------------------------------------------------------------------------------------
-    load_chembl(target_name='monoamine oxidase',
+    load_chembl(search_term='CHEMBL1914',
                 base_output_path='/datasets') 
     
 
-    #----------------------------------------------------------------------------------------------
-    # Example 2: Retrival information from ChEMBL database for Amine oxidase [flavin-containing] B
-    # @param target_name: str = 'Amine oxidase [flavin-containing] B' - specific target name 
-    # defined by ChEMBL @param base_output_path: str = '/datasets' - base path to save the output 
-    # files @obs: Filters to compose retrieval information from ChEMBL database are defined by the
-    # scripts in the scripts folder located in the src > scripts > crawlers folder.
-    #----------------------------------------------------------------------------------------------
-    load_chembl(target_name='Amine oxidase [flavin-containing] B',
-                base_output_path='/datasets') 
-    
 
     
