@@ -34,7 +34,7 @@ if __name__ == "__main__":
     # @obs: Filters to compose retrieval information from ChEMBL database are defined by the
     # scripts in the scripts folder located in the src > scripts > crawlers folder.
     #----------------------------------------------------------------------------------------------
-    load_chembl(search_term='CHEMBL1914',
+    load_chembl(search_term='CHEMBL220',
                 base_output_path='/datasets') 
     
 

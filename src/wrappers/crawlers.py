@@ -71,7 +71,7 @@ def load_chembl(search_term:str, base_output_path:str):
         bioact.set_outputpath(bioactivity_output_path)
         bioact.set_targetpath(target_output_path)
         bioact.search(search_term, filters)
-
+        
         script_path = '/src/scripts/crawlers/molecules.json'
         filters = read_filters(script_path)
         mols.set_outputpath(molecule_output_path)
