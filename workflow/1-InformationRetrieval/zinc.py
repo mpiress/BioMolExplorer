@@ -1,6 +1,7 @@
 #----------------------------------------------------------------------------------------------
-import sys 
-sys.path.append("src")
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 #----------------------------------------------------------------------------------------------
 
 from kernel.header_builder import HeaderBuilder
@@ -10,7 +11,7 @@ __doc__ = HeaderBuilder.build(
     module_title="ADMET analysis",
 
     module_description=(
-    "Core functions for managing and extracting chemical " 
+    "Core functions for managing and extracting chemical "
     "information from the ZINC dataset"
 ),
 
@@ -19,17 +20,17 @@ __doc__ = HeaderBuilder.build(
 
 
 #----------------------------------------------------------------------------------------------
-from wrappers.crawlers import load_chembl, load_pdb, load_zinc
+from wrappers.crawlers import load_zinc
 #----------------------------------------------------------------------------------------------
 
 
 
 if __name__ == "__main__":
-    
+
 
     #----------------------------------------------------------------------------------------------
     # Example 1: Load ZINC database
-    # @param base_output_path: str = '/datasets' - base output path to save the data and find the 
+    # @param base_output_path: str = '/datasets' - base output path to save the data and find the
     #                                              URIs files
     # @param zinc2d: bool  = False - if True, download 2D structures if URI is available
     # @param zinc3d: bool  = True  - if True, download 3D structures if URI is available
@@ -37,8 +38,4 @@ if __name__ == "__main__":
     #----------------------------------------------------------------------------------------------
     load_zinc(base_output_path='/datasets/ZINC',
               filename='ZINC2D.uri',
-              verbose=True) 
-    
-    
-    
-   
+              verbose=True)

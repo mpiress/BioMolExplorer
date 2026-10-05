@@ -1,6 +1,7 @@
 #----------------------------------------------------------------------------------------------
-import sys 
-sys.path.append("src")
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 #----------------------------------------------------------------------------------------------
 
 #----------------------------------------------------------------------------------------------
@@ -11,7 +12,7 @@ __doc__ = HeaderBuilder.build(
     module_title="ADMET analysis",
 
     module_description=(
-    "Main functions for managing and integrating data " 
+    "Main functions for managing and integrating data "
     "analysis available in the src/caad directory"
 ),
 
@@ -27,7 +28,7 @@ from wrappers.molecular_analyzer import generate_fingerprints
 
 
 if __name__ == "__main__":
-    
+
     #----------------------------------------------------------------------------------------------
     # PREPARE FINGERPRINTS FOR EACH MOL AND SIM FILES AVAILABLE IN THE DRUGBANK FOLDER.
     # @param base_input_path: The path to the folder containing the MOL and SIM files.
@@ -40,8 +41,8 @@ if __name__ == "__main__":
                           files=['CHEMBL1914_FULL_BBB+.csv'],
                           morgan=True, maccs=True, pharmacophore=True
     )
-    
-    
+
+
     #----------------------------------------------------------------------------------------------
     # COMPUTE THE SIMILARITY BETWEEN THE MOLECULES BASED ON THE FINGERPRINTS GENERATED.
     # @param base_input_path: The path to the folder containing the fingerprints.
@@ -52,9 +53,9 @@ if __name__ == "__main__":
     compute_similarity(base_input_path='/datasets/ChEMBL/DrugBank/ADMET/Fingerprints',
                        base_output_path='/datasets/ChEMBL/DrugBank/ADMET',
                        metric=similarityFunctions.TanimotoSimilarity,
-                       fingerprint=fingerprints.Morgan                  
+                       fingerprint=fingerprints.Morgan
     )
-    
+
     #----------------------------------------------------------------------------------------------
     # COMPUTE THE RELATIONSHIP BETWEEN THE MOLECULES BASED ON THE SIMILARITY VALUES COMPUTED. THE GRAPH
     # REPRESENTATION IS USED TO IDENTIFY RELEVANT CHARACTERISTICS IN MOLECULES AND ANALOGS STRUCTURES.
@@ -64,9 +65,8 @@ if __name__ == "__main__":
     # @param fingerprint: The fingerprint to be considered in this step (Morgan, MACCS, and Pharmacophore).
     #----------------------------------------------------------------------------------------------
     analyze_graphs(base_input_path='/datasets/ChEMBL/DrugBank/ADMET',
-                    base_output_path='/resultados/grafos',
+                    base_output_path='/datasets/ChEMBL/DrugBank/ADMET/Graphs',
                     metric=similarityFunctions.TanimotoSimilarity,
                     fingerprint=fingerprints.Morgan
     )
-    
-    
+

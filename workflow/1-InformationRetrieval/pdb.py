@@ -1,6 +1,7 @@
 #----------------------------------------------------------------------------------------------
-import sys 
-sys.path.append("src")
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 #----------------------------------------------------------------------------------------------
 
 #----------------------------------------------------------------------------------------------
@@ -11,7 +12,7 @@ __doc__ = HeaderBuilder.build(
     module_title="ADMET analysis",
 
     module_description=(
-    "Core functions for managing and extracting chemical " 
+    "Core functions for managing and extracting chemical "
     "information from the PDB dataset"
 ),
 
@@ -27,7 +28,7 @@ from crawlers.complex import PolymerEntityType, ExperimentalMethod
 
 
 if __name__ == "__main__":
-    
+
 
     #----------------------------------------------------------------------------------------------
     #EXAMPLE 1: Load PDBs for the target Acetylcholinesterase
@@ -43,11 +44,11 @@ if __name__ == "__main__":
     # @param must_have_ligand: If the structure must have a ligand as part of the complex
     # @obs: The parameters are flexible and can be adjusted according to the research needs.
     #----------------------------------------------------------------------------------------------
-    load_pdb(target='Butyrylcholinesterase', 
-             base_output_path='/datasets', 
+    load_pdb(target='Butyrylcholinesterase',
+             base_output_path='/datasets',
              pdb_ec='3.1.1.8',
              PolymerEntityTypeID=[PolymerEntityType.PROTEIN],
              ExperimentalMethodID=[ExperimentalMethod.X_RAY_DIFFRACTION],
              max_resolution=2.0, must_have_ligand=True)
-    
-    
+
+

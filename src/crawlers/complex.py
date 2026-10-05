@@ -1,3 +1,4 @@
+from biomolexplorer.paths import directory, resolve_path, worker_count
 from kernel.header_builder import HeaderBuilder
 
 __doc__ = HeaderBuilder.build(
@@ -50,13 +51,13 @@ class ExperimentalMethod(Enum):
     SOLUTION_SCATTERING = "SOLUTION SCATTERING"
     THEORETICAL_MODEL = "THEORETICAL MODEL"
     X_RAY_DIFFRACTION = "X-RAY DIFFRACTION"
-        
+
 
 
 class PDBComplex():
 
     def __init__(self, output_path=None):
-        self.__path = str(Path.cwd()) 
+        self.__path = str(Path.cwd())
         self.set_outputpath(output_path) if output_path != None else None
         self.logger = LoggerManager.get_logger(self.__class__.__name__, log_file='logs/complex.log')
 
@@ -64,13 +65,13 @@ class PDBComplex():
 
     def set_outputpath(self, output_path:str):
         self.__outputpath = output_path
-        if not os.path.exists(self.__path + self.__outputpath):
-            os.makedirs(self.__path + self.__outputpath, exist_ok=True)
-            
+        if not os.path.exists(directory(self.__outputpath)):
+            os.makedirs(directory(self.__outputpath), exist_ok=True)
+
 
 
     def get_pdb_ids_with_filters(self, filter_params:dict) -> list:
-        
+
         try:
 
             queries = []
@@ -95,28 +96,29 @@ class PDBComplex():
                 queries.append(AttributeQuery("rcsb_entry_info.resolution_combined", "less_or_equal", filter_params['max_resolution'], STRUCTURE_ATTRIBUTE_SEARCH_SERVICE))
             if 'must_have_ligand' in filter_params and filter_params['must_have_ligand']:
                 queries.append(AttributeQuery("rcsb_entry_info.nonpolymer_entity_count", "greater", 0, STRUCTURE_ATTRIBUTE_SEARCH_SERVICE))
-                
+
             if queries:
                 combined_query = queries[0]
                 for query in queries[1:]:
-                    combined_query &= query  
-                
+                    combined_query &= query
+
                 results = list(combined_query())
-                
+
                 return results
             else:
                 return None
-        
+
         except Exception as e:
             self.logger.error(f'Error during to perform {filter_params['ec_target']} in get_pdb_ids_with_filters function', exc_info=True)
-    
+            raise
+
 
     def __identify_ligands(self, pdb_file):
-        
+
         try:
             parser = PDBParser(QUIET=True)
             structure = parser.get_structure('structure', pdb_file)
-            
+
             resolution = structure.header.get('resolution', None)
 
             ligands = []
@@ -127,30 +129,30 @@ class PDBComplex():
                             continue
                         if residue.id[0] != ' ' and residue.resname != 'HOH':
                             ligands.append((residue.resname, residue.id[1], chain.id))
-            
+
             return set(ligands), resolution
-        
+
         except Exception as e:
             return None
-    
+
 
     def get_pdb_files(self, filters:dict):
-        
+
         try:
 
             pdb_crawler = PDBList()
             pdb_codes = self.get_pdb_ids_with_filters(filters)
 
             if pdb_codes:
-                
-                pdb_crawler.download_pdb_files(pdb_codes, pdir=self.__path + self.__outputpath, file_format='pdb', overwrite=True, max_num_threads=os.cpu_count()-1)
 
-                datain  = [self.__outputpath[1:]+'pdb'+code.lower()+'.ent' for code in pdb_codes]
-                dataout = [self.__outputpath[1:]+code+'.pdb' for code in pdb_codes]
+                pdb_crawler.download_pdb_files(pdb_codes, pdir=directory(self.__outputpath), file_format='pdb', overwrite=True, max_num_threads=worker_count())
+
+                datain  = [directory(self.__outputpath)+'pdb'+code.lower()+'.ent' for code in pdb_codes]
+                dataout = [directory(self.__outputpath)+code+'.pdb' for code in pdb_codes]
                 codes   = {}
 
-                for input, output, idx in zip(datain, dataout, pdb_codes): 
-                    
+                for input, output, idx in zip(datain, dataout, pdb_codes):
+
                     if not os.path.exists(input):
                         continue
 
@@ -159,32 +161,34 @@ class PDBComplex():
                             for linha in entrada:
                                 if not linha.startswith(('LINK', 'SSBOND')):
                                     saida.write(linha)
-                        
+
                         os.remove(input)
-                        tmp = self.__identify_ligands(output) 
+                        tmp = self.__identify_ligands(output)
                         if tmp != None:
                             codes[idx] = tmp
-                    
+
                     except Exception as e:
                         self.logger.error(f"[ERROR]: Erro ao processar o arquivo {idx}: {e}", exc_info=True)
-                     
-                with open(self.__outputpath[1:] + 'pdb_codes.csv', 'w') as fp:
+                        raise
+
+                with open(directory(self.__outputpath) + 'pdb_codes.csv', 'w') as fp:
                     fp.write('PDB_CODE,LIGAND,RESNUM,CHAIN,RESOLUTION\n')
                     for code in codes.keys():
                         resolution = codes[code][1]
                         for lig in codes[code][0]:
                             fp.write(f'{code},{lig[0]},{lig[1]},{lig[2]},{resolution}\n')
-                        
-                    
-                    
+
+
+
                 print('[INFO]: ATTENTION: If you need to use DOCK6 functions, you must resolve the non-existent loops in the complexes before!')
 
             else:
                 print('[INFO]: ATTENTION: Filter combination is not valid, refactore and execute again!')
-         
-            
+
+
         except Exception as e:
             self.logger.error(f'Error during to perform the get_pdb_files function', exc_info=True)
+            raise
 
-    
+
 

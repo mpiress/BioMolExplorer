@@ -1,3 +1,4 @@
+from biomolexplorer.paths import directory
 from kernel.header_builder import HeaderBuilder
 
 __doc__ = HeaderBuilder.build(
@@ -30,7 +31,7 @@ from kernel.loggers import LoggerManager
 
 class MoleculeEvaluator:
     """Responsável por calcular propriedades e aplicar filtros em moléculas (SMILES)."""
-    
+
     MUTAGENIC_SMARTS = ['[N+](=O)[O-]', 'N=N', '[CX3](=O)[Cl]', '[SH]', '[C,c]Br', '[C,c]I']
     TUMORIGENIC_SMARTS = ['[N+](=O)[O-]', 'C=C=O', '[Cl][C]=O', '[C,c]Cl', '[C,c]Br']
 
@@ -39,13 +40,13 @@ class MoleculeEvaluator:
         params = FilterCatalogParams()
         params.AddCatalog(FilterCatalogParams.FilterCatalogs.PAINS)
         self.pains_catalog = FilterCatalog(params)
-        
+
         # Compila os padrões SMARTS
         self.mutagenic_patterns = [Chem.MolFromSmarts(x) for x in self.MUTAGENIC_SMARTS]
         self.tumorigenic_patterns = [Chem.MolFromSmarts(x) for x in self.TUMORIGENIC_SMARTS]
 
         self.logger = LoggerManager.get_logger(self.__class__.__name__, log_file='logs/admet.log')
-        
+
 
     def calculate_properties(self, smiles):
 
@@ -62,9 +63,10 @@ class MoleculeEvaluator:
                 'HBA': Descriptors.NumHAcceptors(mol),
                 'RB': Descriptors.NumRotatableBonds(mol)
             }
-        
+
         except Exception as e:
             self.logger.error(f'Error during to perform the calculate_properties function', exc_info=True)
+            raise
 
 
     def is_toxic(self, mol):
@@ -77,9 +79,10 @@ class MoleculeEvaluator:
             if any(mol.HasSubstructMatch(patt) for patt in self.tumorigenic_patterns):
                 return True
             return False
-        
+
         except Exception as e:
             self.logger.error(f'Error during to perform the is_toxic function', exc_info=True)
+            raise
 
 
     def predict_pgp(self, mw, tpsa, logp, hbd):
@@ -98,17 +101,17 @@ class MoleculeEvaluator:
     def classify_hia(self, tpsa, logp):
         value = (((tpsa - 75) ** 2) / (75 ** 2)) + (((logp - 2.0) ** 2) / (3.0 ** 2))
         return "HIA+" if value <= 1 else "HIA-"
-    
+
 
 class BoiledEggPlotter:
-    
+
     @staticmethod
     def plot(df, output_path, output_image_file):
         logger = LoggerManager.get_logger(__class__.__name__, log_file='logs/admet.log')
-        
+
         try:
-            path =  str(Path.cwd()) + output_path + output_image_file
-            
+            path = directory(output_path) + output_image_file
+
             fig, ax = plt.subplots(figsize=(11, 8))
             ax.set_facecolor('#d9d9d9')
 
@@ -145,3 +148,4 @@ class BoiledEggPlotter:
 
         except Exception as e:
             logger.error(f'Error during to perform the plot function', exc_info=True)
+            raise

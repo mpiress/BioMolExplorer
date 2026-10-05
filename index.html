@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
         name="description"
-        content="BioMolExplorer is an integrated computational platform for molecular exploration and informatfion retrieval, specifically designed to support computer-aided drug discovery through molecular similarity analysis, virtual screening, and automated redocking validation workflows."
+        content="BioMolExplorer is an integrated computational platform for molecular exploration and information retrieval, specifically designed to support computer-aided drug discovery through molecular similarity analysis, virtual screening, and automated redocking validation workflows."
     />
 
-    <title>BioMolExplorer | Computational Molecular Intelligence Platform</title>
+    <title>BioMolExplorer | Molecular Exploration & Flexible Pipelines</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -99,7 +99,7 @@
 <body class="text-slate-800 antialiased">
 
     <header class="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-slate-950/70 backdrop-blur-lg">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex flex-wrap gap-4 items-center justify-between">
             <div class="flex items-center gap-4">
                 <img src="imgs/logo.png" alt="BioMolExplorer Logo" class="w-11 h-11 object-contain">
                 <div>
@@ -108,19 +108,19 @@
                 </div>
             </div>
 
-            <nav class="hidden lg:flex items-center gap-8 text-sm text-slate-300">
+            <nav aria-label="Main navigation" class="hidden lg:flex items-center gap-5 text-sm text-slate-300">
                 <a href="#overview" class="hover:text-white transition">Overview</a>
                 <a href="#capabilities" class="hover:text-white transition">Capabilities</a>
                 <a href="#workflow" class="hover:text-white transition">Workflow</a>
                 <a href="#installation" class="hover:text-white transition">Installation</a>
                 <a href="#analysis" class="hover:text-white transition">Analysis</a>
-                <a href="#citation" class="hover:text-white transition">Citation</a>
+                <a href="#documentation" class="hover:text-white transition">Documentation</a>
             </nav>
 
-            <a href="#installation"
-               class="hidden md:inline-flex items-center gap-2 bg-brand-primary hover:bg-emerald-400 transition text-slate-950 px-5 py-2.5 rounded-xl font-semibold shadow-glow">
+            <a href="docs/index.html"
+               class="inline-flex items-center gap-2 bg-brand-primary hover:bg-emerald-400 transition text-slate-950 px-5 py-2.5 rounded-xl font-semibold shadow-glow">
                 <i class="fa-solid fa-terminal"></i>
-                Get Started
+                Documentation
             </a>
         </div>
     </header>
@@ -145,10 +145,7 @@
                     </h1>
 
                     <p class="mt-8 text-lg text-slate-400 leading-relaxed max-w-3xl text-justify">
-                        BioMolExplorer is a robust and extensible computational framework designed to streamline 
-                        workflows for information retrieval, molecular similarity analysis, docking, redocking validation,
-                        graph-based molecular exploration, and ADMET evaluation, thereby supporting advanced computer-aided 
-                        drug design (CADD) and computational drug discovery initiatives.
+                        Retrieve molecular data, build the pipeline your study needs, and keep its inputs, settings and results together. BioMolExplorer combines a Flet workspace with Python services for similarity analysis, graph selection, ADMET screening, preparation, redocking and docking.
                     </p>
 
                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
@@ -170,7 +167,7 @@
 
                     <div class="w-full bg-slate-100 rounded-lg px-4 py-3 text-sm font-mono text-slate-900 border border-slate-200 flex items-center justify-start hover:bg-slate-200 transition duration-300 shadow-sm">
                         <i class="fa-solid fa-shield-halved text-brand-primary mr-3 text-base shrink-0"></i>
-                        <span>MIT Licensed</span>
+<span>Flet Workspace</span>
                     </div>
 
                 </div>
@@ -215,6 +212,14 @@
                                 <p class="text-sm text-slate-400 mt-2">Early-stage absorption, distribution, and toxicity profiling</p>
                             </div>
 
+                            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5">
+                                <div class="text-3xl font-black text-emerald-300">PubChem</div>
+                                <p class="text-sm text-slate-400 mt-2">Structural similarity expansion with cross-source deduplication</p>
+                            </div>
+                            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5">
+                                <div class="text-3xl font-black text-cyan-300">Workspace</div>
+                                <p class="text-sm text-slate-400 mt-2">Private projects, invitations and configurable pipelines</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -228,7 +233,7 @@
             <div class="max-w-4xl">
                 <span class="text-brand-primary font-semibold uppercase tracking-widest text-sm">Platform Overview</span>
                 <h2 class="section-title text-4xl font-black text-slate-900 mt-3">
-                    Enterprise-Grade Molecular Information Retrieval and Analysis
+                    Molecular Exploration, Organized Around Your Research
                 </h2>
             </div>
 
@@ -245,19 +250,14 @@
 
                     <p>
                         BioMolExplorer was designed to address these limitations through a flexible information retrieval
-                        architecture that integrates and standardizes datasets from PDB, ChEMBL, and ZINC. The platform 
+                        architecture that integrates and standardizes datasets from PDB, ChEMBL, PubChem, and ZINC. The platform
                         enables the automated generation of research-ready molecular datasets suitable for computational 
                         pharmacology, high-throughput virtual screening, network analysis, and comprehensive molecular similarity 
                         investigations.
                     </p>
 
                     <p>
-                        To ensure maximum precision, the framework incorporates an advanced structural curation layer that uses 
-                        a consensus docking approach integrating AutoDock Vina and Dock6. This method combines distinct algorithmic 
-                        scoring functions to deliver superior binding pose validation, minimize false positives, and evaluate protein-ligand 
-                        reproducibility. Furthermore, the system introduces an early-stage ADMET profiling pipeline that allows researchers 
-                        to automatically evaluate the absorption, distribution, metabolism, excretion, and toxicity parameters of extracted 
-                        compounds before committing to downstream analytical steps.
+                        The Flet workspace lets researchers create private projects, invite collaborators and connect scientific stages in the order required by their study. ChEMBL retrieval can be expanded with PubChem structural similarity while excluding duplicates. ADMET screening, graph selection, preparation, redocking and docking can be configured independently, with results and logs kept for each run. Scientific interpretations still require validation with study data.
                     </p>
                 </div>
 
@@ -334,7 +334,7 @@
             <div class="text-center max-w-4xl mx-auto">
                 <span class="text-brand-primary font-semibold uppercase tracking-widest text-sm">Core Capabilities</span>
                 <h2 class="text-4xl font-black text-slate-900 mt-3">
-                    Designed for Scalable Computational Drug Discovery
+                    Scientific Operations for Configurable Research Pipelines
                 </h2>
                 <p class="text-slate-600 mt-6 leading-relaxed">
                     BioMolExplorer combines automated retrieval pipelines, molecular fingerprinting, graph analysis,
@@ -351,7 +351,7 @@
 
                     <h3 class="text-xl font-bold text-slate-900 mb-4">Comprehensive Data Retrieval</h3>
                     <p class="text-slate-600 text-sm leading-relaxed text-justify">
-                        Automated extraction pipelines for PDB, ChEMBL, and ZINC repositories supporting large-scale
+                        Automated extraction pipelines for PDB, ChEMBL, PubChem, and ZINC repositories supporting
                         computational screening initiatives.
                     </p>
                 </div>
@@ -375,7 +375,7 @@
 
                     <h3 class="text-xl font-bold text-slate-900 mb-4">Fingerprint Generation</h3>
                     <p class="text-slate-600 text-sm leading-relaxed text-justify">
-                        Native support for Morgan, MACCS, and pharmacophore fingerprint generation workflows.
+                                Choose Morgan, MACCS, or pharmacophore per block. Similarity stages identify the algorithm from generated inputs automatically.
                     </p>
                 </div>
 
@@ -421,7 +421,7 @@
 
                     <h3 class="text-xl font-bold text-slate-900 mb-4">Consensus Docking</h3>
                     <p class="text-slate-600 text-sm leading-relaxed text-justify">
-                        Synergistic combination of AutoDock Vina and Dock6 engines to establish optimized cross-scoring metrics and improved binding pose ranking.
+                        Combination of AutoDock Vina and DOCK6 scores, with configurable repulsion weighting and exported consensus rankings.
                     </p>
                 </div>
 
@@ -432,11 +432,33 @@
 
                     <h3 class="text-xl font-bold text-slate-900 mb-4">ADMET Profiling</h3>
                     <p class="text-slate-600 text-sm leading-relaxed text-justify">
-                        Early-stage prediction of absorption, distribution, metabolism, excretion, and toxicity variables directly from compiled chemical domains.
+                        Molecular properties, heuristic absorption and distribution classifications, toxicity filters and exported screening subsets.
                     </p>
                 </div>
 
             </div>
+        </div>
+    </section>
+
+    <section id="workspace" class="py-24 bg-slate-50">
+        <div class="max-w-7xl mx-auto px-6">
+            <span class="text-emerald-700 font-semibold uppercase tracking-widest text-sm">Flet Workspace</span>
+            <h2 class="section-title text-4xl font-black text-slate-900 mt-3">Your project. Your pipeline. Your collaborators.</h2>
+            <p class="text-slate-600 mt-6 max-w-3xl leading-relaxed">Drag stages onto a visual canvas, connect their ports, and double-click each block to configure it. Guided forms handle filters and engine settings; advanced users can edit JSON and scientific templates. Start with a ready-made pipeline or bring your own data wherever the backend format allows.</p>
+            <div class="grid md:grid-cols-3 gap-6 mt-10">
+                <article class="bg-white border border-slate-200 rounded-3xl p-7"><h3 class="text-xl font-bold mb-3">Projects that travel with you</h3><p class="text-slate-600">Choose a folder for each project. Export and import its configuration, inputs, results and versions to continue on another computer while reusing compatible completed experiments.</p></article>
+                <article class="bg-white border border-slate-200 rounded-3xl p-7"><h3 class="text-xl font-bold mb-3">Collaborate with a shared history</h3><p class="text-slate-600">Invite editors or viewers from the project's Share button. Autosaved edits appear for collaborators, while an attributed change history lets owners restore configuration, files and results to an earlier state.</p></article>
+                <article class="bg-white border border-slate-200 rounded-3xl p-7"><h3 class="text-xl font-bold mb-3">Select the inputs your study needs</h3><p class="text-slate-600">Combine selected output files and validated uploads in each block. Explore paginated compound tables directly in your results, or filter interactive ADMET EGG plots by BBB and HIA classification. Click a point to open its molecular 2D structure and download the selected dataset or chart.</p></article>
+            </div>
+            <div class="grid md:grid-cols-3 gap-4 mt-8 text-sm">
+                <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 font-medium">Compound retrieval → ADMET</div>
+                <div class="bg-cyan-50 border border-cyan-200 rounded-2xl p-5 font-medium">Fingerprints → Similarity → Graph selection → ADMET</div>
+                <div class="bg-violet-50 border border-violet-200 rounded-2xl p-5 font-medium">Your prepared receptors + compounds → Vina → DOCK6 → Consensus</div>
+            </div>
+            <p class="text-slate-600 mt-6">Prepared receptors must include the metadata and files expected by the docking protocol. See the <a href="docs/en/frontend.html#using-your-own-files" class="text-emerald-700 underline font-semibold">input format guide</a>.</p>
+            <a href="docs/en/frontend.html" class="inline-flex mt-6 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-semibold">Explore the workspace guide →</a>
+            <a href="docs/en/projects.html" class="inline-flex mt-6 ml-3 border border-emerald-600 text-emerald-700 px-6 py-3 rounded-xl font-semibold">Projects, migration and versions →</a>
+            <a href="docs/pt/projects.html" lang="pt-BR" class="inline-flex mt-6 ml-3 text-emerald-700 underline font-semibold">Projetos e versões em português</a>
         </div>
     </section>
 
@@ -446,7 +468,7 @@
             <div class="max-w-4xl mb-16">
                 <span class="text-brand-primary font-semibold uppercase tracking-widest text-sm">Workflow Architecture</span>
                 <h2 class="section-title text-4xl font-black text-slate-900 mt-3">
-                    End-to-End Computational Pipeline
+                    Connect the Stages Your Study Needs
                 </h2>
             </div>
 
@@ -467,7 +489,7 @@
                     </h3>
 
                     <p class="text-slate-600 leading-relaxed text-justify">
-                        The BioMolExplorer framework integrates information retrieval, molecular fingerprint generation, similarity analysis, graph-based network modeling, consensus docking, and ADMET profiling into a unified computational pipeline for drug discovery and repositioning. Structural, chemical, and bioactivity data are collected from public repositories and processed through cheminformatics and network analysis workflows. The resulting candidates are subsequently evaluated using consensus docking and pharmacokinetic/toxicity prediction strategies, enabling multi-criteria prioritization of promising therapeutic compounds. The architecture is operationalized through a programmable workflow module composed of two major stages, Information Retrieval and Analysis, which orchestrate the execution and integration of all computational tasks defined in the framework. A dedicated curation layer ensures data quality, standardization, provenance tracking, and consistent integration throughout the entire workflow.
+                        The scientific modules remain organized into retrieval and analysis workflows. Above them, the Flet workspace manages accounts, project permissions, files and pipeline dependencies. Each scientific stage runs in a separate Python process, with its own configuration snapshot, outputs and logs. The diagram below the heading illustrates the scientific workflow; the <a href="docs/en/architecture.html" class="text-emerald-700 underline">architecture guide</a> documents the current application services and their limits.
                     </p>
                 </div>
             </div>
@@ -482,7 +504,7 @@
                             Retrieval Stage
                         </div>
 
-                        <h3 class="text-3xl font-black mb-4">workflow/InformationRetrieval</h3>
+                        <h3 class="text-3xl font-black mb-4">workflow/1-InformationRetrieval</h3>
 
                         <p class="text-slate-300 leading-relaxed mb-8">
                             Responsible for data extraction, normalization, and integration across molecular,
@@ -504,12 +526,12 @@
 
                             <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
                                 <div class="flex items-center justify-between">
-                                    <h4 class="font-bold text-emerald-400">chembl.py</h4>
-                                    <span class="text-xs text-slate-500">ChEMBL Crawlers</span>
+                                    <h4 class="font-bold text-emerald-400">retrieve_compounds.py</h4>
+                                    <span class="text-xs text-slate-500">Compound Retrieval</span>
                                 </div>
                                 <p class="text-sm text-slate-400 mt-3 leading-relaxed">
                                     Retrieves bioactivities, therapeutic targets, molecular entities,
-                                    and similarity-based compound relationships.
+                                    and expands the compound set with PubChem structural similars.
                                 </p>
                             </div>
 
@@ -536,7 +558,7 @@
                             Analysis Stage
                         </div>
 
-                        <h3 class="text-3xl font-black mb-4">workflow/Analysis</h3>
+                        <h3 class="text-3xl font-black mb-4">workflow/2-Analysis</h3>
 
                         <p class="text-slate-300 leading-relaxed mb-8">
                             Responsible for fingerprint generation, similarity modeling,
@@ -562,8 +584,8 @@
                                     <span class="text-xs text-slate-500">ADMET profiling</span>
                                 </div>
                                 <p class="text-sm text-slate-400 mt-3 leading-relaxed">
-                                    Early-stage prediction of absorption, distribution, metabolism,
-                                    excretion, and toxicity variables directly from compiled chemical domains.
+                                    Molecular property calculations, heuristic ADMET classifications,
+                                    toxicity filters and exported subsets for early screening.
                                 </p>
                             </div>
 
@@ -588,177 +610,35 @@
 
     <section id="installation" class="py-24 bg-slate-950 text-white">
         <div class="max-w-7xl mx-auto px-6">
-
-            <div class="space-y-12">
-                
-                <div class="bg-slate-900 border border-slate-800 rounded-[2rem] p-8">
-                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                        <div class="flex items-center gap-4">
-                            <div class="w-14 h-14 rounded-2xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 text-2xl">
-                                <i class="fa-brands fa-ubuntu"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-2xl font-black">Ubuntu 24.04 Automated Setup</h3>
-                                <p class="text-slate-400 text-sm">Automated installation pipeline using integrated scripts</p>
-                            </div>
-                        </div>
-                        
-                        <div class="bg-slate-950 px-5 py-3 rounded-xl border border-slate-800 shrink-0">
-                            <h4 class="font-mono text-xs text-cyan-400 mb-1">Execute the Automated Script</h4>
-                            <pre class="text-xs text-slate-300"><code>chmod +x install.sh && ./install.sh</code></pre>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <div class="bg-slate-950 p-5 rounded-2xl border border-white/5">
-                            <span class="text-xs text-slate-500 font-mono block mb-1">STEP 01</span>
-                            <h5 class="text-sm font-bold text-white mb-2">Create Root Folder</h5>
-                            <p class="text-xs text-slate-400">Create an <code>apps/</code> folder inside the project root.</p>
-                        </div>
-                        <div class="bg-slate-950 p-5 rounded-2xl border border-white/5">
-                            <span class="text-xs text-slate-500 font-mono block mb-1">STEP 02</span>
-                            <h5 class="text-sm font-bold text-white mb-2">Collect Installers</h5>
-                            <p class="text-xs text-slate-400">Insert Anaconda, Chimera, DMS and Dock6 installers inside.</p>
-                        </div>
-                        <div class="bg-slate-950 p-5 rounded-2xl border border-white/5">
-                            <span class="text-xs text-slate-500 font-mono block mb-1">STEP 03</span>
-                            <h5 class="text-sm font-bold text-white mb-2">Exact Naming Mapping</h5>
-                            <p class="text-xs text-slate-400">Rename payloads exactly to: <code>Anaconda.sh</code> and <code>chimera.bin</code>.</p>
-                        </div>
-                        <div class="bg-slate-950 p-5 rounded-2xl border border-white/5">
-                            <span class="text-xs text-slate-500 font-mono block mb-1">STEP 04</span>
-                            <h5 class="text-sm font-bold text-white mb-2">New Tool Bundles</h5>
-                            <p class="text-xs text-slate-400">Include <code>dms.zip</code> and <code>dock6.tgz</code> to complete deployment.</p>
-                        </div>
-                    </div>
-
-                    <div class="mt-8 bg-cyan-500/10 border border-cyan-500/20 rounded-2xl p-5 text-sm text-slate-300 flex items-start gap-3">
-    <i class="fa-solid fa-lightbulb text-cyan-400 text-lg shrink-0 mt-0.5"></i>
-    <div class="space-y-1.5">
-        <div>
-            <strong class="text-slate-200">Quick installation:</strong>
-            Debian-based systems can follow these steps for a faster setup:
-        </div>
-        <ol class="list-decimal list-inside space-y-1 text-slate-300">
-            <li>
-                First, download the required dependencies: 
-                <a 
-                    href="https://drive.google.com/file/d/1hKhYAoYzsVQuUsy-JwCJwAieHlHHKdnj/view?usp=sharing" 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    class="text-cyan-400 hover:text-cyan-300 font-semibold underline"
-                >
-                    Download required apps
-                </a>.
-            </li>
-            <li>
-                Then, install the application package: 
-                <a 
-                    href="https://raw.githubusercontent.com/mpiress/BioMolExplorer/master/biomolexplorer_amd64.deb" 
-                    download 
-                    class="text-cyan-400 hover:text-cyan-300 font-semibold underline"
-                >
-                    Download the .deb package
-                </a>.
-            </li>
-        </ol>
-    </div>
-</div>
-
-                </div>
-
-                <div class="bg-slate-900 border border-slate-800 rounded-[2rem] p-8">
-                    <div class="flex items-center gap-4 mb-8">
-                        <div class="w-14 h-14 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-brand-primary text-2xl">
-                            <i class="fa-brands fa-linux"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-2xl font-black">General Linux Installation</h3>
-                            <p class="text-slate-400 text-sm">Cross-distribution step-by-step environment configuration (Self-adjusting Layout)</p>
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-                        
-                        <div class="space-y-6">
-                            <div class="bg-slate-950 p-6 rounded-2xl border border-white/5 block">
-                                <h4 class="font-semibold text-brand-primary text-sm flex items-center gap-2 mb-2">
-                                    <span class="bg-brand-primary/10 text-brand-primary w-5 h-5 rounded-md flex items-center justify-center text-xs">1</span>
-                                    Install Anaconda
-                                </h4>
-                                <p class="text-xs text-slate-400 mb-4">Grant execution permissions and build base management paths.</p>
-                                <div class="code-block rounded-xl p-4 overflow-x-auto text-xs text-slate-300 font-mono">
-<pre class="whitespace-pre-wrap break-all"><code>chmod +x &lt;file.sh&gt;
-./&lt;file.sh&gt;</code></pre>
-                                </div>
-                            </div>
-
-                            <div class="bg-slate-950 p-6 rounded-2xl border border-white/5 block">
-                                <h4 class="font-semibold text-brand-primary text-sm flex items-center gap-2 mb-2">
-                                    <span class="bg-brand-primary/10 text-brand-primary w-5 h-5 rounded-md flex items-center justify-center text-xs">2</span>
-                                    Create Conda Environment
-                                </h4>
-                                <p class="text-xs text-slate-400 mb-4">Generate dependencies automatically using definition mapping.</p>
-                                <div class="code-block rounded-xl p-4 overflow-x-auto text-xs text-slate-300 font-mono">
-<pre class="whitespace-pre-wrap break-all"><code>conda env create -f environment.yml</code></pre>
-                                </div>
-                            </div>
-
-                            <div class="bg-slate-950 p-6 rounded-2xl border border-white/5 block">
-                                <h4 class="font-semibold text-brand-primary text-sm flex items-center gap-2 mb-2">
-                                    <span class="bg-brand-primary/10 text-brand-primary w-5 h-5 rounded-md flex items-center justify-center text-xs">3</span>
-                                    Install UCSF Chimera
-                                </h4>
-                                <p class="text-xs text-slate-400 mb-4">Initialize target binary structures configuration routines.</p>
-                                <div class="code-block rounded-xl p-4 overflow-x-auto text-xs text-slate-300 font-mono">
-<pre class="whitespace-pre-wrap break-all"><code>chmod +x &lt;file.bin&gt;
-./&lt;file.bin&gt;</code></pre>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="space-y-6">
-                            <div class="bg-slate-950 p-6 rounded-2xl border border-white/5 block">
-                                <h4 class="font-semibold text-brand-primary text-sm flex items-center gap-2 mb-2">
-                                    <span class="bg-brand-primary/10 text-brand-primary w-5 h-5 rounded-md flex items-center justify-center text-xs">4</span>
-                                    Install DMS Tool
-                                </h4>
-                                <p class="text-xs text-slate-400 mb-4">Unpack molecular surface source records and compile target package.</p>
-                                <div class="code-block rounded-xl p-4 overflow-x-auto text-xs text-slate-300 font-mono">
-<pre class="whitespace-pre-wrap break-all"><code>unzip dms.zip -d $HOME/progs
-cd $HOME/progs/dms*
-make && sudo make install</code></pre>
-                                </div>
-                            </div>
-
-                            <div class="bg-slate-950 p-6 rounded-2xl border border-white/5 block">
-                                <h4 class="font-semibold text-brand-primary text-sm flex items-center gap-2 mb-2">
-                                    <span class="bg-brand-primary/10 text-brand-primary w-5 h-5 rounded-md flex items-center justify-center text-xs">5</span>
-                                    Install Dock6
-                                </h4>
-                                <p class="text-xs text-slate-400 mb-4">Compile advanced scoring infrastructure tools from source packages.</p>
-                                <div class="code-block rounded-xl p-4 text-xs text-slate-300 font-mono">
-<pre class="whitespace-pre-wrap break-all leading-relaxed"><code>sudo apt update && \
-sudo apt install build-essential \
-zlib1g-dev flex gfortran yacc -y
-tar -zxvf dock6.tgz -C $HOME/progs
-cd $HOME/progs/dock6*/install
-./configure gnu && make all
-echo 'export PATH="$PATH:$HOME/progs/dock6/bin"' >> ~/.bashrc
-source ~/.bashrc</code></pre>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-
-                    <div class="mt-8 bg-cyan-500/10 border border-cyan-500/20 rounded-2xl p-5 text-sm text-slate-300 flex items-center gap-3">
-                        <i class="fa-solid fa-lightbulb text-cyan-400 text-lg shrink-0"></i>
-                        <span>Before executing target workflow modules, verify that the active workspace interpreter points directly to the newly constructed <strong>BioMolExplorer</strong> Conda environment path inside VSCode.</span>
-                    </div>
-                </div>
-
+            <span class="text-emerald-400 font-semibold uppercase tracking-widest text-sm">Getting Started</span>
+            <h2 class="text-4xl font-black mt-3">Run the workspace in your scientific environment</h2>
+            <p class="text-slate-300 mt-6 max-w-3xl leading-relaxed">Download the <a href="https://github.com/mpiress/BioMolExplorer" class="text-emerald-300 underline">GitHub project</a> using Git or Code → Download ZIP, then open a terminal in the source code folder. The Python package requires Python 3.12 or newer.</p>
+            <div class="mt-6 rounded-2xl border border-amber-400/40 bg-amber-400/10 p-6">
+                <p class="font-bold text-amber-200">Before starting: install UCSF Chimera 1.17, DOCK6 6.11 and DMS.</p>
+                <p class="text-slate-300 mt-3">These tools must be installed and configured on the computer running calculations. Installing the Python package or Conda environment does not install them. The interface may open without them, but dependent preparation, redocking and docking stages will fail.</p>
+                <p class="mt-3"><a href="docs/en/installation.html" class="text-emerald-300 underline">Installation and executable checks (English)</a> · <a href="docs/pt/installation.html" class="text-emerald-300 underline">Instalação e verificação (Português)</a></p>
             </div>
+            <div class="grid lg:grid-cols-2 gap-8 mt-10">
+                <div class="bg-slate-900 border border-slate-800 rounded-3xl p-7">
+                    <h3 class="text-xl font-bold mb-4">Install and start Flet</h3>
+                    <pre class="overflow-x-auto bg-slate-950 rounded-xl p-5 text-sm text-slate-200"><code>git clone https://github.com/mpiress/BioMolExplorer.git
+cd BioMolExplorer
+conda env create -f environment.yml
+conda activate BioMolExplorer
+python -m pip install -e '.[ui]'
+biomolexplorer-ui --web --dock6-path /path/to/dock6-6.11</code></pre>
+                    <p class="text-slate-300 mt-5">Open <code>http://127.0.0.1:8550</code> and create your account. If the environment already exists, activate it and install the interface.</p>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-3xl p-7">
+                    <h3 class="text-xl font-bold mb-4">Choose your execution environment</h3>
+                    <pre class="overflow-x-auto bg-slate-950 rounded-xl p-5 text-sm text-slate-200"><code>biomolexplorer-ui --web --no-browser \
+  --data-dir ./workspace-data \
+  --worker-python /path/to/python \
+  --dock6-path /path/to/dock6-6.11</code></pre>
+                    <p class="text-slate-300 mt-5">Check Chimera 1.17, DOCK6 6.11, DMS and the DOCK6 accessory programs on PATH before starting. Open Babel and Vina are also required by their protocols. Pass the complete DOCK6 installation root, containing bin/ and parameters/, to --dock6-path.</p>
+                </div>
+            </div>
+            <p class="text-slate-300 mt-8">Use the <a href="docs/en/frontend.html" class="text-emerald-300 underline">workspace guide</a> for accounts and pipelines, or the <a href="docs/en/backend_usage.html" class="text-emerald-300 underline">backend guide</a> for CLI usage and parameters. The current executor uses a local Linux backend, SQLite and a bounded queue; see <a href="docs/en/architecture.html#limitations-and-evolution" class="text-emerald-300 underline">deployment and scientific limitations</a>.</p>
         </div>
     </section>
 
@@ -775,16 +655,17 @@ source ~/.bashrc</code></pre>
 
                     <div class="space-y-6 mt-10 text-slate-600 leading-relaxed text-justify">
                         <p>
-                            BioMolExplorer structures molecular relationship networks through graph-based similarity
-                            analysis and connected component identification. Molecular fingerprints are transformed
-                            into similarity references capable of revealing scaffold overlap, cluster organization,
-                            and affinity relationships.
+                            Connect one or more similarity stages, or upload validated external similarity CSVs.
+                            Each source produces a separate graph analysis,
+                            with isolated compounds preserved and the largest connected component (MCC) highlighted.
                         </p>
 
                         <p>
-                            By focusing on the maximum connected component, the platform reduces chemical noise,
-                            enhances interpretability, and prioritizes compounds with stronger structural and
-                            pharmacological relevance.
+                            Explore full networks and their MCC with degree color scales, pan and zoom, and circular
+                            layouts. Hover to identify compounds and click to inspect molecular structures. MCC views
+                            show the common molecular fragment and offer downloadable figures combining its image
+                            with the network and degree statistics.
+                            <a href="docs/en/frontend.html" class="text-brand-primary font-semibold underline">Read the graph explorer guide</a>.
                         </p>
 
                         <p class="h-4"></p>
@@ -797,7 +678,7 @@ source ~/.bashrc</code></pre>
                                 </div>
                                 <h4 class="font-bold text-slate-900">Scaffold Exploration</h4>
                                 <p class="text-sm text-slate-600 mt-2">
-                                    Identification of common molecular fragments and affinity patterns.
+                                    Common molecular fragments with explicit search status and configurable time limits.
                                 </p>
                             </div>
 
@@ -831,6 +712,20 @@ source ~/.bashrc</code></pre>
         </div>
     </section>
 
+    <section id="documentation" class="py-24 bg-slate-50">
+        <div class="max-w-7xl mx-auto px-6">
+            <span class="text-emerald-700 font-semibold uppercase tracking-widest text-sm">Documentation · Documentação</span>
+            <h2 class="section-title text-4xl font-black text-slate-900 mt-3">A guide for every way of using the platform</h2>
+            <p class="text-slate-600 mt-6 max-w-3xl">Read the complete guides in English or Portuguese. Browser pages and Markdown sources cover the same implementation and can be opened locally.</p>
+            <div class="grid md:grid-cols-3 gap-6 mt-10">
+                <article class="bg-white border border-slate-200 rounded-3xl p-7"><h3 class="text-xl font-bold mb-3">Workspace &amp; pipelines</h3><p class="text-slate-600 mb-6">Installation, authentication, project sharing, stage configuration, uploads and execution monitoring.</p><a href="docs/en/frontend.html" class="text-emerald-700 font-semibold underline" lang="en">Read in English</a><br><a href="docs/pt/frontend.html" class="text-emerald-700 font-semibold underline" lang="pt-BR">Ler em português</a></article>
+                <article class="bg-white border border-slate-200 rounded-3xl p-7"><h3 class="text-xl font-bold mb-3">Backend &amp; scientific operations</h3><p class="text-slate-600 mb-6">Conda environment, command line, job services, available operations, inputs and outputs.</p><a href="docs/en/backend_usage.html" class="text-emerald-700 font-semibold underline" lang="en">Read in English</a><br><a href="docs/pt/backend_usage.html" class="text-emerald-700 font-semibold underline" lang="pt-BR">Ler em português</a></article>
+                <article class="bg-white border border-slate-200 rounded-3xl p-7"><h3 class="text-xl font-bold mb-3">Architecture &amp; extension</h3><p class="text-slate-600 mb-6">Code organization, process isolation, contracts, technical corrections, verification and current limits.</p><a href="docs/en/architecture.html" class="text-emerald-700 font-semibold underline" lang="en">Read in English</a><br><a href="docs/pt/architecture.html" class="text-emerald-700 font-semibold underline" lang="pt-BR">Ler em português</a></article>
+            </div>
+            <div class="flex flex-wrap gap-6 mt-8"><a href="docs/index.html" class="text-emerald-700 font-semibold underline">English documentation portal →</a><a href="docs/pt/index.html" class="text-emerald-700 font-semibold underline" lang="pt-BR">Portal de documentação em português →</a><a href="docs/README.md" class="text-slate-600 underline">Markdown index</a></div>
+        </div>
+    </section>
+
     <section id="citation" class="py-24 bg-slate-100 border-t border-slate-200">
         <div class="max-w-5xl mx-auto px-6 text-center">
 
@@ -856,7 +751,7 @@ source ~/.bashrc</code></pre>
                     Flores de Souza Marra, I., Siqueira Valle, M., Silva Matos Andrade, L., Čmelo, I.,
                     Fayne, D., Batista de Carvalho, P., Marques da Silva, A., & Gutterres Taranto, A. (2025).
                     <em>Data-driven chemical domain for polypharmacology agents: Focus on Alzheimer’s disease</em>.
-                    Mendeley Data. https://doi.org/10.17632/5njg46dfj4.3
+                    Mendeley Data. <a href="https://doi.org/10.17632/5njg46dfj4.3" class="text-emerald-700 underline">doi:10.17632/5njg46dfj4.3</a>
                 </p>
             </div>
         </div>
@@ -881,7 +776,7 @@ source ~/.bashrc</code></pre>
                     <p class="text-brand-primary text-sm mt-2">Computational Intelligence & Bioengineering</p>
 
                     <a href="http://lattes.cnpq.br/1449902596670082"
-                       target="_blank"
+                       target="_blank" rel="noopener noreferrer"
                        class="inline-flex items-center gap-2 mt-6 text-sm text-slate-700 hover:text-brand-primary transition">
                         <i class="fa-solid fa-address-card"></i>
                         Currículo Lattes
@@ -897,7 +792,7 @@ source ~/.bashrc</code></pre>
                     <p class="text-cyan-600 text-sm mt-2">Computational Molecular Analysis</p>
 
                     <a href="http://lattes.cnpq.br/3856358583630209"
-                       target="_blank"
+                       target="_blank" rel="noopener noreferrer"
                        class="inline-flex items-center gap-2 mt-6 text-sm text-slate-700 hover:text-brand-primary transition">
                         <i class="fa-solid fa-address-card"></i>
                         Currículo Lattes
@@ -913,7 +808,7 @@ source ~/.bashrc</code></pre>
                     <p class="text-violet-600 text-sm mt-2">Drug Discovery & Molecular Modeling</p>
 
                     <a href="http://lattes.cnpq.br/4759006674013596"
-                       target="_blank"
+                       target="_blank" rel="noopener noreferrer"
                        class="inline-flex items-center gap-2 mt-6 text-sm text-slate-700 hover:text-brand-primary transition">
                         <i class="fa-solid fa-address-card"></i>
                         Currículo Lattes
@@ -939,6 +834,8 @@ source ~/.bashrc</code></pre>
                 </div>
 
                 <div class="flex flex-wrap justify-center gap-4 text-sm text-slate-400">
+                    <a href="docs/index.html" class="bg-slate-900 border border-slate-800 rounded-full px-4 py-2 hover:text-white">Documentation (EN)</a>
+                    <a href="docs/pt/index.html" class="bg-slate-900 border border-slate-800 rounded-full px-4 py-2 hover:text-white" lang="pt-BR">Documentação (PT)</a>
                     <span class="bg-slate-900 border border-slate-800 rounded-full px-4 py-2">
                         Python Ecosystem
                     </span>
@@ -955,7 +852,7 @@ source ~/.bashrc</code></pre>
             </div>
 
             <div class="border-t border-slate-800 mt-10 pt-8 text-center text-sm text-slate-500">
-                © 2026 BioMolExplorer. Distributed under MIT License.
+                © 2026 BioMolExplorer. Distributed under <a href="LICENSE" class="underline hover:text-white">MIT License</a>.
             </div>
         </div>
     </footer>

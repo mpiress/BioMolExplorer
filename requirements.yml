@@ -16,5 +16,11 @@ dependencies:
   - seaborn=0.13.2
   - pymol-open-source=3.0.0
   - vina=1.2.5
+  - requests
+  - matplotlib
+  - pillow
+  - scipy
+  - urllib3
+  - setuptools
   - pip:
     - rcsbsearchapi==1.6.0

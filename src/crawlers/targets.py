@@ -1,3 +1,4 @@
+from biomolexplorer.paths import directory, resolve_path, worker_count
 from kernel.header_builder import HeaderBuilder
 
 __doc__ = HeaderBuilder.build(
@@ -35,23 +36,28 @@ class Targets(CrawlerSettings):
         self.__extension = extension
         self.logger      = LoggerManager.get_logger(self.__class__.__name__, log_file='logs/targets.log')
         self.set_outputpath(path) if path != None else None
-        
-    
+
+
     def set_outputpath(self, path:str):
-        self.__outputpath = path 
-        if not os.path.exists(self.__path + self.__outputpath):
-            os.makedirs(self.__path + self.__outputpath, exist_ok=True)
-      
-     
-       
+        self.__outputpath = path
+        if not os.path.exists(directory(self.__outputpath)):
+            os.makedirs(directory(self.__outputpath), exist_ok=True)
+
+
+
     def search(self, search_term:str, filter_params:dict) -> None:
+        filter_params = dict(filter_params or {})
+        if 'type__in' in filter_params:
+            filter_params['target_type__in']=filter_params.pop('type__in')
+        # Relationship belongs to activity evidence, not to the target resource.
+        filter_params.pop('relationship_type',None)
         try:
             if filter_params is None:
                 filter_params = {}
-                
+
             files = fileHandling(input_path=self.__outputpath, ext=self.__extension)
             search_term_upper = search_term.upper()
-            
+
             # O nome do arquivo salvo ainda pode ser baseado no termo de busca
             infile = files.isFile(search_term_upper)[0]
             columns = ['pref_name', 'target_chembl_id', 'target_components', 'target_type']
@@ -63,11 +69,11 @@ class Targets(CrawlerSettings):
                 # 1. Se parecer um ChEMBL ID (ex: CHEMBL240)
                 if search_term_upper.startswith("CHEMBL"):
                     filter_params["target_chembl_id"] = search_term_upper
-                
+
                 # 2. Se parecer um ID de Acesso do UniProt (ex: P00533 - geralmente 6 ou 10 caracteres alfanuméricos)
                 elif len(search_term) in [6, 10] and any(char.isdigit() for char in search_term):
                     filter_params["target_components__accession"] = search_term_upper
-                
+
                 # 3. Se for um nome de texto, usamos "__icontains" para busca parcial (ou mantém iexact se preferir)
                 else:
                     filter_params["pref_name__icontains"] = search_term
@@ -80,31 +86,32 @@ class Targets(CrawlerSettings):
                 # Se veio da API, convertemos o query result para DataFrame
                 if not infile:
                     target = DataFrame.from_records(target)
-                
+
                 target.drop_duplicates(subset='target_chembl_id', inplace=True, ignore_index=True)
-                
+
                 # Garante que o DataFrame final tenha as colunas desejadas (se existirem)
                 available_cols = [col for col in columns if col in target.columns]
                 target = target[available_cols]
             else:
-                target = DataFrame()
-            
+                raise ValueError(f'Nenhum alvo ChEMBL corresponde a "{search_term}" com os filtros selecionados.')
+
             if self.__outputpath is not None:
                 self.save_target(target, search_term_upper)
-                
+
         except Exception as e:
             self.logger.error(f'Error during search for target "{search_term}"', exc_info=True)
-            
-    
-     
+            raise
+
+
+
 
     def save_target(self, targets:DataFrame, file_name:str) -> None:
         files   = fileHandling(output_path=self.__outputpath, ext=self.__extension)
         infile  =  files.isFile(file_name)[1]
         if targets.shape[0] > 0 and not infile:
             files.dataframe_to_csv(file_name.upper(), targets)
-            
-            
-            
-        
-    
+
+
+
+
+

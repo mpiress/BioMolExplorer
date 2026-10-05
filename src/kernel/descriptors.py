@@ -1,3 +1,5 @@
+import ast
+from biomolexplorer.paths import directory, resolve_path, worker_count
 from kernel.header_builder import HeaderBuilder
 
 __doc__ = HeaderBuilder.build(
@@ -15,7 +17,6 @@ __doc__ = HeaderBuilder.build(
 #----------------------------------------------------------------------------------------------
 import warnings
 # Desabilitar todos os avisos (warnings)
-warnings.filterwarnings("ignore")
 
 import matplotlib
 matplotlib.use('agg')
@@ -32,7 +33,6 @@ from multiprocessing import Pool
 from enum import Enum
 import multiprocessing as mp
 
-from pymol import cmd
 #----------------------------------------------------------------------------------------------
 
 #----------------------------------------------------------------------------------------------
@@ -56,52 +56,52 @@ from kernel.loggers import LoggerManager
 
 
 class similarityFunctions(Enum):
-  TanimotoSimilarity      = 'Tanimoto' 
-  DiceSimilarity          = 'Dice' 
-  CosineSimilarity        = 'Cosine' 
-  SokalSimilarity         = 'Sokal' 
-  RusselSimilarity        = 'Russel' 
-  RogotGoldbergSimilarity = 'RogotGoldberg' 
-  AllBitSimilarity        = 'AllBit' 
-  KulczynskiSimilarity    = 'Kulczynski' 
-  McConnaugheySimilarity  = 'McConnaughey' 
-  AsymmetricSimilarity    = 'Asymmetric' 
-  BraunBlanquetSimilarity = 'BraunBlanquet' 
+  TanimotoSimilarity      = 'Tanimoto'
+  DiceSimilarity          = 'Dice'
+  CosineSimilarity        = 'Cosine'
+  SokalSimilarity         = 'Sokal'
+  RusselSimilarity        = 'Russel'
+  RogotGoldbergSimilarity = 'RogotGoldberg'
+  AllBitSimilarity        = 'AllBit'
+  KulczynskiSimilarity    = 'Kulczynski'
+  McConnaugheySimilarity  = 'McConnaughey'
+  AsymmetricSimilarity    = 'Asymmetric'
+  BraunBlanquetSimilarity = 'BraunBlanquet'
 
 
 class fingerprints(Enum):
-  Morgan        = 'morgan' 
-  MACCs         = 'maccs' 
-  Pharmacophore = 'pharmacophore' 
-  
+  Morgan        = 'morgan'
+  MACCs         = 'maccs'
+  Pharmacophore = 'pharmacophore'
+
 
 
 class Descriptors():
-    
+
     def __init__(self, inputpath:Optional[str]=None, outputpath:Optional[str]=None):
         self.__path = str(Path.cwd())
         self.set_inputpath(inputpath) if inputpath != None else None
         self.set_outputpath(outputpath) if outputpath != None else None
         self.logger = LoggerManager.get_logger(self.__class__.__name__, log_file='logs/descriptors.log')
 
-    
+
     def set_inputpath(self, inputpath:str):
-        self.__inputpath = inputpath 
-        
-    
-        
+        self.__inputpath = inputpath
+
+
+
     def set_outputpath(self, outputpath:str) -> None:
-        self.__outputpath = outputpath 
-        if not os.path.exists(self.__path + self.__outputpath):
-           os.makedirs(self.__path + self.__outputpath, exist_ok=True)
-           
-    
-     
+        self.__outputpath = outputpath
+        if not os.path.exists(directory(self.__outputpath)):
+           os.makedirs(directory(self.__outputpath), exist_ok=True)
+
+
+
     def get_fingerprints(self, smiles_df:DataFrame, morgan_n_bits: Optional[int] = 2048, radius: Optional[int] = 2,
                          morgan: Optional[bool] = True, maccs: Optional[bool] = True, pharmacophore: Optional[bool] = True) -> None:
-        
+
         try:
-            
+
             if morgan:
                 return self.compute_morgan_fingerprints(smiles_df, radius, morgan_n_bits)
 
@@ -114,16 +114,17 @@ class Descriptors():
 
         except Exception as e:
             self.logger.error(f'Error processing smiles in get_fingerprints function', exc_info=True)
+            raise
 
-    
+
 
     @staticmethod
     def compute_morgan_fingerprints(smiles_df: DataFrame, radius: int, n_bits: int) -> DataFrame:
-        with mp.Pool(mp.cpu_count()) as pool:
+        with mp.Pool(worker_count()) as pool:
             results = pool.starmap(Descriptors.morgan_worker, [(row.smiles, row.molecule_chembl_id, radius, n_bits) for row in smiles_df.itertuples(index=False)])
         return DataFrame(results)
 
-    
+
     @staticmethod
     def morgan_worker(smiles: str, molecule_chembl_id: str, radius: int, n_bits: int) -> Dict[str, str]:
         mol = Chem.MolFromSmiles(smiles)
@@ -132,14 +133,14 @@ class Descriptors():
                     "fingerprint": list(AllChem.GetMorganFingerprintAsBitVect(mol, radius, nBits=n_bits, useChirality=True, useBondTypes=False, useFeatures=True))}
         return {"molecule_chembl_id": molecule_chembl_id, "fingerprint": None}
 
-    
+
     @staticmethod
     def compute_maccs_fingerprints(smiles_df: DataFrame) -> DataFrame:
-        with mp.Pool(mp.cpu_count()) as pool:
+        with mp.Pool(worker_count()) as pool:
             results = pool.starmap(Descriptors.maccs_worker, [(row.smiles, row.molecule_chembl_id) for row in smiles_df.itertuples(index=False)])
         return DataFrame(results)
 
-    
+
     @staticmethod
     def maccs_worker(smiles: str, molecule_chembl_id: str) -> Dict[str, str]:
         mol = Chem.MolFromSmiles(smiles)
@@ -147,14 +148,14 @@ class Descriptors():
             return {"molecule_chembl_id": molecule_chembl_id, "fingerprint": list(MACCSkeys.GenMACCSKeys(mol))}
         return {"molecule_chembl_id": molecule_chembl_id, "fingerprint": None}
 
-    
+
     @staticmethod
     def compute_pharmacophore_fingerprints(smiles_df: DataFrame) -> DataFrame:
-        with mp.Pool(mp.cpu_count()) as pool:
+        with mp.Pool(worker_count()) as pool:
             results = pool.starmap(Descriptors.pharmacophore_worker, [(row.smiles, row.molecule_chembl_id) for row in smiles_df.itertuples(index=False)])
         return DataFrame(results)
 
-    
+
     @staticmethod
     def pharmacophore_worker(smiles: str, molecule_chembl_id: str) -> Dict[str, str]:
         mol = Chem.MolFromSmiles(smiles)
@@ -162,56 +163,61 @@ class Descriptors():
         if mol:
             return {"molecule_chembl_id": molecule_chembl_id, "fingerprint": list(Generate.Gen2DFingerprint(mol, factory))}
         return {"molecule_chembl_id": molecule_chembl_id, "fingerprint": None}
-        
-        
-    
+
+
+
     def max_common_substructure(self, smiles:list) -> tuple:
-        
+
         try:
 
             if len(smiles) < 2:
                 mol   = Chem.MolFromSmiles(smiles[0])
                 smile = Chem.MolToSmiles(mol, isomericSmiles=True, canonical=True)
-                img   = Draw.MolToImage(mol) 
-                
-            else: 
+                img   = Draw.MolToImage(mol)
+
+            else:
                 mols  = [Chem.MolFromSmiles(s) for s in smiles]
                 mcs   = rdFMCS.FindMCS(mols)
                 mol   = Chem.MolFromSmarts(mcs.smartsString)
                 smile = Chem.MolToSmiles(mol, isomericSmiles=True, canonical=True)
                 img   = Draw.MolToImage(mol)
-            
+
             return smile, img
-        
+
         except Exception as e:
-            self.logger.error(f'Error during to perform the max_common_substructure function', exc_info=True)   
-        
-    
+            self.logger.error(f'Error during to perform the max_common_substructure function', exc_info=True)
+            raise
+
+
     def calcRMSD(self, ligand_pdbqt:str, vina_pdbqt:str):
-        
+
         try:
-            
+
+            from pymol import cmd
             cmd.reinitialize()
             cmd.load(ligand_pdbqt, "ligand")
             cmd.load(vina_pdbqt, "vina")
-            
+
             pose_number = 1
             pose_name = f"vina_{pose_number}"
             cmd.create(pose_name, "vina", pose_number, 1)
             rmsd = cmd.rms_cur(pose_name, "ligand")
-            
-            return rmsd 
+
+            return rmsd
 
         except Exception as e:
             self.logger.error(f'Error during to perform {ligand_pdbqt} and {vina_pdbqt} in calcRMSD function', exc_info=True)
-  
+            raise
 
-                    
+
+
 class MolSimilarity():
 
-    def __init__(self, inputpath:Optional[str]=None, outputpath:Optional[str]=None, num_perm=256, threshold=0.5, radius=2, n_bits=2048):
+    def __init__(self, inputpath:Optional[str]=None, outputpath:Optional[str]=None, num_perm=256, threshold=0.5, radius=2, n_bits=2048,
+                 approximate:bool=True):
         self.num_perm = num_perm
         self.threshold = threshold
+        self.approximate = approximate
         self.radius = radius
         self.n_bits = n_bits
         self.lsh = MinHashLSH(threshold=threshold, num_perm=num_perm)
@@ -221,22 +227,22 @@ class MolSimilarity():
         self.set_outputpath(outputpath) if outputpath != None else None
         self.logger = LoggerManager.get_logger(self.__class__.__name__, log_file='logs/molsimilarity.log')
 
-    
+
     def set_inputpath(self, inputpath:str):
-        self.__inputpath = inputpath 
-        
-    
-        
+        self.__inputpath = inputpath
+
+
+
     def set_outputpath(self, outputpath:str) -> None:
-        self.__outputpath = outputpath 
-        if not os.path.exists(self.__path + self.__outputpath):
-           os.makedirs(self.__path + self.__outputpath, exist_ok=True)
-        
-    
+        self.__outputpath = outputpath
+        if not os.path.exists(directory(self.__outputpath)):
+           os.makedirs(directory(self.__outputpath), exist_ok=True)
+
+
     def clear_lsh(self):
         self.lsh = MinHashLSH(threshold=self.threshold, num_perm=self.num_perm)
         self.fingerprint_list = []
-        
+
 
     def fingerprint_to_lsh(self, fp:str) -> MinHash:
 
@@ -248,9 +254,10 @@ class MolSimilarity():
                     m.update(str(bit).encode('utf8'))
 
             return m
-        
+
         except Exception as e:
             self.logger.error(f'Error during to perform fingerprint_to_lsh function', exc_info=True)
+            raise
 
 
 
@@ -263,20 +270,21 @@ class MolSimilarity():
             self.lsh.insert(len(self.fingerprint_list) - 1, data)
 
         except Exception as e:
-            self.logger.error(f'Error during to perform {fp} in add_fingerprint function', exc_info=True)   
-    
+            self.logger.error(f'Error during to perform {fp} in add_fingerprint function', exc_info=True)
+            raise
+
 
 
     def string_to_sparsebitvect(self, fp_str: str) -> SparseBitVect:
-        
+
         sbv = SparseBitVect(len(fp_str))
-        
+
         for idx, bit in enumerate(fp_str):
-            if bit == '1':  
+            if bit == '1':
                 sbv.SetBit(idx)
-        
+
         return sbv
-    
+
 
 
     def get_similarity(self, fp1, fp2, metric:Optional[similarityFunctions]=similarityFunctions.TanimotoSimilarity):
@@ -288,40 +296,41 @@ class MolSimilarity():
 
             if similarityFunctions.TanimotoSimilarity == metric:
                 return round(DataStructs.TanimotoSimilarity(fp1, fp2), 3)
-                
+
             elif similarityFunctions.DiceSimilarity == metric:
                 return round(DataStructs.DiceSimilarity(fp1, fp2), 3)
-                
+
             elif similarityFunctions.CosineSimilarity == metric:
                 return round(DataStructs.CosineSimilarity(fp1, fp2), 3)
-                
+
             elif similarityFunctions.SokalSimilarity == metric:
                 return round(DataStructs.SokalSimilarity(fp1, fp2), 3)
-                
+
             elif similarityFunctions.RusselSimilarity == metric:
-                return round(DataStructs.RusselSimilarity(fp1, fp2), 3) 
-                
+                return round(DataStructs.RusselSimilarity(fp1, fp2), 3)
+
             elif similarityFunctions.RogotGoldbergSimilarity == metric:
-                return round(DataStructs.RogotGoldbergSimilarity(fp1, fp2), 3) 
-                
+                return round(DataStructs.RogotGoldbergSimilarity(fp1, fp2), 3)
+
             elif similarityFunctions.AllBitSimilarity == metric:
-                return round(DataStructs.AllBitSimilarity(fp1, fp2), 3) 
-                
+                return round(DataStructs.AllBitSimilarity(fp1, fp2), 3)
+
             elif similarityFunctions.KulczynskiSimilarity == metric:
-                return round(DataStructs.KulczynskiSimilarity(fp1, fp2), 3)  
-                
+                return round(DataStructs.KulczynskiSimilarity(fp1, fp2), 3)
+
             elif similarityFunctions.McConnaugheySimilarity == metric:
-                return round(DataStructs.McConnaugheySimilarity(fp1, fp2), 3)  
-                
+                return round(DataStructs.McConnaugheySimilarity(fp1, fp2), 3)
+
             elif similarityFunctions.AsymmetricSimilarity == metric:
-                return round(DataStructs.AsymmetricSimilarity(fp1, fp2), 3)    
-                
+                return round(DataStructs.AsymmetricSimilarity(fp1, fp2), 3)
+
             else:
-                return round(DataStructs.BraunBlanquetSimilarity(fp1, fp2), 3) 
+                return round(DataStructs.BraunBlanquetSimilarity(fp1, fp2), 3)
 
         except Exception as e:
-            self.logger.error(f'Error during to perform get_similarity function', exc_info=True) 
-    
+            self.logger.error(f'Error during to perform get_similarity function', exc_info=True)
+            raise
+
 
 
     def find_similar_molecules(self, query_fp:str, metric:similarityFunctions) -> list:
@@ -329,54 +338,68 @@ class MolSimilarity():
         try:
 
             query_lsh = self.fingerprint_to_lsh(query_fp)
-            candidates = self.lsh.query(query_lsh)
-            
+            candidates = self.lsh.query(query_lsh) if self.approximate else range(len(self.fingerprint_list))
+
             similar_molecules = []
+            seen = set()
             for idx in candidates:
                 candidate_fp = self.fingerprint_list[idx]
+                if candidate_fp in seen:
+                    continue
+                seen.add(candidate_fp)
                 similarity = self.get_similarity(query_fp, candidate_fp, metric)
                 if similarity >= self.threshold:
                     similar_molecules.append((self.fingerprint_list[idx], similarity))
-            
-            return similar_molecules
-        
-        except Exception as e:
-            self.logger.error(f'Error during to perform find_similar_molecules function', exc_info=True) 
 
-    
+            return similar_molecules
+
+        except Exception as e:
+            self.logger.error(f'Error during to perform find_similar_molecules function', exc_info=True)
+            raise
+
+
 
 
     def perform_similarity(self, filename=None, metric=similarityFunctions.TanimotoSimilarity, fp:Optional[str]='morgan') -> DataFrame:
 
         try:
-            
+
             data = fileHandling(input_path=self.__inputpath, output_path=self.__outputpath)
-            files = [f.rsplit('.')[0] for f in os.listdir(self.__inputpath[1:])
+            files = [f.rsplit('.')[0] for f in os.listdir(directory(self.__inputpath))
                      if f.endswith('.csv') and f.startswith(fp)] if filename == None else [filename.rsplit('.')[0]]
-            
-            
+            if not files:
+                raise ValueError('No fingerprint CSV files found for the selected fingerprint')
+
+
             for filename in files:
 
-                df = data.csv_to_dataframe(filename)
-                df[fp] = df['fingerprint'].apply(lambda x: ''.join(map(str, eval(x))))
-                
+                from biomolexplorer.molecule_quality import clean_dataframe
+                df = clean_dataframe(data.csv_to_dataframe(filename),'fingerprints',filename)
+                df[fp] = df['fingerprint'].apply(lambda x: ''.join(map(str, ast.literal_eval(x))))
+
                 self.clear_lsh()
                 for signature in df[fp].tolist():
                     self.add_fingerprint(signature)
-                
-                result = []
-                for chemblid, signature in df[['molecule_chembl_id', fp]].itertuples(index=False, name=None):
-                    similar_molecules = self.find_similar_molecules(signature, metric)
-                    for sim in similar_molecules:
-                        if sim[1] < 1:
-                            target = df[df[fp] == sim[0]]
-                            tmp = {'source':chemblid, 'target':target['molecule_chembl_id'].values[0], 'value': sim[1]}
-                            result.append(tmp)
-                
-                if len(result) > 0:
-                    filename = metric.value + '_' + filename
-                    data.dataframe_to_csv(filename, DataFrame(result))
+
+                targets_by_signature = df.groupby(fp)['molecule_chembl_id'].agg(list).to_dict()
+                def edge_frames():
+                    yield DataFrame(columns=['source', 'target', 'value'])
+                    result = []
+                    for chemblid, signature in df[['molecule_chembl_id', fp]].itertuples(index=False, name=None):
+                        for target_fp, score in self.find_similar_molecules(signature, metric):
+                            for target in targets_by_signature[target_fp]:
+                                if chemblid != target:
+                                    result.append({'source': chemblid, 'target': target, 'value': score})
+                                if len(result) >= 1000:
+                                    yield DataFrame(result)
+                                    result = []
+                    if result:
+                        yield DataFrame(result)
+                filename = metric.value + '_' + filename
+                from biomolexplorer.storage import write_dataframe_chunks
+                write_dataframe_chunks(edge_frames(), resolve_path(self.__outputpath) / (filename + '.csv'))
 
 
         except Exception as e:
             self.logger.error(f'Error during to perform the perform_similarity function', exc_info=True)
+            raise

@@ -1,7 +1,8 @@
 #----------------------------------------------------------------------------------------------
 #Configure PYTHONPATH to perform execution using the project classes
-import sys 
-sys.path.append("src")
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 #----------------------------------------------------------------------------------------------
 
 #----------------------------------------------------------------------------------------------
@@ -12,7 +13,7 @@ __doc__ = HeaderBuilder.build(
     module_title="ADMET analysis",
 
     module_description=(
-    "Main functions for managing and integrating docking " 
+    "Main functions for managing and integrating docking "
     "analysis available in the wrappers folder (docking.py)"
 ),
 
@@ -37,6 +38,6 @@ if __name__ == "__main__":
                       mol_filename='molecules',
                       dock6_app_path='/home/michel/progs/dock6/',
                       prepare_complex=False, charge_type='am1')
-    
-   
-    
+
+
+

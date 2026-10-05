@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "biomolexplorer"
+version = "0.2.0"
+description = "Molecular retrieval and computational drug discovery services"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+ui = ["flet==1.0.3", "flet-web==1.0.3"]
+
+[project.scripts]
+biomolexplorer = "biomolexplorer.__main__:main"
+biomolexplorer-ui = "biomolexplorer.ui.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["biomolexplorer*", "crawlers*", "caad*", "kernel*", "wrappers*"]
+namespaces = true
+
+[tool.setuptools.package-data]
+biomolexplorer = ["resources/**/*"]

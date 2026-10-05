@@ -31,6 +31,24 @@ The platform integrates data from major public repositories, including PDB, ChEM
 
 </div>
 
+## Portable research projects
+
+The Flet workspace now stores each project in a folder chosen at creation, with
+portable configuration, inputs, results and version history. Project cards offer
+export/import and an attributed change history with owner-controlled rollback.
+Shared pipelines autosave and update across collaborators. Blocks support multiple
+validated input files or supplied completed results, and ADMET EGG points reveal
+compound identifiers and 2D structures.
+
+Graph blocks accept fingerprints, ready similarity files, or both, with separate
+results for each input. Explore the full network and its highlighted MCC, inspect
+molecular 2D structures, and download degree reports containing the common
+fragment image. The [workspace guide](docs/en/frontend.md) explains the color
+scales, source selection and fragment search status.
+
+Read [Projects and versions](docs/en/projects.md) or
+[Projetos e versões](docs/projects.md) for migration, sharing and input formats.
+
 ## 🌐 Project Website
 
 Complete documentation, installation instructions, workflow descriptions, and examples are available at:
@@ -64,7 +82,7 @@ BioMolExplorer integrates information retrieval, molecular fingerprint generatio
 
 ## ⚡ Quick Start
 
-BioMolExplorer relies on several external frameworks to provide its complete computational workflow, including **Anaconda**, **UCSF Chimera**, **Dock6**, and **DMS**. These dependencies are required to support molecular preparation, docking, redocking validation, and cheminformatics analyses. Detailed installation instructions for all dependencies are available on the project website.
+**Before starting BioMolExplorer, install and configure UCSF Chimera 1.17, DOCK6 6.11 and DMS on the computer that will run the calculations.** Installing the Python package or Conda environment does not install these external tools. The interface may open without them, but preparation, redocking and docking stages requiring them will fail. Follow the [installation and configuration guide](docs/en/installation.md) ([Português](docs/installation.md)) for official downloads, executable checks and DOCK6 path configuration. Git and Anaconda or Miniconda are also needed for the commands below.
 
 Clone the repository:
 
@@ -73,6 +91,8 @@ git clone https://github.com/mpiress/BioMolExplorer.git
 cd BioMolExplorer
 ```
 
+Alternatively, open the [GitHub repository](https://github.com/mpiress/BioMolExplorer), select **Code → Download ZIP**, extract the archive and open a terminal in the extracted folder. Run the following commands from the folder containing `environment.yml` and `pyproject.toml`.
+
 Create and activate the Conda environment:
 
 ```bash
@@ -80,7 +100,14 @@ conda env create -f environment.yml
 conda activate BioMolExplorer
 ```
 
-After configuring the required dependencies, execute the workflow modules according to your research objectives. Comprehensive installation guides, configuration examples, and workflow documentation are available on the official BioMolExplorer website.
+After installing the external tools, activating the environment and completing the guide's checks, install and start the interface. Replace the example DOCK6 path with its installation root containing `bin/` and `parameters/`; its `bin/`, Chimera's executable directory and the DMS executable directory must be on `PATH`.
+
+```bash
+python -m pip install -e '.[ui]'
+biomolexplorer-ui --web --dock6-path /path/to/dock6-6.11
+```
+
+Open `http://127.0.0.1:8550` and continue with the [user manual](docs/en/user_manual.md). Omit `--web` for desktop mode. Workflow modules remain available for scripted studies.
 
 
 ## 📂 Project Structure
@@ -114,7 +141,7 @@ BioMolExplorer
 - Open the `BioMolExplorer` project folder in VSCode.
 - Run the Python scripts located in the `workflow` folder in the following sequence:
 
-  1. ***InformationRetrieval***: This stage performs data extraction from the **PDB**, **ChEMBL**, and **ZINC** datasets. For PDB, filters are applied through predefined functions. ChEMBL data is extracted using scripts and filters located in `src/scripts/crawlers`. Extraction from ZINC requires obtaining the dataset URIs from the official ZINC site and configuring their paths in BioMolExplorer to enable proper information retrieval.
+  1. ***InformationRetrieval***: This stage performs data extraction from the **PDB**, **ChEMBL**, and **ZINC** datasets. For PDB, filters are applied through predefined functions. ChEMBL data is extracted using scripts and filters located in `src/biomolexplorer/resources/crawlers`. Extraction from ZINC requires obtaining the dataset URIs from the official ZINC site and configuring their paths in BioMolExplorer to enable proper information retrieval.
 
   2. **Analysis**: The data analysis stage consists of three phases:  
      a) **Generate fingerprints** for molecular entities.  
@@ -133,7 +160,7 @@ To process your data, the project is organized into two main stages located in t
 This stage is responsible for the extraction and standardization of data from public databases. Execute the scripts in the following order:
 
 * **`11-pdb.py`**: Performs the loading of protein structures from the PDB. It allows filtering by Enzyme Commission (EC) number, resolution, and whether the presence of ligands in the complex is mandatory.
-* **`12-chembl.py`**: A crawler focused on extracting bioactivities and information on biological targets from the ChEMBL database.
+* **`retrieve_compounds.py`**: Retrieves target compounds and bioactivities from ChEMBL and expands the compound set with PubChem structural similars.
 * **`13-zinc.py`**: Manages the collection of compound libraries based on configured URIs, focused on obtaining 3D structures for virtual screening.
 
 ---
@@ -255,26 +282,31 @@ Only ligand-bound structures will be retrieved.
 
 ---
 
-#### 🧪 ChEMBL Data Extraction Guide
+#### 🧪 Compound Retrieval Guide
 
-This section explains how to configure and run the following script to extract data from the ChEMBL database:
+This section explains how to retrieve target compounds and bioactivities from ChEMBL and optionally expand the set with PubChem:
 
 ```python
-load_chembl(
-    target_name='monoamine oxidase',
-    base_output_path='/datasets'
+from wrappers.crawlers import retrieve_compounds
+
+retrieve_compounds(
+    search_term='monoamine oxidase',
+    base_output_path='/datasets',
+    include_pubchem=True,
+    pubchem_threshold=75,
+    pubchem_max_records=1000,
 )
 ```
 
 
 🔍 Overview
 
-The `load_chembl` function is responsible for retrieving chemical and bioactivity data associated with a specific biological target from the ChEMBL database. The process is customizable through predefined filters that control what type of data is collected.
+The `retrieve_compounds` function retrieves chemical and bioactivity data for a biological target and optionally expands the compound set through PubChem. ChEMBL filters control the initial retrieval; `include_pubchem`, `pubchem_threshold` and `pubchem_max_records` configure the expansion.
 
 
 ⚙️ Main Parameters
 
-**1. `target_name`**
+**1. `search_term`**
 
 * Defines the **name of the biological target**.
 * ⚠️ This name must match exactly how the target is defined in the ChEMBL database.
@@ -282,7 +314,7 @@ The `load_chembl` function is responsible for retrieving chemical and bioactivit
 ✔️ Example:
 
 ```python
-target_name='monoamine oxidase'
+search_term='monoamine oxidase'
 ```
 
 
@@ -332,7 +364,7 @@ Below are the main filters used during the extraction process.
 
 * `organism`: Selects targets from human organisms.
 * `type__in`: Filters for specific target types (e.g., single proteins).
-* `relationship_type`: Defines how the target relates to the `target_name` provided.
+* `relationship_type`: Defines how the target relates to the `search_term` provided.
 
 
 **2. Bioactivity Filters**
@@ -703,15 +735,20 @@ This step computes **pairwise similarity scores** between molecules based on the
 ```python
 analyze_graphs(
     base_input_path='/datasets/ChEMBL/DrugBank',
-    base_output_path='/resultados/grafos',
-    metric=similarityFunctions.TanimotoSimilarity,
-    fingerprint=fingerprints.Morgan
+    similarity_path='/datasets/ChEMBL/DrugBank/Similarity',
+    base_output_path='/datasets/ChEMBL/DrugBank/Graphs',
+    mcs_timeout=30
 )
 ```
 
 **Purpose**
 
-This function constructs **graph representations** of molecular relationships based on similarity values.
+Use ready similarity files from one or more similarity stages, or validated
+external CSVs with source,target,value columns. Each file produces a separate
+full graph and MCC analysis. Configure metric and threshold in the similarity
+stage; graph filtering retains the supplied relationships. MCC reports include the common fragment image,
+degree rank, histogram and distribution. A time-limited fragment search is
+labeled partial when its maximum size is not confirmed.
 
 **Concept**
 
@@ -767,3 +804,112 @@ Pires da Silva, M., Alves de Oliveira, T., Habib Bechelane Maia, E., Oliveira Me
 
 | [<img loading="lazy" src="imgs/michel.jpg" width=150><br><sub> Michel Pires da Silva</sub>](http://lattes.cnpq.br/1449902596670082) |  [<img loading="lazy" src="imgs/alisson.png" width=150><br><sub> Alisson Marques da Silva</sub>](http://lattes.cnpq.br/3856358583630209) |  [<img loading="lazy" src="imgs/alex.png" width=150><br><sub> Alex Gutterres Taranto</sub>](http://lattes.cnpq.br/4759006674013596) |
 | :---: | :---: | :---: |
+
+### Expansão ChEMBL → PubChem
+
+O exemplo `workflow/1-InformationRetrieval/retrieve_compounds.py` executa a busca de
+similares 2D na PubChem após recuperar moléculas e similares da ChEMBL:
+
+```python
+from wrappers.crawlers import retrieve_compounds
+
+retrieve_compounds(
+    search_term='CHEMBL220',
+    base_output_path='/datasets',
+    include_pubchem=True,
+    pubchem_threshold=75,
+    pubchem_max_records=1000,
+)
+```
+
+Execute a partir da raiz do projeto, no ambiente `BioMolExplorer`.
+`include_pubchem=False` (padrão da função) mantém o fluxo apenas ChEMBL.
+Para expandir downloads existentes sem executar novamente a etapa ChEMBL:
+
+```python
+from wrappers.crawlers import expand_similar_compounds
+expand_similar_compounds('CHEMBL220', '/datasets', threshold=75, max_records=1000)
+```
+
+Como nos outros wrappers, `/datasets` é relativo à raiz do projeto.
+Os CSVs individuais de `ChEMBL/molecules/<alvo>` e
+`ChEMBL/similars/<alvo>` fornecem as referências. Todas as estruturas válidas
+são resolvidas em CIDs antes de baixar propriedades dos resultados, excluindo
+compostos já presentes na ChEMBL. Há uma segunda deduplicação por SMILES
+canônico com estereoquímica e InChIKey completo; estereoisômeros distintos
+podem permanecer no conjunto. Referências com SMILES inválido são registradas
+no log e ignoradas.
+
+Saídas:
+
+- `datasets/PubChem/similars/<alvo>/compounds.csv`: novos compostos únicos.
+- `datasets/PubChem/similars/<alvo>/matches.csv`: relações entre referências
+  ChEMBL e compostos novos, com o limiar de busca.
+- `datasets/compounds/<alvo>/compounds.csv`: conjunto consolidado
+  compatível com as colunas `molecule_chembl_id`, `canonical_smiles` e
+  `molecule_properties` utilizadas pelas análises. Novos compostos usam
+  identificadores `PUBCHEM<CID>` e a coluna `source` registra a origem.
+
+A busca usa FastSimilarity 2D com Tanimoto dos fingerprints da PubChem
+([documentação](https://pubchem.ncbi.nlm.nih.gov/docs/pug-rest)).
+`PubChem_Threshold_Percent` registra o **limiar**, não um score individual.
+`max_records` limita os resultados por referência; atingir o limite gera um
+aviso de possível truncamento. Similaridade estrutural não atribui atividade
+experimental aos novos compostos. O cache em `cache/` evita repetir respostas
+bem-sucedidas nas reexecuções; para atualizar a consulta, remova o cache
+correspondente. Falhas HTTP interrompem a etapa e permitem retomá-la com o
+cache; os CSVs finais são escritos apenas após concluir a busca.
+
+Testes locais sem acesso à API:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+O ponto de entrada do fluxo integrado é `retrieve_compounds(...)` e a expansão
+isolada é `expand_similar_compounds(...)`. Atualize scripts externos para esses
+nomes. Execute o exemplo renomeado com:
+
+```bash
+python workflow/1-InformationRetrieval/retrieve_compounds.py
+```
+
+O consolidado integrado fica em `datasets/compounds/<alvo>/compounds.csv`.
+Arquivos produzidos anteriormente não são movidos; atualize o caminho de entrada
+das análises para usar o novo consolidado. Diretórios e classes específicos das
+fontes mantêm os nomes ChEMBL e PubChem para indicar a origem dos dados.
+
+### Camada de aplicação para integração com Flet
+
+A aplicação dispõe de serviços independentes da interface, CLI e supervisão de
+tarefas em processos separados. O histórico, os estados, erros e caminhos dos
+resultados são persistidos em SQLite. Cada tarefa possui seu próprio diretório,
+com limites de concorrência, timeout e cancelamento.
+
+- [Manual do usuário: passo a passo completo](docs/user_manual.md) · [English user manual](docs/en/user_manual.md)
+- [Instalação e configuração: GitHub, Chimera 1.17, DOCK6 6.11 e DMS](docs/installation.md) · [English installation guide](docs/en/installation.md)
+- [Validação das etapas e conexões](docs/pipeline_validation.md)
+- [Arquitetura, revisão técnica e limites](docs/architecture.md)
+- [Instalação, CLI, operações e integração com Flet](docs/backend_usage.md)
+- [Controlador assíncrono de exemplo](examples/flet_controller.py)
+- [Workspace Flet: instalação, contas, projetos e pipelines](docs/frontend.md)
+- [Documentação em português e inglês](docs/README.md)
+- [English: workspace, backend and architecture](docs/index.html)
+
+Antes de iniciar, instale Chimera 1.17, DOCK6 6.11 e DMS e confira os executáveis conforme o guia de instalação. Na raiz do código baixado, com o ambiente científico ativo e as ferramentas no `PATH`:
+
+```bash
+python -m pip install -e '.[ui]'
+biomolexplorer-ui --web --language pt --dock6-path /caminho/para/dock6-6.11
+```
+
+A interface inclui contas, projetos privados, compartilhamento por convite,
+tags/cores, importação de arquivos próprios, editor de etapas e acompanhamento
+de resultados. Cada etapa permite configurar seus argumentos e templates.
+
+Os filtros e templates agora ficam em `src/biomolexplorer/resources`.
+Os wrappers e workflows existentes permanecem disponíveis; a camada recomendada
+para a interface utiliza `biomolexplorer.workspace.WorkspaceStore` e
+`biomolexplorer.pipeline.PipelineService`, com `JobManager` supervisionando os workers.
+
+Na tela de login, selecione inglês ou português. Sem `--language`, a interface inicia em inglês.

@@ -1,6 +1,7 @@
 #----------------------------------------------------------------------------------------------
-import sys 
-sys.path.append("src")
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 #----------------------------------------------------------------------------------------------
 
 #----------------------------------------------------------------------------------------------
@@ -11,7 +12,7 @@ __doc__ = HeaderBuilder.build(
     module_title="ADMET analysis",
 
     module_description=(
-    "Main functions for managing and integrating redocking " 
+    "Main functions for managing and integrating redocking "
     "analysis available in the src/caad directory"
 ),
 
@@ -34,4 +35,4 @@ if __name__ == "__main__":
                       target='Butyrylcholinesterase',
                       base_output_path='/resultados/redocking',
                       prepare_complex=False, charge_type='am1')
-    
+

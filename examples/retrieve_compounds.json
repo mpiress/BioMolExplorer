@@ -1,0 +1,6 @@
+{
+  "search_term": "CHEMBL220",
+  "include_pubchem": true,
+  "pubchem_threshold": 75,
+  "pubchem_max_records": 1000
+}
