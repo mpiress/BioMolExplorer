@@ -12,6 +12,9 @@
 | [Uso do backend](backend_usage.md) | Ambiente científico, CLI, serviços de tarefas, parâmetros e operações | [HTML](pt/backend_usage.html) |
 | [Arquitetura e revisão técnica](architecture.md) | Organização do código, contratos, correções, execução, verificações e limites | [HTML](pt/architecture.html) |
 | [Projetos e versões](projects.md) | Pastas, migração, colaboração, histórico, rollback e múltiplas entradas | [HTML](pt/projects.html) |
+| [Configuração do redocking](redocking_configuration.md) | Pares, cadeia, cofatores, preparação, RMSD, downloads e visualização 3D | [HTML](pt/redocking_configuration.html) |
+| [Recuperação flexível da informação](retrieval.md) | Critérios PDB, modos ChEMBL, filtros e rastreabilidade | [HTML](pt/retrieval.html) |
+| [Logs e diagnóstico](logging.md) | Contexto, causas, códigos de erro, resumos e filtros | [HTML](pt/logging.html) |
 | [Validação do pipeline](pipeline_validation.md) | Matriz de conexões, regressões e limites da verificação | [HTML](pt/pipeline_validation.html) |
 
 [Avaliação da substituição do Chimera](chimera_migration.md) · [HTML](pt/chimera_migration.html): inventário, alternativas e decisão de preservar o protocolo.
@@ -28,6 +31,9 @@
 | [Backend usage](en/backend_usage.md) | Scientific environment, CLI, job services, parameters and operations | [HTML](en/backend_usage.html) |
 | [Architecture and technical review](en/architecture.md) | Code organization, contracts, fixes, execution, verification and limitations | [HTML](en/architecture.html) |
 | [Projects and versions](en/projects.md) | Folders, migration, collaboration, history, rollback and multiple inputs | [HTML](en/projects.html) |
+| [Redocking configuration](en/redocking_configuration.md) | Pairs, chain, cofactors, preparation, RMSD, downloads and 3D viewing | [HTML](en/redocking_configuration.html) |
+| [Flexible information retrieval](en/retrieval.md) | PDB criteria, ChEMBL modes, filters and traceability | [HTML](en/retrieval.html) |
+| [Logs and diagnostics](en/logging.md) | Context, causes, error codes, summaries and filters | [HTML](en/logging.html) |
 | [Pipeline validation](en/pipeline_validation.md) | Connection matrix, regressions and verification limits | [HTML](en/pipeline_validation.html) |
 
 [Chimera replacement assessment](en/chimera_migration.md) · [HTML](en/chimera_migration.html): inventory, alternatives and decision to preserve the protocol.
@@ -53,5 +59,3 @@ ou publicadas junto com `index.html`.
 The generator uses only the Python standard library. Generated pages are static,
 require no external services and can be opened directly in your browser or
 published alongside `index.html`.
-
-[Recuperação flexível da informação](retrieval.md) · [HTML](pt/retrieval.html) · [English](en/retrieval.md): critérios PDB sem EC obrigatório, modos ChEMBL e rastreabilidade.

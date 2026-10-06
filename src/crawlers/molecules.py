@@ -395,7 +395,6 @@ class ZincMols(MyMolecules):
                 if any(len(row)!=2 for row in conteudo):
                     raise ValueError('Tabela ZINC inválida: esperado SMILES e identificador por linha.')
                 mol = DataFrame(conteudo, columns=['smile', 'zinc_id'])
-                print('File number:', idx, ' URL:', url) if verbose else None
 
             return mol
 
@@ -408,7 +407,7 @@ class ZincMols(MyMolecules):
 
 
 
-    def search(self, output_filename='zinc', verbose=False) -> None:
+    def search(self, output_filename='zinc', verbose=0) -> None:
 
         try:
 
@@ -431,7 +430,7 @@ class ZincMols(MyMolecules):
                     processed += len(data)
 
 
-                    pool = {executor.submit(self.__search_in_zinc, item[0]+idx, item[1], verbose) : item for item in enumerate(data)}
+                    pool = {executor.submit(self.__search_in_zinc, item[0]+idx, item[1], 0) : item for item in enumerate(data)}
                     for future in pool:
                         tmp = future.result()
                         if isinstance(tmp, DataFrame):

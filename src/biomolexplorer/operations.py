@@ -29,7 +29,7 @@ OPERATIONS = {
         (), ('similarity_path','base_input_path',
              'mcs_timeout','mcs_ring_matches_ring_only','mcs_complete_rings_only','graph_inputs')),
     'redocking': OperationSpec('wrappers.redocking', 'perform_redocking', ('base_input_path', 'target'),
-        ('pdb_codes', 'pH', 'sizeof_box', 'exhaustiveness', 'num_modes', 'prepare_complex', 'charge_type')),
+        ('pdb_codes', 'pH', 'sizeof_box', 'exhaustiveness', 'num_modes', 'prepare_complex', 'charge_type', 'preparation_pairs')),
     'docking_vina': OperationSpec('wrappers.docking', 'perform_docking_vina',
         ('base_input_path', 'target', 'base_selected_mols', 'mol_filename'),
         ('pdb_code', 'pH', 'sizeof_box', 'exhaustiveness', 'num_modes')),
@@ -41,7 +41,7 @@ OPERATIONS = {
 }
 
 
-def validate_operation(operation, parameters):
+def validate_operation(operation, parameters, *, defer_redocking_selection=False):
     if operation not in OPERATIONS:
         raise ValueError(f'Unknown operation: {operation}')
     if not isinstance(parameters, dict):
@@ -96,6 +96,9 @@ def validate_operation(operation, parameters):
                                                'organism','PolymerEntityTypeID','ExperimentalMethodID','max_resolution')):
             if parameters.get('target', 'Estruturas') in ('Estruturas', 'MeuAlvo'):
                 raise ValueError('Informe texto, identificadores ou filtros para a busca PDB.')
+    if operation == 'redocking' and not (defer_redocking_selection and not parameters.get('pdb_codes')):
+        from .redocking_config import validate_pairs
+        validate_pairs(parameters.get('pdb_codes'), parameters.get('preparation_pairs') or {})
     if 'chembl_filters' in parameters:
         filters = parameters['chembl_filters']
         if not isinstance(filters, dict) or filters.keys() - {'target', 'bioactivity', 'molecules', 'similars'}:
@@ -117,7 +120,7 @@ def validate_operation(operation, parameters):
         value = parameters['sizeof_box']
         if not isinstance(value,list) or len(value)!=3 or any(type(v) not in (int,float) or not math.isfinite(v) or v<=0 for v in value):
             raise ValueError('sizeof_box must contain three positive finite dimensions')
-    for name in ('expand_chembl', 'include_pubchem', 'verbose', 'must_have_ligand', 'prepare_complex', 'morgan', 'maccs', 'pharmacophore', 'approximate',
+    for name in ('expand_chembl', 'include_pubchem', 'must_have_ligand', 'prepare_complex', 'morgan', 'maccs', 'pharmacophore', 'approximate',
                  'mcs_ring_matches_ring_only','mcs_complete_rings_only'):
         if name in parameters and type(parameters[name]) is not bool:
             raise ValueError(f'{name} must be boolean')
@@ -158,6 +161,7 @@ def execute_operation(operation, parameters, output_path):
 def _execute_operation(operation, parameters, output_path):
     spec = validate_operation(operation, parameters)
     kwargs = dict(parameters)
+    kwargs.pop('verbose',None)
     output = Path(output_path).resolve()
     output.mkdir(parents=True, exist_ok=True)
     for name in ('base_input_path', 'base_selected_mols', 'dock6_app_path', 'base_vina_path', 'base_dock6_path', 'similarity_path','fingerprints_path'):

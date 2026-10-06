@@ -14,14 +14,14 @@ import flet as ft
 from biomolexplorer.catalog import TITLES, PRESETS, new_stage, template_names
 from biomolexplorer.pipeline import PipelineService
 from biomolexplorer.templates import RESOURCE_ROOT
-from biomolexplorer.diagnostics import configure_logging, get_logger
+from biomolexplorer.diagnostics import configure_logging, get_logger, diagnose_exception
 from biomolexplorer.visualizations import SUFFIX, MAX_VIEW_BYTES, load_view
 from .branding import flag, wordmark, BRAND_BLUE, BRAND_NAVY
 from .feedback import readable_error,close_dialog
 from biomolexplorer.workspace import WorkspaceStore, AccessDenied, COLORS
 from .project_tools import ProjectTools
 from .zoom import zoomable_view
-from .localization import LocalizedPage, verbatim
+from .localization import LocalizedPage, verbatim, stage_control
 
 INK = '#172B4D'
 MUTED = '#64748B'
@@ -105,7 +105,8 @@ class WorkspaceUI(ProjectTools):
         try:
             await action()
         except Exception as exc:
-            get_logger('frontend').exception('Falha em ação da interface; project=%s tab=%s',self.current['id'] if self.current else None,self.tab)
+            get_logger('frontend').exception('Interface action failed in tab %s: %s', self.tab, exc,
+                extra={'event': 'ui.action_failed', 'project_id': self.current['id'] if self.current else None, **diagnose_exception(exc)})
             if self.token != token:
                 return
             if isinstance(exc,AccessDenied) and self.token:
@@ -587,6 +588,9 @@ class WorkspaceUI(ProjectTools):
             if configuration.get('id')!=stage_id or configuration.get('operation')!=original['operation']:
                 raise ValueError('A seleção de arquivos pertence a outro bloco.')
             draft=copy.deepcopy(configuration)
+        draft['parameters'].pop('verbose',None)
+        from biomolexplorer.templates import quiet_template
+        draft['templates']={name:quiet_template(name,text) for name,text in draft.get('templates',{}).items()}
         self.artifact_choices={}
         for run in runs:
             for item in run['stages']:
@@ -599,6 +603,29 @@ class WorkspaceUI(ProjectTools):
                 self.artifact_choices.setdefault(source['id'],set()).update(a['name'] for a in assets if a['id'] in params.get('asset_ids',[]))
             elif source['operation']=='retrieve_compounds':
                 self.artifact_choices.setdefault(source['id'],set()).add('compounds.csv')
+        self.redocking_records={}
+        if draft['operation']=='redocking':
+            from biomolexplorer.redocking_config import metadata_records
+            seen=set()
+            for run in runs:
+                for item in run['stages']:
+                    if item['status']!='succeeded' or item['id'] in seen:continue
+                    seen.add(item['id'])
+                    paths=[self.store.scoped_path(project['id'],p) for p in item.get('artifacts',[])]
+                    self.redocking_records['stage:'+item['id']]=await self.call(metadata_records,paths)
+            for asset in assets:
+                path=await self.call(self.store.asset_path,token,project['id'],asset['id'])
+                self.redocking_records['asset:'+asset['id']]=await self.call(metadata_records,[path])
+            for source in project['pipeline']:
+                if source['operation']=='import_results' or source.get('provided_results'):
+                    params=source.get('provided_results') or source['parameters']
+                    self.redocking_records['stage:'+source['id']]=[r for a in params.get('asset_ids',[]) for r in self.redocking_records.get('asset:'+a,[])]
+            direct=draft['parameters'].get('base_input_path')
+            if direct:
+                from pathlib import Path
+                folder=self.store.scoped_path(project['id'],direct)
+                self.redocking_records['configured-path']=await self.call(metadata_records,list(folder.rglob('pdb_codes.csv')))
+            if self.token!=token or self.current is not project:return
         mode='visual'
         reader=None
         body=ft.Container(width=min(960,(self.page.width or 1160)-100),height=max(300,min(620,(self.page.height or 900)-250)),padding=24,bgcolor=BG,border_radius=16)
@@ -618,7 +645,7 @@ class WorkspaceUI(ProjectTools):
                 templates={name:ft.TextField(value=draft.get('templates',{}).get(name,(RESOURCE_ROOT/name).read_text()),multiline=True,min_lines=8,text_style=ft.TextStyle(font_family='monospace'),disabled=not writable) for name in template_names(draft['operation'])}
                 body.content=ft.Column([title,parameters,bindings,*[ft.ExpansionTile(title=text(name),controls=[field]) for name,field in templates.items()]],scroll=ft.ScrollMode.AUTO,spacing=24,horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
                 def read_advanced():
-                    result=copy.deepcopy(draft); result['name']=title.value or draft['name']; result['parameters']=json.loads(parameters.value); result['bindings']=json.loads(bindings.value)
+                    result=copy.deepcopy(draft); result['name']=title.value or draft['name']; result['parameters']=json.loads(parameters.value); result['parameters'].pop('verbose',None); result['bindings']=json.loads(bindings.value)
                     result['templates']={name:field.value for name,field in templates.items() if field.value!=(RESOURCE_ROOT/name).read_text()}
                     return result
                 reader=read_advanced
@@ -657,7 +684,7 @@ class WorkspaceUI(ProjectTools):
                 if not self.polling or self.polling.done():self.polling=self.page.run_task(self.poll_runs)
             elif hasattr(self,'flow_editor'):self.flow_editor.refresh()
         await render_mode(mode)
-        dialog=ft.AlertDialog(title=ft.Column([text(TITLES[original['operation']][2].upper(),11,TEAL,ft.FontWeight.W_600),user_text(original['name'],24,weight=ft.FontWeight.W_700),text(TITLES[original['operation']][1],13,MUTED),ft.Row([
+        dialog=ft.AlertDialog(title=ft.Column([text(TITLES[original['operation']][2].upper(),11,TEAL,ft.FontWeight.W_600),stage_control(user_text(original['name'],24,weight=ft.FontWeight.W_700),original),text(TITLES[original['operation']][1],13,MUTED),ft.Row([
             ft.TextButton('Visual · formulário guiado',on_click=visual),ft.TextButton('Avançado · parâmetros e scripts',on_click=advanced)],wrap=True)],spacing=12),content=body,
             actions=[ft.TextButton('Cancelar' if writable else 'Fechar',on_click=lambda e:close_dialog(self.page,dialog)),button('Aplicar e continuar pipeline' if waiting_run_id else 'Aplicar configuração',self.event_action(apply),True,disabled=not writable)])
         self.editing_stage=True
@@ -935,7 +962,7 @@ class WorkspaceUI(ProjectTools):
                     for index,path in enumerate(reports)]
                 stage_label='Reaproveitado' if stage.get('reused') else 'Resultados fornecidos' if stage.get('provided') else STATUS[stage['status']]
                 if stage.get('excluded_records'):stage_label+=f' · {stage["excluded_records"]} registros excluídos'
-                stage_rows.append(ft.ExpansionTile(title=user_text(stage['name'],16),subtitle=text(stage_label,12,TEAL if stage['status']=='succeeded' else MUTED),
+                stage_rows.append(ft.ExpansionTile(title=stage_control(user_text(stage['name'],16),stage),subtitle=text(stage_label,12,TEAL if stage['status']=='succeeded' else MUTED),
                     expanded=result.expanded,on_change=result.expand,
                     controls=[text(readable_error(stage.get('error','')),color='#DC2626'),ft.Row(report_buttons,wrap=True),result.root,ft.TextButton('Ver log',on_click=log)]))
             actions=[]
@@ -1012,7 +1039,7 @@ class WorkspaceUI(ProjectTools):
 
     async def preview_artifact(self,project_id,path):
         token = self.token
-        if Path(path).suffix.lower()=='.pdb':
+        if Path(path).suffix.lower() in ('.pdb','.pdbqt','.mol2'):
             url=await self.call(self.pdb_view_url,project_id,path)
             if self.token!=token or not self.current or self.current['id']!=project_id:return
             await ft.UrlLauncher().launch_url(url,mode=ft.LaunchMode.EXTERNAL_APPLICATION,web_only_window_name='_blank')
@@ -1107,6 +1134,10 @@ class WorkspaceUI(ProjectTools):
         async def apply(e):
             if self.token!=token or self.current is not project:return
             updated=form.read()
+            if updated['operation']=='redocking':
+                dismiss()
+                await self.open_stage_dialog(pending['id'],waiting_run_id=run_id,configuration=updated)
+                return
             resumed=await self.call(self.service.resume,token,run_id,updated)
             dismiss()
             self.current_run=resumed['id']
@@ -1132,7 +1163,7 @@ class WorkspaceUI(ProjectTools):
                                  height=max(300,min(580,(self.page.height or 900)-250))),
             actions=[ft.TextButton('Selecionar depois',on_click=dismiss),
                      ft.TextButton('Configurar etapa',on_click=self.event_action(configure)),
-                     button('Continuar com os arquivos selecionados',self.event_action(apply),True)])
+                     button('Selecionar pares e configurar redocking' if pending['configuration']['operation']=='redocking' else 'Continuar com os arquivos selecionados',self.event_action(apply),True)])
         self.selection_dialog_key=key
         self.selection_dialog=dialog
         self.auto_selection_key=key

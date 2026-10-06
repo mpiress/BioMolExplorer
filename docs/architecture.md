@@ -313,14 +313,6 @@ etapa. Veja o [guia do frontend](frontend.md) para interpretação e limites.
 A [validação do pipeline](pipeline_validation.md) reúne matriz, regressões e limites. O [manual do usuário](user_manual.md) descreve a execução completa. Ambos têm tradução e navegação nas páginas HTML geradas.
 
 
-## Revisão de contratos e localização
-
-`flow.input_types` compartilha o contrato variável de redocking entre canvas, seletor e formulário. O consenso mantém o alias Vina sincronizado e pareia identificadores em individual. `docking_inputs.py` restringe DOCK6 aos candidatos e referências correspondentes. A materialização preserva auxiliares preparados e filtra centros/metadados pela mesma referência. Scores degenerados no consenso recebem normalização finita.
-
-`ui/localization.py` usa um tradutor por sessão e catálogos JSON empacotados. Traduz controles e mensagens conhecidas ao renderizar/atualizar, sem alterar valores editáveis, chaves de seleção ou dados persistidos. `verbatim` protege conteúdos fornecidos pelo usuário e identificadores científicos. A escolha fica no login e o idioma inicial em `--language`; não há estado global compartilhado entre usuários. Logs científicos permanecem na linguagem original.
-
-A [validação do pipeline](pipeline_validation.md) reúne matriz, regressões e limites. O [manual do usuário](user_manual.md) descreve a execução completa. Ambos têm tradução e navegação nas páginas HTML geradas.
-
 ## Avaliação da dependência Chimera
 
 A [análise de substituição do Chimera](chimera_migration.md) registra as funções atuais, alternativas Python, contratos e critérios de validação. A revisão manteve o backend e as dependências científicas: equivalência completa ainda não foi demonstrada.
@@ -344,3 +336,19 @@ O [relatório do porte DMS](dms_migration.md) descreve a implementação SES nat
 
 
 `project_folders.py` implementa destinos nomeados, confirmação vinculada ao estado da pasta e remoção permanente. A API `create_project_in_parent` recebe a pasta principal; `create_project(directory=...)` e a importação conservam o destino exato para compatibilidade. Operações de substituição/exclusão verificam propriedade, sobreposição, caminhos simbólicos e execuções ativas dentro de uma transação SQLite. A pasta antiga é movida para um diretório oculto irmão, permitindo restaurá-la se a criação falhar antes do commit. A exclusão física ocorre depois do commit, com registro persistente para repetir a limpeza em caso de falha. O visualizador converte endereços Flet `ws://`/`wss://` em páginas `http://`/`https://`, preservando host e porta.
+
+## Regressões de redocking e idioma
+
+A revisão inclui registros estruturados do pandas (que não aceitam fatiamento como listas), seleção pré-configurada sem nova solicitação, ausência de pares, resíduos inválidos, ferramentas ausentes, caminhos com espaços, cofatores e centros preparados. Erros de preparação são propagados com sua causa em vez de retornar um conjunto vazio.
+
+Os testes percorrem formulários de todas as operações em inglês, verificam mensagens aninhadas de workers e preservam valores científicos e nomes personalizados. Rótulos dos templates, nomes padrão das etapas e seletores também acompanham o idioma da sessão. Mensagens originalmente em inglês são traduzidas para português quando apresentadas nessa sessão.
+
+Os testes automatizados de integração substituem ferramentas externas na fronteira de execução. Após a análise dos logs de 6 de outubro de 2026, também foi executado o caso real 4M0E / 1YL / 604 / A com Chimera, Open Babel, Vina e PyMOL: com as opções originais, incluindo minimização do receptor e do ligante, o redocking concluiu e produziu RMSD de aproximadamente 0,149 Å. O teste complementar sem minimização produziu aproximadamente 0,215 Å. As execuções utilizaram cópias temporárias da entrada; esses resultados verificam o fluxo desse caso, sem estabelecer tolerâncias científicas para outros complexos.
+
+## Consulta de resultados do redocking
+
+`redocking_results.py` resolve simulações de etapas concluídas a partir dos metadados e do manifesto autorizado por `ResultFiles`. A identidade inclui a origem dos metadados e o par, mantendo coleções importadas independentes mesmo quando seus identificadores PDB coincidem. O serviço agrupa receptor, referência, poses e metadados associados; downloads ZIP preservam caminhos relativos para evitar colisões entre nomes. Cada leitura revalida a autorização do projeto.
+
+`ui/redocking_results.py` apresenta a tabela paginada de RMSD e o popup de arquivos por simulação. Etapas em execução ou com falha continuam usando a consulta genérica de artefatos. `pdb_view.py` emite acessos temporários ao visualizador PDB/PDBQT/MOL2; troca de projeto ou sessão invalida ações pendentes. A visualização abre no navegador e usa o mesmo componente 3D dos PDBs recuperados.
+
+Consulte [Logs e diagnóstico](logging.md) para o formato comum, contexto por execução, códigos de falha, resumo do job e o comando `python -m biomolexplorer.log_report`.

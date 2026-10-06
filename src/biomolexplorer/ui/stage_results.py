@@ -26,6 +26,7 @@ class StageResults:
         self.active=False;self.sequence+=1
         if hasattr(self,'graph_files'):self.graph_files.active=False
         if self.child:
+            if hasattr(self.child,'close'):self.child.close()
             self.child.active=False
             if hasattr(self.child,'selection_version'):self.child.selection_version+=1
             if hasattr(self.child,'preview_version'):self.child.preview_version+=1
@@ -41,6 +42,15 @@ class StageResults:
         self.ui.page.update()
         try:
             operation=self.stage['operation']
+            if operation=='redocking' and self.stage['status']=='succeeded':
+                from biomolexplorer.redocking_results import RedockingResults
+                from .redocking_results import RedockingResultsTable
+                simulations=await self.ui.call(RedockingResults(self.ui.store).simulations,
+                    self.token,self.project_id,self.run_id,self.stage['id'])
+                if not self.valid():return
+                self.child=RedockingResultsTable(self,simulations)
+                self.root.controls=[self.child.build()] if simulations else [ft.Text('Nenhum valor de RMSD disponível para esta etapa.')]
+                self.loaded=True;self.ui.page.update();return
             if operation in ('retrieve_compounds','expand_similar_compounds') and self.stage['status']=='succeeded':
                 tables=await self.ui.call(CompoundTables(self.ui.store).tables,self.token,self.project_id,self.run_id,self.stage['id'])
                 if not self.valid():return

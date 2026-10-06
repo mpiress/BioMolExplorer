@@ -18,6 +18,7 @@ class GuidedUITests(unittest.TestCase):
         FlowCanvas(self.ui,True).build()
         for stage in self.ui.current['pipeline']:
             with self.subTest(stage=stage['operation']):
+                if stage['operation']=='redocking':stage['parameters']['pdb_codes']=[['1ABC','LIG',123,'A']]
                 result=GuidedForm(self.ui,stage,[],True).read()
                 validate_templates(result['templates'])
                 self.assertEqual(stage['name'],result['name'])

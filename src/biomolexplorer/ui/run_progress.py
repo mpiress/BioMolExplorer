@@ -1,7 +1,7 @@
 """Accessible run feedback, independent of the pipeline editor's redraws."""
 import time
 import flet as ft
-from .localization import verbatim
+from .localization import verbatim, stage_control, Translator, default_stage_names
 from .feedback import readable_error
 
 ACTIVE = {'queued', 'running', 'awaiting_input'}
@@ -154,11 +154,16 @@ class RunProgress:
         self.rows.controls = [ft.Row([ft.Icon(ft.Icons.CHECK_CIRCLE if s['status'] == 'succeeded' else
                 ft.Icons.ERROR_OUTLINE if s['status'] == 'failed' else ft.Icons.TIMELAPSE,
                 color='#15803D' if s['status'] == 'succeeded' else '#B91C1C' if s['status'] == 'failed' else '#64748B', size=19),
-            verbatim(ft.Text(s['name'], expand=True)), ft.Text('Reaproveitado' if s.get('reused') else 'Resultados fornecidos' if s.get('provided') else LABELS[s['status']], size=12)], spacing=10) for s in run['stages']]
+            stage_control(ft.Text(s['name'], expand=True),s), ft.Text('Reaproveitado' if s.get('reused') else 'Resultados fornecidos' if s.get('provided') else LABELS[s['status']], size=12)], spacing=10) for s in run['stages']]
         self.log.visible = any(s.get('log_path') for s in run['stages'])
         self.cancel.visible = active and self.ui.current is not None and self.ui.current['role'] != 'viewer'
         self.cancel.disabled = self.cancel_pending
         self.configure.visible = waiting and self.ui.current is not None and self.ui.current['role']!='viewer'
         self.minimize.content = 'Minimizar' if active else 'Fechar'
         self.results.visible = not active
-        self.badge_text.value = f"{LABELS[run['status']]} · {current['name'] if current else self.count.value} · {elapsed(run['created'], end)}"
+        translate = Translator(getattr(self.ui, 'language', 'pt'))
+        name = current['name'] if current else translate(self.count.value)
+        if current and name in default_stage_names():
+            name = translate(name)
+        self.badge_text.value = f"{translate(LABELS[run['status']])} · {name} · {elapsed(run['created'], end)}"
+        verbatim(self.badge_text)

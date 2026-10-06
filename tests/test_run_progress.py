@@ -158,6 +158,17 @@ class RunFeedbackTests(unittest.TestCase):
         self.assertIsNone(self.progress.bar.value)
         self.assertTrue(self.progress.bar.visible)
 
+    def test_english_badge_translates_status_and_preserves_custom_stage_name(self):
+        self.ui.language = 'en'
+        self.run['status'] = 'running'
+        self.run['stages'][0]['status'] = 'running'
+        self.progress.update(self.run, now=130)
+        self.assertIn('Running', self.progress.badge_text.value)
+        self.assertIn('Retrieve compounds', self.progress.badge_text.value)
+        self.run['stages'][0]['name'] = 'Executando meu estudo'
+        self.progress.update(self.run, now=130)
+        self.assertIn('Executando meu estudo', self.progress.badge_text.value)
+
     def test_minimizing_keeps_tracking_and_terminal_error_has_log_access(self):
         self.progress.show()
         asyncio.run(self.progress.dismiss())

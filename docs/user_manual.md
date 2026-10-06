@@ -205,6 +205,16 @@ Em **Preparar meus complexos**, selecione PDBs brutos e informe registros `[PDB,
 
 Em **Executar redocking**, mantenha **Preparar complexos antes do redocking** ativado para PDBs brutos. Desative-o apenas ao fornecer o conjunto já preparado. Confira registros, dimensões da caixa, esforço de busca e número de poses. Examine os RMSDs e os logs; defina os critérios de aceitação do protocolo no estudo antes de usar seus receptores no docking de candidatos.
 
+Em **Entradas**, selecione e valide ao menos um par PDB / ligante / resíduo / **Cadeia**; a cadeia é comum às duas estruturas. Configure os cofatores e a preparação do receptor e do ligante nessa seleção. A resolução vem dos metadados e as opções do ligante valem também para a conformação. Pares já configurados são reutilizados sem uma nova solicitação. Consulte [Configuração do redocking](redocking_configuration.md) para as opções, validações e diagnóstico.
+
+### Consultar resultados de redocking
+
+Ao expandir uma etapa concluída em **Execuções**, a tabela mostra PDB, ligante, resíduo, cadeia e **RMSD (Å)**. **Ver simulação** abre um popup com os arquivos correspondentes àquela seleção. A lista distingue o receptor preparado, o ligante de referência, as poses e os metadados. Arquivos compartilhados pelo receptor ou pela coleção acompanham as simulações correspondentes.
+
+Use o botão de download de cada linha para baixar um arquivo, ou **Baixar todos (ZIP)** para obter o conjunto da simulação. O ZIP conserva as pastas, inclusive quando o ligante de referência e a saída do Vina têm o mesmo nome. Arquivos de outras simulações ficam fora desse conjunto.
+
+O botão **Visualizar estrutura 3D** abre o visualizador no navegador, como na consulta dos PDBs. Ele aceita PDB, PDBQT e MOL2 para examinar receptor, ligante e poses antes do download. Para saídas com várias poses, use **Modelo** no visualizador. As legendas e ações acompanham o idioma selecionado. Leitores também podem consultar e baixar os resultados.
+
 ### Fingerprints, similaridade e grafos
 
 **Gerar fingerprints** escolhe um tipo por bloco: Morgan, MACCS ou farmacóforo. Raio e bits aplicam-se ao Morgan. Para comparar tipos, duplique o bloco e mantenha os resultados identificados.
@@ -296,3 +306,13 @@ Em **Histórico**, confira data, usuário e alteração. Como proprietário, **R
 | Reaproveitamento | Uso de resultados completos e compatíveis já persistidos |
 
 Um percurso comum é recuperar/importar compostos → fingerprints → similaridade → grafos → ADMET, em paralelo a recuperar/importar PDBs → preparação/redocking. As ramificações convergem em Vina → DOCK6 → consenso. Escolha os arquivos e o modo de processamento em cada passagem; registre parâmetros, exclusões e critérios científicos junto ao estudo. O [relatório de validação](pipeline_validation.md) explica os testes e os limites de verificação dessa cadeia.
+
+## Verificações antes da execução
+
+A seleção de pares é obrigatória e usa uma única **Cadeia** para receptor e ligante. Um redocking já configurado reutiliza os pares escolhidos; o pipeline só pede a seleção quando ela ainda não existe. Resolução vem dos metadados, sem campo editável. Cofatores e opções de solvente, hidrogênios, minimização e cargas são configurados por par. A preparação e a conformação do ligante usam as mesmas opções.
+
+Antes de calcular, o sistema verifica os resíduos, a cadeia e os cofatores nos PDBs. Entradas já preparadas precisam dos PDBQT e de três coordenadas finitas em `Prepared/centers.csv`. O ambiente científico deve disponibilizar Chimera, Open Babel (`obabel`) e Vina; sem preparação, somente Vina é exigido. O diretório do interpretador científico também integra o PATH dos processos.
+
+Falhas de ferramentas mostram o executável, o código de saída e a mensagem do processo. Scripts Chimera que falharam são preservados para diagnóstico. Corrija a entrada ou a instalação indicada e tente novamente. Não há controle de verbose: a verbosidade do Vina permanece em zero.
+
+Consulte [Configuração do redocking](redocking_configuration.md) para o fluxo completo.

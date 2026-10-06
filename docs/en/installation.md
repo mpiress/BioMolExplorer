@@ -87,3 +87,9 @@ biomolexplorer-ui --web --language en --dock6-path "$BIOMOL_DOCK6_ROOT"
 Open `http://127.0.0.1:8550`. For desktop mode, omit `--web`. To serve without automatically opening a browser, use `--web --no-browser`. If you select another interpreter through `--worker-python`, prepare that scientific environment too and ensure workers can access the external tools.
 
 Continue with the [user manual](user_manual.md) to create an account, select a project folder and configure the pipeline. For CLI execution and technical parameters, see [backend usage](backend_usage.md).
+
+## Checks before execution
+
+For redocking with preparation, the worker checks `chimera`, `obabel` and `vina`; with prepared complexes, it checks only `vina`. The scientific interpreter directory is included in subprocess `PATH`, but external installations such as Chimera must also be accessible in that environment. DOCK6 is required for stages using that engine.
+
+See [Redocking configuration](redocking_configuration.md) for pair selection, cofactors, prepared inputs, diagnosis and results.

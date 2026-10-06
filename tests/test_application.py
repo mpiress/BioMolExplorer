@@ -92,7 +92,7 @@ class ApplicationTests(unittest.TestCase):
                 self.assertNotEqual(working, pdb)
                 working.unlink()
             with patch('wrappers.redocking.perform_redocking', side_effect=redock):
-                execute_operation('redocking', {'target': 'TARGET', 'base_input_path': str(root / 'source')}, root / 'out')
+                execute_operation('redocking', {'target': 'TARGET', 'base_input_path': str(root / 'source'), 'pdb_codes': [['1ABC','LIG',1,'A']]}, root / 'out')
             self.assertEqual(pdb.read_text(), 'original')
 
     def test_admet_excludes_flagged_compounds_and_handles_empty(self):
@@ -111,8 +111,8 @@ class ApplicationTests(unittest.TestCase):
 
     def test_commands_handle_spaces_failures_and_timeout(self):
         self.assertTrue(run_command([sys.executable, '-c', 'import sys; assert sys.argv[1] == "a b"', 'a b']))
-        with self.assertRaises(subprocess.CalledProcessError):
-            run_command([sys.executable, '-c', 'raise SystemExit(2)'])
+        with self.assertRaisesRegex(RuntimeError, r'código 2.*invalid input'):
+            run_command([sys.executable, '-c', 'import sys; sys.stderr.write("invalid input"); raise SystemExit(2)'])
         with self.assertRaises(subprocess.TimeoutExpired):
             run_command([sys.executable, '-c', 'import time; time.sleep(10)'], timeout=0.05)
 

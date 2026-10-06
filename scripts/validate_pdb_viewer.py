@@ -6,18 +6,19 @@ service is needed; use --chrome to select an installed Chromium/Chrome binary.
 import argparse,json,time,tempfile,subprocess,base64,shutil
 from pathlib import Path
 import requests
+from PIL import Image
 from websockets.sync.client import connect
 from biomolexplorer.workspace import WorkspaceStore
 from biomolexplorer.pdb_view import StructureViewers
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--chrome',default=shutil.which('google-chrome') or shutil.which('chromium'))
-parser.add_argument('--pdb',type=Path,default=Path(__file__).resolve().parents[1]/'tests/fixtures/dms/1CRN.pdb')
+parser.add_argument('--pdb','--structure',dest='pdb',type=Path,default=Path(__file__).resolve().parents[1]/'tests/fixtures/dms/1CRN.pdb')
 parser.add_argument('--screenshot',type=Path,default=Path('/tmp/biomol-pdb-modern.png'))
 args=parser.parse_args()
 if not args.chrome:parser.error('Select an installed browser with --chrome.')
 with tempfile.TemporaryDirectory(prefix='biomol-webgl-') as tmp:
  store=WorkspaceStore(Path(tmp)/'workspace');token=store.register('Test','test@example.org','viewer-test-password')
- pid=store.create_project(token,'Browser verification')['id'];path=store.project_dir(pid)/'1CRN.pdb'
+ pid=store.create_project(token,'Browser verification')['id'];path=store.project_dir(pid)/args.pdb.name
  path.write_bytes(args.pdb.read_bytes());views=StructureViewers(store)
  key=views.issue(token,pid,str(path));desktop_url=views.url(key)
  # Flet exposes a WebSocket page URL: exercise its conversion in a real browser.
@@ -71,14 +72,21 @@ with tempfile.TemporaryDirectory(prefix='biomol-webgl-') as tmp:
    command('Browser.setDownloadBehavior',{'behavior':'allow','downloadPath':str(downloads)})
    evaluate('document.getElementById("snapshot").click();true')
    deadline=time.monotonic()+5
-   while not (downloads/'1CRN.png').exists():
+   snapshot=downloads/(args.pdb.stem+'.png')
+   while not snapshot.exists():
     if time.monotonic()>deadline:raise RuntimeError('PNG export failed')
     time.sleep(.1)
-   assert (downloads/'1CRN.png').read_bytes().startswith(b'\x89PNG'),'Invalid PNG export'
+   assert snapshot.read_bytes().startswith(b'\x89PNG'),'Invalid PNG export'
    # Save an actual rendered frame for visual inspection.
    time.sleep(.4)
    shot=command('Page.captureScreenshot',{'format':'png'})
    args.screenshot.write_bytes(base64.b64decode(shot['data']))
+   # A ready WebGL canvas can still contain no visible geometry (for example,
+   # when a ligand is incorrectly assigned the polymer cartoon style).
+   image=Image.open(args.screenshot).convert('RGB')
+   pixels=image.crop((420,120,1200,650)).tobytes()
+   colored=sum(max(pixel)>45 for pixel in zip(pixels[0::3],pixels[1::3],pixels[2::3]))
+   assert colored>100,'No molecular geometry visible in the rendered scene'
    requests_seen=[event['params']['request']['url'] for event in events if event.get('method')=='Network.requestWillBeSent']
    external=[request for request in requests_seen if request.startswith(('http://','https://')) and not request.startswith(url.split('/molecular-viewer')[0])]
    assert not external,external

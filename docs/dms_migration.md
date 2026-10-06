@@ -37,7 +37,7 @@ O porte cobre integralmente o caminho que a aplicação utilizava: `dms receptor
 
 ## Uso e dependências
 
-NumPy e SciPy já pertencem ao ambiente científico, portanto nenhuma biblioteca adicional é necessária. `requirements.yml` é o manifesto Conda disponível no checkout; o arquivo `environment.yml` já estava removido antes deste porte e não foi recriado. O instalador não baixa, compila nem instala mais DMS.
+NumPy e SciPy já pertencem ao ambiente científico, portanto nenhuma biblioteca adicional é necessária. `requirements.yml` é o manifesto Conda do projeto. O instalador não baixa, compila nem instala mais DMS.
 
 ```python
 from biomolexplorer.molecular_surface import generate_surface

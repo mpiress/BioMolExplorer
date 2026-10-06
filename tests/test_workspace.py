@@ -190,7 +190,7 @@ class WorkspaceTests(unittest.TestCase):
 
     def test_catalog_matches_all_operations(self):
         for operation,spec in OPERATIONS.items():
-            self.assertEqual({f['name'] for f in operation_fields(operation)},set(spec.required+spec.optional))
+            self.assertEqual({f['name'] for f in operation_fields(operation)},set(spec.required+spec.optional)-{'verbose'})
 
     def test_templates_preserve_contract_and_are_scoped(self):
         name='vina/config.template'

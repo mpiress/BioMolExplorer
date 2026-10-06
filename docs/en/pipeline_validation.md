@@ -79,3 +79,23 @@ The connection test is exhaustive for the declared catalog. This does not execut
 7. Restart, choose reuse and compare with a fresh run when validating environment changes.
 
 External queries depend on network, limits and availability of ChEMBL, PubChem, PDB and ZINC. Deterministic tests do not perform a campaign of live queries. Preparation/docking need validation with real engines and data in the destination installation. Reuse after environment changes is an explicit researcher choice; to recalculate with the current installation, choose **No, run again**. ADMET rules and docking scores are computational results, not experimental proof.
+
+## Redocking and language regressions
+
+The review covers pandas structured records (which cannot be sliced like lists), configured selection without another prompt, missing pairs, invalid residues, missing tools, paths with spaces, cofactors and prepared centers. Preparation errors propagate their cause instead of returning an empty set.
+
+Tests traverse forms for every operation in English, verify nested worker messages and preserve scientific values and custom names. Template labels, default stage names and selectors follow the session language. Messages originally written in English are translated for Portuguese sessions.
+
+Automated integration tests replace external tools at the execution boundary. Following the October 6, 2026 log review, the real 4M0E / 1YL / 604 / A case was also executed using Chimera, Open Babel, Vina and PyMOL: with the original options, including receptor and ligand minimization, redocking completed with an RMSD of approximately 0.149 Å. A complementary run without minimization produced approximately 0.215 Å. Both runs used temporary copies of the input; these results verify this case's execution flow and do not establish scientific tolerances for other complexes.
+
+## Results and 3D visualization
+
+`tests/test_redocking_results.py` covers simulation grouping, imported collections with identical identifiers, duplicate artifacts, invalid RMSD values, repeated reference/pose filenames in ZIP archives, permissions, revoked sessions and dialog actions in Portuguese and English. `tests/test_pdb_viewer.py` validates formats and viewer access.
+
+Browser checks also covered a MOL2 ligand (35 atoms), a PDBQT receptor (4,142 atoms) and PDBQT poses (21 atoms), including visible geometry, rotation, zoom, four representations and PNG export, without JavaScript errors or external requests. These checks complement automated tests and do not replace scientific evaluation of the structures. To repeat with your own file, run:
+
+```bash
+python scripts/validate_pdb_viewer.py --structure /path/to/structure.mol2
+```
+
+See [Logs and diagnostics](logging.md) for the common format, execution context, failure codes, job summary and `python -m biomolexplorer.log_report` command.

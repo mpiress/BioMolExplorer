@@ -43,8 +43,10 @@ class PDBViewerTests(unittest.TestCase):
             with self.assertRaises(ValueError):self.viewers.url(key,True,invalid)
 
     def test_expired_revoked_and_logged_out_access_is_denied(self):
+        pt_key=self.viewers.issue(self.token,self.pid,str(self.path),'pt')
         key=self.key();self.now+=self.viewers.TTL+1
         self.assertEqual(self.viewers.response(PREFIX+'/'+key)[0],403)
+        self.assertIn('Visualização expirada',self.viewers.response(PREFIX+'/'+pt_key)[2].decode())
         guest=self.store.register('Reader','reader@example.org','reader-password')
         self.store.invite(self.token,self.pid,'reader@example.org','viewer');self.store.accept_invitation(guest,self.pid)
         reader_key=self.viewers.issue(guest,self.pid,str(self.path))

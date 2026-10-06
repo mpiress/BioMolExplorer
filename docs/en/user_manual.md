@@ -205,6 +205,16 @@ Under **Prepare my complexes**, select raw PDBs and enter `[PDB, ligand, residue
 
 Under **Run redocking**, keep **Prepare complexes before redocking** enabled for raw PDBs. Disable it only for a prepared dataset. Check records, box dimensions, search effort and pose count. Examine RMSDs and logs; establish the study's protocol acceptance criteria before using its receptors to dock candidates.
 
+In **Input Data**, select and validate at least one PDB / ligand / residue / **Chain** pair; both structures use that chain. Configure cofactors and receptor/ligand preparation for that selection. Resolution comes from metadata and ligand options also apply to conformation. Configured pairs are reused without another prompt. See [Redocking configuration](redocking_configuration.md) for options, validation and diagnosis.
+
+### Inspect redocking results
+
+Expanding a completed stage in **Runs** shows a table of PDB, ligand, residue, chain and **RMSD (Å)**. **View simulation** opens a dialog listing files for that selection. The list distinguishes the prepared receptor, reference ligand, poses and metadata. Files shared by the receptor or collection accompany their corresponding simulations.
+
+Use each row's download button for an individual file, or **Download all (ZIP)** for the simulation bundle. The ZIP preserves directories, including when the reference ligand and Vina output share a filename. Files from other simulations are excluded.
+
+**View 3D structure** opens the browser viewer, following the same flow as PDB inspection. It accepts PDB, PDBQT and MOL2 for inspecting receptors, ligands and poses before downloading. Use **Model** in the viewer for files containing multiple poses. Labels and actions follow the selected language. Readers can also inspect and download results.
+
 ### Fingerprints, similarity and graphs
 
 **Generate fingerprints** chooses one type per block: Morgan, MACCS or pharmacophore. Radius and bits apply to Morgan. Duplicate the block to compare types and keep results identifiable.
@@ -300,3 +310,13 @@ A common workflow is retrieve/import compounds → fingerprints → similarity �
 ## Flexible retrieval
 
 Use the [retrieval guide](retrieval.md) to search PDB by text, IDs, UniProt or ligand codes without requiring EC. ChEMBL supports target and direct compound searches by name, IDs, similarity and substructure, with optional filters and explicit limits. Review retrieval_report.json before passing selected files downstream.
+
+## Checks before execution
+
+Pair selection is mandatory and uses one **Chain** for both receptor and ligand. A configured redocking stage reuses its selected pairs; the pipeline requests selection only when it is missing. Resolution comes from metadata and has no editable field. Cofactors and solvent, hydrogen, minimization and charge options are configured per pair. Ligand preparation and conformation share those options.
+
+Before calculations, the system checks residues, chain and cofactors in the PDB files. Prepared inputs require PDBQT files and three finite coordinates in `Prepared/centers.csv`. The scientific environment must provide Chimera, Open Babel (`obabel`) and Vina; without preparation, only Vina is required. The scientific interpreter's directory is also included in subprocess PATH.
+
+Tool failures report the executable, exit code and process message. Failed Chimera scripts remain available for diagnosis. Correct the reported input or installation and retry. There is no verbose control: Vina verbosity stays at zero.
+
+See [Redocking configuration](redocking_configuration.md) for the complete workflow.

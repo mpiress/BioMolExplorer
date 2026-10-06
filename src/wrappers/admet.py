@@ -27,7 +27,7 @@ from biomolexplorer.visualizations import egg_view, write_view, SUFFIX
 
 class ADMETWrapper:
 
-    def __init__(self, base_output_path, base_input_path=None, input_file=None, verbose=False):
+    def __init__(self, base_output_path, base_input_path=None, input_file=None, verbose=0):
         self.base_output_path = base_output_path
         self.set_output_path()
 
@@ -38,7 +38,7 @@ class ADMETWrapper:
         self.df_results = None
         self.excluded_count = 0
 
-        self.verbose = verbose
+        self.verbose = 0
 
 
     def set_input_path(self, input_file) -> list:
@@ -117,7 +117,6 @@ class ADMETWrapper:
             self.df_results = results
             self.export_results(results, filename)
             self.generate_plot(results, filename)
-            self.print_summary(results) if self.verbose else None
         return self.df_results
 
 

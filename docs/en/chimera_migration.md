@@ -8,21 +8,23 @@ The October 5, 2026 review did not establish a complete replacement preserving s
 
 Code, workflows, resources, installation, UI, tests and documentation were inspected, including searches for notebooks. Official documentation was consulted. `chimera` was unavailable on this session's PATH; OpenMM, PDBFixer, OpenFF and ParmEd were absent from the inspected scientific environment. The project file search found no versioned PDB/MOL2/PDBQT reference files. No experimental comparison between Chimera and proposed replacements was performed.
 
+In redocking, effective selections and options are generated for each validated pair. The base template still removes solvent and hydrogens when used directly by standalone preparation; redocking moves these operations to receptor and ligand stages to respect their respective settings.
+
 ## Inventory
 
 Actual resources live in `src/biomolexplorer/resources/chimera/`; `paths.resolve_path` redirects legacy `src/scripts/chimera/` paths to packaged or worker-specific resources.
 
 | Resource or entry point | Function | Outputs or constraint |
 | --- | --- | --- |
-| `prepare_complex.template` | Remove solvent/H, keep selected chains and FAD, delete the inverse selection | `{PDB}_{CHAIN}.complex.pdb`; FAD selection is not limited to selected chains |
+| `prepare_complex.template` | Keep the selected chain and explicitly declared cofactors, delete the inverse selection | `{PDB}_{CHAIN}.complex.pdb`; no cofactor is included by default; receptor/ligand stages handle solvent and hydrogens |
 | `prepare_receptor.template` | Remove ligands, keep protein, add H, assign ff14SB charges with `method gas`, minimize, export MOL2, reopen and remove H | `.dockprep.mol2` and `.noH.pdb` |
 | `prepare_ligand.template` | Isolate residue/chain, add H, assign selected charges, minimize, export PDB and reopen for MOL2 export | `.lig.pdb` and `.lig.mol2`; attribute preservation through reopening needs comparison |
 | `prepare_better_conform.template` | Prepare, charge and minimize the extracted first Vina pose | `.lig.mol2` used by DOCK6 |
 | `prepare_md.template` | Remove solvent/H, add H, write PDB | Published in the editor; no execution caller identified; does not run MD |
-| `prepare_on_chimera` | Run `chimera --nogui --silent`, propagate command failures and remove scripts | Implemented in both `caad/docking.py` and `caad/redocking.py` |
+| `prepare_on_chimera` | Run `chimera --nogui --silent`, propagate command failures and remove scripts only after success | Implemented in both `caad/docking.py` and `caad/redocking.py` |
 | `perform_consensus` | Instruct manual Chimera loop refinement when `pdb_code` is absent | Human step followed by workflow interruption |
 
-The active redocking wrapper imports classes from `caad.docking`. The duplicate `caad.redocking` module also needs coverage for its consumers. Preparation executes complex, receptor and ligand groups in sequence, parallelizing each group; multiple chains are formatted for Chimera selection and ligand isolation uses the first supplied chain.
+The active redocking wrapper imports classes from `caad.docking`. The duplicate `caad.redocking` module also needs coverage for its consumers. Preparation executes complex, receptor and ligand groups in sequence, parallelizing each group; redocking uses the same selected chain for receptor and ligand. Ligand preparation and conformation share options, and explicitly selected cofactors are preserved.
 
 The catalog publishes all five templates for preparation, redocking, Vina and DOCK6. Template validation accepts the scientific commands `open`, `delete`, `select`, `write`, `close`, `addh`, `addcharge`, and `minimize`, without restricting every argument to its original setting. The UI can disable H addition, minimization and removals, and change charge methods. Replacing only default templates would leave existing customizations unsupported.
 

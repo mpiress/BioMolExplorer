@@ -8,7 +8,7 @@ from biomolexplorer.bindings import sources, pack
 from biomolexplorer.catalog import LABELS
 from biomolexplorer.flow import INPUTS, EXTERNAL_INPUTS, input_types
 from biomolexplorer.input_validation import columns
-from .localization import verbatim
+from .localization import verbatim, stage_control
 
 
 def compatible_file(path, kinds):
@@ -83,7 +83,7 @@ class FileSelection:
                 seen.add(ref['stage'])
                 item = completed[ref['stage']]
                 files = list(dict.fromkeys(Path(p) for p in item['artifacts']))
-                controls.append(verbatim(ft.Text(item['name'], size=13)))
+                controls.append(stage_control(ft.Text(item['name'], size=13),item))
                 matching = [p for p in files if compatible_file(p, kinds)]
                 if 'prepared_structures' in kinds and any(p.parent.name == 'Prepared' for p in matching):
                     matching = [p for p in matching if p.parent.name == 'Prepared']

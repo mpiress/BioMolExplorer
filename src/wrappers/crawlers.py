@@ -299,7 +299,7 @@ def load_pdb(target:str="Estruturas", base_output_path:str="datasets", pdb_ec:Op
 
 
 
-def load_zinc(base_output_path:str, filename:str, verbose=False, base_input_path:Optional[str]=None):
+def load_zinc(base_output_path:str, filename:str, verbose=0, base_input_path:Optional[str]=None):
 
     try:
 
@@ -309,7 +309,7 @@ def load_zinc(base_output_path:str, filename:str, verbose=False, base_input_path
         zinc_output_path = f'{base_output_path}/'
         zinc.set_uri_inputpath(str(resolve_path(base_input_path or base_output_path) / filename))
         zinc.set_outputpath(zinc_output_path)
-        zinc.search(output_filename=output, verbose=verbose)
+        zinc.search(output_filename=output, verbose=0)
 
 
     except Exception as e:

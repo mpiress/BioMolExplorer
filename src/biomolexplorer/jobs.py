@@ -7,6 +7,7 @@ import sqlite3
 import subprocess
 import sys
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -15,7 +16,7 @@ from uuid import uuid4
 
 from .operations import validate_operation
 from .paths import SOURCE_ROOT
-from .diagnostics import log_directory, get_logger
+from .diagnostics import log_directory, get_logger, current_context, log_context, event, diagnose_exception, write_summary
 from .progress import read_progress
 
 TERMINAL = {'succeeded', 'failed', 'cancelled', 'interrupted'}
@@ -77,7 +78,7 @@ class JobManager:
             connection.execute('UPDATE jobs SET ' + ', '.join(f'{name}=?' for name in values) + ' WHERE id=?',
                                (*values.values(), job_id))
 
-    def submit(self, operation, parameters):
+    def submit(self, operation, parameters, *, diagnostic_context=None):
         validate_operation(operation, parameters)
         encoded = json.dumps(parameters, allow_nan=False)
         with self._lock:
@@ -97,7 +98,9 @@ class JobManager:
                     (job_id, operation, encoded, 'queued', now, now, str(output),
                      str(job_dir / 'execution.log'), None, None))
             try:
-                self._executor.submit(self._run, job_id)
+                context = {**current_context(), **(diagnostic_context or {}), 'job_id': job_id, 'operation': operation}
+                event(get_logger('backend'), 'job.queued', 'Scientific job queued', **{k:v for k,v in context.items() if k in ('project_id','run_id','stage_id','job_id','operation')})
+                self._executor.submit(self._run, job_id, context)
             except Exception as exc:
                 self._update(job_id, status='failed', error=f'Could not schedule worker: {exc}')
                 raise
@@ -141,12 +144,18 @@ class JobManager:
             if job['status'] in TERMINAL:
                 return job
             self._update(job_id, status='cancelled', error='Cancelled by user')
+            event(get_logger('backend'), 'job.cancelled', 'Job cancelled by user', job_id=job_id, operation=job['operation'])
             process = self._processes.get(job_id)
             if process is not None:
                 self._stop(process)
         return self.get(job_id)
 
-    def _run(self, job_id):
+    def _run(self, job_id, context=None):
+        with log_context(**(context or {})):
+            return self._run_job(job_id)
+
+    def _run_job(self, job_id):
+        started = time.monotonic()
         process = None
         job = None
         try:
@@ -161,9 +170,11 @@ class JobManager:
                                               'output_path': job['output_path']}))
                 environment = dict(os.environ)
                 environment['PYTHONPATH'] = str(SOURCE_ROOT) + os.pathsep + environment.get('PYTHONPATH', '')
+                environment['PATH'] = str(Path(self.config.worker_python or sys.executable).parent) + os.pathsep + environment.get('PATH','')
                 environment['BIOMOL_WORKSPACE'] = str(self.config.workspace)
                 environment['BIOMOL_CPU_WORKERS'] = str(self.config.cpu_workers)
                 environment['BIOMOL_LOG_DIR'] = str(log_directory() / 'jobs' / job_id)
+                environment['BIOMOL_LOG_CONTEXT'] = json.dumps(current_context())
                 environment['MPLBACKEND'] = 'Agg'
                 environment['MPLCONFIGDIR'] = str(job_dir / 'matplotlib')
                 environment['BIOMOL_CACHE_DIR'] = str(self.config.state_dir / 'cache')
@@ -175,6 +186,7 @@ class JobManager:
                 environment['OMP_NUM_THREADS'] = '1'
                 environment['OPENBLAS_NUM_THREADS'] = '1'
                 self._update(job_id, status='running')
+                event(get_logger('backend'), 'job.started', 'Scientific job started', diagnostic_path=environment['BIOMOL_LOG_DIR'])
                 with Path(job['log_path']).open('w') as log:
                     process = subprocess.Popen([str(self.config.worker_python or sys.executable), '-m', 'biomolexplorer.worker',
                                                 str(request), str(response)],
@@ -190,19 +202,28 @@ class JobManager:
                     return
                 if process.returncode != 0:
                     error = json.loads(response.read_text()).get('error') if response.exists() else 'Worker failed; see execution.log'
-                    get_logger('backend').error('Worker falhou; job=%s operation=%s error=%s diagnostics=%s',job_id,job['operation'],error,environment['BIOMOL_LOG_DIR'])
-                    self._update(job_id, status='failed', error=error)
+                    diagnosis = json.loads(response.read_text()).get('diagnostic', {}) if response.exists() else {}
+                    if not diagnosis:
+                        diagnosis = {'error_code': 'WORKER_EXIT_FAILED', 'action': 'Inspect execution.log for a crash or forced termination of the worker.'}
+                        write_summary('failed', directory=environment['BIOMOL_LOG_DIR'], error_code=diagnosis['error_code'], action=diagnosis['action'], worker_error=error)
+                    event(get_logger('backend'), 'job.failed', f'Scientific worker failed: {error}', level=40,
+                          diagnostic_path=environment['BIOMOL_LOG_DIR'], duration_ms=round((time.monotonic()-started)*1000), **diagnosis)
+                    self._update(job_id, status='failed', error=error, result=json.dumps({'diagnostic': diagnosis}))
                 else:
                     result = json.loads(response.read_text())
                     self._update(job_id, status='succeeded', result=json.dumps(result), error=None)
+                    event(get_logger('backend'), 'job.succeeded', 'Scientific job completed', duration_ms=round((time.monotonic()-started)*1000), artifacts=len(result.get('artifacts', [])))
         except Exception as exc:
-            get_logger('backend').exception('Falha ao supervisionar job=%s',job_id)
+            get_logger('backend').exception('Job supervisor failed', extra={'event': 'job.failed', **diagnose_exception(exc)})
             with self._lock:
                 if self.get(job_id)['status'] != 'cancelled':
-                    self._update(job_id, status='failed', error=f'{type(exc).__name__}: {exc}')
+                    self._update(job_id, status='failed', error=f'{type(exc).__name__}: {exc}', result=json.dumps({'diagnostic': diagnose_exception(exc)}))
+                    write_summary('failed', error=exc, directory=log_directory()/'jobs'/job_id, duration_ms=round((time.monotonic()-started)*1000))
         finally:
             if process is not None and process.poll() is None:
                 self._stop(process)
+            if job and self.get(job_id)['status'] == 'cancelled':
+                write_summary('cancelled', directory=log_directory()/'jobs'/job_id, duration_ms=round((time.monotonic()-started)*1000))
             if job and Path(job['log_path']).is_file():
                 try:
                     destination=log_directory()/'jobs'/job_id/'execution.log'

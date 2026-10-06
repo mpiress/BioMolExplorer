@@ -40,10 +40,27 @@ def validate_templates(templates):
                     raise ValueError('O editor aceita os comandos científicos do template, não scripts executáveis arbitrários.')
 
 
+def quiet_template(name, text):
+    if name=='vina/config.template':
+        found = False
+        def normalize(match):
+            nonlocal found
+            if found:
+                return ''
+            found = True
+            return 'verbosity = 0' + ('\n' if match[0].endswith('\n') else '')
+        text=re.sub(r'^[ \t]*(?:verbose|verbosity)[ \t]*=[ \t]*[^\n]*(?:\n|$)', normalize, text, flags=re.M|re.I)
+        if not found:
+            text=text.rstrip()+'\nverbosity = 0\n'
+    return text
+
+
 def materialize_templates(destination, templates):
     validate_templates(templates)
     destination = Path(destination)
     shutil.copytree(RESOURCE_ROOT, destination)
     for name,text in templates.items():
-        (destination / name).write_text(text)
+        (destination / name).write_text(quiet_template(name,text))
+    vina=destination/'vina/config.template'
+    vina.write_text(quiet_template('vina/config.template',vina.read_text()))
     return destination

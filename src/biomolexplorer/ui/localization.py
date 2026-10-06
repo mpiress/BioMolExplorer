@@ -15,17 +15,39 @@ CATALOG = Path(__file__).resolve().parents[1] / 'resources' / 'i18n' / 'en.json'
 PATTERNS = CATALOG.with_name('patterns.json')
 LANGUAGES = ('en', 'pt')
 
+# Translate system-message payloads while keeping filenames, IDs and user titles intact.
+SYSTEM_ARGUMENTS = {
+    'O bloco “{0}” precisa de ajustes: {1}': {1},
+    'Arquivo {0} ({1}): {2}': {2},
+    'Falha no envio: {0}': {0},
+    'Valor inválido para {0}': {0},
+    '{0} deve indicar uma pasta do projeto.': {0},
+    'A pasta de {0} não está disponível. Escolha uma entrada do projeto.': {0},
+    'Conecte um bloco de origem ou selecione seus arquivos em: {0}': {0},
+    'Selecione ao menos um arquivo para {0}.': {0},
+    'Selecione ao menos um arquivo para {0}': {0},
+    'A entrada {0} do bloco “{1}” está conectada a dados incompatíveis.': {0},
+    '{0} (itens separados por vírgula)': {0},
+    'Adicionar item a {0}': {0},
+    '{0} - {1}': {1},
+}
 
-@lru_cache(maxsize=1)
-def catalogs():
+
+
+@lru_cache(maxsize=2)
+def catalogs(language='en'):
     phrases = json.loads(CATALOG.read_text(encoding='utf-8'))
+    mapping=json.loads(PATTERNS.read_text(encoding='utf-8'))
+    if language=='pt':
+        phrases={translated:source for source,translated in phrases.items() if translated!=source}
+        mapping={translated:source for source,translated in mapping.items() if translated!=source or source in SYSTEM_ARGUMENTS}
     patterns = []
-    for source, translated in json.loads(PATTERNS.read_text(encoding='utf-8')).items():
+    for source, translated in mapping.items():
         parts = re.split(r'(\{\d+\})', source)
         expression = ''.join('(.*?)' if re.fullmatch(r'\{\d+\}', part) else re.escape(part) for part in parts)
         # Prefer specific sentences to short prefixes such as "File {0}".
         specificity = sum(len(part) for part in parts if not re.fullmatch(r'\{\d+\}', part))
-        patterns.append((specificity, re.compile(expression, re.DOTALL), translated))
+        patterns.append((specificity, re.compile(expression, re.DOTALL), translated, source if language=='en' else translated))
     return phrases, sorted(patterns, key=lambda value: -value[0])
 
 
@@ -33,6 +55,21 @@ def verbatim(control, *attributes):
     """Protect user content and scientific text from presentation translation."""
     control._biomol_verbatim = set(attributes) if attributes else True
     return control
+
+
+@lru_cache(maxsize=1)
+def default_stage_names():
+    from biomolexplorer.catalog import TITLES
+    phrases,_=catalogs('en')
+    return {name for title,_,_ in TITLES.values() for name in (title,phrases.get(title,title))}
+
+
+def stage_control(control,stage,attribute='value'):
+    """Localize catalog stage names and preserve names entered by the user."""
+    if stage.get('name') in default_stage_names():
+        control._biomol_verbatim=set()
+        return control
+    return verbatim(control,attribute)
 
 
 class Translator:
@@ -45,28 +82,37 @@ class Translator:
         self.language = language
 
     def __call__(self, value):
-        if self.language == 'pt' or not isinstance(value, str) or not value:
+        if not isinstance(value, str) or not value:
             return value
-        phrases, patterns = catalogs()
+        phrases, patterns = catalogs(self.language)
         if value in phrases:
             return phrases[value]
-        if '\nPadrão esperado: ' in value:
+        if self.language=='en' and '\nPadrão esperado: ' in value:
             message,_,expected=value.partition('\nPadrão esperado: ')
             return self(message)+'\nExpected format: '+self(expected)
         # Progress/error messages can contain several independently translated
         # lines, including messages emitted by a separate scientific worker.
         if '\n' in value:
             return '\n'.join(self(line) for line in value.split('\n'))
-        for prefix in ('Etapa atual: ', 'Padrão esperado: '):
+        for prefix in (('Etapa atual: ', 'Padrão esperado: ') if self.language=='en' else ('Current stage: ', 'Expected format: ')):
             if value.startswith(prefix):
                 remainder=value[len(prefix):]
-                return phrases.get(prefix,prefix)+(self(remainder) if prefix=='Padrão esperado: ' else remainder)
-        for _, pattern, translated in patterns:
+                return phrases.get(prefix,prefix)+(self(remainder) if prefix in ('Padrão esperado: ','Expected format: ') or remainder in default_stage_names() else remainder)
+        for _, pattern, translated, canonical in patterns:
             match = pattern.fullmatch(value)
             if match:
                 # Interpolation data is preserved exactly; it can be a filename,
                 # a project name, an identifier or a scientific value.
-                return re.sub(r'\{(\d+)\}', lambda m: match.group(int(m[1])+1), translated)
+                system_slots=SYSTEM_ARGUMENTS.get(canonical,set())
+                if 'Padrão esperado: ' in canonical:
+                    suffix=canonical.split('Padrão esperado: ',1)[1]
+                    system_slots=system_slots | {int(i) for i in re.findall(r'\{(\d+)\}',suffix)}
+                def substitute(marker):
+                    index=int(marker[1]);payload=match.group(index+1)
+                    stage_patterns=('bloco “','de ajustes:','Configurar {','Resultados de {','Conectar saída de {','Escolha uma entrada compatível para {','Etapa: {','Entrada · {')
+                    default_name=payload in default_stage_names() and any(part in canonical for part in stage_patterns)
+                    return self(payload) if index in system_slots or default_name else payload
+                return re.sub(r'\{(\d+)\}', substitute, translated)
         # Validation errors prepend a user filename to another known system
         # message. Keep the prefix intact and translate only the error payload.
         if ': ' in value:
@@ -81,7 +127,8 @@ class LocalizedPage:
     _children = ('controls', 'content', 'title', 'subtitle', 'actions', 'leading',
         'trailing', 'label', 'error', 'helper', 'rows', 'cells', 'columns', 'options', 'spans',
         'shapes', 'tabs', 'tab_bar', 'body', 'items', 'badge', 'icon', 'menu',
-        'prefix', 'suffix', 'prefix_icon', 'suffix_icon')
+        'prefix', 'suffix', 'prefix_icon', 'suffix_icon', 'secondary_label',
+        'bottom_axis', 'top_axis', 'left_axis', 'right_axis', 'labels', 'titles', 'segments')
     _labels = ('label', 'hint_text', 'error', 'helper', 'helper_text', 'tooltip', 'semantics_label', 'message')
 
     def __init__(self, page, language='pt'):

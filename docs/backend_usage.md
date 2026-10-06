@@ -123,7 +123,12 @@ Enums aceitam nomes ou valores, como `TanimotoSimilarity`/`Tanimoto` e
 `Morgan`/`morgan`. Listas de filtros PDB também usam strings serializáveis.
 O parâmetro Vina `pdb_code` segue a função existente: uma lista de registros
 `[PDB_CODE, LIGAND, RESNUM, CHAIN]`; DOCK6 recebe um único registro desses quatro
-campos. Redocking pode ler os registros de `pdb_codes.csv`.
+campos. Redocking exige `pdb_codes` explicitamente selecionados: uma lista de
+`[PDB_CODE, LIGAND, RESNUM, CHAIN]`, com resolução opcional no quinto elemento,
+complementada pelos metadados de `pdb_codes.csv`. `preparation_pairs` guarda as
+opções por chave `PDB|LIGAND|RESNUM|CHAIN`; receptor e ligante usam a mesma cadeia.
+O parâmetro legado `verbose` é ignorado; a verbosidade permanece em zero.
+Consulte [configuração do redocking](redocking_configuration.md).
 
 Cada tarefa recebe um novo diretório de saída. Para encadear tarefas, use os
 artefatos retornados pela etapa anterior como entrada da próxima. A operação
@@ -147,6 +152,50 @@ No workspace, os caminhos precisam pertencer ao projeto. O pipeline resolve os
 SMILES pela cadeia anterior e mantém cada análise separada, em `plots/`,
 `Molecules/`, `data/maxcomp/` e `centroids/`. A consulta MCS continua como SMARTS interno; o modelo e a interface também oferecem
 o SMILES do fragmento extraído da molécula de referência e o estado da busca.
+
+## Exemplo de redocking
+
+O exemplo exige uma entrada existente em `/tmp/study/PDB/Estruturas/4M0E.pdb`, contendo o resíduo 1YL / 604 na cadeia A. Adapte os caminhos e o par à sua coleção; esta chamada não recupera o PDB.
+
+```python
+from biomolexplorer.operations import execute_operation
+
+parameters = {
+    "base_input_path": "/tmp/study/PDB",
+    "target": "Estruturas",
+    "pdb_codes": [["4M0E", "1YL", 604, "A", 2.0]],
+    "prepare_complex": True,
+    "pH": 7.4,
+    "sizeof_box": [24, 24, 24],
+    "exhaustiveness": 20,
+    "num_modes": 10,
+    "charge_type": "gas",
+    "preparation_pairs": {
+        "4M0E|1YL|604|A": {
+            "cofactors": [],
+            "receptor": {
+                "remove_solvent": True,
+                "remove_hydrogens": True,
+                "add_hydrogens": True,
+                "minimize": True,
+                "charge_type": "gas",
+            },
+            "ligand": {
+                "remove_solvent": True,
+                "remove_hydrogens": True,
+                "add_hydrogens": True,
+                "minimize": True,
+                "charge_type": "gas",
+            },
+        },
+    },
+}
+result = execute_operation("redocking", parameters, "/tmp/study/redocking-output")
+```
+
+Sem opções por par, remoção de solvente e de hidrogênios existentes, adição de hidrogênios e minimização usam `True`; cargas do receptor usam `gas` e as do ligante herdam `charge_type` do bloco quando omitidas. Não há cofator padrão. Ao usar `prepare_complex=False`, mantenha os receptores `<PDB>_<CHAIN>.dockprep.pdbqt`, os ligantes de referência `<PDB>_<LIGAND>_<RESNUM><CHAIN>.lig.pdbqt` e três coordenadas finitas por complexo em `Prepared/centers.csv`.
+
+`execute_operation` prepara uma cópia em `structures/<target>/`, preservando a entrada original. Os metadados com `RMSD` ficam em `structures/<target>/pdb_codes.csv`, os preparados em `structures/<target>/Prepared/` e as poses em `<target>/` dentro da saída. `result.artifacts` lista os arquivos exportáveis. As chamadas diretas a `wrappers.redocking.perform_redocking` não têm o isolamento fornecido pela camada de aplicação. A CLI recebe o mesmo dicionário por `--parameters`, sem as janelas de consulta da interface.
 
 ## Testes
 
@@ -182,12 +231,8 @@ exija código, SMILES, TPSA e WLOGP. Consulte [projetos e versões](projects.md)
 `biomolexplorer-ui --language pt` inicia em português; `--language en` (padrão) inicia em inglês. A tela de login permite trocar por sessão. `ui/localization.py` aplica catálogos em `resources/i18n/` apenas à apresentação, preservando parâmetros, identificadores e dados editáveis. Consulte [manual](user_manual.md) e [validação](pipeline_validation.md).
 
 
-## Seleção, retomada e idioma da interface
-
-`PipelineService.submit(token, project_id, reuse_results=True)` reaproveita resultados compatíveis. A interface consulta `existing_results` e pede a decisão ao usuário; `reuse_results=False` força o recálculo. Etapas que precisam de dados ficam em `awaiting_input`; `resume(token, run_id, configuration)` confirma referências explícitas e modo. Resultados completos persistem entre inicializações. A CLI executa uma operação e não possui os popups do workspace.
-
-`biomolexplorer-ui --language pt` inicia em português; `--language en` (padrão) inicia em inglês. A tela de login permite trocar por sessão. `ui/localization.py` aplica catálogos em `resources/i18n/` apenas à apresentação, preservando parâmetros, identificadores e dados editáveis. Consulte [manual](user_manual.md) e [validação](pipeline_validation.md).
-
 ## Parâmetros de recuperação flexível
 
 Consulte [recuperação da informação](retrieval.md) para os modos ChEMBL `search_mode`, exemplos sem alvo/EC obrigatório, limites, filtros e relatórios. Os nomes das operações e contratos CSV das etapas seguintes permanecem disponíveis.
+
+Consulte [Logs e diagnóstico](logging.md) para o formato comum, contexto por execução, códigos de falha, resumo do job e o comando `python -m biomolexplorer.log_report`.

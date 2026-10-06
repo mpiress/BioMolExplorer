@@ -155,6 +155,8 @@ class DockingHandoffTests(unittest.TestCase):
         root=self.store.project_dir(self.project_id);source=new_stage('prepare_structures');files=self.prepared(source)
         base=Path(files[0]).parent
         if base.name=='Prepared':base=base.parent
+        unselected=base/'2DEF.pdb';unselected.write_text(ATOM)
+        unselected_prepared=base/'Prepared'/'2DEF_A.dockprep.pdbqt';unselected_prepared.write_text(ATOM)
         def redock(**kwargs):
             frame=pd.read_csv(base/'pdb_codes.csv');frame['RMSD']=0.8;frame.to_csv(base/'pdb_codes.csv',index=False)
         with patch('wrappers.redocking.DockVina') as engine:
@@ -164,6 +166,8 @@ class DockingHandoffTests(unittest.TestCase):
             frame=engine.call_args.kwargs['pdb_codes']
             self.assertEqual(frame.columns.tolist(),['PDB_CODE','LIGAND','RESNUM','CHAIN','RESOLUTION'])
             self.assertEqual(frame.iloc[0]['PDB_CODE'],'1ABC')
+            self.assertTrue(unselected.exists())
+            self.assertTrue(unselected_prepared.exists())
 
     def test_consensus_singleton_and_equal_scores_are_finite_and_importable(self):
         root=self.store.project_dir(self.project_id);vina=root/'vina';dock6=root/'dock6';out=root/'consensus'

@@ -79,3 +79,23 @@ O teste de conexões é exaustivo para o catálogo declarado. Isso não signific
 7. Reinicie, escolha reaproveitar e compare com uma nova execução quando precisar validar mudanças de ambiente.
 
 Consultas externas dependem de rede, limites e disponibilidade de ChEMBL, PubChem, PDB e ZINC. Os testes determinísticos não fazem uma campanha de consultas ao vivo. Preparação/docking precisam de validação com motores e dados reais na instalação de destino. O reaproveitamento após mudanças de ambiente é uma escolha explícita do pesquisador; para recalcular com a instalação atual, escolha **Não, executar novamente**. Regras ADMET e scores de docking são resultados computacionais, não comprovação experimental.
+
+## Regressões de redocking e idioma
+
+A revisão inclui registros estruturados do pandas (que não aceitam fatiamento como listas), seleção pré-configurada sem nova solicitação, ausência de pares, resíduos inválidos, ferramentas ausentes, caminhos com espaços, cofatores e centros preparados. Erros de preparação são propagados com sua causa em vez de retornar um conjunto vazio.
+
+Os testes percorrem formulários de todas as operações em inglês, verificam mensagens aninhadas de workers e preservam valores científicos e nomes personalizados. Rótulos dos templates, nomes padrão das etapas e seletores também acompanham o idioma da sessão. Mensagens originalmente em inglês são traduzidas para português quando apresentadas nessa sessão.
+
+Os testes automatizados de integração substituem ferramentas externas na fronteira de execução. Após a análise dos logs de 6 de outubro de 2026, também foi executado o caso real 4M0E / 1YL / 604 / A com Chimera, Open Babel, Vina e PyMOL: com as opções originais, incluindo minimização do receptor e do ligante, o redocking concluiu e produziu RMSD de aproximadamente 0,149 Å. O teste complementar sem minimização produziu aproximadamente 0,215 Å. As execuções utilizaram cópias temporárias da entrada; esses resultados verificam o fluxo desse caso, sem estabelecer tolerâncias científicas para outros complexos.
+
+## Resultados e visualização 3D
+
+`tests/test_redocking_results.py` cobre agrupamento por simulação, coleções importadas com identificadores iguais, artefatos duplicados, valores RMSD inválidos, nomes repetidos entre referência e poses no ZIP, permissões, sessões revogadas e ações do popup em português e inglês. `tests/test_pdb_viewer.py` valida formatos e acesso ao visualizador.
+
+Também foram verificados no navegador um ligante MOL2 (35 átomos), um receptor PDBQT (4.142 átomos) e poses PDBQT (21 átomos), incluindo geometria visível, rotação, zoom, quatro representações e exportação PNG, sem erros JavaScript nem solicitações externas. Essas verificações complementam os testes automatizados; não substituem a avaliação científica das estruturas. Para repetir com um arquivo próprio, execute:
+
+```bash
+python scripts/validate_pdb_viewer.py --structure /path/to/structure.mol2
+```
+
+Consulte [Logs e diagnóstico](logging.md) para o formato comum, contexto por execução, códigos de falha, resumo do job e o comando `python -m biomolexplorer.log_report`.

@@ -63,7 +63,7 @@ Complete documentation, installation instructions, workflow descriptions, and ex
 * Molecular fingerprint generation (Morgan, MACCS, and Pharmacophore).
 * Similarity analysis using Tanimoto-based metrics.
 * Graph-based molecular network modeling.
-* Automated redocking validation using AutoDock Vina.
+* Redocking using AutoDock Vina, with explicit pair selection, per-pair preparation and an RMSD results table with simulation downloads and 3D inspection.
 * Consensus docking using AutoDock Vina and Dock6.
 * ADMET profiling for early-stage compound prioritization.
 * Support for drug discovery and drug repositioning studies.
@@ -429,8 +429,7 @@ This section describes how to configure and execute the script used to retrieve 
 ```python
 load_zinc(
     base_output_path='/datasets/ZINC',
-    filename='ZINC2D.uri',
-    verbose=True
+    filename='ZINC2D.uri'
 )
 ```
 
@@ -466,21 +465,7 @@ filename='ZINC2D.uri'
 ```
 
 
-### **3. `verbose`**
-
-* Controls whether the script displays progress information in the terminal during execution.
-
-⚖️ Options:
-
-* `True` → Displays detailed progress (recommended for monitoring)
-* `False` → Runs silently without output
-
-✔️ Example:
-
-```python
-verbose=True
-```
-
+Legacy `verbose` arguments are ignored. Tool verbosity remains zero; execution status and errors are available in the workspace.
 
 ▶️ How to Use
 
@@ -494,15 +479,15 @@ verbose=True
 
 * Set `base_output_path` to the directory where the file is located
 * Provide the correct `filename`
-* Choose whether to enable progress visualization using `verbose`
+* Review execution status and errors in the workspace
 
 
-### 4.2. Analysis Stage: `workflow/Analysis`
+### 4.2. Analysis Stage: `workflow/2-Analysis`
 
 After retrieval, this stage processes the data, validates structures, and generates similarity models:
 
-* **`21-redocking.py`**: Executes the automated redocking process using **AutoDock Vina**. This script prepares the complexes and calculates the RMSD to validate the quality of the downloaded PDB structures, serving as an essential curation layer for subsequent analyses.
-* **`22-dataAnalysis.py`**: Performs advanced data processing in three phases:
+* **`redocking.py`**: Executes the automated redocking process using **AutoDock Vina**. This script prepares the complexes and calculates the RMSD to validate the quality of the downloaded PDB structures, serving as an essential curation layer for subsequent analyses.
+* **`dataAnalysis.py`**: Performs advanced data processing in three phases:
     1. **Fingerprint Generation**: Creates Morgan, MACCS, and Pharmacophore descriptors.
     2. **Similarity Calculation**: Computes metrics (e.g., Tanimoto) to compare molecular entities.
     3. **Network Analysis**: Constructs molecular affinity graphs, identifying connected components and common scaffolds, facilitating the identification of drug candidates.
@@ -515,7 +500,8 @@ This section explains how to configure and execute the redocking process using t
 ```python
 perform_redocking(
     base_input_path='/datasets/PDB',
-    target='MonoamineOxidaseB',
+    target='Estruturas',
+    pdb_codes=[['4M0E', '1YL', 604, 'A', 2.0]],
     base_output_path='/resultados/redocking',
     prepare_complex=True,
     charge_type='am1'
@@ -548,13 +534,13 @@ base_input_path='/datasets/PDB'
 📁 Example:
 
 ```python
-target='MonoamineOxidaseB'
+target='Estruturas'
 ```
 
 ✔️ Expected structure:
 
 ```
-/datasets/PDB/MonoamineOxidaseB/
+/datasets/PDB/Estruturas/
 ```
 
 **3. `base_output_path`**
@@ -574,7 +560,7 @@ base_output_path='/resultados/redocking'
 ⚖️ Options:
 
 * `True` → Enables preparation (recommended)
-* `False` → Skips preparation
+* `False` → Uses existing prepared PDBQT files and finite ligand centers in `Prepared/centers.csv`
 
 ✔️ When enabled:
 
@@ -610,48 +596,13 @@ The [Chimera replacement assessment](docs/en/chimera_migration.md) ([Português]
 The [native DMS port report](docs/en/dms_migration.md) ([Português](docs/dms_migration.md)) describes the Python SES generator and its comparison with the official C distribution. NumPy and SciPy replace the DMS executable; the `.dms` format consumed by sphgen remains.
 
 
-🧬 Template Script for Complex Preparation
+🧬 Complex selection and preparation
 
-The main preparation logic is defined in the following template:
+Configure validated receptor/ligand pairs in **Input Data**. One chain is used for both structures, and resolution comes from metadata. Select cofactors explicitly for each pair; none is retained by default. Receptor and ligand solvent/hydrogen settings are independent, and ligand preparation and conformation share one configuration. Preconfigured redocking reuses the selected pairs.
 
-```bash
-open {input_complex}.pdb
-delete solvent
-delete element.H
-select #0:.{chain} | :FAD
-select invert
-delete selected
-write format pdb #0 {output_complex}.complex.pdb
-close session
-close all
-```
+The generated complex selection is `select #0:.{chain}`; choosing FAD adds ` | :FAD`. Solvent and hydrogen options are applied during receptor and ligand preparation. Classic Chimera receives file paths without shell quotes, and failed scripts remain available for diagnosis.
 
-✏️ Customization Guidelines
-
-**Editable Section**
-
-It is recommended to modify **only the following line**:
-
-```bash
-select #0:.{chain} | :FAD
-```
-
-* This line defines which parts of the structure are retained.
-* `| :FAD` indicates inclusion of a **cofactor (FAD)**.
-
-**Examples:**
-
-✔️ Include cofactor:
-
-```bash
-select #0:.{chain} | :FAD
-```
-
-✔️ Exclude cofactor:
-
-```bash
-select #0:.{chain}
-```
+See the [redocking guide](docs/en/redocking_configuration.md) ([Português](docs/redocking_configuration.md)) for setup, preflight checks, backend options and results. Completed stages display an RMSD table; **View simulation** lists the corresponding files with individual downloads, a simulation ZIP and 3D viewing for PDB, PDBQT and MOL2 in the browser.
 
 ### ⚠️ Important Notes
 
@@ -919,3 +870,5 @@ para a interface utiliza `biomolexplorer.workspace.WorkspaceStore` e
 Na tela de login, selecione inglês ou português. Sem `--language`, a interface inicia em inglês.
 
 Information retrieval now supports optional EC/collection names for PDB searches and direct ChEMBL compound searches by name, IDs, similarity or substructure. See the [retrieval guide](docs/en/retrieval.md) ([Português](docs/retrieval.md)) for modes, limits, filters and query reports.
+
+For troubleshooting, see [Logs and diagnostics](docs/en/logging.md) ([Português](docs/logging.md)): contextual text and JSONL events, per-job summaries, scientific command failure codes and filtered reports.

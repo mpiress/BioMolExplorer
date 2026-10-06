@@ -8,6 +8,7 @@ from biomolexplorer.retrieval import MODES
 from biomolexplorer.templates import RESOURCE_ROOT, validate_templates
 from biomolexplorer.flow import compatible
 from .localization import verbatim
+from .template_labels import TEMPLATE_FIELDS
 
 TEMPLATE_LABELS={'target':'Filtros do alvo molecular','bioactivity':'Filtros de atividade biológica','molecules':'Filtros das moléculas ChEMBL','similarmols':'Filtros dos similares ChEMBL','config':'Vina · opções do motor','prepare_complex':'Chimera · preparação do complexo','prepare_ligand':'Chimera · preparação do ligante','prepare_receptor':'Chimera · preparação do receptor','prepare_better_conform':'Chimera · conformação do ligante','prepare_md':'Chimera · preparação adicional','docking':'DOCK6 · docking','grid':'DOCK6 · grade','min':'DOCK6 · minimização','footprint':'DOCK6 · footprint','showbox':'DOCK6 · caixa','INSPH':'DOCK6 · esferas'}
 LISTS={'organism':['Homo sapiens','Mus musculus','Rattus norvegicus'],
@@ -67,6 +68,7 @@ class GuidedForm:
         for field in operation_fields(stage['operation']):
             key=field['name']; value=stage['parameters'].get(key,field['default'])
             if key=='graph_inputs':continue
+            if stage['operation']=='redocking' and key in ('pdb_codes','preparation_pairs','charge_type'):continue
             if stage['operation']=='fingerprints' and key in ('morgan','maccs','pharmacophore'):continue
             if key=='base_input_path' and self.derived_consensus_input:
                 continue
@@ -89,6 +91,10 @@ class GuidedForm:
                 self.list_field(key,field['label'],value,LISTS.get(key,[]))
             else: self.add(key,'Nome da coleção PDB (opcional)' if stage['operation']=='retrieve_structures' and key=='target' else field['label'],value,field['choices'])
         if stage['operation']=='redocking':
+            from .redocking_pairs import RedockingPairs
+            self.redocking_pairs=RedockingPairs(self)
+            self.controls.append(self.redocking_pairs.control)
+            self.input_editors['base_input_path'].on_change=self.redocking_pairs.refresh
             def redocking_inputs(e):
                 from biomolexplorer.flow import input_types
                 editor=self.input_editors['base_input_path']
@@ -117,7 +123,9 @@ class GuidedForm:
             self.graph_notice=ft.Text(size=12,color='#64748B')
             self.controls.append(self.graph_notice)
             self.sync_graph_mode()
-        for name in template_names(stage['operation']): self.template(name)
+        for name in template_names(stage['operation']):
+            if stage['operation']=='redocking' and name.startswith('chimera/'):continue
+            self.template(name)
         if stage['operation']=='retrieve_compounds':
             self.field_controls['search_mode'].on_change=self.sync_retrieval
             self.field_controls['expand_chembl'].on_change=self.sync_retrieval
@@ -169,7 +177,8 @@ class GuidedForm:
         if isinstance(value,bool):
             control=ft.Switch(label=label,value=value,disabled=not self.writable); getter=lambda:bool(control.value)
         elif choices:
-            control=ft.Dropdown(label=label,value=value,options=[ft.DropdownOption(key=str(v),text=MODES.get(v,str(v)) if key=='search_mode' else str(v)) for v in choices],disabled=not self.writable); getter=lambda:control.value
+            from .app import KINDS
+            control=ft.Dropdown(label=label,value=value,options=[ft.DropdownOption(key=str(v),text=MODES.get(v,str(v)) if key=='search_mode' else KINDS.get(v,str(v)) if key=='kind' else str(v)) for v in choices],disabled=not self.writable); getter=lambda:control.value
         else:
             control=ft.TextField(label=label,value='' if value is None else str(value),disabled=not self.writable)
             if key=='dock6_app_path': control.value=str(self.ui.service.dock6_path or ''); control.read_only=True; control.helper='Configuração da instalação feita pelo administrador.'
@@ -279,9 +288,9 @@ class GuidedForm:
                     getter=lambda c=field:c.value or None
                 elif isinstance(value,list) and key=='type__in':
                     suggested=['SINGLE PROTEIN','PROTEIN FAMILY','PROTEIN COMPLEX','CELL-LINE','TISSUE','ORGANISM'] if key=='type__in' else ['Ki','IC50','EC50','Kd']
-                    checks=[ft.Checkbox(label=v,value=v in value,disabled=not self.writable) for v in dict.fromkeys(suggested+value)]
+                    checks=[ft.Checkbox(label=v,value=v in value,disabled=not self.writable,data=v) for v in dict.fromkeys(suggested+value)]
                     field=ft.Column([ft.Text(FILTER_LABELS.get(key,key)),ft.Row(checks,wrap=True,spacing=20,run_spacing=16)])
-                    getter=lambda checks=checks:[c.label for c in checks if c.value]
+                    getter=lambda checks=checks:[c.data for c in checks if c.value]
                 elif key in ('natural_product','pchembl_value__isnull') and value in (None,0,1):
                     field=ft.Dropdown(label='Produto natural' if key=='natural_product' else 'Exigir pChEMBL',value='' if value is None else str(value),options=[ft.DropdownOption(key='',text='Qualquer')]+[ft.DropdownOption(key=str(k),text=('Sim' if k==1 else 'Não') if key=='natural_product' else ('Sim' if k==0 else 'Não')) for k in (0,1)],disabled=not self.writable)
                     getter=lambda c=field:int(c.value) if c.value else None
@@ -323,6 +332,9 @@ class GuidedForm:
             for i,line in enumerate(lines):
                 stripped=line.strip()
                 if not stripped or stripped.startswith('#') or '{' in line: continue
+                if re.match(r'^(verbose|verbosity)\b',stripped,re.I):
+                    lines[i]=re.sub(r'^(verbose|verbosity)(\s*=\s*|\s+).*',r'\1\g<2>0',stripped,flags=re.I)+'\n'
+                    continue
                 parts=re.split(r'\s*=\s*|\s+',stripped,maxsplit=1)
                 positional=name in ('dock6/showbox.template','dock6/INSPH.template')
                 if positional:
@@ -334,9 +346,9 @@ class GuidedForm:
                     if len(parts)!=2: continue
                     key,value=parts
                 if value.lower() in ('yes','no'):
-                    c=ft.Switch(label=key.replace('_',' '),value=value.lower()=='yes',disabled=not self.writable); getter=lambda c=c:'yes' if c.value else 'no'
+                    c=ft.Switch(label=TEMPLATE_FIELDS.get(key,key.replace('_', ' ')),value=value.lower()=='yes',disabled=not self.writable); getter=lambda c=c:'yes' if c.value else 'no'
                 else:
-                    c=ft.TextField(label=key.replace('_',' '),value=value,disabled=not self.writable)
+                    c=ft.TextField(label=TEMPLATE_FIELDS.get(key,key.replace('_', ' ')),value=value,disabled=not self.writable)
                     try: float(value); numeric=True
                     except ValueError: numeric=False
                     def getter(c=c,numeric=numeric):
@@ -384,10 +396,16 @@ class GuidedForm:
             else: result.get('templates',{}).pop(name,None)
         # Resource-based guided filters replace the corresponding parameter filters.
         if any(n.startswith('crawlers/') for n in self.template_readers): result['parameters'].pop('chembl_filters',None)
+        result['parameters'].pop('verbose',None)
         if hasattr(self,'provided'):
             provided=self.provided.read()
             if provided:result['provided_results']=provided
             else:result.pop('provided_results',None)
+        if hasattr(self,'redocking_pairs') and not result.get('provided_results'):
+            records,settings=self.redocking_pairs.read()
+            result['parameters']['pdb_codes']=records
+            result['parameters']['preparation_pairs']=settings
+            result['parameters'].pop('charge_type',None)
         validate_templates(result.get('templates',{}))
         if result['operation']=='similarity':
             from biomolexplorer.fingerprint_selection import generated_kind

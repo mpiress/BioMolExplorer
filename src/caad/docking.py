@@ -53,6 +53,7 @@ from pymol import cmd
 #----------------------------------------------------------------------------------------------
 from kernel.utilities import fileHandling, MolConverter, MolExplorer
 from kernel.loggers import LoggerManager
+from biomolexplorer.diagnostics import log_context, diagnose_exception, event
 from kernel.descriptors import Descriptors
 #----------------------------------------------------------------------------------------------
 
@@ -81,24 +82,24 @@ class Docking():
 
     def set_ligandpath(self, path) -> None:
        if not os.path.exists(directory(path)):
-           print(f'[ERROR]: The ligand path {path} does not exist!')
-           raise ValueError('Required inputs or directories are missing; see logs')
+           self.logger.error('Missing ligand directory: %s', path, extra={'event': 'input.missing', 'error_code': 'INPUT_NOT_FOUND', 'action': 'Verify the selected ligand directory.'})
+           raise FileNotFoundError(f'Ligand directory does not exist: {path}')
 
        self.ligandpath = path
 
 
     def set_receptorpath(self, path) -> None:
        if not os.path.exists(directory(path)):
-           print(f'[ERROR]: The receptor path {path} does not exist!')
-           raise ValueError('Required inputs or directories are missing; see logs')
+           self.logger.error('Missing receptor directory: %s', path, extra={'event': 'input.missing', 'error_code': 'INPUT_NOT_FOUND', 'action': 'Verify the selected receptor directory.'})
+           raise FileNotFoundError(f'Receptor directory does not exist: {path}')
 
        self.receptorpath = path
 
 
     def set_complexpath(self, path) -> None:
        if not os.path.exists(directory(path)):
-           print(f'[ERROR]: The complex path {path} does not exist!')
-           raise ValueError('Required inputs or directories are missing; see logs')
+           self.logger.error('Missing complex directory: %s', path, extra={'event': 'input.missing', 'error_code': 'INPUT_NOT_FOUND', 'action': 'Verify the selected complex directory.'})
+           raise FileNotFoundError(f'Complex directory does not exist: {path}')
 
        self.complexpath = path
 
@@ -108,8 +109,7 @@ class Docking():
             os.makedirs(directory(path), exist_ok=True)
 
         if not os.path.exists(directory(path)):
-            print(f'[ERROR]: The output path {path} can not be created!')
-            raise ValueError('Required inputs or directories are missing; see logs')
+            raise OSError(f'Output directory could not be created: {path}')
 
         self.outputpath = path
 
@@ -135,7 +135,16 @@ class Docking():
             with open(resolve_path(input_template), 'r') as template_file:
                 template_content = template_file.read()
 
+            preparation = kwargs.pop('_preparation', None)
+            record = kwargs.pop('_record', None)
+            if preparation is not None:
+                from biomolexplorer.redocking_config import configure_template
+                template_content = configure_template(template_content, Path(input_template).name, preparation, record)
+            from biomolexplorer.templates import quiet_template
+            template_content=quiet_template('vina/config.template' if input_template.endswith('vina/config.template') else input_template,template_content)
             config_content = template_content.format(**kwargs)
+            # Classic Chimera's open/write parsers consume the remaining path
+            # verbatim, including spaces. Shell quoting becomes part of its filename.
 
             with open(output_script, 'w') as output_file:
                 output_file.write(config_content)
@@ -175,17 +184,46 @@ class Docking():
 
         """
         try:
+            import re
+            script = Path(directory(self.outputpath), filename)
+            outputs = re.findall(r'^write format (pdb|mol2) #0 (.+)$', script.read_text(), re.M)
             command = ['chimera', '--nogui', '--silent', filename]
-            self.perform_subprocess(command, self.outputpath)
+            with log_context(pair=Path(filename).stem.removeprefix('prepare_ligand_').removeprefix('prepare_receptor_').removeprefix('prepare_complex_')):
+                self.perform_subprocess(command, self.outputpath)
+            for file_format, output in outputs:
+                self.validate_prepared_file(Path(directory(self.outputpath), output.strip()), file_format)
+            script.unlink(missing_ok=True)
+            return True
 
         except Exception as e:
-            self.logger.error(f'during to perform {filename} in prepare_on_chimera function', exc_info=True)
+            self.logger.error('Chimera preparation failed: %s', e, exc_info=True,
+                extra={'event': 'preparation.failed', 'configuration': filename, **diagnose_exception(e)})
             raise
 
         finally:
 
-            os.remove(directory(self.outputpath) + filename) if os.path.isfile(directory(self.outputpath) + filename) else None
             sync_directory(directory(self.outputpath))
+
+    @staticmethod
+    def validate_prepared_file(path, file_format):
+        path = Path(path)
+        if not path.is_file() or not path.stat().st_size:
+            error = ValueError(f'Arquivo preparado ausente ou vazio: {path.name}. Consulte o log da ferramenta.')
+            error.error_code = 'PREPARED_OUTPUT_INVALID'
+            error.action = 'Inspect the preparation tool output and retained script; verify that the expected output contains atoms.'
+            raise error
+        text = path.read_text()
+        if file_format in ('pdb', 'pdbqt'):
+            atoms = any(line.startswith(('ATOM  ', 'HETATM')) for line in text.splitlines())
+        elif file_format == 'mol2':
+            atoms = '@<TRIPOS>ATOM' in text and bool(text.split('@<TRIPOS>ATOM', 1)[1].split('@<TRIPOS>', 1)[0].strip())
+        else:
+            return
+        if not atoms:
+            error = ValueError(f'Arquivo preparado sem átomos: {path.name}. Consulte o log da ferramenta.')
+            error.error_code = 'PREPARED_OUTPUT_INVALID'
+            error.action = 'Inspect the preparation tool output and retained script; verify that the expected output contains atoms.'
+            raise error
 
 
 
@@ -212,6 +250,8 @@ class Docking():
         try:
 
             input_file = directory(self.outputpath) + inputfile
+            if input_format != 'smi':
+                self.validate_prepared_file(input_file, input_format)
 
             if input_format != 'smi':
                 command = ['obabel', '-i', input_format, input_file, '-o', output_format, '-O', outputfile]
@@ -225,6 +265,8 @@ class Docking():
                     command.append(str(value))
 
             self.perform_subprocess(command, self.outputpath)
+            self.validate_prepared_file(Path(directory(self.outputpath), outputfile), output_format)
+            return True
 
         except Exception as e:
             self.logger.error(f'during to perform {inputfile} to {outputfile} converter in prepare_on_obabel function', exc_info=True)
@@ -336,7 +378,7 @@ class Docking():
 
 
 
-    def prepare_for_docking(self, pdb_codes:list, charge_type:str, pH:float, redefine_centerofmass:bool) -> bool:
+    def prepare_for_docking(self, pdb_codes:list, charge_type:str, pH:float, redefine_centerofmass:bool, preparation_pairs=None) -> bool:
         """
         This function prepares the input files for docking using Chimera and Open Babel software. The input files are prepared in a specific
         format required to perform docking with different docking software. Templates for the input files are available in the src/biomolexplorer/resources folder.
@@ -355,6 +397,8 @@ class Docking():
         """
         try:
 
+            from biomolexplorer.redocking_config import pair_key, DEFAULTS
+            event(self.logger, 'preparation.started', 'Preparing selected receptor/ligand complexes')
             centers   = {}
             complexes = []
             receptors = []
@@ -366,7 +410,12 @@ class Docking():
                 ligand   = pdb[1]
                 resnum   = pdb[2]
                 chain    = pdb[3]
-                chain_id = ',.'.join(chain) if len(chain) > 1 else chain
+                preparation = (preparation_pairs or {}).get(pair_key(pdb), {})
+                preparation = dict(preparation, ligand={'charge_type': charge_type, **preparation.get('ligand', {})})
+                chain_id = chain
+                complex_preparation = None
+                if preparation_pairs is not None:
+                    complex_preparation = preparation
 
                 if f'prepare_complex_{receptor}_{chain}.com' not in complexes:
                     self.generate_docking_script(input_template='src/scripts/chimera/prepare_complex.template',
@@ -374,7 +423,7 @@ class Docking():
                                                 pdb_code=directory(self.complexpath) + receptor,
                                                 input_complex=directory(self.complexpath) + receptor,
                                                 chain=chain_id,
-                                                output_complex=f'{receptor}_{chain}')
+                                                output_complex=directory(self.outputpath) + f'{receptor}_{chain}', _preparation=complex_preparation, _record=pdb)
                     complexes.append(f'prepare_complex_{receptor}_{chain}.com')
 
 
@@ -382,7 +431,7 @@ class Docking():
                     self.generate_docking_script(input_template='src/scripts/chimera/prepare_receptor.template',
                                                 output_script=directory(self.outputpath) + f'prepare_receptor_{receptor}_{chain}.com',
                                                 input_complex=directory(self.outputpath) + f'{receptor}_{chain}' + '.complex',
-                                                receptor=directory(self.outputpath) + f'{receptor}_{chain}')
+                                                receptor=directory(self.outputpath) + f'{receptor}_{chain}', _preparation=preparation if preparation_pairs is not None else None)
                     receptors.append(f'prepare_receptor_{receptor}_{chain}.com')
 
 
@@ -391,10 +440,10 @@ class Docking():
                                              output_script=directory(self.outputpath) + f'prepare_ligand_{extention}.com',
                                              input_complex=directory(self.outputpath) + f'{receptor}_{chain}' + '.complex',
                                              resnum=resnum,
-                                             chain=chain[0],
+                                             chain=chain,
                                              charge_type=charge_type,
                                              input_ligand=directory(self.outputpath) + f'{extention}',
-                                             output_ligand=directory(self.outputpath) + f'{extention}')
+                                             output_ligand=directory(self.outputpath) + f'{extention}', _preparation=preparation if preparation_pairs is not None else None)
                 ligands.append(f'prepare_ligand_{extention}.com')
 
 
@@ -407,7 +456,8 @@ class Docking():
 
             for pdb in pdb_codes:
                 chain = pdb[3]
-                self.prepare_on_obabel(f'{pdb[0]}_{chain}.dockprep.mol2', f'{pdb[0]}_{chain}.dockprep.pdbqt', [('p',str(pH)), ('xr','')], input_format='mol2', output_format='pdbqt')
+                options = dict(DEFAULTS, **(preparation_pairs or {}).get(pair_key(pdb), {}).get('receptor', {}))
+                self.prepare_on_obabel(f'{pdb[0]}_{chain}.dockprep.mol2', f'{pdb[0]}_{chain}.dockprep.pdbqt', ([('p',str(pH))] if options['add_hydrogens'] else []) + [('xr','')], input_format='mol2', output_format='pdbqt')
 
             args = [(file,) for file in ligands]
             self.process_in_parallel(method_name='prepare_on_chimera', args_list=args)
@@ -416,12 +466,14 @@ class Docking():
             for pdb in pdb_codes:
                 chain = pdb[3]
                 key = f'{pdb[0]}_{pdb[1]}_{pdb[2]}{chain}'
-                self.prepare_on_obabel(f'{key}.lig.mol2', f'{key}.lig.pdbqt', [('p',str(pH))], input_format='mol2', output_format='pdbqt')
+                options = dict(DEFAULTS, **(preparation_pairs or {}).get(pair_key(pdb), {}).get('ligand', {}))
+                self.prepare_on_obabel(f'{key}.lig.mol2', f'{key}.lig.pdbqt', [('p',str(pH))] if options['add_hydrogens'] else [], input_format='mol2', output_format='pdbqt')
                 if redefine_centerofmass:
                     center = self.calculate_ligand_centerofmass(f'{key}.lig.pdb', pdb[1])
-                    if center != None:
-                        centers[key] = center
-                        tmp_codes.append(tuple(pdb))
+                    if center is None or len(center)!=3 or not all(math.isfinite(float(v)) for v in center):
+                        raise ValueError(f'Não foi possível calcular o centro do ligante {key}. Verifique o arquivo preparado e o log da etapa.')
+                    centers[key] = center
+                    tmp_codes.append(tuple(pdb))
 
 
             if redefine_centerofmass:
@@ -431,16 +483,18 @@ class Docking():
                 df = DataFrame(tmp)
                 f1.dataframe_to_csv('centers', df)
 
+            event(self.logger, 'preparation.succeeded', 'Complex preparation completed', artifacts=len(tmp_codes))
             return tmp_codes if redefine_centerofmass else list(pdb_codes)
 
 
-        except Exception as e:
-             return None
+        except Exception:
+            self.logger.exception('Falha na preparação dos complexos para docking.')
+            raise
 
         finally:
             sync_directory(directory(self.outputpath))
 
-    def recover_better_conforms_of_vina(self, charge_type:str, filename:Optional[list]=None, molecules_dataset:Optional[str]=None):
+    def recover_better_conforms_of_vina(self, charge_type:str, filename:Optional[list]=None, molecules_dataset:Optional[str]=None, preparation_pairs=None):
         """
         This function recover better conformations for each ligand performed by AutoDock Vina software. The input files are prepared in a specific
         format required to perform docking with different docking software. Templates for the input files are available in the src/biomolexplorer/resources folder.
@@ -471,7 +525,8 @@ class Docking():
 
                     self.generate_docking_script(input_template='src/scripts/chimera/prepare_better_conform.template',
                                              output_script=directory(self.outputpath) + f'prepare_better_conform_{input_file}.com',
-                                             ligand=input_file.rsplit(".")[0], charge_type=charge_type)
+                                             ligand=input_file.rsplit(".")[0], charge_type=charge_type,
+                                             _preparation=next((config for key, config in (preparation_pairs or {}).items() if input_file.startswith('_'.join(key.split('|')[:3]) + key.split('|')[3] + '.')), None))
 
 
             args = [(f'prepare_better_conform_{input_file}.com',) for input_file in files]
@@ -590,7 +645,8 @@ class DockVina(Docking):
 
         for file in files_to_perform:
             command = ['vina', '--config', file]
-            self.perform_subprocess(command, self.outputpath)
+            with log_context(pair=Path(file).stem):
+                self.perform_subprocess(command, self.outputpath)
 
 
 
@@ -612,15 +668,13 @@ class DockVina(Docking):
             pdb_codes = DataFrame(self.__pdb_codes, columns=['PDB_CODE', 'LIGAND', 'RESNUM', 'CHAIN'])
             pdb_codes['RESNUM'] = pdb_codes['RESNUM'].astype(str)
             pdb_codes = pdb_codes.to_records(index=False)
-            idx_to_remove = []
 
             for idx, (receptor, ligand, resnum, chain) in enumerate(pdb_codes):
                 composite = f'{receptor}_{ligand}_{resnum}{chain}'
 
                 center = self.retrieve_centerofmass_dataset(self.ligandpath, receptor, ligand, resnum, chain)
                 if center == None:
-                    idx_to_remove.append(idx)
-                    continue
+                    raise ValueError(f'Centro do ligante ausente ou inválido: {composite}')
 
                 self.generate_docking_script(input_template='src/scripts/vina/config.template',
                                             output_script=directory(self.outputpath) + f'{composite}.vina',
@@ -640,13 +694,16 @@ class DockVina(Docking):
 
             self.perform_vina_evaluation()
 
-            pdb_codes = np.delete(pdb_codes, idx_to_remove)
             for receptor, ligand, resnum, chain in pdb_codes:
                 composite = f'{receptor}_{ligand}_{resnum}{chain}'
                 iligand  = directory(self.ligandpath) + f'{composite}' + '.lig.pdbqt'
                 vina_model = directory(self.outputpath) + f'{composite}' + '.lig.pdbqt'
-                if os.path.isfile(iligand) and os.path.isfile(vina_model):
-                    results.append((f'{receptor}', f'{ligand}', f'{resnum}', f'{chain}', desc.calcRMSD(iligand, vina_model)))
+                if not os.path.isfile(iligand) or not os.path.isfile(vina_model):
+                    raise ValueError(f'Saída de redocking ausente: {composite}. Consulte o log do Vina.')
+                rmsd_value = desc.calcRMSD(iligand, vina_model)
+                if not math.isfinite(float(rmsd_value)):
+                    raise ValueError(f'RMSD inválido no redocking: {composite}')
+                results.append((f'{receptor}', f'{ligand}', f'{resnum}', f'{chain}', rmsd_value))
 
 
             rmsd = DataFrame(results, columns=['PDB_CODE', 'LIGAND', 'RESNUM', 'CHAIN', 'RMSD'])
@@ -1317,5 +1374,3 @@ class Dock6(Docking):
 
             [os.remove(directory(self.outputpath) + f) for f in os.listdir(directory(self.outputpath)) if f.endswith('.in')]
             sync_directory(directory(self.outputpath))
-
-

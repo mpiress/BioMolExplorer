@@ -153,6 +153,27 @@ class InputProcessingTests(unittest.TestCase):
                 self.assertEqual(params['pdb_codes'],[[code,'LIG',1,'A']])
         finally:service.close()
 
+    def test_redocking_individual_batches_preserve_curated_pairs_and_settings(self):
+        source,stage=new_stage('retrieve_structures'),new_stage('redocking')
+        root=self.store.project_dir(self.project_id)/'structures';root.mkdir()
+        paths=[]
+        for code in ('1ABC','2ABC','3ABC'):
+            path=root/(code+'.pdb')
+            path.write_text('ATOM      1  C   ALA A   2       0.000   0.000   0.000  1.00  0.00           C\nHETATM    2  C   LIG A   1       0.000   0.000   0.000  1.00  0.00           C\n')
+            paths.append(str(path))
+        stage['parameters']['pdb_codes']=[['1ABC','LIG',1,'A'],['2ABC','LIG',1,'A']]
+        stage['parameters']['preparation_pairs']={f'{code}|LIG|1|A':{'cofactors':[]} for code in ('1ABC','2ABC')}
+        stage['bindings']['base_input_path']={'sources':[{'stage':source['id'],'selector':Path(p).name} for p in paths]}
+        service=PipelineService(self.store)
+        try:
+            variants=list(service._variants(self.project_id,stage))
+            self.assertEqual(len(variants),2)
+            for (variant,_),code in zip(variants,('1ABC','2ABC')):
+                params=service._resolve(self.project_id,self.store.user(self.token)['id'],variant,{source['id']:paths})
+                self.assertEqual(params['pdb_codes'],[[code,'LIG',1,'A']])
+                self.assertEqual(set(params['preparation_pairs']),{f'{code}|LIG|1|A'})
+        finally:service.close()
+
     def test_merge_prepared_outputs_combines_their_metadata_and_centers(self):
         source,stage=new_stage('prepare_structures'),new_stage('docking_vina')
         atom='ATOM      1  C   LIG A   1       0.000   0.000   0.000  1.00  0.00           C\n'

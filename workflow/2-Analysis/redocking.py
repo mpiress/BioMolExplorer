@@ -9,7 +9,7 @@ from kernel.header_builder import HeaderBuilder
 
 __doc__ = HeaderBuilder.build(
 
-    module_title="ADMET analysis",
+    module_title="Redocking analysis",
 
     module_description=(
     "Main functions for managing and integrating redocking "
@@ -32,7 +32,8 @@ if __name__ == "__main__":
     # REDOCKING EXPERIMENTS USING AUTODOCK VINA WITH COMPLEXES FROM PDB - RMSD CALCULATION
     #----------------------------------------------------------------------------------------------
     perform_redocking(base_input_path='/datasets/PDB',
-                      target='Butyrylcholinesterase',
+                      target='Estruturas',
+                      pdb_codes=[['4M0E', '1YL', 604, 'A', 2.0]],
                       base_output_path='/resultados/redocking',
-                      prepare_complex=False, charge_type='am1')
+                      prepare_complex=True, charge_type='am1')
 

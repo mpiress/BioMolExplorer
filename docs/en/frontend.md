@@ -56,10 +56,10 @@ Create an account on the initial screen. Passwords have at least 10 characters
 and are stored using an individual salt and scrypt. Sessions last eight hours
 and are invalidated on logout.
 
-Each project starts private. In the **Compartilhar** (Share) tab, the owner enters
+Each project starts private. In the **Share** tab, the owner enters
 the email of an already registered account and chooses a permission. An invitation
 appears in the recipient's workspace and must be accepted. The owner can revoke it.
-Invitations show whether the role is **Editor** or **Leitor** (Viewer). Declined
+Invitations show whether the role is **Editor** or **Viewer**. Declined
 or revoked invitations cannot be accepted later. Changing a collaborator's role
 creates a new invitation and suspends previous access until acceptance. Inviting
 an active collaborator again with the same role does not remove access.
@@ -95,24 +95,24 @@ or click the output followed by the input. Colors identify retrieval, analysis,
 docking and imports. Incompatible connections and cycles are rejected without
 changing the graph.
 
-Double-click a header or use **Configurar seleção** (Configure selection). The
+Double-click a header or use **Configure selection**. The
 **Visual** mode provides forms, lists, selectors and controls for ChEMBL filters,
 PDB records, docking boxes and engine options. Scripts are generated from these
 choices. **Avançado** (Advanced) allows JSON parameter/connection editing and full
-scientific templates. **Aplicar configuração** validates and commits the draft;
-**Cancelar** keeps the previous block configuration.
+scientific templates. **Apply configuration** validates and commits the draft;
+**Cancel** keeps the previous block configuration.
 
-After a stage completes, execution pauses before the next connected block and
+Except for redocking with previously configured pairs, after a stage completes execution pauses before the next connected block and
 automatically opens a file selection popup. Check the compatible files to use for
-each input, then click **Continuar com os arquivos selecionados**. Only outputs
-from this run are listed. Choose **Processar individualmente** (the popup default)
-to keep each file and its results separate, or **Mesclar arquivos (merge)** to
+each input, then click **Continue with selected files**. Only outputs
+from this run are listed. Choose **Process individually** (the popup default)
+to keep each file and its results separate, or **Merge files** to
 combine selected inputs. Multiple input ports form file combinations in individual
 mode. DOCK6 retains only matching receptor/compound/pose combinations; consensus pairs matching Vina/DOCK6 identifiers. Required structure metadata accompanies selected receptors in both modes.
 The choice is recorded for each stage. Stages that need processing require
 confirmation; reused stages complete without repeating file selection.
 Closing the popup keeps the run paused and preserves the selected files and mode.
-Reopen it from the progress window or the runs tab; **Configurar etapa** opens
+Reopen it from the progress window or the runs tab; **Configure stage** opens
 the full configuration with those choices already filled in. Confirmed selections
 are also saved in the block. Resuming keeps
 completed outputs and follows the dependencies defined by the connections.
@@ -125,7 +125,7 @@ with a logarithmic slider for fine adjustments at small and large scales.
 **Ctrl+Z**, **Ctrl+Y** and **Delete** operate while configuration is closed;
 **Escape** cancels a pending connection. Undo history belongs to the editing
 session; positions and connections autosave after a short editing pause.
-**Salvar** (Save) also commits changes. The selection
+**Save** also commits changes. The selection
 menu and buttons provide alternatives to dragging. Visual positions do not define
 execution order: connections define dependencies. An enabled stage cannot depend
 on a disabled stage.
@@ -144,16 +144,16 @@ Starting a run opens a dialog showing the current stage, elapsed time, every
 block's state and the number of completed stages. ChEMBL retrieval also reports
 the query phase and the number of processed molecular records. The animated
 indicator shows ongoing work without estimating a percentage for calculations
-whose duration is unknown. **Minimizar** (Minimize) keeps a project status banner;
-**Acompanhar execução** (Track run) reopens the dialog. Completion, cancellation
+whose duration is unknown. **Minimize** keeps a project status banner;
+**Track run** reopens the dialog. Completion, cancellation
 or failure is shown with access to stage logs and results. Editors and owners can
-request **Cancelar execução** (Cancel run); the request remains visible while
+request **Cancel run**; the request remains visible while
 the backend stops the process. Readers can track runs.
 
-**Execuções** (Runs) shows states, errors, logs and downloadable files. Cancellation stops the worker;
+**Runs** shows states, errors, logs and downloadable files. Cancellation stops the worker;
 after an application interruption, the previous run is recorded as interrupted.
 A new run reuses compatible completed stages and executes the remaining ones.
-The progress dialog and history label these stages **Reaproveitado** (Reused).
+The progress dialog and history label these stages **Reused**.
 Every two seconds, open projects load collaborator changes when there is no
 open configuration form or local draft. If permission changes to viewer, editing drafts and private dialogs are
 discarded when the change is detected.
@@ -165,12 +165,12 @@ before running. DOCK6 requires a configured installation and a reference complex
 
 ## Exploring charts and compounds
 
-In **Execuções** (Runs), expand **Recuperar compostos** (Retrieve compounds) or
-**Expandir similares** (Expand similar compounds). The compound table appears
+In **Runs**, expand **Retrieve compounds** or
+**Expand similar compounds**. The compound table appears
 directly within the stage. The table
 selector lists available `<target>_FULL`, `<target>_MOLS`, `<target>_SIMS` CSVs and
 `compounds.csv`, the integrated ChEMBL/PubChem dataset. Columns show compound codes,
-SMILES and actions, with search and a selected-table download. **Itens por página**
+SMILES and actions, with search and a selected-table download. **Items per page**
 (Items per page) offers 10, 25, 50 or 100 rows; the default is 25.
 Only generated files appear; runs without similar compounds may omit some CSVs.
 
@@ -178,7 +178,7 @@ Only generated files appear; runs without similar compounds may omit some CSVs.
 SMILES with drag rotation, zoom and reset; it is not a docking pose. Readers can
 also use these previews.
 
-**Remover** (Remove) asks for confirmation and deletes only the selected CSV row,
+**Remove** asks for confirmation and deletes only the selected CSV row,
 preserving its other columns. Editors and owners can curate tables while no
 pipeline is active in the project. The original file and authorship record remain
 in private curation history (`.curation/` and SQLite table `compound_edits`).
@@ -186,28 +186,28 @@ Retrieval remains reusable after curation; stages consuming changed data are
 recalculated on the next run. Other CSVs are not synchronized: select the table
 to use in the next block's input connection.
 
-After running a stage, click the block's **Resultados** (Results) icon, or open
-**Execuções** (Runs) and expand the stage. Fingerprints, similarity and other
+After running a stage, click the block's **Results** icon, or open
+**Runs** and expand the stage. Fingerprints, similarity and other
 file lists use paginated tables with download, preview when available, and remove
-actions on the right. **Arquivos** (Files) uses the same layout. Removing files
+actions on the right. **Files** uses the same layout. Removing files
 requires editor access and no active pipeline; unlink input files from blocks
 before deleting them. Project history can restore removed files. Stages with
 removed outputs cannot be reused as complete results on the next execution.
 
-In **Filtrar por grafos** (Graph filtering), **Similaridades** is the only
-canvas input. Connect one or more **Calcular similaridade** (Compute similarity)
+In **Filter by graphs** (Graph filtering), **Similarities** is the only
+canvas input. Connect one or more **Calculate similarity** (Compute similarity)
 stages and select their output files. Each CSV produces an independent analysis.
 Fingerprint, compound retrieval and generic import stages cannot connect directly.
 Metric, fingerprint type and threshold belong to the similarity stage; graph
 filtering preserves the relationships and weights it receives.
 
-Optionally, **Enviar meus arquivos** uploads external UTF-8 CSVs with
+Optionally, **Upload my files** uploads external UTF-8 CSVs with
 `source,target,value` columns, valid identifiers and finite numeric weights
 between 0 and 1. Example: `MOL1,MOL2,0.85`. Invalid headers, missing identifiers
 and invalid weights produce messages explaining the expected format.
 
 Pipeline compound SMILES are identified automatically. For external inputs,
-**Arquivo externo de compostos e SMILES · opcional** accepts a companion CSV
+**External compounds and SMILES file · optional** accepts a companion CSV
 with `molecule_chembl_id,canonical_smiles` and matching edge identifiers. This
 provides molecular 2D structures, common-fragment search and isolated compounds.
 Without the companion table, topology remains available and missing structures
@@ -217,10 +217,10 @@ table is supplied.
 Older projects preserve similarity connections and saved experiment results.
 Direct fingerprint connections and graph calculation parameters are removed
 when opening the project. If no similarity connection remains, connect a
-**Calcular similaridade** stage before execution. Older archives receive the
+**Calculate similarity** stage before execution. Older archives receive the
 same update on import.
 
-Expand the stage in **Execuções** and select **Análise de grafos · entrada e
+Expand the stage in **Runs** and select **Análise de grafos · entrada e
 origem**. The graph appears inline. Switch between the full graph, including
 isolates, and the MCC (largest connected component). Blue outlines highlight
 MCC nodes in the full graph. Nodes have a small, uniform size, including in the
@@ -229,8 +229,8 @@ exported MCC presentation. Viridis colors indicate degree
 defined as degree / (n − 1) for the displayed dataset. The legend gives the
 range. This per-node measure differs from global edge density, recorded in the
 result model. Components occupy separate areas and vertices retain spacing as
-the canvas expands. **Navegar entre componentes** selects a component;
-**Ajustar à tela** fits the visible graph. Pan, zoom, recenter or choose circular
+the canvas expands. **Navigate components** selects a component;
+**Fit to view** fits the visible graph. Pan, zoom, recenter or choose circular
 organization. Selecting a node highlights its neighbors and relations; the
 neighbor list follows connections and displays similarity values. Code searches
 can locate compounds in other components. Toggle node
@@ -238,7 +238,7 @@ labels as needed. Hover to identify a compound; click to open its molecular 2D
 structure and properties.
 
 In MCC mode, the right panel shows the common molecular fragment, its image,
-**SMILES do fragmento**, atom and bond counts, and search status. The image and
+**Fragment SMILES**, atom and bond counts, and search status. The image and
 SMILES depict the matched fragment of a reference molecule. SMARTS remains in
 the result model for matching. Older saved graphs receive this display and
 layout update when opened. Configure the time limit
@@ -247,10 +247,10 @@ a match in every MCC compound. When the limit is reached, the interface and
 exported figure label the best fragment found as partial; its maximum size is
 unconfirmed. This distinction follows the [RDKit FindMCS documentation](https://www.rdkit.org/docs/source/rdkit.Chem.rdFMCS.html).
 
-**Baixar apresentação MCC** exports a PNG with the degree-colored MCC, fragment
+**Download MCC presentation** exports a PNG with the degree-colored MCC, fragment
 image, degree rank, histogram and degree distributions. **Baixar compostos do
 MCC** exports the selected analysis CSV with original identifiers and metadata.
-**Arquivos desta análise** lists files for the selected result in a paginated table (25 items by
+**Files for this analysis** lists files for the selected result in a paginated table (25 items by
 default). Every analysis has its own CSV, figure, interactive model and edges.
 `Molecules/molecules.csv` retains the union of MCCs for existing pipelines. If
 independent analyses reuse an identifier for different structures, this union
@@ -263,7 +263,7 @@ no edges, one isolated compound forms an MCC of size one. Networks larger than
 1,000 nodes use concentric rings within each component to reduce layout cost, preserving all nodes and
 relationships.
 
-For **Avaliar ADMET** (Evaluate ADMET), choose a result CSV and one of four
+For **Evaluate ADMET**, choose a result CSV and one of four
 datasets: all evaluated compounds, BBB+, BBB− or HIA+. The interactive EGG appears
 within the stage and shows TPSA × WLOGP and HIA/BBB regions. Axis bounds include
 outliers. Clicking a point opens a popup with its molecular 2D structure and
@@ -271,9 +271,9 @@ properties. Two buttons on the right download the selected EGG chart or matching
 CSV. Filtered CSV downloads preserve compound properties. JSON files remain
 internal visualization data and are hidden from the ADMET file list.
 
-**Gerar fingerprints** (Generate fingerprints) offers one algorithm per block:
+**Generate fingerprints** offers one algorithm per block:
 Morgan, MACCS or pharmacophore. Radius and bit-count fields appear only for Morgan.
-**Calcular similaridade** (Compute similarity) automatically identifies and locks
+**Calculate similarity** (Compute similarity) automatically identifies and locks
 the algorithm for selected application-generated inputs. The selector remains
 editable for user-supplied inputs. Different fingerprint types cannot be combined.
 For older projects generating several types per block, select a specific output
@@ -287,7 +287,7 @@ In both interactive viewers:
    the `(+N)` indicator shows how many other compounds overlap there.
 3. Search by code to select a compound with the keyboard, including overlapping
    points. In MCC mode, search is restricted to that component.
-4. Drag the background to pan, use zoom and **Recentrar** (Reset view).
+4. Drag the background to pan, use zoom and **Recenter** (Reset view).
 
 Viewers can explore and download charts; editing and execution remain restricted
 to editors and owners. Authorization is checked when opening files and compound
@@ -299,12 +299,12 @@ to generate interactive artifacts.
 
 ## Using your own files
 
-Each block supports **Enviar meus arquivos** (Upload my files), **Adicionar entrada**
+Each block supports **Upload my files**, **Add input**
 (Add input) and a separate completed-results mode, with expected-format validation.
 The import block remains available:
 
-1. Open **Arquivos** (Files), choose the type and upload files.
-2. Add **Importar meus arquivos** (Import my files) to the pipeline and select the uploads.
+1. Open **Files**, choose the type and upload files.
+2. Add **Import my files** to the pipeline and select the uploads.
 3. Configure the import type and, for structures, the target directory.
 4. Connect the import output to the stage that will consume the data.
 
@@ -317,16 +317,16 @@ assets directory; downloads go through authorization.
 Compound CSVs accept `canonical_smiles` and `molecule_chembl_id`, or `smiles` and
 `name`. Import normalizes column names and generates missing identifiers.
 Identifiers must be safe for filenames. The uploaded original is preserved.
-To select a particular result, use **Resultado usado nesta entrada** (Input result).
+To select a particular result, use **Result used in this input** (Input result).
 The selector lists imported files and outputs from previous runs; automatic
 bindings can start automatic, but execution asks you to confirm files. Advanced mode accepts other `selector` values.
 
-For your own PDBs, use the **Complexos PDB** (PDB complexes) import type, followed
-by **Preparar meus complexos** (Prepare my complexes), and add records through the
+For your own PDBs, use the **PDB complexes** import type, followed
+by **Prepare my complexes**, and add records through the
 form (PDB, ligand, residue and chain). You can also upload `pdb_codes.csv` with
 `PDB_CODE,LIGAND,RESNUM,CHAIN`. PDB retrieval or redocking is then unnecessary.
 
-For already prepared receptors, choose **Receptores preparados** (Prepared
+For already prepared receptors, choose **Prepared receptors** (Prepared
 receptors) and upload the bundle required by the existing protocol:
 `<PDB>_<CHAIN>.dockprep.pdbqt` files, `centers.csv` and `pdb_codes.csv`.
 Import creates `<target>/Prepared` and puts metadata in `<target>/pdb_codes.csv`.
@@ -360,7 +360,7 @@ checkout, the default is `logs` in the working directory. Use UI option
 
 Diagnostic files rotate at 5 MB, retaining three previous copies. `execution.log`
 is copied when the worker exits; the original private log remains available in
-**Execuções** while running. Do not serve `logs` as public assets: diagnostics
+**Runs** while running. Do not serve `logs` as public assets: diagnostics
 include paths and project identifiers.
 
 ChEMBL retrieval uses paginated REST endpoints with bounded retries and timeouts,
@@ -368,7 +368,7 @@ without initializing `/spore`. An unavailable API remains an explicit error, rat
 than an empty dataset. Activity thresholds use `standard_value`/`standard_units`;
 natural-product filtering applies to both Yes and No.
 
-The **Recuperar compostos** block calls `wrappers.crawlers.retrieve_compounds` in a
+The **Retrieve compounds** block calls `wrappers.crawlers.retrieve_compounds` in a
 separate Python worker. `workflow/1-InformationRetrieval/retrieve_compounds.py` is
 a manual example calling the same function; its options and output directory may
 differ from the project's configuration. Worker startup records its interpreter
@@ -379,7 +379,7 @@ templates.
 ChEMBL endpoint HTTP 500 responses or retrieval timeouts are reported to the
 frontend with query context after automatic retries. Downloading some files before
 a failure does not complete retrieval: partial files remain in that run's private
-directory and dependent stages are not executed. The dialog and **Ver log da etapa**
+directory and dependent stages are not executed. The dialog and **View stage log**
 (View stage log) help distinguish this situation from a worker startup failure.
 
 To probe CHEMBL220 using only IC50, without similarity expansion:
@@ -428,3 +428,23 @@ PDB listings provide ligand editing, local structure previews and links to RCSB.
 ## Explore a PDB in 3D
 
 **View 3D structure** opens a browser tab with the local WebGL explorer. Drag to rotate, wheel to zoom and right-drag to pan. The panel provides representations, colors, chains, models, ligands and water; the header offers fullscreen and PNG export. See [the retrieval guide](retrieval.md) for controls, permissions and browser requirements. PDB data is not sent to external services.
+
+## Checks before execution
+
+Pair selection is mandatory and uses one **Chain** for both receptor and ligand. A configured redocking stage reuses its selected pairs; the pipeline requests selection only when it is missing. Resolution comes from metadata and has no editable field. Cofactors and solvent, hydrogen, minimization and charge options are configured per pair. Ligand preparation and conformation share those options.
+
+Before calculations, the system checks residues, chain and cofactors in the PDB files. Prepared inputs require PDBQT files and three finite coordinates in `Prepared/centers.csv`. The scientific environment must provide Chimera, Open Babel (`obabel`) and Vina; without preparation, only Vina is required. The scientific interpreter's directory is also included in subprocess PATH.
+
+Tool failures report the executable, exit code and process message. Failed Chimera scripts remain available for diagnosis. Correct the reported input or installation and retry. There is no verbose control: Vina verbosity stays at zero.
+
+See [Redocking configuration](redocking_configuration.md) for the complete workflow.
+
+## Inspect redocking results
+
+Expanding a completed stage in **Runs** shows a table of PDB, ligand, residue, chain and **RMSD (Å)**. **View simulation** opens a dialog listing files for that selection. The list distinguishes the prepared receptor, reference ligand, poses and metadata. Files shared by the receptor or collection accompany their corresponding simulations.
+
+Use each row's download button for an individual file, or **Download all (ZIP)** for the simulation bundle. The ZIP preserves directories, including when the reference ligand and Vina output share a filename. Files from other simulations are excluded.
+
+**View 3D structure** opens the browser viewer, following the same flow as PDB inspection. It accepts PDB, PDBQT and MOL2 for inspecting receptors, ligands and poses before downloading. Use **Model** in the viewer for files containing multiple poses. Labels and actions follow the selected language. Readers can also inspect and download results.
+
+See [Logs and diagnostics](logging.md) for the common format, execution context, failure codes, job summary and `python -m biomolexplorer.log_report` command.

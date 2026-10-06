@@ -83,6 +83,7 @@ def operation_fields(operation):
     defaults = dict(zip([a.arg for a in node.args.args][-len(node.args.defaults):], node.args.defaults)) if node.args.defaults else {}
     fields = []
     for key in spec.required + spec.optional:
+        if key=='verbose':continue
         default = ENUM_DEFAULTS.get(key)
         if key in defaults:
             try:

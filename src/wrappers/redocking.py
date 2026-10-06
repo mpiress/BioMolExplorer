@@ -3,7 +3,7 @@ from kernel.header_builder import HeaderBuilder
 
 __doc__ = HeaderBuilder.build(
 
-    module_title="ADMET analysis",
+    module_title="Redocking analysis",
 
     module_description=(
     "Wrapper module for managing and integrating redocking "
@@ -20,7 +20,7 @@ __doc__ = HeaderBuilder.build(
 #----------------------------------------------------------------------------------------------
 from typing import Optional, List, Tuple, Literal
 from pathlib import Path
-from pandas import DataFrame
+from pandas import DataFrame, isna
 import os
 
 from caad.docking import DockVina, Docking
@@ -36,7 +36,7 @@ ChargeType = Literal['gas', 'am1']
 
 def perform_redocking(base_input_path:str, target:str, base_output_path:str, pdb_codes:Optional[List[Tuple[str, str, str, str]]]=None,
                       pH:Optional[float]=7.4, sizeof_box:Optional[List]=[24,24,24], exhaustiveness:Optional[int]=20,
-                      num_modes:Optional[int]=10, prepare_complex:Optional[bool]=True, charge_type:Optional[ChargeType]='gas') -> None:
+                      num_modes:Optional[int]=10, prepare_complex:Optional[bool]=True, charge_type:Optional[ChargeType]='gas', preparation_pairs:Optional[dict]=None) -> None:
 
     logger = LoggerManager.get_logger('wrapper_redocking', log_file='logs/redocking.log')
 
@@ -47,10 +47,16 @@ def perform_redocking(base_input_path:str, target:str, base_output_path:str, pdb
         base_output_path        = f'{base_output_path}/{target.replace(' ','')}/'
         path                    = directory(base_input_path)
 
+        from biomolexplorer.redocking_config import validate_structure_pairs, validate_redocking_tools
+        records = [list(r) for r in pdb_codes.to_records(index=False)] if isinstance(pdb_codes, DataFrame) else pdb_codes
+        validate_structure_pairs(base_input_path, records, preparation_pairs or {}, prepared=not prepare_complex)
+        validate_redocking_tools(prepare_complex)
         f1 = fileHandling(input_path=base_input_path, output_path=base_input_path)
 
         if pdb_codes is None:
-            pdb_codes = f1.csv_to_dataframe('pdb_codes')
+            raise ValueError('Selecione pelo menos um par receptor / ligante e sua cadeia na aba Input Data.')
+        from biomolexplorer.redocking_config import validate_pairs
+        validate_pairs([list(record) for record in pdb_codes.to_records(index=False)] if isinstance(pdb_codes, DataFrame) else pdb_codes, preparation_pairs or {})
         columns=['PDB_CODE','LIGAND','RESNUM','CHAIN','RESOLUTION']
         if isinstance(pdb_codes,DataFrame):
             pdb_codes=pdb_codes.reindex(columns=columns).copy()
@@ -58,14 +64,24 @@ def perform_redocking(base_input_path:str, target:str, base_output_path:str, pdb
             pdb_codes=DataFrame([list(record[:4])+[record[4] if len(record)>4 else None] for record in pdb_codes],columns=columns)
 
 
+        if f1.isFile('pdb_codes')[0]:
+            metadata = f1.csv_to_dataframe('pdb_codes')
+            if 'RESOLUTION' in metadata:
+                resolutions = {(str(r.PDB_CODE), str(r.LIGAND), str(r.RESNUM), str(r.CHAIN)): r.RESOLUTION for r in metadata.itertuples()}
+                for idx, row in pdb_codes.iterrows():
+                    if row['RESOLUTION'] is None or isna(row['RESOLUTION']):
+                        key = (str(row['PDB_CODE']), str(row['LIGAND']), str(row['RESNUM']), str(row['CHAIN']))
+                        pdb_codes.at[idx, 'RESOLUTION'] = resolutions.get(key)
+
         if prepare_complex:
             dock = Docking(complex_input_path=base_input_path, output_path=base_prepared_complexes)
-            pdb_codes = dock.prepare_for_docking(pdb_codes=pdb_codes.to_records(index=False), charge_type=charge_type, pH=pH, redefine_centerofmass=True)
+            pdb_codes = dock.prepare_for_docking(pdb_codes=pdb_codes.to_records(index=False), charge_type=charge_type, pH=pH, redefine_centerofmass=True, preparation_pairs=preparation_pairs or {})
             if not pdb_codes:raise ValueError('A preparação não produziu complexos utilizáveis. Consulte o log de preparação.')
             pdb_codes = DataFrame(pdb_codes, columns=['PDB_CODE', 'LIGAND', 'RESNUM', 'CHAIN', 'RESOLUTION'])
             f1.dataframe_to_csv('pdb_codes', pdb_codes)
 
 
+        validate_structure_pairs(base_input_path, [list(r) for r in pdb_codes.to_records(index=False)], preparation_pairs or {}, prepared=True)
         vina = DockVina(ligand_input_path=base_prepared_complexes, receptor_input_path=base_prepared_complexes,
                         output_path=base_output_path, complex_input_path=base_input_path,
                         pdb_codes=pdb_codes, centerofmasspath=base_prepared_complexes, sizeof_box=sizeof_box,
@@ -77,15 +93,7 @@ def perform_redocking(base_input_path:str, target:str, base_output_path:str, pdb
 
         pdb  = f1.csv_to_dataframe('pdb_codes')
 
-        complexes = set([file + '.pdb' for file in pdb[pdb['RMSD'].notnull()]['PDB_CODE'].to_list()])
-        files     = set([f for f in os.listdir(path) if f.endswith('.pdb')])
-        files     = files - complexes
-        [os.remove(path + f) for f in files]
-
-        prefix   = [f.split('.')[0] for f in files]
-        files    = os.listdir(path+'/Prepared/')
-        [os.remove(path +'/Prepared/' + f) for f in files if any(f.startswith(p) for p in prefix)]
-
+        # Selecting a subset must not delete other structures from the input collection.
         pdb = pdb[pdb['RMSD'].notnull()]
         f1.dataframe_to_csv('pdb_codes', pdb)
 

@@ -8,21 +8,23 @@ A revisão de 5 de outubro de 2026 não autoriza retirar o Chimera do backend at
 
 A inspeção abrangeu as referências ao Chimera no código Python, workflows, recursos, instalador, interface, testes e documentação, incluindo a busca por notebooks. Foram consultadas fontes oficiais das alternativas. Não houve comparação experimental entre motores: `chimera` não foi encontrado no PATH desta sessão, as bibliotecas candidatas OpenMM/PDBFixer/OpenFF/ParmEd não estão instaladas no ambiente científico inspecionado e não foram encontrados arquivos de referência PDB/MOL2/PDBQT versionados pela busca nos arquivos do projeto. Os testes com motores simulados não resolvem essa lacuna.
 
+No redocking, as seleções e opções efetivas são geradas para cada par validado. O template base ainda remove solvente e hidrogênios quando usado diretamente pela preparação independente; no redocking, essas remoções são transferidas para as etapas de receptor e ligante para respeitar as opções de cada um.
+
 ## Inventário das funções
 
 Os recursos reais estão em `src/biomolexplorer/resources/chimera/`. As referências legadas a `src/scripts/chimera/` são resolvidas por `biomolexplorer.paths.resolve_path`, inclusive para a cópia de recursos de cada worker.
 
 | Recurso ou ponto de entrada | Trabalho realizado | Contrato relevante |
 | --- | --- | --- |
-| `prepare_complex.template` | Abre PDB, remove solvente e hidrogênios, conserva as cadeias selecionadas e resíduos FAD, inverte a seleção e remove o restante | `{PDB}_{CHAIN}.complex.pdb`; FAD é conservado mesmo fora das cadeias escolhidas |
+| `prepare_complex.template` | Abre PDB, conserva a cadeia selecionada e os cofatores explicitamente declarados, inverte a seleção e remove o restante | `{PDB}_{CHAIN}.complex.pdb`; nenhum cofator é incluído por padrão; solvente e hidrogênios são tratados nas etapas de receptor/ligante |
 | `prepare_receptor.template` | Remove ligantes, conserva a seleção `protein`, adiciona hidrogênios, atribui cargas com `chargeModel 14sb method gas`, minimiza e grava MOL2; reabre esse MOL2 e remove H | `{PDB}_{CHAIN}.dockprep.mol2` e `{PDB}_{CHAIN}.noH.pdb` |
 | `prepare_ligand.template` | Isola o resíduo por número/cadeia, adiciona H, atribui cargas pelo método escolhido, minimiza, grava PDB e o reabre para exportar MOL2 | `{PDB}_{LIGAND}_{RESNUM}{CHAIN}.lig.pdb` e `.lig.mol2`; o ciclo de reabertura deve ser avaliado ao comparar a preservação de atributos |
 | `prepare_better_conform.template` | Abre a primeira pose Vina extraída em PDB, remove H/solvente, adiciona H, atribui cargas, minimiza e exporta MOL2 | `.lig.mol2` usado no refinamento DOCK6; não é apenas conversão de formato |
 | `prepare_md.template` | Remove solvente/H, adiciona H e escreve PDB | Recurso disponível no catálogo/editor, mas sem chamada de execução identificada nos fluxos atuais; não implementa uma simulação MD |
-| `Docking.prepare_on_chimera` | Executa `chimera --nogui --silent` com o arquivo `.com`, propaga falhas e limpa o script | Existe em `caad/docking.py` e no módulo duplicado `caad/redocking.py` |
+| `Docking.prepare_on_chimera` | Executa `chimera --nogui --silent` com o arquivo `.com`, propaga falhas e remove o script apenas em caso de sucesso | Existe em `caad/docking.py` e no módulo duplicado `caad/redocking.py` |
 | `wrappers.docking.perform_consensus` | Quando falta `pdb_code`, orienta refinamento manual de loops no Chimera e interrompe o fluxo | Ação humana indicada, sem implementação automática de refinamento |
 
-O wrapper ativo de redocking importa `Docking` e `DockVina` de `caad.docking`; `caad.redocking` mantém outra implementação que também precisaria ser migrada para consumidores desse módulo. `prepare_for_docking` executa complexos, receptores e ligantes nessa ordem, paralelizando cada grupo. As cadeias múltiplas são formatadas para a seleção Chimera; o ligante usa a primeira cadeia fornecida. Preservar o fluxo inclui essas escolhas, nomes de arquivos e metadados.
+O wrapper ativo de redocking importa `Docking` e `DockVina` de `caad.docking`; `caad.redocking` mantém outra implementação que também precisaria ser migrada para consumidores desse módulo. `prepare_for_docking` executa complexos, receptores e ligantes nessa ordem, paralelizando cada grupo. No redocking, receptor e ligante usam a mesma cadeia escolhida no formulário de pares. Opções do ligante são compartilhadas com sua conformação, e cofatores são preservados conforme a seleção explícita. Preservar o fluxo inclui essas escolhas, nomes de arquivos e metadados.
 
 `catalog.py` publica os cinco templates para preparação, redocking, Vina e DOCK6. `templates.py` aceita comandos científicos `open`, `delete`, `select`, `write`, `close`, `addh`, `addcharge` e `minimize`; não limita todos os argumentos à configuração original. `ui/guided.py` permite desligar adição de H, minimização e remoções, além de editar métodos de cargas. Uma migração que implemente apenas os cinco templates originais perderia comportamentos configuráveis e precisaria de migração das configurações salvas.
 

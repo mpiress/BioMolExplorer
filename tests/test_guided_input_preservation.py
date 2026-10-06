@@ -28,6 +28,7 @@ class GuidedInputPreservationTests(unittest.TestCase):
             if operation == 'import_results':
                 continue
             stage = new_stage(operation)
+            if operation=='redocking':stage['parameters']['pdb_codes']=[['1ABC','LIG',123,'A']]
             paths = {f['name']: '/tmp/project/prepared data/' + f['name']
                 for f in operation_fields(operation) if f['name'] in PATH_FIELDS}
             if not paths:
@@ -46,6 +47,7 @@ class GuidedInputPreservationTests(unittest.TestCase):
         from biomolexplorer.flow import INPUTS
         for operation,fields in INPUTS.items():
             stage=new_stage(operation)
+            if operation=='redocking':stage['parameters']['pdb_codes']=[['1ABC','LIG',123,'A']]
             origins=[]
             expected={}
             for field,kinds in fields.items():

@@ -28,6 +28,6 @@ if __name__ == "__main__":
 
     adme_pipeline = ADMETWrapper(base_input_path='/datasets/ChEMBL/DrugBank/',
                                  base_output_path='/datasets/ChEMBL/DrugBank/ADMET/',
-                                 verbose=True)
+                                 verbose=0)
 
     adme_pipeline.run_pipeline()

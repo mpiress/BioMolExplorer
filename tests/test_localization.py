@@ -110,4 +110,50 @@ class LocalizationTests(unittest.TestCase):
         self.assertTrue(any(isinstance(c,ft.Text) and c.value=='Invalid email or password.' for c in walk(page.controls)))
 
 
+class LocalizationCoverageTests(unittest.TestCase):
+    def test_every_guided_form_translates_without_changing_configuration(self):
+        import re
+        from biomolexplorer.catalog import new_stage
+        from biomolexplorer.ui.guided import GuidedForm
+        stages=[new_stage(operation) for operation in TITLES]
+        ui=SimpleNamespace(current={'pipeline':stages},service=SimpleNamespace(dock6_path=None),page=LocalizedPage(Page(),'en'))
+        for stage in stages:
+            if stage['operation']=='redocking':stage['parameters']['pdb_codes']=[['1ABC','LIG',1,'A']]
+            with self.subTest(operation=stage['operation']):
+                form=GuidedForm(ui,stage,[],True)
+                original=form.read()
+                ui.page.localize(form.layout())
+                self.assertEqual(form.read(),original)
+                for control in walk(form.controls):
+                    if getattr(control,'_biomol_verbatim',False) is True:continue
+                    for attr in LocalizedPage._labels+ (('value',) if isinstance(control,ft.Text) else ('text',) if isinstance(control,ft.DropdownOption) else ('content',) if isinstance(control,(ft.Button,ft.TextButton)) else ()):
+                        value=getattr(control,attr,None)
+                        if isinstance(value,str):self.assertFalse(re.search(r'[ãõçáéíóúêô]',value),value)
+
+    def test_nested_worker_errors_translate_and_keep_user_titles(self):
+        message='O bloco “Novo projeto” precisa de ajustes: ValueError: Selecione pelo menos um par receptor / ligante e sua cadeia na aba Input Data.'
+        rendered=Translator('en')(message)
+        self.assertIn('Block “Novo projeto” needs adjustments:',rendered)
+        self.assertIn('Select at least one receptor / ligand pair',rendered)
+        self.assertNotIn('Selecione',rendered)
+        message='Arquivo 1 (4M0E): ValueError: Cofator não encontrado no PDB 4M0E: FAD'
+        self.assertEqual(Translator('en')(message),'File 1 (4M0E): ValueError: Cofactor not found in PDB 4M0E: FAD')
+        self.assertEqual(Translator('pt')('ValueError: radius must be a non-negative integer'),'ValueError: radius deve ser um inteiro não negativo')
+
+    def test_literal_validation_messages_have_translations_in_both_directions(self):
+        import ast
+        from pathlib import Path
+        from biomolexplorer.ui.localization import catalogs
+        phrases,_=catalogs()
+        known_english=set(phrases.values())
+        for path in (Path(__file__).parents[1]/'src').rglob('*.py'):
+            for node in ast.walk(ast.parse(path.read_text())):
+                if not isinstance(node,ast.Raise) or not isinstance(node.exc,ast.Call) or not node.exc.args:continue
+                argument=node.exc.args[0]
+                if isinstance(argument,ast.Constant) and isinstance(argument.value,str):
+                    message=argument.value
+                    self.assertTrue(Translator('en')(message)!=message or message in known_english,
+                        f'{path.name}:{node.lineno}: {message}')
+
+
 if __name__=='__main__':unittest.main()

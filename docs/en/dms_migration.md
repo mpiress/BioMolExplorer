@@ -29,7 +29,7 @@ Historical `PI=3.141592`, layered sampling, internal `2.75 × density`, rounding
 
 ## Usage and environment
 
-NumPy and SciPy are already scientific environment dependencies; no new library is needed. `requirements.yml` is the available Conda manifest. `environment.yml` had already been removed before this port and was not recreated. The installer no longer downloads, compiles or installs DMS.
+NumPy and SciPy are already scientific environment dependencies; no new library is needed. `requirements.yml` is the project’s Conda manifest. The installer no longer downloads, compiles or installs DMS.
 
 ```python
 from biomolexplorer.molecular_surface import generate_surface

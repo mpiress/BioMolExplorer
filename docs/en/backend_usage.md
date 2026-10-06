@@ -123,7 +123,12 @@ Enums accept names or values, such as `TanimotoSimilarity`/`Tanimoto` and
 `Morgan`/`morgan`. PDB filter lists also use serializable strings.
 The Vina `pdb_code` parameter follows the existing function: a list of
 `[PDB_CODE, LIGAND, RESNUM, CHAIN]` records; DOCK6 receives one record with those
-four fields. Redocking can read records from `pdb_codes.csv`.
+four fields. Redocking requires explicitly selected `pdb_codes`: a list of
+`[PDB_CODE, LIGAND, RESNUM, CHAIN]`, with optional resolution as its fifth value,
+ supplemented by `pdb_codes.csv` metadata. `preparation_pairs` stores options
+under `PDB|LIGAND|RESNUM|CHAIN` keys; receptor and ligand use the same chain.
+Legacy `verbose` arguments are ignored; verbosity stays at zero.
+See [redocking configuration](redocking_configuration.md).
 
 Each job receives a new output directory. Chain jobs by passing their artifacts
 to the next operation. `graphs` accepts only ready similarity CSVs or directories
@@ -147,6 +152,50 @@ Workspace paths must belong to the project. Compound SMILES are resolved through
 upstream stages, and each analysis remains separate under `plots/`, `Molecules/`,
 `data/maxcomp/` and `centroids/`. MCS queries remain internal SMARTS; the model and interface also provide
 fragment SMILES extracted from the reference molecule and search status.
+
+## Redocking example
+
+The example requires an existing `/tmp/study/PDB/Estruturas/4M0E.pdb` containing residue 1YL / 604 in chain A. Adapt paths and the pair to your collection; this call does not retrieve the PDB.
+
+```python
+from biomolexplorer.operations import execute_operation
+
+parameters = {
+    "base_input_path": "/tmp/study/PDB",
+    "target": "Estruturas",
+    "pdb_codes": [["4M0E", "1YL", 604, "A", 2.0]],
+    "prepare_complex": True,
+    "pH": 7.4,
+    "sizeof_box": [24, 24, 24],
+    "exhaustiveness": 20,
+    "num_modes": 10,
+    "charge_type": "gas",
+    "preparation_pairs": {
+        "4M0E|1YL|604|A": {
+            "cofactors": [],
+            "receptor": {
+                "remove_solvent": True,
+                "remove_hydrogens": True,
+                "add_hydrogens": True,
+                "minimize": True,
+                "charge_type": "gas",
+            },
+            "ligand": {
+                "remove_solvent": True,
+                "remove_hydrogens": True,
+                "add_hydrogens": True,
+                "minimize": True,
+                "charge_type": "gas",
+            },
+        },
+    },
+}
+result = execute_operation("redocking", parameters, "/tmp/study/redocking-output")
+```
+
+When pair options are omitted, solvent removal, existing hydrogen removal, hydrogen addition and minimization default to `True`; receptor charges use `gas`, while omitted ligand charges inherit stage-wide `charge_type`. No cofactor is selected by default. With `prepare_complex=False`, retain receptors `<PDB>_<CHAIN>.dockprep.pdbqt`, reference ligands `<PDB>_<LIGAND>_<RESNUM><CHAIN>.lig.pdbqt` and three finite coordinates per complex in `Prepared/centers.csv`.
+
+`execute_operation` prepares a copy in `structures/<target>/`, preserving the original input. Metadata with `RMSD` is saved in `structures/<target>/pdb_codes.csv`, prepared files in `structures/<target>/Prepared/`, and poses in `<target>/` within the output directory. `result.artifacts` lists exportable files. Direct calls to `wrappers.redocking.perform_redocking` do not provide the application layer's isolation. The CLI accepts the same dictionary through `--parameters`, without the interface's inspection dialogs.
 
 ## Tests
 
@@ -184,3 +233,5 @@ requires identifiers, SMILES, TPSA and WLOGP. See [projects and versions](projec
 ## Flexible retrieval parameters
 
 See the [retrieval guide](retrieval.md) for all ChEMBL `search_mode` values, direct compound search examples, optional PDB collection names, limits, filters and report files. Existing operation names and downstream CSV contracts remain available.
+
+See [Logs and diagnostics](logging.md) for the common format, execution context, failure codes, job summary and `python -m biomolexplorer.log_report` command.

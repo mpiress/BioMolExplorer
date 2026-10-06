@@ -37,7 +37,10 @@ TEXT={
 def viewer_document(name,language='pt',prefix=PREFIX):
     language=language if language in TEXT else 'pt'
     labels=TEXT[language]
-    config=json.dumps({'name':name,'labels':labels},ensure_ascii=False).replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')
+    file_format=Path(name).suffix.lower().lstrip('.')
+    config=json.dumps({'name':name,'labels':labels,'format':file_format if file_format in ('pdb','pdbqt','mol2') else 'pdb',
+        'ligand':'.lig.' in name.lower(),
+        'representation':'sticks' if '.lig.' in name.lower() or file_format=='mol2' else 'cartoon'},ensure_ascii=False).replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')
     source=(RESOURCE/'pdb-viewer.html').read_text(encoding='utf-8')
     for key,value in dict(labels,name=name,language=language,prefix=prefix,config=config).items():
         source=source.replace('{{'+key+'}}',value if key=='config' else html.escape(value,quote=True))
@@ -56,7 +59,7 @@ class StructureViewers:
     def issue(self,token,pid,filename,language='pt'):
         self.store.project(token,pid)
         path=self.store.scoped_path(pid,filename)
-        if path.suffix.lower()!='.pdb' or not path.is_file():raise ValueError('Estrutura PDB indisponível.')
+        if path.suffix.lower() not in ('.pdb','.pdbqt','.mol2') or not path.is_file():raise ValueError('Estrutura molecular indisponível.')
         if path.stat().st_size>MAX_VIEW_BYTES:raise ValueError('Visualização maior que o limite de 32 MB. Baixe o arquivo para consultá-lo localmente.')
         with self.lock:
             now=self.clock()
@@ -77,6 +80,7 @@ class StructureViewers:
 
     def response(self,path,prefix=PREFIX):
         """Shared HTTP adapter for same-origin web and loopback desktop hosts."""
+        language = 'en'
         try:
             if path.startswith(PREFIX+'/assets/'):
                 name=path.removeprefix(PREFIX+'/assets/')
@@ -86,6 +90,8 @@ class StructureViewers:
             parts=path.removeprefix(PREFIX+'/').split('/')
             if not path.startswith(PREFIX+'/') or len(parts)>2 or (len(parts)==2 and parts[1]!='structure'):
                 return 404,'text/plain',b'Not found',PRIVATE_HEADERS
+            with self.lock:
+                language = self.tickets.get(parts[0], {}).get('language', 'en')
             record=self.ticket(parts[0])
             if len(parts)==2:
                 data=self.store.read_file(record['token'],record['pid'],record['path'],MAX_VIEW_BYTES+1)
@@ -94,7 +100,9 @@ class StructureViewers:
             document=viewer_document(Path(record['path']).name,record['language'],prefix)
             return 200,'text/html; charset=utf-8',document.encode(),PRIVATE_HEADERS
         except (AccessDenied,FileNotFoundError,ValueError,OSError):
-            return 403,'text/plain; charset=utf-8',b'Visualization expired or unavailable. Return to the project and reopen it.',PRIVATE_HEADERS
+            message = ('Visualização expirada ou indisponível. Retorne ao projeto e abra novamente.' if language == 'pt' else
+                       'Visualization expired or unavailable. Return to the project and reopen it.')
+            return 403,'text/plain; charset=utf-8',message.encode('utf-8'),PRIVATE_HEADERS
 
     def url(self,key,web=False,page_url=None):
         if web:

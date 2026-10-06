@@ -326,3 +326,19 @@ The [DMS port report](dms_migration.md) describes the native Python rolling-prob
 
 
 `project_folders.py` implements named destinations, confirmation bound to folder state and permanent removal. `create_project_in_parent` accepts the parent folder; `create_project(directory=...)` and imports retain exact-destination semantics for compatibility. Replacement/deletion check ownership, overlap, symbolic paths and active runs inside a SQLite transaction. The old folder moves to a hidden sibling, allowing restoration if creation fails before commit. Physical cleanup follows commit and uses a persistent record for retries after failure. The viewer converts Flet `ws://`/`wss://` addresses into `http://`/`https://` pages, retaining host and port.
+
+## Redocking and language regressions
+
+The review covers pandas structured records (which cannot be sliced like lists), configured selection without another prompt, missing pairs, invalid residues, missing tools, paths with spaces, cofactors and prepared centers. Preparation errors propagate their cause instead of returning an empty set.
+
+Tests traverse forms for every operation in English, verify nested worker messages and preserve scientific values and custom names. Template labels, default stage names and selectors follow the session language. Messages originally written in English are translated for Portuguese sessions.
+
+Automated integration tests replace external tools at the execution boundary. Following the October 6, 2026 log review, the real 4M0E / 1YL / 604 / A case was also executed using Chimera, Open Babel, Vina and PyMOL: with the original options, including receptor and ligand minimization, redocking completed with an RMSD of approximately 0.149 Å. A complementary run without minimization produced approximately 0.215 Å. Both runs used temporary copies of the input; these results verify this case's execution flow and do not establish scientific tolerances for other complexes.
+
+## Redocking result inspection
+
+`redocking_results.py` resolves simulations from completed stages using metadata and the manifest authorized by `ResultFiles`. Identity includes the metadata origin and pair, keeping imported collections independent even when their PDB identifiers match. The service groups the corresponding receptor, reference, poses and metadata; ZIP downloads preserve relative paths to prevent filename collisions. Each read revalidates project authorization.
+
+`ui/redocking_results.py` presents the paginated RMSD table and per-simulation file dialog. Running or failed stages retain generic artifact inspection. `pdb_view.py` issues temporary access to the PDB/PDBQT/MOL2 viewer; project or session changes invalidate pending actions. Visualization opens in the browser and uses the same 3D component as retrieved PDBs.
+
+See [Logs and diagnostics](logging.md) for the common format, execution context, failure codes, job summary and `python -m biomolexplorer.log_report` command.

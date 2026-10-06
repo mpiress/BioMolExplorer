@@ -3,7 +3,7 @@ import flet as ft
 from biomolexplorer.bindings import sources, pack
 from biomolexplorer.flow import INPUTS, EXTERNAL_INPUTS, compatible, input_types
 from biomolexplorer.input_validation import contract, output_kind
-from .localization import verbatim
+from .localization import verbatim, stage_control
 
 
 class InputEditor:
@@ -26,7 +26,7 @@ class InputEditor:
 
     def source_options(self):
         options=[ft.DropdownOption(key='',text='Conectar no canvas / selecionar arquivo')]
-        options += [ft.DropdownOption(key='stage:'+s['id'],text=s['name']) for s in self.ui.current['pipeline'] if compatible(s,self.stage,self.field['name'])]
+        options += [stage_control(ft.DropdownOption(key='stage:'+s['id'],text=s['name']),s,'text') for s in self.ui.current['pipeline'] if compatible(s,self.stage,self.field['name'])]
         options += [verbatim(ft.DropdownOption(key='asset:'+a['id'],text=a['name'])) for a in self.assets
             if a['kind'] in self.expected or (a['kind']=='other' and self.stage['operation']!='graphs')]
         if self.value:options.append(ft.DropdownOption(key='configured-path',text='Pasta configurada'))

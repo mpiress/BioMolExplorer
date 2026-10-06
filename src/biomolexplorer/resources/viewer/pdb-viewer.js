@@ -7,11 +7,15 @@
   const status = control("status");
   let viewer, models, modelIndex = 0;
   const waterNames = ["HOH", "WAT", "DOD"];
+  const proteinNames = new Set(["ALA", "ARG", "ASN", "ASP", "CYS", "GLN", "GLU", "GLY", "HIS", "ILE", "LEU", "LYS", "MET", "PHE", "PRO", "SER", "THR", "TRP", "TYR", "VAL", "HID", "HIE", "HIP", "CYX", "SEC", "PYL"]);
   const palette = ["#2dd4bf", "#60a5fa", "#c084fc", "#fbbf24", "#fb7185", "#34d399", "#f97316", "#a5b4fc"];
   const currentModel = () => models[modelIndex];
   const selection = () => control("chain").value ? {chain: control("chain").value === "__blank__" ? "" : control("chain").value} : {};
   const isWater = atom => waterNames.includes(atom.resn);
-  const isLigand = atom => atom.hetflag && !isWater(atom);
+  // MOL2 lacks PDB's HETATM distinction. Keep small molecules visible in
+  // the ribbons+ligands representation and honor the ligand visibility switch.
+  const isLigand = atom => (config.ligand || atom.hetflag || (config.format === "mol2" && !proteinNames.has(atom.resn))) && !isWater(atom);
+  const isPolymer = atom => !isLigand(atom) && !isWater(atom);
   const download = (url, name) => {
     const link = document.createElement("a"); link.href = url; link.download = name; link.click();
   };
@@ -37,7 +41,7 @@
     else if (representation === "lines") style = {line: {...coloring, linewidth: 1.4}};
     else style = {cartoon: {...coloring, thickness: .35, arrows: true}};
     // Style the polymer separately, so ligand/water switches work in every representation.
-    const polymer = {...selected, hetflag: false};
+    const polymer = {...selected, predicate: isPolymer};
     model.setStyle(polymer, style);
     if (colorBy === "chain") {
       const values = [...new Set(model.selectedAtoms({}).map(atom => atom.chain || ""))].sort();
@@ -45,7 +49,7 @@
         if (chainValue && chain !== (chainValue === "__blank__" ? "" : chainValue)) return;
         const tinted = {};
         Object.entries(style).forEach(([key, value]) => tinted[key] = {...value, color: palette[index % palette.length]});
-        model.setStyle({chain, hetflag: false}, tinted);
+        model.setStyle({chain, predicate: isPolymer}, tinted);
       });
     }
     if (control("ligands").checked) model.setStyle({...selected, predicate: isLigand}, {
@@ -69,16 +73,19 @@
     viewer.setProjection("perspective");
     const response = await fetch(location.pathname.replace(/\/$/, "") + "/structure", {cache: "no-store", credentials: "same-origin"});
     if (!response.ok) throw new Error("Structure unavailable");
-    models = viewer.addModels(await response.text(), "pdb");
+    const loaded = viewer.addModels(await response.text(), config.format || "pdb");
+    models = loaded.filter(model => model.selectedAtoms({}).length);
+    loaded.filter(model => !model.selectedAtoms({}).length).forEach(model => viewer.removeModel(model));
     if (!models.length || !models[0].selectedAtoms({}).length) throw new Error("No atoms in structure");
     models.forEach((model, index) => control("model").add(new Option(String(index + 1), String(index))));
     control("model").disabled = models.length === 1;
+    control("representation").value = config.representation || "cartoon";
     chains(); draw(); viewer.zoomTo({model: modelIndex}); viewer.render();
     for (const id of ["representation", "color", "ligands", "water"]) control(id).addEventListener("change", draw);
     control("chain").addEventListener("change", () => {draw(); viewer.zoomTo({model: modelIndex, ...selection()}); viewer.render();});
     control("model").addEventListener("change", () => {modelIndex = Number(control("model").value); chains(); draw(); viewer.zoomTo({model: modelIndex}); viewer.render();});
     control("center").addEventListener("click", () => {viewer.zoomTo({model: modelIndex, ...selection()}); viewer.render();});
-    control("snapshot").addEventListener("click", () => download(viewer.pngURI(), config.name.replace(/\.pdb$/i, "") + ".png"));
+    control("snapshot").addEventListener("click", () => download(viewer.pngURI(), config.name.replace(/\.(pdb|pdbqt|mol2)$/i, "") + ".png"));
     control("fullscreen").addEventListener("click", async () => {
       try {if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen();} catch (_) {}
     });

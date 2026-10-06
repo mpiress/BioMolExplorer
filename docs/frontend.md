@@ -102,7 +102,7 @@ gerados a partir dessas escolhas. O modo **Avançado** permite editar parâmetro
 conexões em JSON e os templates científicos completos. **Aplicar configuração**
 valida e confirma a edição; **Cancelar** preserva o bloco anterior.
 
-Ao concluir uma etapa, o pipeline pausa antes do próximo bloco conectado e abre
+Exceto pelo redocking com pares previamente configurados, ao concluir uma etapa o pipeline pausa antes do próximo bloco conectado e abre
 automaticamente **Selecionar arquivos**. Marque os arquivos desejados em cada
 entrada e clique em **Continuar com os arquivos selecionados**. O popup lista
 somente resultados compatíveis das origens conectadas nesta execução. Em **Como
@@ -461,3 +461,23 @@ A listagem de PDBs oferece edição de ligantes, visualização local e acesso a
 ## Explorar um PDB em 3D
 
 O botão **Visualizar estrutura 3D** abre uma aba com o explorador WebGL local. Arraste para rotacionar, use a roda para zoom e o botão direito para deslocamento. O painel oferece representações, cores, cadeias, modelos, ligantes e água; a barra superior oferece tela inteira e exportação PNG. Consulte [o guia de recuperação](retrieval.md) para controles, permissões e requisitos do navegador. Nenhum PDB é enviado a serviços externos.
+
+## Verificações antes da execução
+
+A seleção de pares é obrigatória e usa uma única **Cadeia** para receptor e ligante. Um redocking já configurado reutiliza os pares escolhidos; o pipeline só pede a seleção quando ela ainda não existe. Resolução vem dos metadados, sem campo editável. Cofatores e opções de solvente, hidrogênios, minimização e cargas são configurados por par. A preparação e a conformação do ligante usam as mesmas opções.
+
+Antes de calcular, o sistema verifica os resíduos, a cadeia e os cofatores nos PDBs. Entradas já preparadas precisam dos PDBQT e de três coordenadas finitas em `Prepared/centers.csv`. O ambiente científico deve disponibilizar Chimera, Open Babel (`obabel`) e Vina; sem preparação, somente Vina é exigido. O diretório do interpretador científico também integra o PATH dos processos.
+
+Falhas de ferramentas mostram o executável, o código de saída e a mensagem do processo. Scripts Chimera que falharam são preservados para diagnóstico. Corrija a entrada ou a instalação indicada e tente novamente. Não há controle de verbose: a verbosidade do Vina permanece em zero.
+
+Consulte [Configuração do redocking](redocking_configuration.md) para o fluxo completo.
+
+## Consultar resultados de redocking
+
+Ao expandir uma etapa concluída em **Execuções**, a tabela mostra PDB, ligante, resíduo, cadeia e **RMSD (Å)**. **Ver simulação** abre um popup com os arquivos correspondentes àquela seleção. A lista distingue o receptor preparado, o ligante de referência, as poses e os metadados. Arquivos compartilhados pelo receptor ou pela coleção acompanham as simulações correspondentes.
+
+Use o botão de download de cada linha para baixar um arquivo, ou **Baixar todos (ZIP)** para obter o conjunto da simulação. O ZIP conserva as pastas, inclusive quando o ligante de referência e a saída do Vina têm o mesmo nome. Arquivos de outras simulações ficam fora desse conjunto.
+
+O botão **Visualizar estrutura 3D** abre o visualizador no navegador, como na consulta dos PDBs. Ele aceita PDB, PDBQT e MOL2 para examinar receptor, ligante e poses antes do download. Para saídas com várias poses, use **Modelo** no visualizador. As legendas e ações acompanham o idioma selecionado. Leitores também podem consultar e baixar os resultados.
+
+Consulte [Logs e diagnóstico](logging.md) para o formato comum, contexto por execução, códigos de falha, resumo do job e o comando `python -m biomolexplorer.log_report`.

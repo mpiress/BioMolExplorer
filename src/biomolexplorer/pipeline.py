@@ -18,7 +18,7 @@ from .jobs import JobManager, TERMINAL
 from .operations import OPERATIONS, validate_operation
 from .templates import validate_templates, materialize_templates
 from .workspace import AccessDenied
-from .diagnostics import get_logger
+from .diagnostics import get_logger, log_context, event, diagnose_exception
 from .stage_cache import artifact_manifest, manifest_matches, implementation_digest, input_manifests, stage_key, path_manifest
 from .bindings import sources as input_sources, dependencies as stage_dependencies, asset_references
 
@@ -340,7 +340,8 @@ class PipelineService:
                 if missing:
                     raise ValueError('Conecte um bloco de origem ou selecione seus arquivos em: ' +
                                      ', '.join(LABELS.get(field,field) for field in sorted(missing)))
-            validate_operation(operation,supplied)
+            # Connected inputs are curated after retrieval; execution validates the selected pairs.
+            validate_operation(operation,supplied,defer_redocking_selection=partial and bool(stage.get('bindings',{})))
         for field,value in params.items():
             if field == 'target' and operation == 'import_results' and (not isinstance(value,str) or not re.fullmatch('[A-Za-z0-9_-]{1,80}',value)):
                 raise ValueError('O nome da pasta do alvo deve conter apenas letras, números, _ e -.')
@@ -525,7 +526,7 @@ class PipelineService:
     def _resolve(self, project_id, user_id, stage, results, input_directory=None, item=None, cache_only=False, pipeline=None):
         params = dict(stage['parameters'])
         if stage.get('_process_all_inputs') and 'base_input_path' in stage.get('bindings',{}):
-            if stage['operation'] in ('prepare_structures','redocking'):params.pop('pdb_codes',None)
+            if stage['operation']=='prepare_structures':params.pop('pdb_codes',None)
             elif stage['operation']=='docking_vina':params.pop('pdb_code',None)
         if stage['operation']=='graphs':
             from .graph_inputs import GraphInputs
@@ -587,9 +588,14 @@ class PipelineService:
                     configured=params.get(key)
                     if configured:
                         configured=configured if isinstance(configured[0],(list,tuple)) else [configured]
-                        chosen=[r for r in configured if matches(r)] or [r for r in records if matches(r)]
+                        chosen=[r for r in configured if matches(r)]
+                        if not chosen and stage['operation']!='redocking':chosen=[r for r in records if matches(r)]
                         if not chosen:raise ValueError('Os registros PDB configurados não correspondem à estrutura selecionada.')
                         params[key]=chosen if key=='pdb_codes' else chosen[0][:4]
+                        if stage['operation']=='redocking':
+                            from .redocking_config import pair_key
+                            keys={pair_key(r) for r in chosen}
+                            params['preparation_pairs']={k:v for k,v in params.get('preparation_pairs',{}).items() if k in keys}
                 if filename:
                     if stage['operation'] in ('admet','expand_similar_compounds'):params['input_file']=filename
                     elif stage['operation']=='retrieve_zinc':params['filename']=filename
@@ -651,6 +657,10 @@ class PipelineService:
                 path = Path(params[field])
                 params[field] = str(self.store.scoped_path(project_id,path if path.is_absolute() else self.store.project_dir(project_id) / path))
         self._validate_parameters(project_id,dict(stage,parameters=params),cache_only=cache_only)
+        if stage['operation']=='redocking' and not cache_only:
+            from .redocking_config import validate_structure_pairs
+            validate_structure_pairs(Path(params['base_input_path'])/params['target'].replace(' ',''),
+                params['pdb_codes'], params.get('preparation_pairs') or {}, prepared=not params.get('prepare_complex',True))
         if stage['operation']=='retrieve_zinc':
             from urllib.parse import urlsplit
             with (Path(params['base_input_path']) / params['filename']).open() as stream:
@@ -725,6 +735,26 @@ class PipelineService:
 
     def _variants(self, project_id, stage, results=None):
         """One job per selected file; distinct input ports form combinations."""
+        if stage['operation']=='redocking' and results is not None:
+            from .bindings import pack
+            stage=copy.deepcopy(stage)
+            refs=[]
+            prepared=not stage['parameters'].get('prepare_complex',True)
+            records=stage['parameters'].get('pdb_codes') or []
+            identities={f'{r[0]}_{r[3]}.dockprep.pdbqt' if prepared else f'{r[0]}.pdb' for r in records}
+            for ref in input_sources(stage.get('bindings',{}).get('base_input_path',{})):
+                if 'stage' not in ref or ref.get('selector','auto')!='auto':
+                    refs.append(ref);continue
+                files=[Path(p) for p in results.get(ref['stage'],[])]
+                for path in files:
+                    if path.name not in identities:continue
+                    selector=path.name
+                    for length in range(1,len(path.parts)):
+                        selector='/'.join(path.parts[-length:])
+                        if sum(p.as_posix().endswith('/'+selector) for p in files)==1:break
+                    refs.append(dict(ref,selector=selector))
+            if not refs:raise ValueError('Selecione arquivos de estruturas correspondentes aos pares de redocking configurados.')
+            stage['bindings']['base_input_path']=pack(refs)
         fields=[];groups=[];shared={};asset_names={}
         bindings=stage.get('bindings',{})
         for field,group in bindings.items():
@@ -744,6 +774,13 @@ class PipelineService:
         from .bindings import pack
         emitted=False
         for selection in product(*groups):
+            if stage['operation']=='redocking' and 'base_input_path' in fields:
+                ref=dict(zip(fields,selection))['base_input_path']
+                filename=asset_names.get(ref.get('asset'),Path(ref.get('selector','')).name)
+                if filename not in ('','auto'):
+                    records=stage['parameters'].get('pdb_codes') or []
+                    identities={str(r[0]) if filename.endswith('.pdb') else f'{r[0]}_{r[3]}' for r in records}
+                    if filename.split('.',1)[0] not in identities:continue
             if stage['operation']=='docking_dock6' and results is not None and {'base_input_path','base_selected_mols','base_vina_path'}<=set(fields):
                 from .docking_inputs import dock6_variant_matches
                 if not dock6_variant_matches(stage,dict(zip(fields,selection)),results,self.store,project_id):continue
@@ -764,6 +801,8 @@ class PipelineService:
                 variant['bindings']['base_input_path']=copy.deepcopy(variant['bindings']['base_vina_path'])
             emitted=True
             yield variant,' + '.join(labels) or stage['name']
+        if not emitted and stage['operation']=='redocking':
+            raise ValueError('Selecione arquivos de estruturas correspondentes aos pares de redocking configurados.')
         if not emitted and stage['operation']=='docking_dock6':
             raise ValueError('Selecione receptores, compostos e poses Vina correspondentes para executar DOCK6.')
         if not emitted and stage['operation']=='consensus':
@@ -817,6 +856,11 @@ class PipelineService:
                         write_view(destination,view);artifacts.append(str(destination))
             return artifacts
         params = self._resolve(project_id,user_id,stage,results,stage_dir/'inputs',item,pipeline=execution_context(stages))
+        if stage['operation']=='redocking':
+            import sys
+            from .redocking_config import validate_redocking_tools
+            tool_path=str(Path(self.worker_python or sys.executable).parent)+os.pathsep+os.environ.get('PATH','')
+            validate_redocking_tools(params.get('prepare_complex',True),tool_path)
         resource = materialize_templates(stage_dir / 'resources',stage.get('templates',{}))
         manager = JobManager(AppConfig(workspace=stage_dir, cpu_workers=self.cpu_workers,
             worker_python=self.worker_python, job_timeout=self.job_timeout, resource_dir=resource))
@@ -825,7 +869,8 @@ class PipelineService:
                 state['manager'] = manager
                 if state['event'].is_set():
                     raise InterruptedError('Execução cancelada.')
-                job = manager.submit(stage['operation'],params)
+                with log_context(project_id=project_id, run_id=run_id, stage_id=stage['id']):
+                    job = manager.submit(stage['operation'],params)
                 state['job_id'] = job['id']
                 item['log_path'] = job['log_path']
                 item['job_id'] = job['id']
@@ -845,7 +890,11 @@ class PipelineService:
             if job['status'] == 'cancelled':
                 raise InterruptedError('Execução cancelada.')
             if job['status'] != 'succeeded':
-                raise RuntimeError(job['error'] or 'O estágio falhou. Consulte o log.')
+                failure = RuntimeError(job['error'] or 'O estágio falhou. Consulte o log.')
+                if (job.get('result') or {}).get('diagnostic'):
+                    failure.error_code = job['result']['diagnostic']['error_code']
+                    failure.action = job['result']['diagnostic']['action']
+                raise failure
             from .molecule_quality import REPORT_NAME
             reports=list((stage_dir/'inputs').rglob(REPORT_NAME))
             item['excluded_records']=job['result'].get('details',{}).get('excluded_records',0)+sum(
@@ -1006,7 +1055,7 @@ class PipelineService:
                 stage = item['configuration']
                 dependencies = stage_dependencies(stage)
                 item['input_mode']='curated'
-                item['requires_curation']=bool(dependencies)
+                item['requires_curation']=bool(dependencies) and not (stage['operation']=='redocking' and stage['parameters'].get('pdb_codes'))
                 unavailable = [by_id[source]['name'] for source in dependencies if by_id[source]['status'] != 'succeeded']
                 if unavailable:
                     item.update(status='skipped', error='Esta etapa depende de blocos que não concluíram: ' + ', '.join(sorted(unavailable)))
@@ -1054,8 +1103,8 @@ class PipelineService:
                 except (AccessDenied,InterruptedError):
                     raise
                 except Exception as exc:
-                    get_logger('backend').exception('Falha na etapa; run=%s project=%s stage=%s operation=%s',
-                        run_id,project_id,stage['id'],stage['operation'])
+                    get_logger('backend').exception('Pipeline stage failed: %s', exc, extra={'event': 'stage.failed',
+                        'run_id': run_id, 'project_id': project_id, 'stage_id': stage['id'], 'operation': stage['operation'], **diagnose_exception(exc)})
                     item.update(status='failed',error=str(exc),finished_at=time.time())
                     self._update(run_id,'running',stages)
                     continue
@@ -1069,7 +1118,7 @@ class PipelineService:
             else:
                 self._update(run_id,'succeeded',stages)
         except Exception as exc:
-            get_logger('backend').exception('Falha no pipeline; run=%s project=%s',run_id,project_id)
+            get_logger('backend').exception('Pipeline failed: %s', exc, extra={'event': 'pipeline.failed', 'run_id': run_id, 'project_id': project_id, **diagnose_exception(exc)})
             cancelled = state['event'].is_set() or isinstance(exc,InterruptedError)
             for item in stages:
                 if item['status'] in ('running','awaiting_input'):
@@ -1087,6 +1136,9 @@ class PipelineService:
     def resume(self, token, run_id, configuration):
         """Confirm one pending stage without rerunning completed retrievals."""
         configuration=execution_stage(configuration,'curated')
+        if configuration.get('operation')=='redocking' and not configuration.get('provided_results'):
+            from .redocking_config import validate_pairs
+            validate_pairs(configuration['parameters'].get('pdb_codes'),configuration['parameters'].get('preparation_pairs') or {})
         run = self.store.get_run(token,run_id)
         self.store.project(token,run['project_id'],'editor')
         user = self.store.user(token)

@@ -2,7 +2,7 @@
 import copy
 from uuid import uuid4
 import flet as ft
-from .localization import verbatim
+from .localization import verbatim, stage_control
 import flet.canvas as canvas
 from biomolexplorer import flow
 from biomolexplorer.diagnostics import get_logger
@@ -56,7 +56,7 @@ class FlowCanvas:
                 shapes.append(canvas.Path([canvas.Path.MoveTo(x,y),canvas.Path.CubicTo(x+100,y,endx-100,endy,endx,endy)],
                     paint=ft.Paint(color=COLORS[TITLES[source['operation']][2]],stroke_width=3,style=ft.PaintingStyle.STROKE)))
         self.stack.controls=[self.grid,canvas.Canvas(shapes=shapes,width=flow.CANVAS_WIDTH,height=height)]+([self.node(s,i) for i,s in enumerate(self.stages)] if nodes else self.stack.controls[2:])
-        self.selection.options=[ft.DropdownOption(key=s['id'],text=s['name']) for s in self.stages]
+        self.selection.options=[stage_control(ft.DropdownOption(key=s['id'],text=s['name']),s,'text') for s in self.stages]
         self.selection.value=self.ui.selected if self.ui.selected in by_id else None
         if update: self.ui.page.update()
     def node(self,stage,index):
@@ -82,7 +82,7 @@ class FlowCanvas:
             if self.writable and hasattr(self.ui,'schedule_save'):self.ui.schedule_save()
         header=ft.GestureDetector(on_tap=select,on_double_tap=configure,on_pan_start=begin,on_pan_update=move,on_pan_end=moved,
             mouse_cursor=ft.MouseCursor.MOVE,content=ft.Container(width=flow.NODE_WIDTH-4,height=64,padding=12,bgcolor=color,border_radius=ft.BorderRadius.only(top_left=14,top_right=14),
-            content=ft.Column([ft.Text(TITLES[stage['operation']][2].upper(),size=10,color='#FFFFFF'),verbatim(ft.Text(stage['name'],size=14,color='#FFFFFF',weight=ft.FontWeight.W_600,max_lines=1,overflow=ft.TextOverflow.ELLIPSIS))],spacing=4)))
+            content=ft.Column([ft.Text(TITLES[stage['operation']][2].upper(),size=10,color='#FFFFFF'),stage_control(ft.Text(stage['name'],size=14,color='#FFFFFF',weight=ft.FontWeight.W_600,max_lines=1,overflow=ft.TextOverflow.ELLIPSIS),stage)],spacing=4)))
         rows=[ft.Row([ft.Text('Saída',size=12,color=color,expand=True),out],spacing=0,height=34)]
         for port in flow.input_ports(stage):
             field=port['field']
