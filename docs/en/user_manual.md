@@ -15,7 +15,7 @@ cd BioMolExplorer
 
 Without Git, use **Code → Download ZIP**, extract the archive and open a terminal inside the extracted folder. The [installation and configuration guide](installation.md) explains downloading, external tools and paths.
 
-**Install UCSF Chimera 1.17, DOCK6 6.11 and DMS before starting the application.** They must be available on the computer running calculations, including in web mode. Installing the interface and Conda environment does not install these tools; stages requiring them will fail without them. Complete the installation guide's checks before running the startup commands.
+**Install UCSF Chimera 1.17 and DOCK6 6.11 before starting the application.** They must be available on the computer running calculations, including in web mode. Installing the interface and Conda environment does not install these tools; stages requiring them will fail without them. Complete the installation guide's checks before running the startup commands.
 
 1. Create the scientific environment from the downloaded source code root.
 2. Activate the environment and install the interface.
@@ -23,7 +23,7 @@ Without Git, use **Code → Download ZIP**, extract the archive and open a termi
 4. Start browser or desktop mode after checking the executables.
 
 ```bash
-conda env create -f environment.yml
+conda env create -f requirements.yml
 conda activate BioMolExplorer
 python -m pip install -e '.[ui]'
 biomolexplorer-ui --web --language en --dock6-path /path/to/dock6-6.11
@@ -50,15 +50,15 @@ Accounts belong to the workspace selected at startup. This version has no email 
 ## 3. Create a project and choose its folder
 
 1. In the workspace, click **New project**.
-2. Enter a name identifying the study; add a description, comma-separated tags and a color for the card.
-3. Under **Project folder**, click the folder button inside the field and select a new or empty folder. The field cannot be typed into. On desktop, the button opens the system picker; in a browser, it opens folder navigation on the computer running BioMolExplorer and allows you to create a folder.
+2. Enter a name identifying the study; add a description and choose the card color from visual swatches. The Tags field has been removed.
+3. Under **Project folder**, click the folder button inside the field and select the parent folder. Enter the project name first: the project will live in a subfolder with that name. An existing destination requires replacement confirmation; removal happens only when saving. The field cannot be typed into. Desktop and browser mode open visible folder navigation on the computer running BioMolExplorer. Create folder asks for a name, creates it inside the current location and selects it automatically.
 4. Confirm creation and open the project.
 
 Linux example: `/home/researcher/studies/enzyme-a`. In browser mode, this path belongs to the backend computer. A path on your laptop works only if the backend runs there or can access the folder. The application needs write permission. Folders belonging to other projects, overlapping folders and the accounts directory cannot be reused for a new project.
 
 The selected folder stores `project.json`, files in `assets/`, runs in `runs/`, versions in `.history/` and project working copies. The central database retains accounts, sessions, permissions and indexes; general infrastructure logs use the configured logging directory. Results and run-associated logs are available through the project. Restarting with the same workspace preserves the folder association.
 
-Search by name or tags to find a project. Archiving removes it from the active list; restoring allows you to use it again. Deleting removes normal project access while preserving its files on disk.
+Search by name or description to find a project. Archiving removes it from the active list; restoring allows you to use it again. Deleting removes normal project access while preserving its files on disk.
 
 ## 4. Understand the project areas
 
@@ -193,11 +193,11 @@ A small dataset may produce isolated components or be entirely removed by ADMET 
 
 ### Retrieval and expansion
 
-Under **Retrieve compounds**, enter a target name or ChEMBL ID, review target/bioactivity/molecule filters and decide whether to expand with PubChem. Threshold and maximum similar compounds control expansion. After execution, inspect `compounds.csv` and available ChEMBL downloads; use the appropriate table for the next analysis.
+Under **Retrieve compounds**, choose a target search by name/IDs/UniProt/text or a direct compound search by name/IDs/similarity/substructure. Review optional filters and limits, and choose ChEMBL/PubChem expansion. Threshold and maximum similar compounds control expansion. After execution, inspect `compounds.csv` and available ChEMBL downloads; use the appropriate table for the next analysis.
 
 **Expand similar compounds** uses ChEMBL downloads from existing retrieval. Connect that source and review threshold/maximum; do not substitute an ordinary CSV for the ChEMBL context. **Retrieve ZINC** requires an authorized address list; select the `.txt` and inspect the produced compounds.
 
-**Retrieve PDB structures** offers criteria such as EC, organism, resolution, ligand, polymer type and experimental method. Check `pdb_codes.csv`, ligands and chains before preparation or redocking. If retrieval finds no compatible structures, revise the filters rather than proceeding with an empty dataset.
+**Retrieve PDB structures** accepts text, PDB IDs, UniProt accessions and ligand codes; EC and collection names are optional. Organism, resolution, polymer and method refine the search. See the [retrieval guide](retrieval.md) and retrieval_report.json for criteria and outcomes. Use each PDB’s **Ligands** button to review, remove or add records before preparation or redocking. The browser-based 3D explorer offers mouse rotation, zoom and representation options; the RCSB button opens its official page. `pdb_codes.csv` and `retrieval_report.json` remain on disk but are hidden in this listing. If retrieval finds no compatible structures, revise the filters rather than proceeding with an empty dataset.
 
 ### Preparation and redocking
 
@@ -296,3 +296,7 @@ In **History**, inspect the date, user and change. As owner, **Restore before** 
 | Reuse | Using complete, compatible, previously persisted results |
 
 A common workflow is retrieve/import compounds → fingerprints → similarity → graphs → ADMET, alongside retrieve/import PDBs → preparation/redocking. The branches converge at Vina → DOCK6 → consensus. Choose files and processing mode at each handoff; record parameters, exclusions and scientific criteria with your study. The [validation report](pipeline_validation.md) explains tests and verification limits for this chain.
+
+## Flexible retrieval
+
+Use the [retrieval guide](retrieval.md) to search PDB by text, IDs, UniProt or ligand codes without requiring EC. ChEMBL supports target and direct compound searches by name, IDs, similarity and substructure, with optional filters and explicit limits. Review retrieval_report.json before passing selected files downstream.

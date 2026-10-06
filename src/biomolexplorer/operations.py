@@ -9,11 +9,11 @@ from .paths import resolve_path
 
 OPERATIONS = {
     'retrieve_compounds': OperationSpec('wrappers.crawlers', 'retrieve_compounds',
-        ('search_term',), ('include_pubchem', 'pubchem_threshold', 'pubchem_max_records', 'chembl_filters')),
+        ('search_term',), ('include_pubchem', 'pubchem_threshold', 'pubchem_max_records', 'chembl_filters', 'search_mode', 'max_targets', 'max_records', 'expand_chembl', 'similarity_threshold')),
     'expand_similar_compounds': OperationSpec('wrappers.crawlers', 'expand_similar_compounds',
         ('search_term',), ('threshold', 'max_records', 'base_input_path', 'input_file')),
-    'retrieve_structures': OperationSpec('wrappers.crawlers', 'load_pdb', ('target',),
-        ('pdb_ec', 'organism', 'PolymerEntityTypeID', 'ExperimentalMethodID', 'max_resolution', 'must_have_ligand'),
+    'retrieve_structures': OperationSpec('wrappers.crawlers', 'load_pdb', (),
+        ('target', 'pdb_query', 'pdb_ids', 'uniprot_ids', 'ligand_ids', 'max_records', 'pdb_ec', 'organism', 'PolymerEntityTypeID', 'ExperimentalMethodID', 'max_resolution', 'must_have_ligand'),
         {'PolymerEntityTypeID': 'crawlers.complex:PolymerEntityType',
          'ExperimentalMethodID': 'crawlers.complex:ExperimentalMethod'}),
     'retrieve_zinc': OperationSpec('wrappers.crawlers', 'load_zinc', ('filename', 'base_input_path'), ('verbose',)),
@@ -57,8 +57,9 @@ def validate_operation(operation, parameters):
     for name in ('search_term', 'target'):
         if name in parameters:
             value = parameters[name]
-            if not isinstance(value, str) or not value.strip() or any(c in value for c in '/\\\x00') or value.strip() in ('.', '..'):
-                raise ValueError(f'{name} must be a non-empty name without path separators')
+            structural = name=='search_term' and operation=='retrieve_compounds' and parameters.get('search_mode') in ('similarity','substructure')
+            if not isinstance(value, str) or not value.strip() or '\x00' in value or (not structural and (any(c in value for c in '/\\') or value.strip() in ('.', '..'))):
+                raise ValueError(f'{name} deve ser um texto válido; nomes de coleção não podem conter separadores de caminho')
     for name in ('pubchem_threshold', 'threshold'):
         if name in parameters and parameters[name] is not None:
             value = parameters[name]
@@ -74,13 +75,34 @@ def validate_operation(operation, parameters):
                 continue
             if type(value) not in (int, float) or not math.isfinite(value) or value <= 0:
                 raise ValueError(f'{name} must be a positive finite number')
+    if operation == 'retrieve_compounds':
+        from .retrieval import MODES, target_criteria, identifiers
+        mode = parameters.get('search_mode', 'target')
+        if mode not in MODES:
+            raise ValueError('Escolha um modo de busca ChEMBL válido.')
+        if mode.startswith('target') or mode=='uniprot':
+            target_criteria(parameters['search_term'], mode)
+        elif mode=='molecule_id':
+            identifiers(parameters['search_term'], 'chembl')
+        threshold = parameters.get('similarity_threshold', 70)
+        if type(threshold) is not int or not 1 <= threshold <= 100:
+            raise ValueError('similarity_threshold deve ser inteiro entre 1 e 100.')
+    if operation == 'retrieve_structures':
+        from .retrieval import identifiers
+        for key, kind in (('pdb_ids','pdb'), ('uniprot_ids','uniprot'), ('ligand_ids','ligand')):
+            if parameters.get(key):
+                identifiers(parameters[key], kind)
+        if not any(parameters.get(k) for k in ('pdb_query','pdb_ids','uniprot_ids','ligand_ids','pdb_ec',
+                                               'organism','PolymerEntityTypeID','ExperimentalMethodID','max_resolution')):
+            if parameters.get('target', 'Estruturas') in ('Estruturas', 'MeuAlvo'):
+                raise ValueError('Informe texto, identificadores ou filtros para a busca PDB.')
     if 'chembl_filters' in parameters:
         filters = parameters['chembl_filters']
         if not isinstance(filters, dict) or filters.keys() - {'target', 'bioactivity', 'molecules', 'similars'}:
             raise ValueError('chembl_filters must contain only known ChEMBL stages')
         if not all(isinstance(value, dict) for value in filters.values()):
             raise ValueError('Each ChEMBL stage filter must be a dictionary')
-    for name in ('max_records', 'pubchem_max_records', 'morgan_n_bits', 'num_modes', 'exhaustiveness', 'chunk_size','mcs_timeout'):
+    for name in ('max_targets', 'max_records', 'pubchem_max_records', 'morgan_n_bits', 'num_modes', 'exhaustiveness', 'chunk_size','mcs_timeout'):
         if name in parameters and (type(parameters[name]) is not int or parameters[name] < 1):
             raise ValueError(f'{name} must be a positive integer')
     if 'pH' in parameters:
@@ -95,7 +117,7 @@ def validate_operation(operation, parameters):
         value = parameters['sizeof_box']
         if not isinstance(value,list) or len(value)!=3 or any(type(v) not in (int,float) or not math.isfinite(v) or v<=0 for v in value):
             raise ValueError('sizeof_box must contain three positive finite dimensions')
-    for name in ('include_pubchem', 'verbose', 'must_have_ligand', 'prepare_complex', 'morgan', 'maccs', 'pharmacophore', 'approximate',
+    for name in ('expand_chembl', 'include_pubchem', 'verbose', 'must_have_ligand', 'prepare_complex', 'morgan', 'maccs', 'pharmacophore', 'approximate',
                  'mcs_ring_matches_ring_only','mcs_complete_rings_only'):
         if name in parameters and type(parameters[name]) is not bool:
             raise ValueError(f'{name} must be boolean')

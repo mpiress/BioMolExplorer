@@ -6,19 +6,19 @@ Para utilizar a interface pronta com autenticação e projetos, consulte o
 [guia do workspace Flet](frontend.md). Este documento descreve a CLI e os serviços
 Python utilizados pela interface.
 
-Antes de executar a CLI ou iniciar a interface, siga o [guia de instalação e configuração](installation.md): baixe o [repositório do GitHub](https://github.com/mpiress/BioMolExplorer) e instale **UCSF Chimera 1.17, DOCK6 6.11 e DMS** no computador dos cálculos. Configure seus executáveis no `PATH`. Sem essas ferramentas, as etapas que dependem delas falharão.
+Antes de executar a CLI ou iniciar a interface, siga o [guia de instalação e configuração](installation.md): baixe o [repositório do GitHub](https://github.com/mpiress/BioMolExplorer) e instale **UCSF Chimera 1.17 e DOCK6 6.11** no computador dos cálculos. Configure seus executáveis no `PATH`. Sem essas ferramentas, as etapas que dependem delas falharão.
 
 Crie/ative o ambiente Conda e instale o projeto a partir da raiz do código baixado:
 
 ```bash
-conda env create -f environment.yml
+conda env create -f requirements.yml
 conda activate BioMolExplorer
 python -m pip install -e . --no-deps --no-build-isolation
 ```
 
 As dependências científicas são gerenciadas pelos arquivos Conda. O pacote
 Python fornece a camada de aplicação, os módulos científicos e os recursos;
-a instalação do pacote por si só não instala Chimera 1.17, DOCK6 6.11 ou DMS.
+a instalação do pacote por si só não instala Chimera 1.17 ou DOCK6 6.11.
 Open Babel e Vina são declarados no ambiente Conda. Para um ambiente já existente,
 atualize-o conforme necessário e verifique também esses executáveis.
 
@@ -107,7 +107,7 @@ Consulte `biomolexplorer.operations.OPERATIONS` para os parâmetros completos.
 | --- | --- | --- |
 | `retrieve_compounds` | `search_term`, opções PubChem e filtros ChEMBL | Dados por fonte e `compounds/<alvo>/compounds.csv` |
 | `expand_similar_compounds` | `search_term`, `base_input_path` contendo `ChEMBL/molecules` e `ChEMBL/similars` | Compostos novos, relações e conjunto consolidado |
-| `retrieve_structures` | `target`, filtros PDB | PDBs e `pdb_codes.csv` |
+| `retrieve_structures` | Texto/IDs/UniProt/ligantes ou filtros; `target` opcional | PDBs, `pdb_codes.csv`, relatório |
 | `retrieve_zinc` | `filename`, `base_input_path` contendo o arquivo de URIs | CSV ZINC |
 | `admet` | `base_input_path`, opcional `input_file` | CSVs de avaliação, subconjuntos e figura |
 | `fingerprints` | `base_input_path`, algoritmos, `chunk_size` | CSVs de fingerprints |
@@ -187,3 +187,7 @@ exija código, SMILES, TPSA e WLOGP. Consulte [projetos e versões](projects.md)
 `PipelineService.submit(token, project_id, reuse_results=True)` reaproveita resultados compatíveis. A interface consulta `existing_results` e pede a decisão ao usuário; `reuse_results=False` força o recálculo. Etapas que precisam de dados ficam em `awaiting_input`; `resume(token, run_id, configuration)` confirma referências explícitas e modo. Resultados completos persistem entre inicializações. A CLI executa uma operação e não possui os popups do workspace.
 
 `biomolexplorer-ui --language pt` inicia em português; `--language en` (padrão) inicia em inglês. A tela de login permite trocar por sessão. `ui/localization.py` aplica catálogos em `resources/i18n/` apenas à apresentação, preservando parâmetros, identificadores e dados editáveis. Consulte [manual](user_manual.md) e [validação](pipeline_validation.md).
+
+## Parâmetros de recuperação flexível
+
+Consulte [recuperação da informação](retrieval.md) para os modos ChEMBL `search_mode`, exemplos sem alvo/EC obrigatório, limites, filtros e relatórios. Os nomes das operações e contratos CSV das etapas seguintes permanecem disponíveis.

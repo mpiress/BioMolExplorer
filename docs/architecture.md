@@ -320,3 +320,27 @@ A [validação do pipeline](pipeline_validation.md) reúne matriz, regressões e
 `ui/localization.py` usa um tradutor por sessão e catálogos JSON empacotados. Traduz controles e mensagens conhecidas ao renderizar/atualizar, sem alterar valores editáveis, chaves de seleção ou dados persistidos. `verbatim` protege conteúdos fornecidos pelo usuário e identificadores científicos. A escolha fica no login e o idioma inicial em `--language`; não há estado global compartilhado entre usuários. Logs científicos permanecem na linguagem original.
 
 A [validação do pipeline](pipeline_validation.md) reúne matriz, regressões e limites. O [manual do usuário](user_manual.md) descreve a execução completa. Ambos têm tradução e navegação nas páginas HTML geradas.
+
+## Avaliação da dependência Chimera
+
+A [análise de substituição do Chimera](chimera_migration.md) registra as funções atuais, alternativas Python, contratos e critérios de validação. A revisão manteve o backend e as dependências científicas: equivalência completa ainda não foi demonstrada.
+
+## Avaliação da dependência DMS
+
+O [relatório do porte DMS](dms_migration.md) descreve a implementação SES nativa em `biomolexplorer.molecular_surface`, chamada diretamente pela preparação DOCK6. O formato DMS permanece como contrato com sphgen. NumPy e SciPy substituem a instalação do aplicativo; 31 superfícies de referência geradas pelo C validam o porte. Os fixtures não abrangem execução real de sphgen/docking.
+
+## Recuperação flexível
+
+`biomolexplorer.retrieval` centraliza modos, validação de identificadores e nomes seguros de coleções. PDB combina construtores RCSB com paginação POST limitada, retentativas/timeouts, downloads concorrentes validados e relatório de resultados. ChEMBL distingue busca de evidências por alvo de busca direta de moléculas; os campos da interface seguem o modo. Consulte [recuperação](retrieval.md) para contratos e limites.
+
+
+## Controles de recuperação e curadoria de ligantes
+
+`ui/color_palette.py` mantém códigos de cor internos e apresenta amostras visuais. Tags continuam aceitas no armazenamento para compatibilidade com projetos antigos, mas não são expostas nem utilizadas na busca da interface. `ui/folder_browser.py` uniformiza seleção no desktop/web, omite diretórios ocultos e cria e seleciona subpastas a partir do local atual.
+
+`ui/pdb_results.py` oferece ações por estrutura nos resultados e na seleção de entradas. `ResultFiles.pdb_ligands` e `set_pdb_ligands` autorizam a estrutura e seu CSV pela execução/etapa, validam os resíduos reais, detectam conflitos por digest e salvam atomicamente com histórico e atualização dos manifests. O pipeline conserva a transferência automática dos metadados. `pdb_view.py` autoriza capacidades temporárias para o visualizador WebGL 3Dmol.js empacotado. O servidor desktop é restrito a loopback; `ui/web_host.py` monta as rotas privadas antes do Flet na mesma origem web.
+
+`ui/activity_measures.py` pagina o snapshot público de `standard_type` em uma grade responsiva, preservando nomes científicos e seleção. O catálogo embarcado funciona sem novas chamadas de rede e aceita nomes adicionais. Organismos usam sugestões editáveis; ensaios usam os seis códigos oficiais descritos nos dois idiomas. Nenhuma dependência adicional foi necessária.
+
+
+`project_folders.py` implementa destinos nomeados, confirmação vinculada ao estado da pasta e remoção permanente. A API `create_project_in_parent` recebe a pasta principal; `create_project(directory=...)` e a importação conservam o destino exato para compatibilidade. Operações de substituição/exclusão verificam propriedade, sobreposição, caminhos simbólicos e execuções ativas dentro de uma transação SQLite. A pasta antiga é movida para um diretório oculto irmão, permitindo restaurá-la se a criação falhar antes do commit. A exclusão física ocorre depois do commit, com registro persistente para repetir a limpeza em caso de falha. O visualizador converte endereços Flet `ws://`/`wss://` em páginas `http://`/`https://`, preservando host e porta.

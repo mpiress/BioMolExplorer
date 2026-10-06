@@ -1,6 +1,8 @@
 {
-    "standard_type__in": ["Ki","IC50"],
-    "molecule_type": "small molecule",
+    "standard_type__in": [
+        "Ki",
+        "IC50"
+    ],
     "max_value_ref": 5000,
     "standard_units": "nM",
     "assay_type": "B",

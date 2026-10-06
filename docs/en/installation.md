@@ -4,7 +4,7 @@
 
 Follow this order: download the project → install the external tools → prepare the Conda environment → configure and check the executables → start BioMolExplorer. Terminal examples use Linux and Bash, the current backend execution environment. Install Git and Anaconda or Miniconda beforehand.
 
-**Before starting the application, install and configure UCSF Chimera 1.17, DOCK6 6.11 and DMS on the computer that will run the calculations.** Installing the Python package or interface does not install these three tools. The interface may open without them, but preparation, redocking and docking stages that depend on them will fail during execution.
+**Before starting the application, install and configure UCSF Chimera 1.17 and DOCK6 6.11 on the computer that will run the calculations.** Installing the Python package or interface does not install these two tools. The interface may open without them, but preparation, redocking and docking stages that depend on them will fail during execution.
 
 ## 1. Download the project from GitHub
 
@@ -15,7 +15,7 @@ git clone https://github.com/mpiress/BioMolExplorer.git
 cd BioMolExplorer
 ```
 
-To download without Git, click **Code → Download ZIP** in the repository, extract the archive and open a terminal inside the extracted folder, usually `BioMolExplorer-master`. Run subsequent commands there, where `environment.yml` and `pyproject.toml` should be present; do not use the `src` folder or run commands inside the ZIP.
+To download without Git, click **Code → Download ZIP** in the repository, extract the archive and open a terminal inside the extracted folder, usually `BioMolExplorer-master`. Run subsequent commands there, where `requirements.yml` and `pyproject.toml` should be present; do not use the `src` folder or run commands inside the ZIP.
 
 The source code folder is separate from each research project's folder. You will select where inputs and results are stored when creating a project in the interface.
 
@@ -25,25 +25,26 @@ The source code folder is separate from each research project's folder. You will
 | --- | --- | --- | --- |
 | UCSF Chimera | 1.17 | Structure and ligand preparation, including redocking steps | [Previous releases from UCSF](https://www.cgl.ucsf.edu/chimera/olddownload.html) and [installation instructions](https://www.cgl.ucsf.edu/chimera/docs/UsersGuide/installation.html) |
 | DOCK6 | 6.11 | Docking, refinement and scoring, with its accessory programs | [Official DOCK 6 page](https://dock.compbio.ucsf.edu/DOCK_6/index.htm), [6.11 release notes](https://dock.compbio.ucsf.edu/DOCK_6/new_in_6.11.txt) and the manual included in the distribution |
-| DMS | UCSF distribution | Molecular surface calculation used to prepare the DOCK6 protocol | [UCSF software, DMS section](https://www.cgl.ucsf.edu/Overview/software.html#dms); follow the README supplied in the archive |
 
 Download **Chimera 1.17** and **DOCK6 6.11** explicitly, even if the official page highlights a newer release. Current scripts use UCSF Chimera; ChimeraX is not a direct replacement for those scripts.
 
-Install Chimera using the installer for your system. For DOCK6, follow the 6.11 distribution instructions, build the accessory programs as well, and retain the complete installation, including `bin/` and `parameters/`. Run the tests supplied by DOCK6 as described in its manual. For DMS, extract the package and follow its README to compile and install the `dms` executable. BioMolExplorer calls that executable directly; exporting a surface through Chimera's interface alone does not replace its installation in the automated workflow.
+Install Chimera using the installer for your system. For DOCK6, follow the 6.11 distribution instructions, build the accessory programs as well, and retain the complete installation, including `bin/` and `parameters/`. Run the tests supplied by DOCK6 as described in its manual.
 
-Complete all three installations before proceeding. In a web deployment, install them on the computer running BioMolExplorer and its workers, not only on the computer where the user opens a browser.
+The molecular surface is computed natively in Python using NumPy and SciPy. No DMS installation is needed; see the [port and validation report](dms_migration.md).
+
+Complete both installations before proceeding. In a web deployment, install them on the computer running BioMolExplorer and its workers, not only on the computer where the user opens a browser.
 
 ## 3. Create the scientific environment and install the interface
 
 From the downloaded source code root:
 
 ```bash
-conda env create -f environment.yml
+conda env create -f requirements.yml
 conda activate BioMolExplorer
 python -m pip install -e '.[ui]'
 ```
 
-If the environment already exists, update it with `conda env update -f environment.yml`, then activate it. The environment includes declared scientific dependencies such as Open Babel and Vina; it does not replace separate installation of Chimera, DOCK6 and DMS. The package requires Python 3.12 or newer.
+If the environment already exists, update it with `conda env update -f requirements.yml`, then activate it. The environment includes declared scientific dependencies such as Open Babel and Vina; it does not replace separate installation of Chimera and DOCK6. The package requires Python 3.12 or newer.
 
 ## 4. Configure paths and check the installation
 
@@ -51,7 +52,7 @@ With the Conda environment active, add the executable directories to `PATH`. Rep
 
 ```bash
 export BIOMOL_DOCK6_ROOT="/path/to/dock6-6.11"
-export PATH="/path/to/chimera-1.17/bin:$BIOMOL_DOCK6_ROOT/bin:/directory/containing/dms:$PATH"
+export PATH="/path/to/chimera-1.17/bin:$BIOMOL_DOCK6_ROOT/bin:$PATH"
 ```
 
 `BIOMOL_DOCK6_ROOT` is a convenience variable used in this guide. The application receives that path through `--dock6-path`, shown below. Supply the DOCK6 root containing `bin/` and `parameters/`, rather than only the executable or `bin/` directory. Start the application from the same terminal so workers inherit `PATH`. To retain these settings between sessions, add the exports with actual paths to your shell startup file and open a new terminal.
@@ -59,7 +60,7 @@ export PATH="/path/to/chimera-1.17/bin:$BIOMOL_DOCK6_ROOT/bin:/directory/contain
 Check executables before starting:
 
 ```bash
-for tool in chimera dock6 dms sphgen showbox grid obabel vina; do
+for tool in chimera dock6 sphgen showbox grid obabel vina; do
     if command -v "$tool"; then
         printf 'OK: %s available\n' "$tool"
     else

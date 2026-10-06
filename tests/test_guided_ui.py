@@ -61,6 +61,21 @@ class GuidedUITests(unittest.TestCase):
         ui.show_login();ui.show_login(True)
         self.assertTrue(image_bytes('logo.png').startswith(b'\x89PNG'))
         ui.page.width=390;ui.page.height=844;ui.show_login()
+    def test_direct_retrieval_mode_shows_relevant_controls_and_preserves_query(self):
+        stage=new_stage('retrieve_compounds')
+        stage['parameters'].update(search_mode='substructure',search_term='F/C=C/F')
+        form=GuidedForm(self.ui,stage,[],True);form.layout()
+        self.assertFalse(form.field_controls['max_targets'].visible)
+        self.assertFalse(form.filter_tiles['target'].visible)
+        self.assertFalse(form.filter_tiles['bioactivity'].visible)
+        self.assertTrue(form.filter_tiles['molecules'].visible)
+        self.assertEqual(form.read()['parameters']['search_term'],'F/C=C/F')
+        form.field_controls['search_mode'].value='similarity';form.sync_retrieval()
+        self.assertTrue(form.field_controls['similarity_threshold'].visible)
+        form.field_controls['search_mode'].value='target';form.sync_retrieval()
+        self.assertTrue(form.filter_tiles['bioactivity'].visible)
+        self.assertTrue(form.conditional_cells['max_targets'].visible)
+
     def test_default_filters_have_no_redundant_overrides(self):
         result=GuidedForm(self.ui,new_stage('retrieve_compounds'),[],True).read()
         self.assertEqual(result['templates'],{})

@@ -92,7 +92,14 @@ class StageResults:
                 await self.ui.call(self.service.remove,self.token,self.project_id,self.run_id,self.stage['id'],item['path'])
                 self.stage['artifacts']=[p for p in self.stage.get('artifacts',[]) if p!=item['path']]
             async def preview(item):await self.ui.preview_artifact(self.project_id,item['path'])
-            self.child=FileTable(self.ui,self.project_id,files,self.writable and not active,remove=remove,preview=preview)
+            extra=None
+            if self.stage['operation']=='retrieve_structures':
+                from .pdb_results import PDBActions
+                running=any(r['status'] in ('queued','running') for r in await self.ui.call(self.ui.store.list_runs,self.token,self.project_id))
+                if not self.valid():return
+                self.pdb_actions=PDBActions(self,self.writable and not running)
+                extra=self.pdb_actions.actions
+            self.child=FileTable(self.ui,self.project_id,files,self.writable and not active,remove=remove,preview=preview,extra_actions=extra)
             self.root.controls=[self.child.build()] if files else [ft.Text('Nenhum arquivo de resultado disponível.',size=13,color='#64748B')]
             self.loaded=True;self.ui.page.update()
         except Exception:

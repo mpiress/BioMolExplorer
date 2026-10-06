@@ -62,3 +62,20 @@ def write_dataframe_chunks(frames, path):
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)
+
+
+def write_text(value, path):
+    """Publish a downloaded textual artifact after the write completes."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with NamedTemporaryFile(dir=path.parent, suffix='.tmp', mode='w', encoding='utf-8', delete=False) as stream:
+            temporary = Path(stream.name)
+            stream.write(value)
+            stream.flush()
+            os.fsync(stream.fileno())
+        temporary.replace(path)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)

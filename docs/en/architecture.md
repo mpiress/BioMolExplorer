@@ -302,3 +302,27 @@ See the [frontend guide](frontend.md) for scientific interpretation and limits.
 `ui/localization.py` uses a session-owned translator and packaged JSON catalogs. It translates controls and recognized messages during rendering/updates without changing editable values, selection keys or persisted data. `verbatim` protects user-provided content and scientific identifiers. Selection is available at login and the initial language through `--language`; no shared global user-language state exists. Scientific logs retain their original language.
 
 [Pipeline validation](pipeline_validation.md) brings together the matrix, regressions and limits. The [user manual](user_manual.md) describes the complete workflow. Both have translations and navigation in generated HTML pages.
+
+## Chimera dependency assessment
+
+The [Chimera replacement assessment](chimera_migration.md) records current functions, Python alternatives, contracts and validation criteria. The review retained the backend and scientific dependencies because full equivalence has not been demonstrated.
+
+## DMS dependency assessment
+
+The [DMS port report](dms_migration.md) describes the native Python rolling-probe SES implementation in `biomolexplorer.molecular_surface`. DOCK6 preparation calls it directly and retains the DMS file contract for sphgen. NumPy and SciPy replace the standalone DMS installation; 31 C-generated reference surfaces validate the port. Actual sphgen/docking execution is not covered by the retained fixtures.
+
+## Flexible retrieval
+
+`biomolexplorer.retrieval` centralizes search modes, identifier validation and safe collection names. PDB combines RCSB query builders with bounded POST pagination, retries, finite timeouts, concurrent parsed downloads and outcome reports. ChEMBL supports target evidence and direct molecule queries; guided fields follow the selected mode. See [retrieval](retrieval.md) for contracts and limits.
+
+
+## Retrieval controls and ligand curation
+
+`ui/color_palette.py` keeps color codes internal and displays visual swatches. Storage retains legacy tags for compatibility, but the interface does not expose or search them. `ui/folder_browser.py` uses the same desktop/web navigation, hides hidden folders and creates and selects subfolders under the current location.
+
+`ui/pdb_results.py` adds per-structure actions to results and input selection. `ResultFiles.pdb_ligands` and `set_pdb_ligands` authorize the structure and metadata by run/stage, validate real residues, detect digest conflicts and save atomically with history and updated manifests. The pipeline still carries metadata automatically. `pdb_view.py` authorizes temporary capabilities for the bundled 3Dmol.js WebGL viewer. Desktop binds only to loopback; `ui/web_host.py` mounts private viewer routes before Flet on the same web origin.
+
+`ui/activity_measures.py` paginates a public standard_type snapshot in a responsive grid while preserving scientific names and selections. The bundled catalog works without fresh network calls and accepts additional names. Organisms use editable suggestions; assays use six official codes described in both interface languages. No additional dependency was needed.
+
+
+`project_folders.py` implements named destinations, confirmation bound to folder state and permanent removal. `create_project_in_parent` accepts the parent folder; `create_project(directory=...)` and imports retain exact-destination semantics for compatibility. Replacement/deletion check ownership, overlap, symbolic paths and active runs inside a SQLite transaction. The old folder moves to a hidden sibling, allowing restoration if creation fails before commit. Physical cleanup follows commit and uses a persistent record for retries after failure. The viewer converts Flet `ws://`/`wss://` addresses into `http://`/`https://` pages, retaining host and port.

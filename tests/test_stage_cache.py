@@ -74,13 +74,15 @@ class StageCacheTests(unittest.TestCase):
         self.assertEqual(len(calls),2)
         self.assertNotIn('reused',second['stages'][0])
 
-    def test_explicit_compounds_filename_selects_integrated_dataset(self):
+    def test_qualified_compounds_filename_selects_integrated_dataset(self):
         root=self.store.project_dir(self.project_id)
         pubchem=root/'artifacts'/'PubChem'/'similars'/'CHEMBL220'/'compounds.csv'
         integrated=root/'artifacts'/'compounds'/'CHEMBL220'/'compounds.csv'
         for path in (pubchem,integrated):
             path.parent.mkdir(parents=True);path.write_text('molecule_chembl_id,canonical_smiles\nCHEMBL1,CCO\n')
-        self.assertEqual(select_input([str(pubchem),str(integrated)],'base_input_path','compounds.csv'),integrated.parent)
+        with self.assertRaisesRegex(ValueError,'mais de um resultado'):
+            select_input([str(pubchem),str(integrated)],'base_input_path','compounds.csv')
+        self.assertEqual(select_input([str(pubchem),str(integrated)],'base_input_path','compounds/CHEMBL220/compounds.csv'),integrated.parent)
         self.assertEqual(select_input([str(pubchem),str(integrated)],'base_input_path','PubChem/similars/CHEMBL220/compounds.csv'),pubchem.parent)
 
     def test_missing_or_modified_output_is_never_reused(self):

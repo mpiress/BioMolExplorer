@@ -134,5 +134,8 @@
   "{0} · {1} {2} · {3} na tabela · Página {4}": "{0} · {1} {2} · {3} in the table · Page {4}",
   "{0} átomos · {1} ligações · {2} compostos": "{0} atoms · {1} bonds · {2} compounds",
   "{0}: {1}\nPadrão esperado: {2}": "{0}: {1}\nExpected format: {2}",
-  "{0}… Consulte o log da etapa para os detalhes.": "{0}… See the stage log for details."
+  "{0}… Consulte o log da etapa para os detalhes.": "{0}… See the stage log for details.",
+  "Ligantes · {0}": "Ligands · {0}",
+  "Selecionadas: {0}": "Selected: {0}",
+  "Ligantes revisados: {0}": "Ligands reviewed: {0}"
 }

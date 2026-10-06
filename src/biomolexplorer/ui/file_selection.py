@@ -42,7 +42,7 @@ def file_selector(path, files):
 
 
 class FileSelection:
-    def __init__(self, run, pending, assets=(), state=None):
+    def __init__(self, run, pending, assets=(), state=None, file_actions=None):
         self.stage = pending['configuration']
         self.rows = {}
         bindings=self.stage.get('bindings',{})
@@ -97,7 +97,8 @@ class FileSelection:
                         and sum(p.as_posix().endswith('/'+choice) for p in files)==1 for choice in selectors)
                     check = verbatim(ft.Checkbox(label=selector, value=chosen),'label')
                     rows.append((check, {'stage': item['id'], 'selector': selector}))
-                    controls.append(check)
+                    actions=file_actions(item,path) if file_actions else []
+                    controls.append(ft.Row([check,*actions],wrap=True) if actions else check)
                 if not matching:
                     controls.append(ft.Text('Esta origem não produziu arquivos compatíveis com esta entrada.', color='#B91C1C'))
             self.rows[field] = rows

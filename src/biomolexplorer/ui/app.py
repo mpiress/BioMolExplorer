@@ -57,8 +57,10 @@ def panel(content, padding=24, **kwargs):
 
 
 class WorkspaceUI(ProjectTools):
-    def __init__(self,page,store,service,language='pt'):
+    def __init__(self,page,store,service,language='pt',structure_viewer=None):
         self.page,self.store,self.service = LocalizedPage(page,language),store,service
+        from biomolexplorer.pdb_view import StructureViewers
+        self.structure_viewer=structure_viewer or StructureViewers(store)
         self.language = language
         self.token = None
         self.current = None
@@ -331,7 +333,7 @@ class WorkspaceUI(ProjectTools):
         invites = await self.call(self.store.invitations,token)
         if self.token != token:
             return
-        search = ft.TextField(hint_text='Buscar por nome ou tag',value=query,prefix_icon=ft.Icons.SEARCH,expand=True)
+        search = ft.TextField(hint_text='Buscar por nome ou descrição',value=query,prefix_icon=ft.Icons.SEARCH,expand=True)
         archive = ft.Checkbox(label='Mostrar arquivados',value=archived)
         async def filter_projects(e):
             await self.guard(lambda:self.show_workspace(search.value or '',bool(archive.value)))
@@ -339,12 +341,11 @@ class WorkspaceUI(ProjectTools):
         archive.on_change = filter_projects
         cards = []
         for project in projects:
-            if query and query.lower() not in (project['name']+' '+' '.join(project['tags'])).lower():
+            if query and query.lower() not in (project['name']+' '+project['description']).lower():
                 continue
             card = panel(ft.Column([
                 ft.Row([ft.Container(width=12,height=12,bgcolor=project['color'],border_radius=6),user_text(project['name'],20,weight=ft.FontWeight.W_600)],wrap=True),
                 user_text(project['description'],color=MUTED) if project['description'] else text('Seu próximo caminho de exploração começa aqui.',color=MUTED),
-                ft.Row([ft.Container(user_text(tag,11,project['color']),bgcolor='#F1F5F9',padding=6,border_radius=8) for tag in project['tags']],wrap=True),
                 text(f"{len(project['pipeline'])} etapas · " + self.tr({'owner':'Proprietário','editor':'Editor','viewer':'Leitor'}[project['role']]),12,MUTED),
                 ft.Row([ft.TextButton('Abrir projeto',icon=ft.Icons.ARROW_FORWARD,on_click=self.event(self.open_project,project['id'])),
                     ft.TextButton('Histórico',icon=ft.Icons.HISTORY,on_click=self.event(self.history_dialog,project['id'])),
@@ -380,12 +381,41 @@ class WorkspaceUI(ProjectTools):
     async def project_dialog(self,project=None):
         name = ft.TextField(label='Nome do projeto',value=project['name'] if project else '')
         description = ft.TextField(label='Descrição',value=project['description'] if project else '',multiline=True,min_lines=2,max_lines=4)
-        tags = ft.TextField(label='Tags (separadas por vírgula)',value=', '.join(project['tags']) if project else '',hint_text='MAO, revisão, candidatos')
-        color = ft.Dropdown(label='Cor',value=project['color'] if project else COLORS[0],options=[ft.DropdownOption(key=c,text=c) for c in COLORS])
-        directory,folder=self.folder_controls(project['directory'] if project else None,locked=bool(project))
+        from .color_palette import ColorPalette
+        color = ColorPalette(self.page,project['color'] if project else None)
+        token=self.token
+        selection={'plan':None}
+        async def choose_parent(path):
+            plan=await self.call(self.store.project_destination,token,name.value or '',path)
+            if self.token!=token:return
+            async def accept(e=None):
+                if self.token!=token:return
+                selection['plan']=plan
+                directory.value=plan['directory'];directory.error=None;self.page.update()
+                if plan['replace']:close_dialog(self.page,confirmation)
+            if plan['replace']:
+                confirmation=ft.AlertDialog(modal=True,title=text('Substituir projeto existente?',24),
+                    content=ft.Container(width=520,content=ft.Column([
+                        text('Ao salvar, o projeto existente e todo o conteúdo desta pasta serão removidos permanentemente:'),
+                        user_text(plan['directory'],12),
+                        text('Entradas, resultados e histórico serão apagados. Esta ação não pode ser desfeita.',12,'#B91C1C')],tight=True,spacing=16)),
+                    actions=[ft.TextButton('Manter pasta',on_click=lambda e:close_dialog(self.page,confirmation)),
+                             button('Utilizar e substituir ao salvar',accept,True)])
+                self.page.show_dialog(confirmation)
+            else:
+                await accept()
+        directory,folder=self.folder_controls(project['directory'] if project else None,locked=bool(project),
+            project_name=None if project else lambda:name.value, on_select=None if project else choose_parent)
+        def renamed(e):
+            if project:return
+            selection['plan']=None
+            directory.value='';directory.error='Escolha novamente a pasta principal após alterar o nome.'
+            self.page.update()
+        name.on_change=renamed
         async def save(e):
             async def action():
-                values=(name.value or '',description.value or '',color.value,[s.strip() for s in (tags.value or '').split(',') if s.strip()])
+                if self.token!=token:return
+                values=(name.value or '',description.value or '',color.value,project.get('tags',[]) if project else [])
                 if project:
                     await self.call(self.store.update_project,self.token,project['id'],*values,archived=bool(project['archived']))
                     close_dialog(self.page,dialog)
@@ -395,12 +425,17 @@ class WorkspaceUI(ProjectTools):
                         directory.error='Informe ou escolha a pasta que receberá os arquivos e resultados.'
                         self.page.update()
                         raise ValueError('Informe a pasta do projeto.')
-                    created=await self.call(self.store.create_project,self.token,*values,directory=directory.value.strip())
+                    plan=selection['plan']
+                    if not plan or plan['name']!=(name.value or '').strip():
+                        raise ValueError('Escolha a pasta principal usando o botão de pasta após preencher o nome do projeto.')
+                    created=await self.call(self.store.create_project_in_parent,token,*values,
+                        parent=plan['parent'],confirmation=plan if plan['replace'] else None)
+                    if self.token!=token:return
                     close_dialog(self.page,dialog)
                     await self.open_project(created['id'])
             await self.guard(action)
         dialog=ft.AlertDialog(title=text('Editar projeto' if project else 'Novo projeto',24),
-            content=ft.Container(width=560,height=550,content=ft.Column([name,description,tags,color,folder],
+            content=ft.Container(width=560,height=550,content=ft.Column([name,description,color.control,folder],
                 scroll=ft.ScrollMode.AUTO,spacing=20,horizontal_alignment=ft.CrossAxisAlignment.STRETCH)),
             actions=[ft.TextButton('Cancelar',on_click=lambda e:close_dialog(self.page,dialog)),button('Salvar',save,True)])
         self.page.show_dialog(dialog)
@@ -434,19 +469,20 @@ class WorkspaceUI(ProjectTools):
             if self.token != token:
                 return
             async def action():
-                await self.call(self.store.delete_project,token,project_id)
+                await self.call(self.store.delete_project,token,project_id,expected_directory=project['directory'])
                 if self.token != token:
                     return
                 self.page.pop_dialog()
                 await self.show_workspace()
-                self.notify('Projeto excluído do workspace.')
+                self.notify('Projeto e pasta removidos permanentemente.')
             await self.guard(action)
         self.page.show_dialog(ft.AlertDialog(modal=True,title=text('Excluir projeto?',24),
             content=ft.Container(width=460,content=ft.Column([
                 user_text(project['name'],18,weight=ft.FontWeight.W_600),
-                text('O projeto deixará de aparecer no workspace. Você e os colaboradores perderão o acesso aos arquivos e resultados.'),
+                text('O projeto será excluído do workspace e sua pasta será removida permanentemente, incluindo entradas, resultados e histórico.'),
+                user_text(project['directory'],12),
                 text('Há uma execução ativa. Conclua ou cancele a execução antes de excluir o projeto.' if active else
-                     'Esta ação não pode ser desfeita pela interface.',12,'#B91C1C')],tight=True,spacing=18)),
+                     'Esta ação é permanente e não pode ser desfeita.',12,'#B91C1C')],tight=True,spacing=18)),
             actions=[ft.TextButton('Manter projeto',on_click=lambda e:self.page.pop_dialog()),
                      button('Excluir projeto',remove,icon=ft.Icons.DELETE_OUTLINE,disabled=active)]))
 
@@ -968,8 +1004,19 @@ class WorkspaceUI(ProjectTools):
         self.page.show_dialog(dialog)
         await viewer.load()
 
+    def pdb_view_url(self,project_id,path):
+        from biomolexplorer.pdb_view import StructureViewers
+        if not getattr(self,'structure_viewer',None):self.structure_viewer=StructureViewers(self.store)
+        key=self.structure_viewer.issue(self.token,project_id,path,getattr(self,'language','pt'))
+        return self.structure_viewer.url(key,web=self.page.web,page_url=self.page.url if self.page.web else None)
+
     async def preview_artifact(self,project_id,path):
         token = self.token
+        if Path(path).suffix.lower()=='.pdb':
+            url=await self.call(self.pdb_view_url,project_id,path)
+            if self.token!=token or not self.current or self.current['id']!=project_id:return
+            await ft.UrlLauncher().launch_url(url,mode=ft.LaunchMode.EXTERNAL_APPLICATION,web_only_window_name='_blank')
+            return
         data=await self.call(self.store.read_file,token,project_id,path,MAX_VIEW_BYTES+1)
         if self.token != token or not self.current or self.current['id'] != project_id:
             return
@@ -998,8 +1045,9 @@ class WorkspaceUI(ProjectTools):
                         ft.TextButton('Recentrar',on_click=reset)]),viewer],expand=True)
         else:
             raise ValueError('Este arquivo não possui visualizador.')
+        previous_editing=getattr(self,'editing_stage',False)
         self.editing_stage=True
-        def dismissed(e): self.editing_stage=False
+        def dismissed(e): self.editing_stage=previous_editing
         self.page.show_dialog(ft.AlertDialog(title=text(title,22),content=ft.Container(width=width,height=height,content=content),
                                             on_dismiss=dismissed,
                                             actions=[ft.TextButton('Fechar',on_click=lambda e:self.page.pop_dialog())]))
@@ -1041,7 +1089,13 @@ class WorkspaceUI(ProjectTools):
         if progress and progress.is_open:await progress.dismiss()
         if not hasattr(self,'pending_file_selections'):self.pending_file_selections={}
         drafts=self.pending_file_selections
-        form=FileSelection(run,pending,assets,state=drafts.get(key))
+        from .pdb_results import PDBActions
+        from .stage_results import StageResults
+        def file_actions(stage,path):
+            if stage['operation']!='retrieve_structures':return []
+            results=StageResults(self,run['project_id'],run_id,stage,True)
+            return PDBActions(results,True).actions({'path':str(path),'name':path.name})
+        form=FileSelection(run,pending,assets,state=drafts.get(key),file_actions=file_actions)
         inactive=False
         def remember():drafts[key]=form.state()
         def dismiss(e=None):
@@ -1184,6 +1238,8 @@ def main():
     os.environ.setdefault('FLET_SECRET_KEY',secrets.token_urlsafe(48))
     os.environ.setdefault('FLET_MAX_UPLOAD_SIZE',str(store.max_upload_bytes))
     service=PipelineService(store,worker_python=args.worker_python,dock6_path=args.dock6_path)
+    from biomolexplorer.pdb_view import StructureViewers
+    viewers=StructureViewers(store)
     async def session(page):
         loop=asyncio.get_running_loop()
         def async_error(loop,context):
@@ -1191,12 +1247,17 @@ def main():
             get_logger('frontend').error('Falha assíncrona: %s',context.get('message'),exc_info=(type(exception),exception,exception.__traceback__) if exception else None)
             loop.default_exception_handler(context)
         loop.set_exception_handler(async_error)
-        ui=WorkspaceUI(page,store,service,language=args.language)
+        ui=WorkspaceUI(page,store,service,language=args.language,structure_viewer=viewers)
         ui.show_login()
     try:
-        ft.run(session,view=None if args.no_browser else ft.AppView.WEB_BROWSER if args.web else ft.AppView.FLET_APP,
-               host=args.host,port=args.port,upload_dir=str(store.staging),assets_dir=None)
+        if args.web or args.no_browser:
+            from .web_host import run_web
+            run_web(session,store,viewers,args.host,args.port,not args.no_browser,os.environ['FLET_SECRET_KEY'])
+        else:
+            ft.run(session,view=ft.AppView.FLET_APP,host=args.host,port=args.port,
+                   upload_dir=str(store.staging),assets_dir=None)
     finally:
+        viewers.close()
         service.close()
 
 

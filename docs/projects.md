@@ -4,11 +4,12 @@
 
 ## Escolher a pasta do projeto
 
-Em **Novo projeto**, informe nome, descrição, tags, cor e **Pasta do projeto**.
-Escolha uma pasta nova ou vazia pelo botão dentro do campo, que não permite digitação manual. A interface desktop oferece um seletor do sistema; na versão web, o botão abre a navegação de pastas e permite criar uma pasta;
-no navegador, o caminho pertence ao computador que executa o backend, e não ao
-computador do navegador. A aplicação precisa poder escrever nesse caminho.
-Pastas sobrepostas a outros projetos ou ao armazenamento de contas são rejeitadas.
+Em **Novo projeto**, informe nome e descrição, escolha a cor na paleta visual e selecione a **Pasta do projeto** pelo botão dentro do campo. Tags não fazem parte do formulário.
+O navegador de pastas é o mesmo no desktop e na versão web e oculta diretórios cujo nome começa com ponto e os sinalizados como ocultos pelo sistema. Em **Criar pasta**, informe somente o nome: a pasta é criada dentro do local atual e selecionada automaticamente. Por exemplo, em `/home/michel/Downloads`, criar `teste` seleciona `/home/michel/Downloads/teste`. Preencha o nome antes de abrir o seletor. A pasta selecionada é a pasta principal: por exemplo, nome `MAO` e pasta `/home/michel/Downloads` criam `/home/michel/Downloads/MAO`. O campo mostra esse destino completo. A pasta principal pode conter outros arquivos ou projetos; somente a subpasta de destino pertence ao novo projeto. Alterar o nome exige escolher novamente a pasta.
+
+Se a subpasta já existir, a aplicação mostra o caminho e solicita confirmação para substituir todo o seu conteúdo. A remoção acontece somente ao salvar o novo projeto; cancelar preserva os dados. Se o conteúdo mudar após a confirmação, escolha e confirme novamente. Projetos de outro proprietário, execuções ativas, links simbólicos e pastas sobrepostas são protegidos.
+
+No navegador, o caminho pertence ao computador que executa o backend. A aplicação precisa de permissão de escrita; pastas sobrepostas a projetos ou às contas são rejeitadas.
 
 Essa pasta guarda `project.json` (configuração portátil), `assets/` (entradas
 originais), `runs/` (experimentos e resultados) e `.history/` (versões).
@@ -84,8 +85,9 @@ Uma execução ativa impede a restauração.
 As versões usam cópias por conteúdo em `.history/blobs/`: arquivos iguais são
 armazenados uma vez; arquivos modificados geram novos conteúdos. Preserve essa
 pasta ao fazer backup. Não há retenção automática nem expurgo das versões nesta
-edição. A exclusão do card continua sendo lógica; projetos excluídos ficam fora
-do acesso normal e não são restaurados pelo botão de histórico.
+edição. **Excluir projeto** solicita confirmação e mostra a pasta associada. Ao aceitar, o sistema remove permanentemente a pasta completa (incluindo versões, entradas e resultados), os registros, permissões e uploads pendentes desse projeto. Exporte um backup antes de excluir se precisar preservá-lo. A exclusão não pode ser restaurada pelo histórico. Execuções ativas precisam ser concluídas ou canceladas primeiro.
+
+A limpeza usa uma pasta temporária oculta no mesmo diretório e um registro de remoção pendente. Em caso de erro de permissão ou de disco, a interface informa que a remoção física está incompleta; corrija a causa e tente novamente na confirmação ainda aberta ou reinicie a aplicação para retomar a limpeza. As demais pastas não são apagadas.
 
 ## Escolher várias entradas de um bloco
 

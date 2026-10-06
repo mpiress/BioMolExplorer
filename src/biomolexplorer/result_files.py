@@ -32,7 +32,82 @@ class ResultFiles:
         return [{'path': str(p), 'name': p.name, 'size': p.stat().st_size}
                 for name in stage.get('artifacts', [])
                 if (p := self.store.scoped_path(pid, name)).is_file()
+                and not (stage['operation']=='retrieve_structures' and p.name in ('pdb_codes.csv','retrieval_report.json'))
                 and not (stage['operation'] == 'admet' and p.suffix.lower() == '.json' and p.name!='molecule_exclusions.json')]
+
+    def pdb_ligands(self, token, pid, rid, sid, filename):
+        stage=self.stage(token,pid,rid,sid)
+        path=self.store.scoped_path(pid,filename)
+        if stage['operation']!='retrieve_structures' or str(path) not in stage.get('artifacts',[]) or path.suffix.lower()!='.pdb':
+            raise AccessDenied('Estrutura não autorizada para esta etapa.')
+        metadata=path.parent/'pdb_codes.csv'
+        if str(metadata) not in stage.get('artifacts',[]):raise AccessDenied('Metadados PDB não autorizados.')
+        data=self.store.read_file(token,pid,str(metadata),MAX_VIEW_BYTES)
+        reader=csv.DictReader(io.StringIO(data.decode('utf-8-sig')))
+        from hashlib import sha256
+        from Bio.PDB import parse_pdb_header
+        resolution=parse_pdb_header(str(path)).get('resolution')
+        available=set()
+        for line in self.store.read_file(token,pid,str(path),MAX_VIEW_BYTES).decode().splitlines():
+            if line.startswith('HETATM') and line[17:20].strip() not in ('HOH','WAT'):
+                available.add((line[17:20].strip(),int(line[22:26]),line[21:22].strip()))
+        return {'pdb_id':path.stem.upper(),'revision':sha256(data).hexdigest(),'resolution':resolution,
+                'ligands':[row for row in reader if row['PDB_CODE'].upper()==path.stem.upper()],
+                'available_ligands':[{'LIGAND':name,'RESNUM':str(number),'CHAIN':chain} for name,number,chain in sorted(available)]}
+
+    def set_pdb_ligands(self,token,pid,rid,sid,filename,records,revision):
+        """Replace one structure's curated ligands, preserving other PDB rows."""
+        import re
+        from .storage import write_text
+        from .stage_cache import artifact_manifest
+        path=self.store.scoped_path(pid,filename)
+        metadata=path.parent/'pdb_codes.csv'
+        backup=None
+        try:
+            with self.store.change(token,pid,'editor','curate_pdb_ligands','Ligantes revisados: '+path.stem) as db:
+                if db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running')",(pid,)).fetchone():
+                    raise ValueError('Aguarde a execução terminar ou pausar antes de editar os ligantes.')
+                context=self.pdb_ligands(token,pid,rid,sid,filename)
+                if context['revision']!=revision:raise ValueError('Os ligantes foram alterados. Reabra a lista antes de salvar.')
+                if not isinstance(records,list) or len(records)>10000:raise ValueError('Lista de ligantes inválida.')
+                residues=set()
+                for line in self.store.read_file(token,pid,str(path),MAX_VIEW_BYTES).decode().splitlines():
+                    if line.startswith(('ATOM  ','HETATM')):
+                        residues.add((line[17:20].strip().upper(),int(line[22:26]),line[21:22].strip()))
+                curated=[];seen=set()
+                with metadata.open(encoding='utf-8-sig',newline='') as stream:
+                    reader=csv.DictReader(stream);fields=reader.fieldnames;existing=list(reader)
+                for record in records:
+                    ligand=str(record.get('LIGAND','')).strip().upper()
+                    chain=str(record.get('CHAIN','')).strip()
+                    try:number=int(record.get('RESNUM',''))
+                    except (TypeError,ValueError):raise ValueError('Informe um número de resíduo inteiro.')
+                    if not re.fullmatch(r'[A-Z0-9]{1,5}',ligand) or not re.fullmatch(r'[A-Za-z0-9]',chain):
+                        raise ValueError('Informe código do ligante e cadeia válidos.')
+                    key=(ligand,number,chain)
+                    if key not in residues:raise ValueError('Este ligante/resíduo/cadeia não foi encontrado na estrutura baixada.')
+                    if key in seen:continue
+                    seen.add(key)
+                    row={k:'' for k in fields}
+                    row.update(PDB_CODE=context['pdb_id'],LIGAND=ligand,RESNUM=str(number),CHAIN=chain)
+                    if 'RESOLUTION' in fields:row['RESOLUTION']='' if context['resolution'] is None else str(context['resolution'])
+                    curated.append(row)
+                rows=[row for row in existing if row['PDB_CODE'].upper()!=context['pdb_id']]+curated
+                stream=io.StringIO(newline='');writer=csv.DictWriter(stream,fieldnames=fields)
+                writer.writeheader();writer.writerows(rows)
+                backup=metadata.read_text()
+                write_text(stream.getvalue(),metadata)
+                for run in db.execute('SELECT id,stages FROM runs WHERE project_id=?',(pid,)).fetchall():
+                    stages=json.loads(run[1]);changed=False
+                    for item in stages:
+                        if str(metadata) in item.get('artifacts',[]):
+                            item['artifact_manifest']=artifact_manifest(item['artifacts'])
+                            item['curated_at']=time.time();changed=True
+                    if changed:db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(stages),run[0]))
+        except Exception:
+            if backup is not None:write_text(backup,metadata)
+            raise
+        return self.pdb_ligands(token,pid,rid,sid,filename)
 
     def remove(self, token, pid, rid, sid, filename):
         """Audit deletion, invalidate producer caches and restore bytes on failure."""

@@ -6,10 +6,11 @@ from .localization import verbatim
 
 
 class FileTable:
-    def __init__(self, ui, project_id, files, writable=False, remove=None, download=None, preview=None):
+    def __init__(self, ui, project_id, files, writable=False, remove=None, download=None, preview=None, extra_actions=None):
         self.ui,self.project_id,self.files=ui,project_id,files
         self.token=ui.token;self.active=True;self.offset=0;self.limit=25
         self.remove_action,self.download_action,self.preview_action=remove,download,preview
+        self.extra_actions=extra_actions
         self.writable=writable
         self.table=ft.DataTable(columns=[ft.DataColumn(ft.Text(n)) for n in ('Arquivo','Tamanho','Ações')],rows=[],
             column_spacing=30,heading_row_color='#F1F5F9',data_row_min_height=58,data_row_max_height=68)
@@ -44,6 +45,7 @@ class FileTable:
                     if self.valid():await self.confirm_remove(item)
                 actions.append(ft.IconButton(ft.Icons.DELETE_OUTLINE,tooltip='Remover '+item['name'],on_click=remove,
                     disabled=not self.writable,icon_color='#B91C1C'))
+            if self.extra_actions:actions.extend(self.extra_actions(item))
             name=ft.Column([verbatim(ft.Text(item['name'],size=13,tooltip=item['name'])),
                 *([ft.Text(item['description'],size=11,color='#64748B')] if item.get('description') else [])],spacing=3)
             rows.append(ft.DataRow(cells=[ft.DataCell(ft.Container(name,width=420)),

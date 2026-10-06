@@ -1,0 +1,188 @@
+[
+  {
+    "name": "single",
+    "density": 0.5,
+    "probe_radius": 1.4,
+    "sha256": "8cbf53423a7080d9da3c59b7042fc85cdaf4ebc303a4ce07895f6413b776d46a"
+  },
+  {
+    "name": "pair",
+    "density": 0.5,
+    "probe_radius": 1.4,
+    "sha256": "ad7a1230eeb79d56c048f4dbd7a023bba22f484ab9033f7782d323c12fbc2cf1"
+  },
+  {
+    "name": "triangle",
+    "density": 0.5,
+    "probe_radius": 1.4,
+    "sha256": "ee22f93c576ed326a1dc8d01932aac594ae10f2908718edf6740a0cbb99899f3"
+  },
+  {
+    "name": "tetrahedron",
+    "density": 0.5,
+    "probe_radius": 1.4,
+    "sha256": "790922953911d6c1752f59b29a50ed1ecd97419cf00badcc2898b415393ba651"
+  },
+  {
+    "name": "spindle",
+    "density": 0.5,
+    "probe_radius": 1.4,
+    "sha256": "6917b1e06f1ae366b50b93d1dfc82c34d1027e0ef3f4b1ca28183209454ef172"
+  },
+  {
+    "name": "buried",
+    "density": 0.5,
+    "probe_radius": 1.4,
+    "sha256": "73fec8eebe2adfc8d2b62c2bdad94f44b24a1f86621240f004779787e51ee8b2"
+  },
+  {
+    "name": "random0",
+    "density": 0.1,
+    "probe_radius": 1.0,
+    "sha256": "179a716fccd5f9653bb3b91ec31e246cf7d4d3972fbd7ccc4e8db12d9c89030b"
+  },
+  {
+    "name": "random1",
+    "density": 0.5,
+    "probe_radius": 1.4,
+    "sha256": "8449b7298eba1ca073722b1acaed44610eeb52fe1c97526c2b7bee5ba1c65fa0"
+  },
+  {
+    "name": "random2",
+    "density": 1.0,
+    "probe_radius": 2.0,
+    "sha256": "64abb7f06ec5321df055d41b76c5ba67d9741a6e80063b85ff26cb7f0d5edb90"
+  },
+  {
+    "name": "random3",
+    "density": 2.0,
+    "probe_radius": 1.0,
+    "sha256": "da0dc487e244e133d244dece05fe13fdc43150ff3e70df2682545965a16f9524"
+  },
+  {
+    "name": "random4",
+    "density": 0.1,
+    "probe_radius": 1.4,
+    "sha256": "5efb581bdc33af705d3c785f3d9b4399d0b3ec800b0a3f534513411d857d135b"
+  },
+  {
+    "name": "random5",
+    "density": 0.5,
+    "probe_radius": 2.0,
+    "sha256": "52dd1b03ca40d3d92fea625bb1c105e604b30eac3ac03a1b029848fe8ca73db6"
+  },
+  {
+    "name": "random6",
+    "density": 1.0,
+    "probe_radius": 1.0,
+    "sha256": "0947150881af0e1bbe46541d01b41f4dbfe63aad09a0c399fd7ade8c86d56ac4"
+  },
+  {
+    "name": "random7",
+    "density": 2.0,
+    "probe_radius": 1.4,
+    "sha256": "bd94dc534057e0606f630465618fb2e1d2e1802fa9871d0bae90f8061d6943c8"
+  },
+  {
+    "name": "random8",
+    "density": 0.1,
+    "probe_radius": 2.0,
+    "sha256": "541cf73036fcbd0aac6ee74d0d491c59b1da94c6173cab42657e5cf91be693a9"
+  },
+  {
+    "name": "random9",
+    "density": 0.5,
+    "probe_radius": 1.0,
+    "sha256": "90416848b069c23439bf816a0c30f92c16e82f0c83df06f3d6f0eccb4b1f143d"
+  },
+  {
+    "name": "random10",
+    "density": 1.0,
+    "probe_radius": 1.4,
+    "sha256": "ea5d2500653be762b0354d30980ca555e1284bae8706f4bcf3fb59da383bbe83"
+  },
+  {
+    "name": "random11",
+    "density": 2.0,
+    "probe_radius": 2.0,
+    "sha256": "1ea077a7522e771158453aa4bbd7a506d582fab65e4449d48ca1624da454252b"
+  },
+  {
+    "name": "random12",
+    "density": 0.1,
+    "probe_radius": 1.0,
+    "sha256": "6363ab86825aa3bb6250739e451e1d57db16bed31b373e2a3121fc0688f4b347"
+  },
+  {
+    "name": "random13",
+    "density": 0.5,
+    "probe_radius": 1.4,
+    "sha256": "5626da4865cb6e3c5f207832191b505e0ce4519d15742912c4e7c829601ed291"
+  },
+  {
+    "name": "random14",
+    "density": 1.0,
+    "probe_radius": 2.0,
+    "sha256": "e11c1e2b307bd4b49afa671ada9ba4b09ee9a74cb011e9df1021c4a44375ae1a"
+  },
+  {
+    "name": "random15",
+    "density": 2.0,
+    "probe_radius": 1.0,
+    "sha256": "9f67a7a6b81936e4db1a068e5e2bb704f9bd726da73ab13bddddc03f839fb6a2"
+  },
+  {
+    "name": "random16",
+    "density": 0.1,
+    "probe_radius": 1.4,
+    "sha256": "a549fe330f2b5d66f43626c64ede58b9a2f71af984618fefe5791ad76709a1db"
+  },
+  {
+    "name": "random17",
+    "density": 0.5,
+    "probe_radius": 2.0,
+    "sha256": "9b1d4f486b3ddd4e52d4806dcb9157e84f830a962f6c36cc1a738f2eee2bce96"
+  },
+  {
+    "name": "random18",
+    "density": 1.0,
+    "probe_radius": 1.0,
+    "sha256": "d77206e5aa6c9e85fd5ea90238894be222fb0341ece0fdc0ba030676d80f169f"
+  },
+  {
+    "name": "random19",
+    "density": 2.0,
+    "probe_radius": 1.4,
+    "sha256": "5cdb7a9b48145f99eb3835c1b1cb18c1859c201fe2cbceeef278c6f94ba8ea74"
+  },
+  {
+    "name": "1CRN",
+    "density": 0.5,
+    "probe_radius": 1.4,
+    "sha256": "2ac76c718602b168f6f00b288f6c708bf26f37edb5dc0b4764dcf458311e4662"
+  },
+  {
+    "name": "square",
+    "density": 0.5,
+    "probe_radius": 1.4,
+    "sha256": "d98fb9f6884fcffb7450979d3afbb5e7174a5baf071a3a4503e0d9330597d32e"
+  },
+  {
+    "name": "pentagon",
+    "density": 0.5,
+    "probe_radius": 1.4,
+    "sha256": "7920a1440ee1c161ea24a89df3a20ac0e0f120c86e8ecb7864dd296d42ef8dc9"
+  },
+  {
+    "name": "cube",
+    "density": 0.5,
+    "probe_radius": 1.4,
+    "sha256": "a12c4ccec0e1cc9e4a5e6257530c3aff4c50b601f6abbbb4e265f2620c8bd5e1"
+  },
+  {
+    "name": "octahedron",
+    "density": 0.5,
+    "probe_radius": 1.4,
+    "sha256": "24ec13034b872a89fa0c16633432442afe4d3d995657af9dbd0839dd9fa30d38"
+  }
+]

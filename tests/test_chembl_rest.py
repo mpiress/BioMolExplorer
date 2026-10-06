@@ -21,6 +21,22 @@ class ChEMBLRestTests(unittest.TestCase):
         self.assertEqual(session.get.call_args_list[0].kwargs['params']['standard_type'],'IC50')
         self.assertNotIn('only', session.get.call_args_list[0].kwargs['params'])
         self.assertFalse(any('spore' in c.args[0] for c in session.get.call_args_list))
+    def test_activity_names_with_literal_commas_use_exact_filters_and_shared_limit(self):
+        session=Mock();session.get.side_effect=[
+            self.response('activity',[{'activity_id':1,'standard_type':'Ki'}]),
+            self.response('activity',[{'activity_id':2,'standard_type':'K(p,uu,brain)'}])]
+        with patch('crawlers.chembl_client.requests.Session',return_value=session):
+            query=ChEMBLClient().activity.filter(target_chembl_id='CHEMBL220',standard_units='nM',
+                standard_type__in=['Ki','K(p,uu,brain)','K(p,uu,CSF)']).take(2).only(['activity_id'])
+            self.assertEqual(list(query),[{'activity_id':1},{'activity_id':2}])
+        self.assertEqual(session.get.call_count,2)
+        first,second=session.get.call_args_list
+        self.assertEqual(first.kwargs['params']['standard_type'],'Ki')
+        self.assertEqual(second.kwargs['params']['standard_type'],'K(p,uu,brain)')
+        self.assertEqual(second.kwargs['params']['limit'],1)
+        self.assertEqual(second.kwargs['params']['standard_units'],'nM')
+        self.assertNotIn('standard_type__in',second.kwargs['params'])
+
     def test_server_error_is_clear(self):
         session=Mock();session.get.return_value=Mock(ok=False,status_code=500)
         with patch('crawlers.chembl_client.requests.Session',return_value=session),self.assertRaisesRegex(RuntimeError,'HTTP 500'):

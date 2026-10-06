@@ -1,3 +1,6 @@
+# Chimera replacement review: docs/chimera_migration.md.
+# Current backend still requires Chimera; candidate libraries are not activated.
+# Native DMS surface port: docs/dms_migration.md (NumPy + SciPy; no DMS executable).
 name: BioMolExplorer
 channels:
   - conda-forge
@@ -19,7 +22,7 @@ dependencies:
   - requests
   - matplotlib
   - pillow
-  - scipy
+  - scipy  
   - urllib3
   - setuptools
   - pip:

@@ -23,7 +23,7 @@ TITLES = {
  'consensus': ('Consenso de docking', 'Combine resultados Vina e DOCK6.', 'Docking'),
 }
 LABELS = {
- 'search_term': 'Alvo molecular (nome ou ID ChEMBL)', 'target': 'Nome do alvo / pasta das estruturas',
+ 'search_term': 'Consulta ChEMBL (nome, identificador ou SMILES)', 'target': 'Nome do alvo / pasta das estruturas',
  'include_pubchem': 'Ampliar a seleção com PubChem', 'pubchem_threshold': 'Similaridade mínima PubChem (%)',
  'pubchem_max_records': 'Máximo de similares por referência', 'threshold': 'Limiar de similaridade (%)',
  'max_records': 'Máximo de registros', 'base_input_path': 'Dados de entrada',
@@ -33,7 +33,12 @@ LABELS = {
  'mcs_timeout': 'Tempo máximo da busca do fragmento (s)',
  'mcs_ring_matches_ring_only': 'Comparar átomos de anéis somente com anéis',
  'mcs_complete_rings_only': 'Exigir anéis completos no fragmento',
- 'pdb_ec': 'Número EC', 'organism': 'Organismos', 'max_resolution': 'Resolução máxima (Å)',
+ 'search_mode': 'Buscar na ChEMBL por', 'max_targets': 'Máximo de alvos ChEMBL',
+ 'expand_chembl': 'Ampliar com similares ChEMBL', 'similarity_threshold': 'Similaridade mínima ChEMBL (%)',
+ 'pdb_query': 'Texto de busca PDB (proteína, gene ou descrição)',
+ 'pdb_ids': 'IDs PDB (separados por vírgulas)', 'uniprot_ids': 'Acessos UniProt (separados por vírgulas)',
+ 'ligand_ids': 'Códigos de ligantes PDB (ex.: ATP)',
+ 'pdb_ec': 'Número EC (opcional)', 'organism': 'Organismos', 'max_resolution': 'Resolução máxima (Å)',
  'must_have_ligand': 'Exigir ligante', 'input_file': 'Arquivo de compostos (opcional)',
  'mol_filename': 'Nome da tabela de compostos (sem .csv)', 'filename': 'Nome do arquivo',
  'metric': 'Métrica de similaridade', 'fingerprint': 'Tipo de fingerprint', 'radius': 'Raio',
@@ -50,7 +55,10 @@ LABELS = {
  'verbose': 'Detalhar o processamento',
 }
 PATH_FIELDS = {'base_input_path','base_selected_mols','base_vina_path','base_dock6_path','similarity_path'}
+from .retrieval import MODES
+
 ENUMS = {
+ 'search_mode': list(MODES),
  'metric': ['Tanimoto','Dice','Cosine','Sokal','Russel','RogotGoldberg','AllBit','Kulczynski','McConnaughey','Asymmetric','BraunBlanquet'],
  'fingerprint': ['morgan','maccs','pharmacophore'], 'charge_type': ['gas','am1'], 'conformer_search_type': ['flex','rigid'],
 }

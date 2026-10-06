@@ -4,11 +4,12 @@
 
 ## Choose the project folder
 
-**New project** asks for a name, description, tags, color and **Project folder**.
-Choose a new or empty folder using the button inside the field, which cannot be typed into. Desktop provides a system picker; web mode provides folder navigation and folder creation. In a browser, the
-path belongs to the computer running the backend, rather than the browser's
-computer. The application needs write access. Overlapping project folders and
-paths containing the account database are rejected.
+**New project** asks for a name and description, a color selected from visual swatches and a **Project folder** selected using the folder button. Tags are no longer part of the form.
+Desktop and web use the same folder browser, hiding dot-prefixed directories and folders marked as hidden by the operating system. Under **Create folder**, enter only the name: the folder is created inside the current location and selected automatically. For example, creating `teste` while browsing `/home/michel/Downloads` selects `/home/michel/Downloads/teste`. Enter the project name before opening the picker. The selected folder is the parent: name `MAO` and parent `/home/michel/Downloads` create `/home/michel/Downloads/MAO`. The field displays this complete destination. The parent may contain other files or projects; only the destination subfolder belongs to the new project. Changing the name requires selecting the parent again.
+
+If the destination already exists, the application displays its path and asks for confirmation to replace its entire contents. Removal happens only when saving the new project; cancellation preserves the data. If contents change after confirmation, select and confirm again. Another owner's projects, active runs, symbolic links and overlapping project folders are protected.
+
+In a browser, the path belongs to the backend computer. Write access is required; folders overlapping projects or account storage are rejected.
 
 The folder contains `project.json` (portable configuration), `assets/` (original
 inputs), `runs/` (experiments and results) and `.history/` (versions).
@@ -80,8 +81,9 @@ Active executions prevent rollback.
 Versions use content-addressed copies in `.history/blobs/`: identical files occupy
 one stored copy and modified files create new contents. Preserve this folder in
 backups. This release does not automatically expire or purge versions. Project
-deletion remains logical; deleted projects are outside normal access and cannot
-be restored through the history button.
+deletion requests confirmation and displays the associated path. Accepting permanently removes the whole folder (including versions, inputs and results), project records, permissions and pending uploads. Export a backup first if needed. History cannot undo deletion. Finish or cancel active runs first.
+
+Cleanup uses a hidden temporary folder in the same directory and a persistent pending-removal record. If permissions or disk errors prevent physical removal, the interface reports incomplete cleanup. Correct the cause and retry in the still-open confirmation or restart the application to resume cleanup. Other folders are preserved.
 
 ## Select multiple block inputs
 

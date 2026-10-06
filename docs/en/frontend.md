@@ -8,7 +8,7 @@ Python services; scientific calculations continue to run in separate processes.
 
 ## Portable collaborative projects
 
-Creating a project requires selecting a folder through the button inside **Project folder**; the field cannot be typed into. On desktop, use the system picker; on the web, browse and create folders on the computer running BioMolExplorer. Choose a new or empty folder; its
+Creating a project requires selecting a folder through the button inside **Project folder**; the field cannot be typed into. Desktop and web browse visible folders on the computer running BioMolExplorer. Create folder asks for a name and automatically selects the new folder inside the current location. Enter the name first and choose a parent folder; a subfolder named after the project is created and its
 inputs, configuration, history and results are stored there. In web mode, this
 path refers to the computer running the backend. The workspace offers **Import project**,
 **Export** and **History**, including complete version restoration. Configuration
@@ -18,7 +18,7 @@ accept multiple inputs and validated completed results. See
 
 ## Getting started
 
-Before starting, download the source code from [GitHub](https://github.com/mpiress/BioMolExplorer) and install **UCSF Chimera 1.17, DOCK6 6.11 and DMS** on the computer running calculations. Follow the [installation and configuration guide](installation.md) to prepare the environment, configure `PATH` and check executables. Installing the interface does not install these tools; stages requiring them will fail if they are absent.
+Before starting, download the source code from [GitHub](https://github.com/mpiress/BioMolExplorer) and install **UCSF Chimera 1.17 and DOCK6 6.11** on the computer running calculations. Follow the [installation and configuration guide](installation.md) to prepare the environment, configure `PATH` and check executables. Installing the interface does not install these tools; stages requiring them will fail if they are absent.
 
 From the downloaded source code root, with the scientific environment prepared:
 
@@ -86,9 +86,8 @@ application authorization and path restrictions, not containers.
 
 ## Projects and pipelines
 
-Create projects with a name, description, tags and color. Search by name or tags.
-Projects can be archived, restored or deleted. Deletion removes access and keeps
-the files in storage; it does not physically purge data.
+Create projects with a name, description and color selected from visual swatches. Search by name or description.
+Projects can be archived, restored or deleted. Deletion requests confirmation showing the path and permanently removes the project, its records and the whole folder on disk. Finish or cancel active runs before deletion.
 
 In **Pipeline**, click a category title in the stage library to expand its blocks; categories start collapsed. Search expands categories containing matches. Drag blocks onto the grid, or use
 **+**. Drag a block header to move it. Drag an output to another block's input,
@@ -417,3 +416,15 @@ with distributed services. This version does not expose a public HTTP API for
 scientific services.
 
 For contracts and test evidence, see [pipeline validation](pipeline_validation.md).
+
+
+## Color swatches, folders and retrieved structures
+
+Choose colors from visual swatches; the form has no Tags field. Desktop and web use the same folder browser, hiding dot-prefixed directories and folders marked as hidden by the operating system. Under **Create folder**, enter only the name: the folder is created inside the current location and selected automatically. For example, creating `teste` while browsing `/home/michel/Downloads` selects `/home/michel/Downloads/teste`. For new projects, enter the name first and select the parent: the destination is a subfolder named after the project. Existing destinations require replacement confirmation when saving.
+
+PDB listings provide ligand editing, local structure previews and links to RCSB. Metadata files are hidden in this list and retained for the pipeline. See [retrieval](retrieval.md) for ChEMBL filters and curation rules.
+
+
+## Explore a PDB in 3D
+
+**View 3D structure** opens a browser tab with the local WebGL explorer. Drag to rotate, wheel to zoom and right-drag to pan. The panel provides representations, colors, chains, models, ligands and water; the header offers fullscreen and PNG export. See [the retrieval guide](retrieval.md) for controls, permissions and browser requirements. PDB data is not sent to external services.

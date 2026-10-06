@@ -278,7 +278,8 @@ class SimilarMols(CrawlerSettings, MyMolecules):
 
             filter_params['chembl_id'] = molecule_id
 
-            molecules = files.csv_to_dataframe(molecule_id) if infile else self.__similarity.filter(**filter_params)
+            maximum = filter_params.pop('max_records', 1000)
+            molecules = self.__similarity.filter(**filter_params).take(maximum)
             if len(molecules) == 0:
                 return
 
@@ -390,7 +391,9 @@ class ZincMols(MyMolecules):
 
             if response.status_code == 200:
                 conteudo = response.text.splitlines()[1:]
-                conteudo = [token.split(' ') for token in conteudo]
+                conteudo = [token.split() for token in conteudo if token.strip()]
+                if any(len(row)!=2 for row in conteudo):
+                    raise ValueError('Tabela ZINC inválida: esperado SMILES e identificador por linha.')
                 mol = DataFrame(conteudo, columns=['smile', 'zinc_id'])
                 print('File number:', idx, ' URL:', url) if verbose else None
 

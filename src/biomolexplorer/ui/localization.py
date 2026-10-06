@@ -82,7 +82,7 @@ class LocalizedPage:
         'trailing', 'label', 'error', 'helper', 'rows', 'cells', 'columns', 'options', 'spans',
         'shapes', 'tabs', 'tab_bar', 'body', 'items', 'badge', 'icon', 'menu',
         'prefix', 'suffix', 'prefix_icon', 'suffix_icon')
-    _labels = ('label', 'hint_text', 'error', 'helper', 'tooltip', 'semantics_label', 'message')
+    _labels = ('label', 'hint_text', 'error', 'helper', 'helper_text', 'tooltip', 'semantics_label', 'message')
 
     def __init__(self, page, language='pt'):
         object.__setattr__(self, '_page', page)

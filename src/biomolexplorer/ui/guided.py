@@ -4,6 +4,7 @@ import json
 import re
 import flet as ft
 from biomolexplorer.catalog import operation_fields, template_names, TITLES
+from biomolexplorer.retrieval import MODES
 from biomolexplorer.templates import RESOURCE_ROOT, validate_templates
 from biomolexplorer.flow import compatible
 from .localization import verbatim
@@ -13,13 +14,13 @@ LISTS={'organism':['Homo sapiens','Mus musculus','Rattus norvegicus'],
  'PolymerEntityTypeID':['Protein','DNA','RNA','NA-hybrid','Other'],
  'ExperimentalMethodID':['X-RAY DIFFRACTION','SOLUTION NMR','ELECTRON MICROSCOPY','ELECTRON CRYSTALLOGRAPHY','EPR','FIBER DIFFRACTION','FLUORESCENCE TRANSFER','INFRARED SPECTROSCOPY','NEUTRON DIFFRACTION','POWDER DIFFRACTION','SOLID-STATE NMR','SOLUTION SCATTERING','THEORETICAL MODEL']}
 FILTER_LABELS={'organism':'Organismo','type__in':'Tipos de alvo','relationship_type':'Relação com o alvo','standard_type__in':'Medidas de atividade (Ki, IC50…)','molecule_type':'Tipo de molécula','max_value_ref':'Atividade máxima','standard_units':'Unidade de atividade','assay_type':'Tipo de ensaio','pchembl_value__isnull':'Ausência de pChEMBL (0 = exigir valor)','natural_product':'Produto natural (1 = sim, 0 = não)','similarity':'Similaridade mínima (%)','molecule_weight':'Massa molecular máxima'}
-NUMERIC={'max_resolution','pH','threshold','pubchem_threshold','pubchem_max_records','max_records','radius','morgan_n_bits','exhaustiveness','num_modes','chunk_size','repulsion_weight','density','distance','plot_max_residues'}
+NUMERIC={'max_resolution','pH','threshold','pubchem_threshold','pubchem_max_records','max_records','radius','morgan_n_bits','exhaustiveness','num_modes','chunk_size','repulsion_weight','density','distance','plot_max_residues','max_targets','similarity_threshold'}
 
 class GuidedForm:
     def __init__(self,ui,stage,assets,writable):
         self.ui,self.stage,self.assets,self.writable=ui,stage,assets,writable
         self.readers={}; self.binding_readers={}; self.direct_path_readers={}; self.template_readers={}
-        self.input_editors={};self.field_controls={};self.conditional_cells={}
+        self.input_editors={};self.field_controls={};self.conditional_cells={};self.filter_tiles={};self.filter_cells={}
         # Consensus uses its Vina input to derive the legacy base_input_path.
         # Do not keep a second, hidden dependency on the previously linked block.
         self.derived_consensus_input=(stage['operation']=='consensus'
@@ -39,6 +40,10 @@ class GuidedForm:
             self.controls.append(ft.Text(
                 'Ao concluir cada etapa, selecione no popup os arquivos que seguirão para o próximo bloco.',
                 size=13,color='#64748B'))
+        if stage['operation']=='retrieve_structures':
+            self.controls.append(ft.Text('Escolha texto, IDs PDB, UniProt, EC ou filtros. Campos preenchidos são combinados; o nome da coleção só organiza a saída.',size=13))
+        elif stage['operation']=='retrieve_compounds':
+            self.controls.append(ft.Text('Busque alvos para obter bioatividades ou compostos diretamente por nome, IDs, similaridade ou subestrutura. Limpe filtros para ampliar a seleção.',size=13))
         if stage['operation']=='import_results':
             from .app import KINDS
             self.add('kind','Tipo de dados',stage['parameters'].get('kind','compounds'),list(KINDS))
@@ -82,7 +87,7 @@ class GuidedForm:
                 self.controls.append(ft.Row(fields,wrap=True,spacing=24,run_spacing=24)); self.readers[key]=lambda f=fields:[float(c.value) for c in f]
             elif key in LISTS or key=='files':
                 self.list_field(key,field['label'],value,LISTS.get(key,[]))
-            else: self.add(key,field['label'],value,field['choices'])
+            else: self.add(key,'Nome da coleção PDB (opcional)' if stage['operation']=='retrieve_structures' and key=='target' else field['label'],value,field['choices'])
         if stage['operation']=='redocking':
             def redocking_inputs(e):
                 from biomolexplorer.flow import input_types
@@ -113,6 +118,10 @@ class GuidedForm:
             self.controls.append(self.graph_notice)
             self.sync_graph_mode()
         for name in template_names(stage['operation']): self.template(name)
+        if stage['operation']=='retrieve_compounds':
+            self.field_controls['search_mode'].on_change=self.sync_retrieval
+            self.field_controls['expand_chembl'].on_change=self.sync_retrieval
+            self.sync_retrieval()
     def layout(self):
         """Group fields into roomy cards; expansion content has explicit spacing."""
         from .branding import BRAND_BLUE
@@ -125,7 +134,7 @@ class GuidedForm:
                 col=12 if control.data=='wide' or long_label or not isinstance(control,(ft.TextField,ft.Dropdown)) else {'xs':12,'md':6}
                 cells.append(ft.Container(content=control,col=col,padding=ft.Padding.symmetric(vertical=6),visible=control.visible))
                 # Hidden conditional fields also release their space in the form.
-                conditional=('radius','morgan_n_bits') if self.stage['operation']=='fingerprints' else ()
+                conditional=('radius','morgan_n_bits') if self.stage['operation']=='fingerprints' else ('max_targets','expand_chembl','similarity_threshold') if self.stage['operation']=='retrieve_compounds' else ()
                 if control in [self.field_controls.get(k) for k in conditional]:
                     key=next(k for k in conditional if self.field_controls[k] is control)
                     self.conditional_cells[key]=cells[-1]
@@ -149,7 +158,10 @@ class GuidedForm:
             control.tile_padding=24
             control.text_color=control.collapsed_text_color='#172B4D'
             control.icon_color=control.collapsed_icon_color=BRAND_BLUE
-            sections.append(ft.Container(control,border_radius=16,border=ft.Border.all(1,'#E2E8F0')))
+            cell=ft.Container(control,border_radius=16,border=ft.Border.all(1,'#E2E8F0'),visible=control.visible)
+            for key,tile in self.filter_tiles.items():
+                if tile is control:self.filter_cells[key]=cell
+            sections.append(cell)
         return ft.Column(sections,spacing=24,scroll=ft.ScrollMode.AUTO,horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
 
     def add(self,key,label,value,choices=None,into=None):
@@ -157,16 +169,35 @@ class GuidedForm:
         if isinstance(value,bool):
             control=ft.Switch(label=label,value=value,disabled=not self.writable); getter=lambda:bool(control.value)
         elif choices:
-            control=ft.Dropdown(label=label,value=value,options=[ft.DropdownOption(key=str(v),text=str(v)) for v in choices],disabled=not self.writable); getter=lambda:control.value
+            control=ft.Dropdown(label=label,value=value,options=[ft.DropdownOption(key=str(v),text=MODES.get(v,str(v)) if key=='search_mode' else str(v)) for v in choices],disabled=not self.writable); getter=lambda:control.value
         else:
             control=ft.TextField(label=label,value='' if value is None else str(value),disabled=not self.writable)
             if key=='dock6_app_path': control.value=str(self.ui.service.dock6_path or ''); control.read_only=True; control.helper='Configuração da instalação feita pelo administrador.'
-            integers={'threshold','pubchem_threshold','pubchem_max_records','max_records','morgan_n_bits','num_modes','exhaustiveness','chunk_size','plot_max_residues'}
+            integers={'threshold','pubchem_threshold','pubchem_max_records','max_records','morgan_n_bits','num_modes','exhaustiveness','chunk_size','plot_max_residues','max_targets','similarity_threshold'}
             if key=='radius' and self.stage['operation']=='fingerprints': integers.add('radius')
             kind=int if key in integers else float if key in NUMERIC else int if type(value)is int else float if type(value)is float else str
             getter=lambda:None if not control.value else kind(control.value)
         if key in ('search_term','target'): control.data='wide'
         controls.append(control); self.readers[key]=getter;self.field_controls[key]=control
+    def sync_retrieval(self,e=None):
+        mode=self.field_controls['search_mode'].value or 'target'
+        direct=mode in ('molecule_id','molecule_name','similarity','substructure')
+        for key,visible in (('max_targets',not direct),('expand_chembl',not direct),('similarity_threshold',mode=='similarity')):
+            self.field_controls[key].visible=visible
+            if key in self.conditional_cells:self.conditional_cells[key].visible=visible
+        self.field_controls['search_term'].helper={
+            'target':'Ex.: CHEMBL220, P00533 ou acetylcholinesterase',
+            'target_id':'Ex.: CHEMBL220, CHEMBL240', 'uniprot':'Ex.: P00533, P22303',
+            'molecule_id':'Ex.: CHEMBL25, CHEMBL50',
+            'similarity':'SMILES ou um único ID ChEMBL de composto',
+            'substructure':'SMILES do fragmento que os compostos devem conter',
+        }.get(mode,'Digite o nome ou texto da consulta.')
+        for group,tile in self.filter_tiles.items():
+            visible=group=='molecules' or (not direct and (group!='similarmols' or self.field_controls['expand_chembl'].value))
+            tile.visible=visible
+            if group in self.filter_cells:self.filter_cells[group].visible=visible
+        if e:self.ui.page.update()
+
     def sync_fingerprint(self):
         from biomolexplorer.fingerprint_selection import generated_kind,LABELS
         editor=self.input_editors['base_input_path']
@@ -221,26 +252,54 @@ class GuidedForm:
         if name.endswith('.json'):
             group={'target':'target','bioactivity':'bioactivity','molecules':'molecules','similarmols':'similars'}[name.split('/')[-1][:-5]]
             data=copy.deepcopy(self.stage['parameters'].get('chembl_filters',{}).get(group,json.loads(source))); getters={}
+            if group=='target':data.setdefault('organism','')
+            if group=='bioactivity':
+                data.setdefault('standard_type__in',[]);data.setdefault('assay_type','')
             for key,value in data.items():
-                if isinstance(value,list) and key in ('type__in','standard_type__in'):
+                if key=='standard_type__in':
+                    from .activity_measures import ActivityMeasures
+                    picker=ActivityMeasures(self.ui.page,value or [],self.writable)
+                    field=picker.control;getter=picker.values
+                elif key=='organism':
+                    organisms=list(dict.fromkeys(LISTS['organism']+['Escherichia coli','Saccharomyces cerevisiae','Danio rerio']+([value] if value else [])))
+                    field=ft.Dropdown(label='Organismo',value=value or '',hint_text='Ex.: Homo sapiens',
+                        helper_text='Nome científico do organismo do alvo. Selecione ou digite; vazio aceita qualquer organismo.',
+                        editable=True,enable_filter=True,enable_search=True,
+                        options=[ft.DropdownOption(key='',text='Qualquer')]+[ft.DropdownOption(key=v,text=v) for v in organisms],disabled=not self.writable)
+                    typed=[None]
+                    field.on_text_change=lambda e,t=typed:t.__setitem__(0,e.control.text or '')
+                    field.on_select=lambda e,t=typed:t.__setitem__(0,None)
+                    def getter(c=field,t=typed):
+                        text=(t[0] if t[0] is not None else c.value or '').strip()
+                        return '' if text==c.options[0].text else text
+                elif key=='assay_type':
+                    choices=[('B','Ligação'),('F','Funcional'),('A','ADMET'),('T','Toxicidade'),('P','Físico-químico'),('U','Não atribuído')]
+                    field=ft.Dropdown(label='Tipo de ensaio',value=value or '',helper_text='Classificação do ensaio na ChEMBL.',
+                        options=[ft.DropdownOption(key='',text='Qualquer')]+[ft.DropdownOption(key=k,text=k+' - '+label) for k,label in choices],disabled=not self.writable)
+                    getter=lambda c=field:c.value or None
+                elif isinstance(value,list) and key=='type__in':
                     suggested=['SINGLE PROTEIN','PROTEIN FAMILY','PROTEIN COMPLEX','CELL-LINE','TISSUE','ORGANISM'] if key=='type__in' else ['Ki','IC50','EC50','Kd']
                     checks=[ft.Checkbox(label=v,value=v in value,disabled=not self.writable) for v in dict.fromkeys(suggested+value)]
                     field=ft.Column([ft.Text(FILTER_LABELS.get(key,key)),ft.Row(checks,wrap=True,spacing=20,run_spacing=16)])
                     getter=lambda checks=checks:[c.label for c in checks if c.value]
-                elif key in ('natural_product','pchembl_value__isnull') and value in (0,1):
-                    field=ft.Dropdown(label='Produto natural' if key=='natural_product' else 'Exigir pChEMBL',value=str(value),options=[ft.DropdownOption(key=str(k),text=('Sim' if k==1 else 'Não') if key=='natural_product' else ('Sim' if k==0 else 'Não')) for k in (0,1)],disabled=not self.writable)
-                    getter=lambda c=field:int(c.value)
+                elif key in ('natural_product','pchembl_value__isnull') and value in (None,0,1):
+                    field=ft.Dropdown(label='Produto natural' if key=='natural_product' else 'Exigir pChEMBL',value='' if value is None else str(value),options=[ft.DropdownOption(key='',text='Qualquer')]+[ft.DropdownOption(key=str(k),text=('Sim' if k==1 else 'Não') if key=='natural_product' else ('Sim' if k==0 else 'Não')) for k in (0,1)],disabled=not self.writable)
+                    getter=lambda c=field:int(c.value) if c.value else None
                 elif isinstance(value,list):
                     field=ft.TextField(label=FILTER_LABELS.get(key,key)+' (itens separados por vírgula)',value=', '.join(map(str,value)),disabled=not self.writable)
                     getter=lambda c=field:[v.strip() for v in c.value.split(',') if v.strip()]
                 elif isinstance(value,(dict,tuple)): continue
                 else:
-                    field=ft.Switch(label=FILTER_LABELS.get(key,key),value=value,disabled=not self.writable) if isinstance(value,bool) else ft.TextField(label=FILTER_LABELS.get(key,key),value=str(value),disabled=not self.writable)
-                    kind=type(value); getter=lambda c=field,k=kind:k(c.value)
+                    field=ft.Switch(label=FILTER_LABELS.get(key,key),value=value,disabled=not self.writable) if isinstance(value,bool) else ft.TextField(label=FILTER_LABELS.get(key,key),value='' if value is None else str(value),disabled=not self.writable)
+                    kind=int if key=='similarity' else float if key in ('molecule_weight','max_value_ref') else type(value) if value is not None else str
+                    getter=lambda c=field,k=kind:k(c.value) if c.value not in (None,'') else None
                 controls.append(field); getters[key]=getter
             def read(data=data,getters=getters):
                 result=copy.deepcopy(data)
-                for k,g in getters.items(): result[k]=g()
+                for k,g in getters.items():
+                    value=g()
+                    if value is None or value=='' or value==[]: result.pop(k,None)
+                    else: result[k]=value
                 return json.dumps(result,indent=2,ensure_ascii=False)
             self.template_readers[name]=read
         elif name.startswith('chimera/'):
@@ -290,7 +349,11 @@ class GuidedForm:
                 for i,(key,getter,sep) in readers.items(): result[i]=key+sep+getter()+'\n'
                 return ''.join(result)
             self.template_readers[name]=read
-        if controls: self.controls.append(ft.ExpansionTile(title=ft.Text(TEMPLATE_LABELS.get(name.split('/')[-1].split('.')[0],name)),controls=controls))
+        if controls:
+            tile=ft.ExpansionTile(title=ft.Text(TEMPLATE_LABELS.get(name.split('/')[-1].split('.')[0],name)),controls=controls)
+            self.controls.append(tile)
+            if name.startswith('crawlers/'):
+                self.filter_tiles[name.split('/')[-1].split('.')[0]]=tile
     def read(self):
         result=copy.deepcopy(self.stage); result['name']=self.title.value or TITLES[result['operation']][0]; result['enabled']=bool(self.enabled.value)
         if 'process_all' in result:result['process_all']=False
@@ -316,7 +379,7 @@ class GuidedForm:
         for name,getter in self.template_readers.items():
             value=getter()
             original=(RESOURCE_ROOT/name).read_text()
-            different=json.loads(value)!=json.loads(original) if name.endswith('.json') else value!=original
+            different=json.loads(value)!={k:v for k,v in json.loads(original).items() if v is not None and v!='' and v!=[]} if name.endswith('.json') else value!=original
             if different: result.setdefault('templates',{})[name]=value
             else: result.get('templates',{}).pop(name,None)
         # Resource-based guided filters replace the corresponding parameter filters.

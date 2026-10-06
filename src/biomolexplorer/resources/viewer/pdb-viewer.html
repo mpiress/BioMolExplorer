@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="{{language}}">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{name}} · BioMolExplorer</title>
+<link rel="stylesheet" href="{{prefix}}/assets/pdb-viewer.css">
+<script src="{{prefix}}/assets/3Dmol-min.js" defer></script>
+<script src="{{prefix}}/assets/pdb-viewer.js" defer></script></head>
+<body>
+<header><div class="brand"><span class="mark">B</span><div><strong>BioMolExplorer</strong><small>{{viewer}}</small></div></div>
+<div class="identity"><h1>{{name}}</h1><span id="summary"></span></div>
+<div class="header-actions"><button id="snapshot">{{snapshot}}</button><button id="fullscreen">{{fullscreen}}</button></div></header>
+<main><div id="scene" aria-label="{{viewer}}"></div>
+<aside class="panel"><label for="representation">{{representation}}</label>
+<select id="representation"><option value="cartoon">{{cartoon}}</option><option value="sticks">{{sticks}}</option><option value="spheres">{{spheres}}</option><option value="lines">{{lines}}</option></select>
+<label for="color">{{color}}</label><select id="color"><option value="chain">{{chain}}</option><option value="element">{{element}}</option><option value="spectrum">{{spectrum}}</option></select>
+<label for="chain">{{chain}}</label><select id="chain"><option value="">{{all}}</option></select>
+<label for="model">{{model}}</label><select id="model"></select>
+<div class="toggles"><label><input type="checkbox" id="ligands" checked>{{ligands}}</label><label><input type="checkbox" id="water">{{water}}</label></div>
+<button id="center" class="primary">{{center}}</button></aside>
+<div id="status" role="status">{{loading}}</div><div id="atom" class="atom-card">{{picked}}</div>
+</main><footer><span class="mouse-dot"></span>{{hint}}<span class="engine">3Dmol.js · WebGL</span></footer>
+<script id="configuration" type="application/json">{{config}}</script>
+</body></html>

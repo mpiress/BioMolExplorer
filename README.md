@@ -33,7 +33,7 @@ The platform integrates data from major public repositories, including PDB, ChEM
 
 ## Portable research projects
 
-The Flet workspace now stores each project in a folder chosen at creation, with
+The Flet workspace stores each new project in a subfolder named after the project, inside the parent folder selected at creation. Existing destinations require confirmation before replacement; deleting a project permanently removes its associated folder after confirmation. Each project includes
 portable configuration, inputs, results and version history. Project cards offer
 export/import and an attributed change history with owner-controlled rollback.
 Shared pipelines autosave and update across collaborators. Blocks support multiple
@@ -82,7 +82,7 @@ BioMolExplorer integrates information retrieval, molecular fingerprint generatio
 
 ## ⚡ Quick Start
 
-**Before starting BioMolExplorer, install and configure UCSF Chimera 1.17, DOCK6 6.11 and DMS on the computer that will run the calculations.** Installing the Python package or Conda environment does not install these external tools. The interface may open without them, but preparation, redocking and docking stages requiring them will fail. Follow the [installation and configuration guide](docs/en/installation.md) ([Português](docs/installation.md)) for official downloads, executable checks and DOCK6 path configuration. Git and Anaconda or Miniconda are also needed for the commands below.
+**Before starting BioMolExplorer, install and configure UCSF Chimera 1.17 and DOCK6 6.11 on the computer that will run the calculations.** Installing the Python package or Conda environment does not install these external tools. The interface may open without them, but preparation, redocking and docking stages requiring them will fail. Follow the [installation and configuration guide](docs/en/installation.md) ([Português](docs/installation.md)) for official downloads, executable checks and DOCK6 path configuration. Git and Anaconda or Miniconda are also needed for the commands below.
 
 Clone the repository:
 
@@ -91,16 +91,16 @@ git clone https://github.com/mpiress/BioMolExplorer.git
 cd BioMolExplorer
 ```
 
-Alternatively, open the [GitHub repository](https://github.com/mpiress/BioMolExplorer), select **Code → Download ZIP**, extract the archive and open a terminal in the extracted folder. Run the following commands from the folder containing `environment.yml` and `pyproject.toml`.
+Alternatively, open the [GitHub repository](https://github.com/mpiress/BioMolExplorer), select **Code → Download ZIP**, extract the archive and open a terminal in the extracted folder. Run the following commands from the folder containing `requirements.yml` and `pyproject.toml`.
 
 Create and activate the Conda environment:
 
 ```bash
-conda env create -f environment.yml
+conda env create -f requirements.yml
 conda activate BioMolExplorer
 ```
 
-After installing the external tools, activating the environment and completing the guide's checks, install and start the interface. Replace the example DOCK6 path with its installation root containing `bin/` and `parameters/`; its `bin/`, Chimera's executable directory and the DMS executable directory must be on `PATH`.
+After installing the external tools, activating the environment and completing the guide's checks, install and start the interface. Replace the example DOCK6 path with its installation root containing `bin/` and `parameters/`; its `bin/` and Chimera's executable directory must be on `PATH`.
 
 ```bash
 python -m pip install -e '.[ui]'
@@ -122,7 +122,7 @@ BioMolExplorer
 ├── src
 ├── datasets
 ├── results
-├── environment.yml
+├── requirements.yml
 └── install.sh
 ```
 
@@ -600,10 +600,14 @@ charge_type='am1'
 When `prepare_complex=True`, the system uses auxiliary scripts located at:
 
 ```
-src > scripts > chimera
+src/biomolexplorer/resources/chimera
 ```
 
 These scripts rely on command-line operations from **UCSF Chimera** to process molecular structures in the background.
+
+The [Chimera replacement assessment](docs/en/chimera_migration.md) ([Português](docs/chimera_migration.md)) maps every current function and evaluates Python alternatives. Chimera remains required because complete scientific and configuration compatibility has not been established.
+
+The [native DMS port report](docs/en/dms_migration.md) ([Português](docs/dms_migration.md)) describes the Python SES generator and its comparison with the official C distribution. NumPy and SciPy replace the DMS executable; the `.dms` format consumed by sphgen remains.
 
 
 🧬 Template Script for Complex Preparation
@@ -887,7 +891,7 @@ resultados são persistidos em SQLite. Cada tarefa possui seu próprio diretóri
 com limites de concorrência, timeout e cancelamento.
 
 - [Manual do usuário: passo a passo completo](docs/user_manual.md) · [English user manual](docs/en/user_manual.md)
-- [Instalação e configuração: GitHub, Chimera 1.17, DOCK6 6.11 e DMS](docs/installation.md) · [English installation guide](docs/en/installation.md)
+- [Instalação e configuração: GitHub, Chimera 1.17 e DOCK6 6.11](docs/installation.md) · [English installation guide](docs/en/installation.md)
 - [Validação das etapas e conexões](docs/pipeline_validation.md)
 - [Arquitetura, revisão técnica e limites](docs/architecture.md)
 - [Instalação, CLI, operações e integração com Flet](docs/backend_usage.md)
@@ -896,7 +900,7 @@ com limites de concorrência, timeout e cancelamento.
 - [Documentação em português e inglês](docs/README.md)
 - [English: workspace, backend and architecture](docs/index.html)
 
-Antes de iniciar, instale Chimera 1.17, DOCK6 6.11 e DMS e confira os executáveis conforme o guia de instalação. Na raiz do código baixado, com o ambiente científico ativo e as ferramentas no `PATH`:
+Antes de iniciar, instale Chimera 1.17 e DOCK6 6.11 e confira os executáveis conforme o guia de instalação. Na raiz do código baixado, com o ambiente científico ativo e as ferramentas no `PATH`:
 
 ```bash
 python -m pip install -e '.[ui]'
@@ -913,3 +917,5 @@ para a interface utiliza `biomolexplorer.workspace.WorkspaceStore` e
 `biomolexplorer.pipeline.PipelineService`, com `JobManager` supervisionando os workers.
 
 Na tela de login, selecione inglês ou português. Sem `--language`, a interface inicia em inglês.
+
+Information retrieval now supports optional EC/collection names for PDB searches and direct ChEMBL compound searches by name, IDs, similarity or substructure. See the [retrieval guide](docs/en/retrieval.md) ([Português](docs/retrieval.md)) for modes, limits, filters and query reports.

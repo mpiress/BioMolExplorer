@@ -15,7 +15,7 @@ from biomolexplorer.pipeline import PipelineService,select_input
 from biomolexplorer.input_validation import validate_file
 from biomolexplorer.ui.file_selection import FileSelection
 from biomolexplorer.docking_inputs import matching_poses
-from caad.docking import Docking,DockVina
+from caad.docking import Docking,DockVina,Dock6
 from wrappers.docking import generate_consensus,perform_docking_dock6
 from wrappers.redocking import perform_redocking
 
@@ -36,6 +36,30 @@ class DockingHandoffTests(unittest.TestCase):
         (folder/f'{code}_{chain}.dockprep.mol2').write_text(MOL2)
         for suffix in ('.lig.pdb','.lig.pdbqt'):(folder/f'{code}_LIG_1{chain}{suffix}').write_text(ATOM)
         return [str(p) for p in root.rglob('*') if p.is_file()]
+
+    def test_dock6_surface_uses_native_dms_and_keeps_sphgen_handoff(self):
+        root=self.store.project_dir(self.project_id)
+        receptor=root/'receptor';receptor.mkdir()
+        ligands=root/'ligands';ligands.mkdir()
+        (receptor/'1ABC.noH.pdb').write_text(ATOM.replace('LIG','ALA'))
+        (ligands/'M1.mol2').write_text(MOL2)
+        obj=object.__new__(Dock6);obj.logger=MagicMock()
+        obj.receptorpath=str(receptor);obj.ligandpath=str(ligands)
+        obj._Dock6__base_output_path=str(root/'out');obj._Dock6__pdb_code='1ABC'
+        obj._Dock6__density=.5;obj._Dock6__radius=1.4;obj._Dock6__distance=10.
+        obj.generate_docking_script=MagicMock()
+        def external(command, cwd=None):
+            if isinstance(command,list) and command[0]=='sphere_selector':
+                (Path(cwd)/'selected_spheres.sph').write_text('spheres')
+        obj.perform_subprocess=MagicMock(side_effect=external)
+        obj.prepare_surface()
+        surface=root/'out/surface/1ABC.dms'
+        self.assertIn('SC0',surface.read_text())
+        commands=[call.args[0] for call in obj.perform_subprocess.call_args_list]
+        self.assertEqual(commands[0],'sphgen -i INSPH -o OUTSPH')
+        self.assertEqual(commands[1][0],'sphere_selector')
+        self.assertEqual(len(commands),2)
+        self.assertEqual((root/'out/surface/Molecules/M1.sph').read_text(),'spheres')
 
     def test_preparation_copies_native_centers_ligands_and_dock6_companions(self):
         source,stage=new_stage('prepare_structures'),new_stage('docking_dock6')

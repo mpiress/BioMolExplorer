@@ -50,11 +50,29 @@ class WorkspaceStore:
                 CREATE INDEX IF NOT EXISTS runs_project ON runs(project_id,created);
                 CREATE INDEX IF NOT EXISTS assets_project ON assets(project_id);
                 CREATE TABLE IF NOT EXISTS project_locations(project_id TEXT PRIMARY KEY REFERENCES projects(id), path TEXT UNIQUE NOT NULL);
+                CREATE TABLE IF NOT EXISTS pending_deletions(id TEXT PRIMARY KEY, owner TEXT NOT NULL,
+                    original TEXT NOT NULL, parked TEXT NOT NULL, created REAL NOT NULL, uploads TEXT NOT NULL DEFAULT '[]');
                 CREATE TABLE IF NOT EXISTS project_history(id TEXT PRIMARY KEY, project_id TEXT REFERENCES projects(id),
                     user_id TEXT, actor_name TEXT NOT NULL, actor_email TEXT NOT NULL, action TEXT NOT NULL,
                     summary TEXT NOT NULL, created REAL NOT NULL, has_before INTEGER NOT NULL);
                 CREATE INDEX IF NOT EXISTS history_project ON project_history(project_id,created);
             ''')
+
+        from .project_folders import finish
+        try:
+            finish(self)
+        except (OSError, ValueError):
+            import logging
+            logging.getLogger(__name__).exception('Não foi possível concluir a limpeza de projetos excluídos.')
+
+    def project_destination(self, token, name, parent):
+        from .project_folders import plan
+        return plan(self, token, name, parent)
+
+    def create_project_in_parent(self, token, name, description='', color=COLORS[0], tags=None,
+                                 parent=None, confirmation=None):
+        from .project_folders import create
+        return create(self, token, name, parent, description, color, tags, confirmation)
 
     @contextmanager
     def connect(self):
@@ -223,14 +241,9 @@ class WorkspaceStore:
             db.execute('UPDATE projects SET name=?,description=?,color=?,tags=?,archived=?,updated=? WHERE id=?',
                        (name.strip(), description[:4000], color, json.dumps(tags), int(archived), time.time(), project_id))
 
-    def delete_project(self, token, project_id):
-        self.project(token, project_id, 'owner')
-        with self.change(token, project_id, 'owner', 'delete', 'Projeto excluído do workspace') as db:
-            active = db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running','awaiting_input')", (project_id,)).fetchone()
-            if active:
-                raise ValueError('Cancele a execução antes de excluir o projeto.')
-            db.execute('UPDATE projects SET deleted=1,updated=? WHERE id=?', (time.time(), project_id))
-        # Tombstone rather than deleting large scientific datasets during a UI request.
+    def delete_project(self, token, project_id, expected_directory=None):
+        from .project_folders import delete
+        delete(self, token, project_id, expected_directory)
 
     def save_pipeline(self, token, project_id, stages, expected_revision, base_pipeline=None):
         self.project(token, project_id, 'editor')

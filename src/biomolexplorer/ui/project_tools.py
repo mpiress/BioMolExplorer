@@ -13,27 +13,30 @@ from .folder_browser import FolderBrowser
 
 
 class ProjectTools:
-    def folder_controls(self, value=None, locked=False):
+    def folder_controls(self, value=None, locked=False, project_name=None, on_select=None):
         field=ft.TextField(label='Pasta do projeto',value=value or '',
             hint_text='Selecione uma pasta',read_only=True,multiline=True,min_lines=1,max_lines=3)
-        def selected(path):
-            field.value=str(path);field.error=None;self.page.update()
+        async def selected(path):
+            if on_select:
+                await on_select(path)
+            else:
+                field.value=str(path);field.error=None;self.page.update()
         async def choose(e):
             if locked:return
-            token=self.token
             async def action():
-                if self.page.web:
-                    await FolderBrowser(self,selected,field.value).open()
-                else:
-                    parent=await self.picker.get_directory_path(dialog_title=self.tr('Escolha a pasta do projeto'))
-                    if parent and self.token==token:selected(parent)
+                if project_name:
+                    from ..project_folders import folder_name
+                    folder_name(project_name())
+                initial=str(Path(field.value).parent) if project_name and field.value else field.value
+                await FolderBrowser(self,selected,initial,allow_nonempty=bool(project_name)).open()
             await self.guard(action)
         field.suffix_icon=ft.Semantics(container=True,label='Escolher pasta',button=True,
             exclude_semantics=True,disabled=locked,on_tap=None if locked else choose,
             content=ft.IconButton(icon=ft.Icons.FOLDER_OPEN,tooltip='Escolher pasta',
                 on_click=choose,disabled=locked))
         return field,ft.Column([field,
-            ft.Text('Escolha uma pasta nova ou vazia. Configuração, entradas, resultados e histórico ficarão nela.',size=12,color='#64748B'),
+            ft.Text('Escolha a pasta principal. Será criada nela uma subpasta com o nome do projeto.' if project_name else
+                    'Escolha uma pasta nova ou vazia. Configuração, entradas, resultados e histórico ficarão nela.',size=12,color='#64748B'),
             ft.Text('No navegador, as pastas são do computador onde o BioMolExplorer está em execução.',size=12,color='#64748B') if self.page.web else
             ft.Container()],spacing=12,horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
 

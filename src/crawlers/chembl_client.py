@@ -5,13 +5,13 @@ checked locally without asking the API to perform extra joins. Field selection
 is also local: a server-side ``only`` projection can fail on nested fields even
 when the corresponding full record remains available.
 """
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, quote
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 BASE_URL = 'https://www.ebi.ac.uk/chembl/api/data'
-KEYS = {'target':'targets', 'activity':'activities', 'molecule':'molecules', 'similarity':'molecules'}
+KEYS = {'target':'targets', 'activity':'activities', 'molecule':'molecules', 'similarity':'molecules', 'substructure':'molecules'}
 
 
 def _target_matches(row, filters):
@@ -40,6 +40,30 @@ class ChEMBLQuery:
     def _load(self):
         if self._records is not None:
             return self._records
+        # ChEMBL's __in syntax uses commas as separators. Some scientific
+        # measure names contain literal commas, so query those with exact filters.
+        measures=self.parameters.get('standard_type__in')
+        if (self.resource=='activity' and 'standard_type' not in self.parameters
+                and isinstance(measures,(list,tuple)) and len(measures)>1
+                and any(',' in value for value in measures)):
+            measures=list(dict.fromkeys(measures));ordinary=[v for v in measures if ',' not in v]
+            groups=([{'standard_type__in':ordinary}] if ordinary else [])+[
+                {'standard_type':v} for v in measures if ',' in v]
+            base={k:v for k,v in self.parameters.items() if k!='standard_type__in'}
+            records=[];seen=set()
+            for group in groups:
+                remaining=None if self.maximum is None else self.maximum-len(records)
+                if remaining is not None and remaining<=0:break
+                for row in ChEMBLQuery(self.resource,dict(base,**group),maximum=remaining):
+                    identity=row.get('activity_id')
+                    if identity is not None and identity in seen:continue
+                    if identity is not None:seen.add(identity)
+                    records.append(row)
+            if self.columns:
+                fields=list(dict.fromkeys(column.split('__',1)[0] for column in self.columns))
+                records=[{column:row.get(column) for column in fields} for row in records]
+            self._records=records
+            return records
         query_parameters = dict(self.parameters)
         for key, value in tuple(query_parameters.items()):
             if key.endswith('__in') and isinstance(value, (list, tuple)):
@@ -55,10 +79,17 @@ class ChEMBLQuery:
                     local_filters[key] = query_parameters.pop(key)
         parameters={k:','.join(map(str,v)) if isinstance(v,(list,tuple)) else str(v).lower() if isinstance(v,bool) else v for k,v in query_parameters.items()}
         path=self.resource
-        if path=='similarity':
+        search = parameters.pop('_search', None)
+        if search:
+            path += '/search'
+            parameters['q'] = search
+        if self.resource=='similarity':
             identifier=parameters.pop('chembl_id')
             threshold=parameters.pop('similarity',70)
-            path=f'similarity/{identifier}/{threshold}'
+            path=f'similarity/{quote(identifier, safe="")}/{threshold}'
+        elif self.resource=='substructure':
+            structure = parameters.pop('smiles')
+            path = f'substructure/{quote(structure, safe="")}'
         exact_identifier = (self.resource in ('target', 'molecule')
                             and set(parameters) == {f'{self.resource}_chembl_id'})
         if not exact_identifier:
@@ -77,6 +108,12 @@ class ChEMBLQuery:
                 seen.add(url)
                 response=session.get(url,params=parameters,timeout=(5,20))
                 if not response.ok:
+                    if response.status_code==400:
+                        try:
+                            detail=response.json().get('error_message', 'Verifique os critérios e filtros.')
+                        except ValueError:
+                            detail='Verifique os critérios e filtros.'
+                        raise ValueError(f'ChEMBL rejeitou a consulta: {detail}')
                     raise RuntimeError(f'ChEMBL indisponível (HTTP {response.status_code}) na consulta {self.resource}. Tente novamente em alguns minutos.')
                 data=response.json()
                 if not isinstance(data, dict):

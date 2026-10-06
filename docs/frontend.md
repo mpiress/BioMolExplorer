@@ -15,14 +15,14 @@ bloco pode receber várias entradas e usar resultados prontos validados. Consult
 [o guia de projetos e versões](projects.md) para o passo a passo e os formatos.
 
 Ao criar um projeto, use o botão de pasta dentro de **Pasta do projeto** para
-selecionar uma pasta nova ou vazia. O campo não permite digitação manual.
-No desktop, o botão abre o seletor do sistema; na versão web, abre a navegação
-no computador que executa o BioMolExplorer e permite criar uma pasta. Essa pasta recebe entradas, configurações,
-resultados e histórico. O caminho continua associado ao projeto ao reabrir a aplicação.
+selecionar a pasta principal; o nome deve estar preenchido e será usado para criar a subpasta do projeto. O campo não permite digitação manual.
+No desktop e na versão web, o botão abre a navegação de pastas visíveis
+no computador que executa o BioMolExplorer. Criar pasta solicita um nome e seleciona automaticamente a nova pasta no local atual. A subpasta com o nome do projeto recebe entradas, configurações,
+resultados e histórico. Destinos existentes exigem confirmação para substituição ao salvar. O caminho continua associado ao projeto ao reabrir a aplicação.
 
 ## Iniciar
 
-Antes de iniciar, baixe o código do [GitHub](https://github.com/mpiress/BioMolExplorer) e instale **UCSF Chimera 1.17, DOCK6 6.11 e DMS** no computador dos cálculos. Siga o [guia de instalação e configuração](installation.md) para preparar o ambiente, configurar o `PATH` e conferir os executáveis. Instalar a interface não instala essas ferramentas; etapas que dependem delas falharão se estiverem ausentes.
+Antes de iniciar, baixe o código do [GitHub](https://github.com/mpiress/BioMolExplorer) e instale **UCSF Chimera 1.17 e DOCK6 6.11** no computador dos cálculos. Siga o [guia de instalação e configuração](installation.md) para preparar o ambiente, configurar o `PATH` e conferir os executáveis. Instalar a interface não instala essas ferramentas; etapas que dependem delas falharão se estiverem ausentes.
 
 Na raiz do código baixado, com o ambiente científico preparado:
 
@@ -86,9 +86,8 @@ implementado é de autorização e caminhos na aplicação, não de containers.
 
 ## Projetos e pipelines
 
-Crie projetos com nome, descrição, tags e cor. Busque pelo nome ou pelas tags.
-Projetos podem ser arquivados, restaurados ou excluídos. A exclusão retira o acesso
-e preserva os arquivos no armazenamento; ela não limpa fisicamente os dados.
+Crie projetos com nome, descrição e cor escolhida na paleta. Busque pelo nome ou descrição.
+Projetos podem ser arquivados, restaurados ou excluídos. A exclusão exige confirmação mostrando o caminho e remove permanentemente o projeto, seus registros e a pasta completa no disco. Conclua ou cancele execuções ativas antes de excluir.
 
 Na aba **Pipeline**, clique no título de uma categoria da biblioteca para expandir seus blocos; as categorias começam recolhidas. A busca expande as categorias com resultados. Arraste os blocos para a área
 quadriculada, ou use **+**. Arraste o cabeçalho para reposicionar um bloco. Conecte
@@ -450,3 +449,15 @@ armazenamento e o supervisor por serviços distribuídos. Esta versão não ofer
 uma API HTTP pública dos serviços científicos.
 
 Para consultar os contratos e a evidência de testes, veja [validação do pipeline](pipeline_validation.md).
+
+
+## Paleta, pastas e estruturas recuperadas
+
+Escolha a cor por amostra visual; o formulário não apresenta Tags. O navegador de pastas é o mesmo no desktop e na versão web e oculta diretórios cujo nome começa com ponto e os sinalizados como ocultos pelo sistema. Em **Criar pasta**, informe somente o nome: a pasta é criada dentro do local atual e selecionada automaticamente. Por exemplo, em `/home/michel/Downloads`, criar `teste` seleciona `/home/michel/Downloads/teste`. Para novos projetos, selecione a pasta principal após preencher o nome: o destino será uma subpasta com o nome do projeto. Uma subpasta existente exige confirmação para substituição ao salvar.
+
+A listagem de PDBs oferece edição de ligantes, visualização local e acesso ao RCSB. Os metadados são ocultados na interface, preservando seu uso no pipeline. Consulte [recuperação](retrieval.md) para os filtros ChEMBL e regras de curadoria.
+
+
+## Explorar um PDB em 3D
+
+O botão **Visualizar estrutura 3D** abre uma aba com o explorador WebGL local. Arraste para rotacionar, use a roda para zoom e o botão direito para deslocamento. O painel oferece representações, cores, cadeias, modelos, ligantes e água; a barra superior oferece tela inteira e exportação PNG. Consulte [o guia de recuperação](retrieval.md) para controles, permissões e requisitos do navegador. Nenhum PDB é enviado a serviços externos.

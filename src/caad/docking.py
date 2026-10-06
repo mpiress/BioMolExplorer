@@ -1,3 +1,4 @@
+from biomolexplorer.molecular_surface import generate_surface
 from biomolexplorer.processes import run_command
 from biomolexplorer.storage import sync_directory
 from biomolexplorer.paths import directory, resolve_path, worker_count
@@ -772,14 +773,14 @@ class Dock6(Docking):
 
             self.set_outputpath(f'{self.__base_output_path}/surface/' )
 
-            os.remove(directory(self.outputpath) + self.__pdb_code +".dms") if os.path.exists(directory(self.outputpath) + self.__pdb_code +".dms") else None
             os.remove(directory(self.outputpath) + self.__pdb_code +".sph") if os.path.exists(directory(self.outputpath) + self.__pdb_code +".sph") else None
 
             input = directory(self.receptorpath) + self.__pdb_code
             output = directory(self.outputpath) + self.__pdb_code
 
-            command = ['dms', f'{input}.noH.pdb', '-d', str(self.__density), '-n', '-w', str(self.__radius), '-v', '-o', f'{output}.dms']
-            self.perform_subprocess(command)
+            summary = generate_surface(f'{input}.noH.pdb', f'{output}.dms',
+                                       density=self.__density, probe_radius=self.__radius)
+            self.logger.info('Native molecular surface: %s', summary)
 
             self.generate_docking_script(input_template='src/scripts/dock6/INSPH.template',
                                          output_script=directory(self.outputpath)+'INSPH',

@@ -15,7 +15,7 @@ cd BioMolExplorer
 
 Sem Git, use **Code → Download ZIP**, extraia o arquivo e abra um terminal na pasta extraída. O [guia de instalação e configuração](installation.md) detalha o download, as ferramentas externas e os caminhos.
 
-**Instale UCSF Chimera 1.17, DOCK6 6.11 e DMS antes de iniciar a aplicação.** Eles precisam estar disponíveis no computador dos cálculos, inclusive em modo web. A instalação da interface e do ambiente Conda não instala essas ferramentas; sem elas, as etapas que dependem delas falharão. Conclua as verificações do guia de instalação antes de executar os comandos de inicialização.
+**Instale UCSF Chimera 1.17 e DOCK6 6.11 antes de iniciar a aplicação.** Eles precisam estar disponíveis no computador dos cálculos, inclusive em modo web. A instalação da interface e do ambiente Conda não instala essas ferramentas; sem elas, as etapas que dependem delas falharão. Conclua as verificações do guia de instalação antes de executar os comandos de inicialização.
 
 1. Na raiz do código baixado, crie o ambiente científico.
 2. Ative o ambiente e instale a interface.
@@ -23,7 +23,7 @@ Sem Git, use **Code → Download ZIP**, extraia o arquivo e abra um terminal na 
 4. Inicie o modo navegador ou desktop após conferir os executáveis.
 
 ```bash
-conda env create -f environment.yml
+conda env create -f requirements.yml
 conda activate BioMolExplorer
 python -m pip install -e '.[ui]'
 biomolexplorer-ui --web --language pt --dock6-path /caminho/para/dock6-6.11
@@ -50,15 +50,15 @@ As contas pertencem ao workspace utilizado na inicialização. Não há recupera
 ## 3. Criar um projeto e escolher sua pasta
 
 1. No workspace, clique em **Novo projeto**.
-2. Informe um nome que identifique o estudo; acrescente descrição, tags separadas por vírgulas e uma cor para o card.
-3. Em **Pasta do projeto**, clique no botão de pasta dentro do campo e selecione uma pasta nova ou vazia. O campo não permite digitação manual. No desktop, o botão abre o seletor do sistema; no navegador, abre a navegação de pastas do computador que executa o BioMolExplorer e permite criar uma pasta.
+2. Informe um nome que identifique o estudo; acrescente descrição e escolha a cor do card na paleta visual. O campo Tags foi removido.
+3. Em **Pasta do projeto**, clique no botão de pasta dentro do campo e selecione a pasta principal. Preencha o nome antes de abrir o seletor: o projeto ficará numa subpasta com esse nome. Uma subpasta já existente exige confirmação de substituição; os dados são removidos somente ao salvar. O campo não permite digitação manual. No desktop e no navegador, o botão abre a navegação de pastas do computador que executa o BioMolExplorer. Pastas ocultas não aparecem. **Criar pasta** solicita um nome e cria e seleciona a pasta dentro do local atual.
 4. Confirme a criação e abra o projeto.
 
 Exemplo Linux: `/home/pesquisador/estudos/enzima-a`. No navegador, esse caminho pertence ao computador do backend. Um caminho do seu notebook só funciona se o backend também estiver no notebook ou tiver acesso à pasta. A aplicação precisa ter permissão de escrita. Pastas de outros projetos, pastas sobrepostas e o diretório das contas não podem ser reutilizados como pasta de um novo projeto.
 
 A pasta escolhida guarda `project.json`, arquivos em `assets/`, execuções em `runs/`, versões em `.history/` e as cópias de trabalho do projeto. O banco central conserva contas, sessões, permissões e índices; logs gerais de infraestrutura ficam no diretório de logs configurado. Resultados e logs associados às execuções podem ser consultados pelo projeto. Reabrir a aplicação com o mesmo workspace conserva a associação à pasta.
 
-Use busca por nome ou tags para localizar um projeto. Arquivar retira o projeto da lista ativa; restaurar permite voltar a usá-lo. Excluir remove o acesso normal ao projeto, preservando os arquivos no disco.
+Use busca por nome ou descrição para localizar um projeto. Arquivar retira o projeto da lista ativa; restaurar permite voltar a usá-lo. Excluir remove o acesso normal ao projeto, preservando os arquivos no disco.
 
 ## 4. Conhecer as áreas do projeto
 
@@ -193,11 +193,11 @@ Um conjunto pequeno pode produzir componentes isolados ou ser inteiramente remov
 
 ### Recuperação e expansão
 
-Em **Recuperar compostos**, informe nome ou ID ChEMBL do alvo, revise filtros de alvo/bioatividade/moléculas e escolha se deseja ampliar com PubChem. Limiar e máximo de similares controlam essa ampliação. Após executar, examine `compounds.csv` e os downloads ChEMBL disponíveis; use a tabela adequada como entrada da análise seguinte.
+Em **Recuperar compostos**, escolha o modo de consulta: alvo por nome/IDs/UniProt/texto ou composto diretamente por nome/IDs/similaridade/subestrutura. Revise os filtros opcionais e os limites; escolha se deseja expandir com ChEMBL e/ou PubChem. Limiar e máximo de similares controlam essa ampliação. Após executar, examine `compounds.csv` e os downloads ChEMBL disponíveis; use a tabela adequada como entrada da análise seguinte.
 
 **Expandir similares** utiliza os downloads ChEMBL de uma recuperação existente. Conecte essa origem e revise limiar/máximo; não use um CSV comum como substituto do contexto ChEMBL. **Recuperar ZINC** exige a lista de endereços autorizados; selecione o `.txt` e examine os compostos produzidos.
 
-**Recuperar estruturas PDB** oferece critérios como EC, organismo, resolução, ligante, tipo de polímero e método experimental. Confira `pdb_codes.csv`, ligantes e cadeias antes de preparar ou fazer redocking. Uma recuperação sem estruturas compatíveis exige revisar os filtros; não avance com um conjunto vazio.
+**Recuperar estruturas PDB** aceita texto, IDs PDB, acessos UniProt e códigos de ligantes; EC é opcional. Organismo, resolução, polímero e método refinam a busca. O nome da coleção é opcional. Consulte [recuperação flexível](retrieval.md) e `retrieval_report.json` para os critérios e resultados. Use o botão **Ligantes** de cada PDB para revisar, remover ou adicionar registros antes de preparar ou fazer redocking. O explorador 3D abre em uma aba do navegador, com rotação pelo mouse, zoom e opções de representação; o botão RCSB abre sua página oficial. `pdb_codes.csv` e `retrieval_report.json` são preservados no disco e ocultos nessa listagem. Uma recuperação sem estruturas compatíveis exige revisar os filtros; não avance com um conjunto vazio.
 
 ### Preparação e redocking
 
