@@ -13,14 +13,19 @@ from biomolexplorer.pdb_view import StructureViewers
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--chrome',default=shutil.which('google-chrome') or shutil.which('chromium'))
 parser.add_argument('--pdb','--structure',dest='pdb',type=Path,default=Path(__file__).resolve().parents[1]/'tests/fixtures/dms/1CRN.pdb')
+parser.add_argument('--smiles',help='Validate a generated compound in the shared viewer instead of a structure file.')
 parser.add_argument('--screenshot',type=Path,default=Path('/tmp/biomol-pdb-modern.png'))
 args=parser.parse_args()
 if not args.chrome:parser.error('Select an installed browser with --chrome.')
 with tempfile.TemporaryDirectory(prefix='biomol-webgl-') as tmp:
  store=WorkspaceStore(Path(tmp)/'workspace');token=store.register('Test','test@example.org','viewer-test-password')
- pid=store.create_project(token,'Browser verification')['id'];path=store.project_dir(pid)/args.pdb.name
- path.write_bytes(args.pdb.read_bytes());views=StructureViewers(store)
- key=views.issue(token,pid,str(path));desktop_url=views.url(key)
+ pid=store.create_project(token,'Browser verification')['id'];views=StructureViewers(store)
+ if args.smiles:
+  name='compound.sdf';key=views.issue_compound(token,pid,args.smiles,'compound')
+ else:
+  path=store.project_dir(pid)/args.pdb.name;path.write_bytes(args.pdb.read_bytes())
+  name=path.name;key=views.issue(token,pid,str(path))
+ desktop_url=views.url(key)
  # Flet exposes a WebSocket page URL: exercise its conversion in a real browser.
  page_url=desktop_url.split('/molecular-viewer')[0].replace('http://','ws://')+'/ws'
  url=views.url(key,web=True,page_url=page_url)
@@ -65,18 +70,32 @@ with tempfile.TemporaryDirectory(prefix='biomol-webgl-') as tmp:
    time.sleep(.2);rotated=evaluate('biomolViewer.getView()');assert first!=rotated,'Rotation failed'
    command('Input.dispatchMouseEvent',{'type':'mouseWheel','x':800,'y':400,'deltaX':0,'deltaY':-240})
    time.sleep(.2);zoomed=evaluate('biomolViewer.getView()');assert rotated!=zoomed,'Zoom failed'
-   for value in ('sticks','spheres','lines','cartoon'):
+   representations=('sticks','spheres','lines') if args.smiles else ('sticks','spheres','lines','cartoon')
+   for value in representations:
     evaluate(f'document.getElementById("representation").value="{value}";document.getElementById("representation").dispatchEvent(new Event("change"));true')
+    if args.smiles:
+     styles=evaluate('biomolViewer.getModel().selectedAtoms({}).map(atom => Object.keys(atom.style))')
+     expected={'sticks':'stick','spheres':'sphere','lines':'line'}[value]
+     assert all(expected in style for style in styles),'Compound representation did not change'
+   if args.smiles:
+    evaluate('document.getElementById("representation").value="sticks";document.getElementById("representation").dispatchEvent(new Event("change"));true')
+    assert evaluate('!document.getElementById("conformer").hidden'),'Conformer provenance missing'
    evaluate('document.getElementById("center").click();true')
    downloads=Path(tmp)/'downloads';downloads.mkdir()
    command('Browser.setDownloadBehavior',{'behavior':'allow','downloadPath':str(downloads)})
    evaluate('document.getElementById("snapshot").click();true')
    deadline=time.monotonic()+5
-   snapshot=downloads/(args.pdb.stem+'.png')
+   snapshot=downloads/(Path(name).stem+'.png')
    while not snapshot.exists():
     if time.monotonic()>deadline:raise RuntimeError('PNG export failed')
     time.sleep(.1)
    assert snapshot.read_bytes().startswith(b'\x89PNG'),'Invalid PNG export'
+   if not args.smiles and args.pdb.suffix.lower()=='.pdbqt':
+    first_model=[]
+    for line in args.pdb.read_text().splitlines():
+     if line.startswith('ENDMDL'):break
+     if line.startswith(('ATOM  ','HETATM')):first_model.append(line)
+    assert evaluate('biomolViewer.getModel().selectedAtoms({}).length')==len(first_model),'PDBQT atoms lost at torsion boundaries'
    # Save an actual rendered frame for visual inspection.
    time.sleep(.4)
    shot=command('Page.captureScreenshot',{'format':'png'})
@@ -92,6 +111,6 @@ with tempfile.TemporaryDirectory(prefix='biomol-webgl-') as tmp:
    assert not external,external
    errors=[event['params'] for event in events if event.get('method')=='Runtime.exceptionThrown']
    assert not errors,errors
-   print(json.dumps({'websocket_url_converted':True,'rendered':True,'atoms':evaluate('biomolViewer.getModel().selectedAtoms({}).length'),'mouse_rotation':first!=rotated,'wheel_zoom':rotated!=zoomed,'representations':4,'png_export':True,'external_requests':len(external),'javascript_errors':len(errors),'screenshot':str(args.screenshot)}))
+   print(json.dumps({'websocket_url_converted':True,'rendered':True,'atoms':evaluate('biomolViewer.getModel().selectedAtoms({}).length'),'mouse_rotation':first!=rotated,'wheel_zoom':rotated!=zoomed,'representations':len(representations),'png_export':True,'external_requests':len(external),'javascript_errors':len(errors),'screenshot':str(args.screenshot)}))
  finally:
   proc.terminate();proc.wait(timeout=15);error.close();views.close()

@@ -299,17 +299,12 @@ def load_pdb(target:str="Estruturas", base_output_path:str="datasets", pdb_ec:Op
 
 
 
-def load_zinc(base_output_path:str, filename:str, verbose=0, base_input_path:Optional[str]=None):
+def load_zinc(base_output_path:str, filename:str='zinc_urls.txt', verbose=0, base_input_path:Optional[str]=None, download_workers:int=4):
 
     try:
 
-        zinc = ZincMols()
-        output = filename.split('.')[0]
-
-        zinc_output_path = f'{base_output_path}/'
-        zinc.set_uri_inputpath(str(resolve_path(base_input_path or base_output_path) / filename))
-        zinc.set_outputpath(zinc_output_path)
-        zinc.search(output_filename=output, verbose=0)
+        from biomolexplorer.zinc_retrieval import retrieve_tranches
+        return retrieve_tranches(resolve_path(base_input_path or base_output_path)/filename,base_output_path,download_workers=download_workers)
 
 
     except Exception as e:

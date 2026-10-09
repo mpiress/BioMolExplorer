@@ -52,13 +52,13 @@
         model.setStyle({chain, predicate: isPolymer}, tinted);
       });
     }
-    if (control("ligands").checked) model.setStyle({...selected, predicate: isLigand}, {
+    if (control("ligands").checked) model.setStyle({...selected, predicate: isLigand}, config.ligand && representation !== "cartoon" ? style : {
       stick: {colorscheme: "Jmol", radius: .2}, sphere: {colorscheme: "Jmol", scale: .22}});
     if (control("water").checked) model.setStyle({...selected, predicate: isWater}, {
       sphere: {color: "#60a5fa", scale: .18, opacity: .7}});
     model.setClickable(selected, true, atom => {
       viewer.removeAllLabels();
-      const info = `${atom.resn} ${atom.resi}${atom.icode || ""} · ${labels.chain} ${atom.chain || "—"} · ${atom.atom} (${atom.elem})`;
+      const info = config.ligand ? `${atom.atom || atom.serial} (${atom.elem})` : `${atom.resn} ${atom.resi}${atom.icode || ""} · ${labels.chain} ${atom.chain || "—"} · ${atom.atom} (${atom.elem})`;
       control("atom").textContent = info;
       viewer.addLabel(info, {position: atom, backgroundColor: "#111b2b", fontColor: "#e5edf9", fontSize: 12, backgroundOpacity: .9});
       viewer.render();
@@ -73,19 +73,48 @@
     viewer.setProjection("perspective");
     const response = await fetch(location.pathname.replace(/\/$/, "") + "/structure", {cache: "no-store", credentials: "same-origin"});
     if (!response.ok) throw new Error("Structure unavailable");
-    const loaded = viewer.addModels(await response.text(), config.format || "pdb");
+    let structure = await response.text();
+    let format = config.format || "pdb";
+    if (format === "pdbqt") {
+      // PDB parsers treat ENDROOT/ENDBRANCH as model boundaries. Strip torsion
+      // records while retaining every atom and the actual Vina model boundaries.
+      if (structure.includes("REMARK VINA RESULT:")) {
+        config.ligand = true;
+        config.representation = "sticks";
+      }
+      const elements = {A: "C", OA: "O", NA: "N", SA: "S", HD: "H", HS: "H"};
+      structure = structure.split(/\r?\n/).filter(line => /^(ATOM  |HETATM|MODEL |ENDMDL|CONECT|TER   )/.test(line)).map(line => {
+        if (!/^(ATOM  |HETATM)/.test(line)) return line;
+        const type = line.trim().split(/\s+/).pop();
+        const element = elements[type] || type;
+        return line.slice(0, 66).padEnd(76) + element.padStart(2);
+      }).join("\n");
+      format = "pdb";
+    }
+    const loaded = viewer.addModels(structure, format, {keepH: true});
     models = loaded.filter(model => model.selectedAtoms({}).length);
     loaded.filter(model => !model.selectedAtoms({}).length).forEach(model => viewer.removeModel(model));
     if (!models.length || !models[0].selectedAtoms({}).length) throw new Error("No atoms in structure");
     models.forEach((model, index) => control("model").add(new Option(String(index + 1), String(index))));
     control("model").disabled = models.length === 1;
     control("representation").value = config.representation || "cartoon";
+    if (config.ligand) {
+      control("color").value = "element";
+      control("color").querySelector('option[value="spectrum"]').disabled = true;
+      control("representation").querySelector('option[value="cartoon"]').disabled = true;
+      control("chain").disabled = true;
+      control("water").disabled = true;
+    }
+    if (config.generated) {
+      control("conformer").textContent = labels.conformer;
+      control("conformer").hidden = false;
+    }
     chains(); draw(); viewer.zoomTo({model: modelIndex}); viewer.render();
     for (const id of ["representation", "color", "ligands", "water"]) control(id).addEventListener("change", draw);
     control("chain").addEventListener("change", () => {draw(); viewer.zoomTo({model: modelIndex, ...selection()}); viewer.render();});
     control("model").addEventListener("change", () => {modelIndex = Number(control("model").value); chains(); draw(); viewer.zoomTo({model: modelIndex}); viewer.render();});
     control("center").addEventListener("click", () => {viewer.zoomTo({model: modelIndex, ...selection()}); viewer.render();});
-    control("snapshot").addEventListener("click", () => download(viewer.pngURI(), config.name.replace(/\.(pdb|pdbqt|mol2)$/i, "") + ".png"));
+    control("snapshot").addEventListener("click", () => download(viewer.pngURI(), config.name.replace(/\.(pdb|pdbqt|mol2|sdf)$/i, "") + ".png"));
     control("fullscreen").addEventListener("click", async () => {
       try {if (document.fullscreenElement) await document.exitFullscreen(); else await document.documentElement.requestFullscreen();} catch (_) {}
     });

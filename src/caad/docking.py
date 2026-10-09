@@ -797,21 +797,36 @@ class Dock6(Docking):
     def __init__(self, dock6_path:Optional[str]='', ligand_input_path:Optional[str]=None, receptor_input_path:Optional[str]=None,
                  base_output_path:Optional[str]=None, pdb_code:Optional[str]=None, density:Optional[float]=0.5,
                  radius:Optional[float]=1.4, distance:Optional[float]=10.0, max_residues:Optional[int]=50,
-                 conformer_search_type:Optional[Literal['flex', 'rigid']] = 'flex', mol_filename:Optional[str]='molecules',) -> None:
+                 conformer_search_type:Optional[Literal['flex', 'rigid']] = 'flex', mol_filename:Optional[str]='molecules',
+                 binding_site_center=None) -> None:
 
-        super().__init__(ligand_input_path=ligand_input_path,
-                         receptor_input_path=receptor_input_path,
-                         output_path=f'{base_output_path}/',
+        # Legacy DOCK6 helpers truncate long paths and split whitespace.
+        import tempfile
+        import shutil
+        self.runtime_path=tempfile.mkdtemp(prefix='bme-',dir='/tmp')
+        self.export_path=base_output_path
+        runtime=Path(self.runtime_path)
+        shutil.copytree(ligand_input_path,runtime/'lig')
+        shutil.copytree(receptor_input_path,runtime/'rec')
+        super().__init__(ligand_input_path=str(runtime/'lig'),
+                         receptor_input_path=str(runtime/'rec'),
+                         output_path=str(runtime/'out'),
                          mol_filename=mol_filename)
 
-        self.__dock6_path            = dock6_path
-        self.__base_output_path      = base_output_path
+        self.__dock6_path            = directory(dock6_path)
+        self.__base_output_path      = str(runtime/'out')
         self.__pdb_code              = pdb_code
         self.__density               = density
         self.__radius                = radius
         self.__distance              = distance
         self.__max_residues          = max_residues
         self.__conformer_search_type = conformer_search_type
+        self.binding_site_center = binding_site_center
+
+    def export_results(self):
+        import shutil
+        shutil.copytree(self.__base_output_path,self.export_path,dirs_exist_ok=True)
+        shutil.rmtree(self.runtime_path)
 
 
 
@@ -850,9 +865,17 @@ class Dock6(Docking):
             self.set_outputpath(f'{self.__base_output_path}/surface/Molecules/')
             selector = directory(f'{self.__base_output_path}/surface/') + self.__pdb_code + '.sph'
 
+            site=None
+            if getattr(self,'binding_site_center',None) is not None:
+                x,y,z=self.binding_site_center
+                site=Path(self.outputpath)/'binding_site.mol2'
+                site.write_text('@<TRIPOS>MOLECULE\nsite\n1 0 1 0 0\nSMALL\nNO_CHARGES\n'
+                    f'@<TRIPOS>ATOM\n1 C {x} {y} {z} C.3 1 SITE 0.0\n'
+                    '@<TRIPOS>BOND\n@<TRIPOS>SUBSTRUCTURE\n1 SITE 1\n')
+
             files = [f for f in os.listdir(directory(self.ligandpath)) if f.endswith('.mol2')]
             for ligand in files:
-                command = ['sphere_selector', selector, directory(self.ligandpath) + ligand, str(self.__distance)]
+                command = ['sphere_selector', selector, str(site) if site else directory(self.ligandpath) + ligand, str(self.__distance)]
                 self.perform_subprocess(command, self.outputpath)
                 os.rename(directory(self.outputpath) + 'selected_spheres.sph', directory(self.outputpath) + ligand.rsplit('.')[0] + '.sph')
 
@@ -936,7 +959,7 @@ class Dock6(Docking):
 
         output = directory(self.outputpath) + showbox.rsplit('.')[0]
         command = ['grid', '-i', directory(self.outputpath) + f'{tid}_grid.in', '-o', f'{output}.out', '-t']
-        self.perform_subprocess(command)
+        self.perform_subprocess(command, self.outputpath)
 
         sync_directory(directory(self.outputpath))
 
@@ -1000,7 +1023,7 @@ class Dock6(Docking):
 
         output = directory(self.outputpath) + str(tid) + ligand.rsplit('.')[0]
         command = ['dock6', '-i', directory(self.outputpath) + f'{tid}_min.in', '-o', f'{output}.out']
-        self.perform_subprocess(command)
+        self.perform_subprocess(command, self.outputpath)
 
         sync_directory(directory(self.outputpath))
 
@@ -1244,7 +1267,7 @@ class Dock6(Docking):
 
         output = directory(self.outputpath) + receptor + '_' + ligand
         command = ['dock6', '-i', directory(self.outputpath) + f'{tid}_footprint.in', '-o', f'{output}.out']
-        self.perform_subprocess(command)
+        self.perform_subprocess(command, self.outputpath)
 
         sync_directory(directory(self.outputpath))
 
@@ -1338,14 +1361,14 @@ class Dock6(Docking):
         """
 
         command = ['dock6', '-i', directory(self.outputpath) + f'{tid}_docking.in']
-        self.perform_subprocess(command)
+        self.perform_subprocess(command, self.outputpath)
 
         sync_directory(directory(self.outputpath))
 
     def perform_dock6_evaluation(self):
 
         try:
-            self.set_outputpath(f'{self.__base_output_path}/flex/')
+            self.set_outputpath(f'{self.__base_output_path}/{self.__conformer_search_type}/')
 
             files = [f for f in os.listdir(f'{directory(self.__base_output_path)}/energy_min/') if f.endswith('.mol2')]
             args = [(ligand[0],) for ligand in enumerate(files)]

@@ -42,6 +42,19 @@ class StageResults:
         self.ui.page.update()
         try:
             operation=self.stage['operation']
+            if operation in ('docking_vina','docking_dock6','consensus'):
+                if self.stage.get('skip_reason'):
+                    self.root.controls=[ft.Text(self.stage['skip_reason'])]
+                    self.loaded=True;self.ui.page.update();return
+                if self.stage['status']=='succeeded':
+                    from biomolexplorer.docking_results import DockingResults
+                    from .docking_results import DockingResultsTable
+                    tables=await self.ui.call(DockingResults(self.ui.store).tables,self.token,self.project_id,self.run_id,self.stage['id'])
+                    if not self.valid():return
+                    if tables:
+                        self.child=DockingResultsTable(self.ui,self.project_id,self.run_id,self.stage['id'],tables,inline=True)
+                        self.root.controls=[self.child.build()];await self.child.load()
+                        self.loaded=True;return
             if operation=='redocking' and self.stage['status']=='succeeded':
                 from biomolexplorer.redocking_results import RedockingResults
                 from .redocking_results import RedockingResultsTable
@@ -51,7 +64,7 @@ class StageResults:
                 self.child=RedockingResultsTable(self,simulations)
                 self.root.controls=[self.child.build()] if simulations else [ft.Text('Nenhum valor de RMSD disponível para esta etapa.')]
                 self.loaded=True;self.ui.page.update();return
-            if operation in ('retrieve_compounds','expand_similar_compounds') and self.stage['status']=='succeeded':
+            if operation in ('retrieve_compounds','retrieve_pubchem','expand_similar_compounds') and self.stage['status']=='succeeded':
                 tables=await self.ui.call(CompoundTables(self.ui.store).tables,self.token,self.project_id,self.run_id,self.stage['id'])
                 if not self.valid():return
                 if tables:

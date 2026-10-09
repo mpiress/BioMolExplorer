@@ -107,7 +107,7 @@ class PipelineExecutionTests(unittest.TestCase):
         self.assertEqual(len(calls),1)
         self.assertEqual(calls[0],('retrieve_compounds',stage['parameters']))
         self.assertEqual(calls[0][1]['search_term'],'CHEMBL220')
-        self.assertTrue(calls[0][1]['include_pubchem'])
+        self.assertFalse(calls[0][1]['include_pubchem'])
         self.assertEqual(run['stages'][0]['status'],'succeeded')
 
     def test_independent_default_blocks_all_execute(self):
@@ -266,7 +266,7 @@ class PipelineExecutionTests(unittest.TestCase):
     def test_imported_docking_results_connect_through_the_two_visual_consensus_ports(self):
         vina = self.imported(self.upload('MOL1.lig.pdbqt','REMARK VINA RESULT: -6.0\nATOM      1  C   LIG A   1       0.000   0.000   0.000  1.00  0.00           C\n','vina'))
         vina['parameters']['kind'] = 'vina'
-        dock6 = self.imported(self.upload('MOL1_scored.mol2','Grid_Score: -20.0\n@<TRIPOS>MOLECULE\nMOL1\n@<TRIPOS>ATOM\n1 C 0 0 0 C.3\n','dock6'))
+        dock6 = self.imported(self.upload('MOL1_scored.mol2','Grid_Score: -20.0\n@<TRIPOS>MOLECULE\nMOL1\n1 0 1 0 0\nSMALL\nNO_CHARGES\n@<TRIPOS>ATOM\n1 C 0 0 0 C.3 1 LIG 0.0\n@<TRIPOS>BOND\n@<TRIPOS>SUBSTRUCTURE\n1 LIG 1\n','dock6'))
         dock6['parameters']['kind'] = 'dock6'
         consensus = new_stage('consensus')
         consensus['bindings'] = {'base_vina_path':{'stage':vina['id']},
@@ -283,8 +283,12 @@ class PipelineExecutionTests(unittest.TestCase):
         self.assertEqual(len(calls),1)
         operation,params = calls[0]
         self.assertEqual(operation,'consensus')
-        self.assertTrue((Path(params['base_vina_path']) / 'MOL1.lig.pdbqt').is_file())
-        self.assertTrue((Path(params['base_dock6_path']) / 'MOL1_scored.mol2').is_file())
+        for field in ('base_vina_path','base_dock6_path'):
+            import csv
+            table=Path(params[field])/'docking_results.csv'
+            with table.open() as stream: rows=list(csv.DictReader(stream))
+            self.assertEqual(rows[0]['molecule_chembl_id'],'MOL1')
+            self.assertTrue(Path(rows[0]['conformer_file']).is_file())
         self.assertTrue(Path(params['base_input_path']).is_dir())
 
     def test_empty_selection_and_disabled_pipeline_do_not_create_successful_runs(self):
@@ -335,7 +339,7 @@ class PipelineExecutionTests(unittest.TestCase):
         structures = new_stage('retrieve_structures')
         analysis = new_stage('admet')
         analysis['bindings']['base_input_path'] = {'stage':structures['id']}
-        with self.assertRaisesRegex(ValueError,'dados incompatíveis'):
+        with self.assertRaisesRegex(ValueError,'Dados incompatíveis'):
             validate_pipeline([structures,analysis])
 
     def test_legacy_automatic_pipeline_requires_confirmation_and_merges_only_selected_files(self):

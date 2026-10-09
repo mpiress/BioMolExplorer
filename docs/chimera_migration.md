@@ -73,7 +73,7 @@ A identificação dos métodos é respaldada pela documentação de minimizaçã
 
 ## Ambiente e validação
 
-`requirements.yml` e `requirements.yml` foram revisados: ambos já declaram RDKit, Biopython, Open Babel, PyMOL e Vina e têm a mesma lista de dependências. Como não há migração ativada, essa lista foi preservada; não foram adicionados OpenMM, PDBFixer, OpenFF, ParmEd, Meeko ou AmberTools sem uso pelo código. A revisão foi anotada nos arquivos. Não foi feita atualização geral de versões nem resolução/instalação Conda, que seriam mudanças independentes e exigiriam sua própria verificação.
+`requirements.yml` declara RDKit, Biopython, Open Babel, PyMOL e Vina. Como não há migração ativada, essa lista foi preservada; não foram adicionados OpenMM, PDBFixer, OpenFF, ParmEd, Meeko ou AmberTools sem uso pelo código. A revisão foi anotada nos arquivos. Não foi feita atualização geral de versões nem resolução/instalação Conda, que seriam mudanças independentes e exigiriam sua própria verificação.
 
 Os testes existentes `test_docking_handoffs`, `test_workspace` e `test_stage_default_isolation` verificam contratos de preparação/docking, templates, isolamento e fluxo do workspace. Os motores científicos são simulados nos casos pertinentes. Na revisão, os três módulos passaram: 31 testes em 18,151 segundos, executados com o Python do ambiente BioMolExplorer e `PYTHONPATH=src:tests`. Esse resultado é verificação de software, sem alegação de equivalência química. As páginas HTML foram regeneradas e `git diff --check` não apontou problemas de whitespace.
 

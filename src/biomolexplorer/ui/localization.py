@@ -61,7 +61,7 @@ def verbatim(control, *attributes):
 def default_stage_names():
     from biomolexplorer.catalog import TITLES
     phrases,_=catalogs('en')
-    return {name for title,_,_ in TITLES.values() for name in (title,phrases.get(title,title))}
+    return {name for title,_,_ in TITLES.values() for name in (title,phrases.get(title,title))} | {'Recuperar compostos','Retrieve compounds','Preparar meus complexos','Prepare my complexes'}
 
 
 def stage_control(control,stage,attribute='value'):
@@ -84,6 +84,8 @@ class Translator:
     def __call__(self, value):
         if not isinstance(value, str) or not value:
             return value
+        if value in ('Preparar meus complexos','Prepare my complexes'):
+            value='Preparar para docking'
         phrases, patterns = catalogs(self.language)
         if value in phrases:
             return phrases[value]

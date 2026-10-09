@@ -1,0 +1,151 @@
+{
+  "vina_independent": [
+    {
+      "molecule_chembl_id": "ETHANOL",
+      "receptor_id": "1ABE_A",
+      "score": -2.673
+    },
+    {
+      "molecule_chembl_id": "REF",
+      "receptor_id": "1ABE_A",
+      "score": -6.511
+    }
+  ],
+  "dock6_independent": [
+    {
+      "molecule_chembl_id": "ETHANOL",
+      "receptor_id": "1ABE_A",
+      "score": -13.771717
+    },
+    {
+      "molecule_chembl_id": "REF",
+      "receptor_id": "1ABE_A",
+      "score": -12.755546
+    }
+  ],
+  "vina_to_dock6": [
+    {
+      "molecule_chembl_id": "ETHANOL",
+      "receptor_id": "1ABE_A",
+      "score": -11.354554
+    },
+    {
+      "molecule_chembl_id": "REF",
+      "receptor_id": "1ABE_A",
+      "score": -23.41861
+    }
+  ],
+  "dock6_to_vina": [
+    {
+      "molecule_chembl_id": "ETHANOL",
+      "receptor_id": "1ABE_A",
+      "score": -2.673
+    },
+    {
+      "molecule_chembl_id": "REF",
+      "receptor_id": "1ABE_A",
+      "score": -6.509
+    }
+  ],
+  "consensus_independent": [
+    {
+      "molecule_chembl_id": "ETHANOL",
+      "vina": -2.673,
+      "dock6": -13.772,
+      "z-score": -0.0,
+      "min-max": 0.5
+    },
+    {
+      "molecule_chembl_id": "REF",
+      "vina": -6.511,
+      "dock6": -11.854,
+      "z-score": -0.0,
+      "min-max": 0.5
+    }
+  ],
+  "consensus_vina_to_dock6": [
+    {
+      "molecule_chembl_id": "REF",
+      "vina": -6.511,
+      "dock6": -23.134,
+      "z-score": 0.707,
+      "min-max": 1.0
+    },
+    {
+      "molecule_chembl_id": "ETHANOL",
+      "vina": -2.673,
+      "dock6": -11.355,
+      "z-score": -0.707,
+      "min-max": 0.0
+    }
+  ],
+  "consensus_dock6_to_vina": [
+    {
+      "molecule_chembl_id": "ETHANOL",
+      "vina": -2.673,
+      "dock6": -13.772,
+      "z-score": 0.0,
+      "min-max": 0.5
+    },
+    {
+      "molecule_chembl_id": "REF",
+      "vina": -6.509,
+      "dock6": -11.854,
+      "z-score": -0.0,
+      "min-max": 0.5
+    }
+  ],
+  "no_intersection": {
+    "skipped_reason": "O consenso não foi executado: Vina e DOCK6 não avaliaram compostos em comum para o mesmo receptor. Selecione resultados com códigos de molécula e receptores correspondentes.",
+    "rows": 0
+  },
+  "reference_case": {
+    "receptor": "1ABE_A",
+    "source": "DOCK6 tutorials/ligand_sampling_demo/1_struct",
+    "date": "2026-10-07",
+    "vina_exhaustiveness": 1,
+    "vina_num_modes": 2,
+    "dock6_search": "rigid",
+    "repulsion_weight": 1.0
+  },
+  "dock6_flexible_reused_preparation": [
+    {
+      "molecule_chembl_id": "ETHANOL",
+      "receptor_id": "1ABE_A",
+      "score": -15.546004
+    },
+    {
+      "molecule_chembl_id": "REF",
+      "receptor_id": "1ABE_A",
+      "score": -38.876862
+    }
+  ],
+  "automated_suite": {
+    "tests": 442,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 2
+  },
+  "browser_pose_checks": [
+    {
+      "format": "pdbqt",
+      "atoms": 14,
+      "mouse_rotation": true,
+      "wheel_zoom": true,
+      "representations": 4,
+      "png_export": true,
+      "external_requests": 0,
+      "javascript_errors": 0
+    },
+    {
+      "format": "mol2",
+      "atoms": 20,
+      "mouse_rotation": true,
+      "wheel_zoom": true,
+      "representations": 4,
+      "png_export": true,
+      "external_requests": 0,
+      "javascript_errors": 0
+    }
+  ]
+}

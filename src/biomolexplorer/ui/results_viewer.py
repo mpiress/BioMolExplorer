@@ -1,4 +1,4 @@
-"""Native Flet graph/EGG exploration without external pages or JavaScript."""
+"""Native graph/EGG exploration with the shared molecular 3D viewer."""
 import json
 import base64
 
@@ -290,6 +290,29 @@ class ResultsViewer:
             await self.center_on(chosen)
         await self.ui.guard(action)
 
+    async def show_3d(self, identifier, version):
+        def current():
+            project = getattr(self.ui, 'current', None)
+            return (self.active and self.ui.token == self.token
+                    and version == self.selection_version and self.selected == identifier
+                    and project is not None and project['id'] == self.project_id
+                    and identifier in self.displayed())
+
+        if not current():
+            return
+        await self.ui.call(self.ui.store.project, self.token, self.project_id)
+        if not current():
+            return
+        smiles = self.displayed()[identifier]['properties'].get('canonical_smiles')
+        url = await self.ui.call(self.ui.compound_view_url, self.project_id, smiles, identifier, self.token)
+        if not current():
+            return
+        await self.ui.call(self.ui.store.project, self.token, self.project_id)
+        if not current():
+            return
+        await ft.UrlLauncher().launch_url(url, mode=ft.LaunchMode.EXTERNAL_APPLICATION,
+                                         web_only_window_name='_blank')
+
     async def select(self, identifier):
         # Membership may have changed since opening this dialog.
         self.selection_version += 1
@@ -314,6 +337,9 @@ class ResultsViewer:
             return
         controls = [verbatim(ft.Text(identifier, size=22, weight=ft.FontWeight.W_700, selectable=True))]
         controls.append(ft.Image(src=image, width=280, height=205, fit=ft.BoxFit.CONTAIN) if image else ft.Text(structure_notice, size=12))
+        async def open_3d(event):
+            await self.ui.guard(lambda: self.show_3d(identifier, version))
+        controls.append(ft.TextButton('Visualizar estrutura 3D', on_click=open_3d, disabled=not bool(image)))
         for key, value in node['properties'].items():
             label = str(key)
             rendered = '—' if value is None else json.dumps(value, ensure_ascii=False) if isinstance(value, (dict, list)) else str(value)

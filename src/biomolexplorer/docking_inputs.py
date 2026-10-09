@@ -3,6 +3,21 @@ import csv
 from pathlib import Path
 
 
+def target_input(stage, field):
+    return field == 'base_input_path' and (stage['operation'] in ('docking_vina', 'docking_dock6') or
+        stage['operation']=='prepare_structures' and stage['parameters'].get('receptor_prepared',False))
+
+
+def prepared_receptor(path):
+    """The preparation stage gives ligand-free receptors this dedicated suffix."""
+    return Path(path).name.endswith('.dockprep.pdbqt')
+
+
+def ligand_input_file(path):
+    path=Path(path)
+    return path.suffix.lower() in ('.csv','.sdf','.mol2','.pdbqt') and '.dockprep.' not in path.name and '.noH.' not in path.name
+
+
 def compound_codes(path):
     from .molecule_quality import _validated_row
     codes=set()

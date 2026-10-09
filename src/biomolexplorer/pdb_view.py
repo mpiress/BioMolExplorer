@@ -24,23 +24,26 @@ TEXT={
        'hint':'Arraste para girar · Roda do mouse para zoom · Botão direito para deslocar',
        'loading':'Carregando estrutura…','error':'Não foi possível abrir a estrutura. Volte ao projeto e abra o visualizador novamente.',
        'webgl':'Seu navegador não conseguiu iniciar o WebGL. Ative a aceleração gráfica ou use outro navegador.',
-       'atoms':'átomos','chains':'cadeias','picked':'Selecione um átomo para ver seus detalhes.'},
+       'atoms':'átomos','chains':'cadeias','picked':'Selecione um átomo para ver seus detalhes.',
+       'conformer':'Conformero gerado localmente a partir do SMILES; não representa uma pose de docking.'},
  'en':{'viewer':'3D structure','representation':'Representation','cartoon':'Ribbons + ligands','sticks':'Sticks','spheres':'Spheres','lines':'Lines',
        'color':'Color by','chain':'Chain','element':'Element','spectrum':'Sequence','model':'Model','all':'All chains',
        'ligands':'Ligands','water':'Water','center':'Recenter','fullscreen':'Fullscreen','snapshot':'Save image',
        'hint':'Drag to rotate · Mouse wheel to zoom · Right drag to pan',
        'loading':'Loading structure…','error':'Unable to open the structure. Return to the project and open the viewer again.',
        'webgl':'Your browser could not start WebGL. Enable graphics acceleration or use another browser.',
-       'atoms':'atoms','chains':'chains','picked':'Select an atom to see its details.'}}
+       'atoms':'atoms','chains':'chains','picked':'Select an atom to see its details.',
+       'conformer':'Conformer generated locally from SMILES; this is not a docking pose.'}}
 
 
-def viewer_document(name,language='pt',prefix=PREFIX):
+def viewer_document(name,language='pt',prefix=PREFIX,generated=False):
     language=language if language in TEXT else 'pt'
     labels=TEXT[language]
     file_format=Path(name).suffix.lower().lstrip('.')
-    config=json.dumps({'name':name,'labels':labels,'format':file_format if file_format in ('pdb','pdbqt','mol2') else 'pdb',
-        'ligand':'.lig.' in name.lower(),
-        'representation':'sticks' if '.lig.' in name.lower() or file_format=='mol2' else 'cartoon'},ensure_ascii=False).replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')
+    ligand='.lig.' in name.lower() or file_format=='sdf'
+    config=json.dumps({'name':name,'labels':labels,'format':file_format if file_format in ('pdb','pdbqt','mol2','sdf') else 'pdb',
+        'ligand':ligand,'generated':generated,
+        'representation':'sticks' if ligand or file_format=='mol2' else 'cartoon'},ensure_ascii=False).replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')
     source=(RESOURCE/'pdb-viewer.html').read_text(encoding='utf-8')
     for key,value in dict(labels,name=name,language=language,prefix=prefix,config=config).items():
         source=source.replace('{{'+key+'}}',value if key=='config' else html.escape(value,quote=True))
@@ -59,14 +62,27 @@ class StructureViewers:
     def issue(self,token,pid,filename,language='pt'):
         self.store.project(token,pid)
         path=self.store.scoped_path(pid,filename)
-        if path.suffix.lower() not in ('.pdb','.pdbqt','.mol2') or not path.is_file():raise ValueError('Estrutura molecular indisponível.')
+        if path.suffix.lower() not in ('.pdb','.pdbqt','.mol2','.sdf') or not path.is_file():raise ValueError('Estrutura molecular indisponível.')
         if path.stat().st_size>MAX_VIEW_BYTES:raise ValueError('Visualização maior que o limite de 32 MB. Baixe o arquivo para consultá-lo localmente.')
+        return self._issue({'token':token,'pid':pid,'path':str(path),'language':language})
+
+    def issue_compound(self,token,pid,smiles,name,language='pt'):
+        """Keep generated conformers ephemeral; authorize every browser fetch."""
+        from .visualizations import molecule_sdf
+        self.store.project(token,pid)
+        data=molecule_sdf(smiles).encode('utf-8')
+        if len(data)>MAX_VIEW_BYTES:raise ValueError('Estrutura molecular indisponível.')
+        self.store.project(token,pid)
+        return self._issue({'token':token,'pid':pid,'name':str(name)+'.sdf',
+                            'data':data,'language':language,'generated':True})
+
+    def _issue(self,record):
         with self.lock:
             now=self.clock()
             for key in [k for k,v in self.tickets.items() if v['expires']<=now]:self.tickets.pop(key)
             while len(self.tickets)>=self.LIMIT:self.tickets.popitem(last=False)
             key=secrets.token_urlsafe(32)
-            self.tickets[key]={'token':token,'pid':pid,'path':str(path),'language':language,'expires':now+self.TTL}
+            self.tickets[key]=dict(record,expires=now+self.TTL)
             return key
 
     def ticket(self,key):
@@ -94,10 +110,11 @@ class StructureViewers:
                 language = self.tickets.get(parts[0], {}).get('language', 'en')
             record=self.ticket(parts[0])
             if len(parts)==2:
-                data=self.store.read_file(record['token'],record['pid'],record['path'],MAX_VIEW_BYTES+1)
+                data=record['data'] if 'data' in record else self.store.read_file(record['token'],record['pid'],record['path'],MAX_VIEW_BYTES+1)
                 if len(data)>MAX_VIEW_BYTES:raise ValueError('PDB exceeds preview limit.')
                 return 200,'text/plain; charset=utf-8',data,PRIVATE_HEADERS
-            document=viewer_document(Path(record['path']).name,record['language'],prefix)
+            document=viewer_document(record['name'] if 'name' in record else Path(record['path']).name,
+                                     record['language'],prefix,generated=record.get('generated',False))
             return 200,'text/html; charset=utf-8',document.encode(),PRIVATE_HEADERS
         except (AccessDenied,FileNotFoundError,ValueError,OSError):
             message = ('Visualização expirada ou indisponível. Retorne ao projeto e abra novamente.' if language == 'pt' else

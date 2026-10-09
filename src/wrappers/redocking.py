@@ -108,17 +108,48 @@ def perform_redocking(base_input_path:str, target:str, base_output_path:str, pdb
 
 
 def prepare_structures(base_input_path:str, target:str, base_output_path:str,
-                       pdb_codes=None, pH:float=7.4, charge_type:str='gas'):
-    """Prepare uploaded complexes without requiring retrieval or redocking."""
+                       pdb_codes=None, pH:float=7.4, charge_type:str='gas', preparation_options=None,
+                       base_selected_mols=None, mol_filename:str='compounds',
+                       receptor_prepared:bool=False, docking_engines:str='both'):
+    """Prepare or reuse PDB receptors and prepare independent compound sources."""
+    import shutil
+    if docking_engines not in ("vina","dock6","both"):
+        raise ValueError("Selecione Vina, DOCK6 ou ambos para a saída de preparação.")
     from biomolexplorer.storage import write_dataframe
     source = resolve_path(base_input_path) / target.replace(' ', '')
     if pdb_codes is None:
         import pandas as pd
         metadata = pd.read_csv(source / 'pdb_codes.csv')
-        pdb_codes = metadata[['PDB_CODE', 'LIGAND', 'RESNUM', 'CHAIN']].to_records(index=False)
+        pdb_codes = metadata[['PDB_CODE', 'LIGAND', 'RESNUM', 'CHAIN']].values.tolist()
     output = resolve_path(base_output_path) / target.replace(' ', '') / 'Prepared'
-    docking = Docking(complex_input_path=str(source), output_path=str(output))
-    prepared = docking.prepare_for_docking(pdb_codes, charge_type, pH, True)
+    if receptor_prepared:
+        if base_selected_mols is not None:
+            from biomolexplorer.docking_preparation import validate_receptor_outputs
+            validate_receptor_outputs(source/'Prepared',pdb_codes,docking_engines)
+        output.mkdir(parents=True,exist_ok=True)
+        receptors={f'{record[0]}_{record[3]}' for record in pdb_codes}
+        for file in (source/'Prepared').iterdir():
+            if file.name=='centers.csv' or file.name.split('.',1)[0] in receptors:
+                shutil.copy2(file,output/file.name)
+        prepared=pdb_codes
+    else:
+        docking = Docking(complex_input_path=str(source), output_path=str(output))
+    settings=None
+    if preparation_options is not None:
+        from biomolexplorer.redocking_config import pair_key,validate_pairs
+        settings={pair_key(record):preparation_options for record in pdb_codes}
+        if not receptor_prepared:validate_pairs([list(r) for r in pdb_codes],settings)
+    if not receptor_prepared:
+        prepared = docking.prepare_for_docking(pdb_codes, charge_type, pH, True, preparation_pairs=settings)
     records = [list(record[:4]) + [record[4] if len(record) > 4 else None] for record in prepared]
     write_dataframe(DataFrame(records, columns=['PDB_CODE','LIGAND','RESNUM','CHAIN','RESOLUTION']),
                     output.parent / 'pdb_codes.csv')
+    if base_selected_mols is not None:
+        from biomolexplorer.docking_preparation import prepare_candidates,validate_receptor_outputs
+        validate_receptor_outputs(output,prepared,docking_engines)
+        prepare_candidates(resolve_path(base_selected_mols)/(mol_filename+'.csv'),
+                           output.parent/'Compounds',preparation_options,pH,docking_engines)
+        receptors={f'{record[0]}_{record[3]}' for record in prepared}
+        for file in output.iterdir():
+            if file.suffix in ('.pdb','.pdbqt','.mol2') and file.name.split('.',1)[0] not in receptors:
+                file.unlink()

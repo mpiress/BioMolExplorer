@@ -148,7 +148,7 @@ class RunProgress:
         self.error_semantics.visible = self.error.visible
         self.hint.value = ('Cancelamento solicitado. Aguardando a interrupção do processo…' if self.cancel_pending and active else
             'O pipeline está pausado. Selecione os arquivos do bloco indicado e aplique a configuração para continuar.' if waiting else
-            'Consultas externas podem demorar e repetir tentativas automaticamente. Você pode minimizar esta janela; a execução continua.' if current and current['operation'] in ('retrieve_compounds', 'expand_similar_compounds', 'retrieve_complex', 'retrieve_zinc') else
+            'Consultas externas podem demorar e repetir tentativas automaticamente. Você pode minimizar esta janela; a execução continua.' if current and current['operation'] in ('retrieve_compounds', 'retrieve_pubchem', 'expand_similar_compounds', 'retrieve_complex', 'retrieve_zinc') else
             'Você pode minimizar esta janela e continuar usando o projeto.' if active else
             'Os detalhes técnicos e os resultados ficam na aba Execuções.')
         self.rows.controls = [ft.Row([ft.Icon(ft.Icons.CHECK_CIRCLE if s['status'] == 'succeeded' else

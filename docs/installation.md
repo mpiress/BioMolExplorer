@@ -92,4 +92,6 @@ Continue no [manual do usuário](user_manual.md) para criar uma conta, seleciona
 
 Para redocking com preparação, o worker verifica `chimera`, `obabel` e `vina`; com complexos já preparados, verifica somente `vina`. O diretório do interpretador científico integra o `PATH` dos subprocessos, mas instalações externas, como Chimera, também precisam estar acessíveis nesse ambiente. DOCK6 é necessário para etapas que usam esse motor.
 
+**Preparar para docking** usa Chimera e Open Babel para os candidatos mesmo quando reutiliza um receptor já preparado no redocking. A escolha Vina, DOCK6 ou ambos define os formatos exportados; os motores são executados nos blocos de docking conectados à saída.
+
 Consulte [Configuração do redocking](redocking_configuration.md) para seleção de pares, cofatores, entradas preparadas, diagnóstico e resultados.

@@ -17,6 +17,10 @@ class ScientificToolError(RuntimeError):
         self.error_code = error_code
         self.action = action
 
+    def __reduce__(self):
+        # ProcessPoolExecutor must preserve the original scientific failure.
+        return type(self), (str(self), self.error_code, self.action)
+
 
 def run_command(command, cwd=None, check=True, timeout=None):
     arguments = shlex.split(command) if isinstance(command, str) else list(command)

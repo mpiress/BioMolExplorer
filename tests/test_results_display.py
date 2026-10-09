@@ -8,7 +8,7 @@ import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
 from biomolexplorer.catalog import new_stage
@@ -171,6 +171,93 @@ class ResultsDisplayTests(unittest.TestCase):
         asyncio.run(viewer.actions[1].on_click(None))
         self.assertEqual(ui.saved[-1]['file_name'],'admet_BBB+.csv')
         self.assertEqual(len(list(csv.DictReader(io.StringIO(ui.saved[-1]['src_bytes'].decode())))),1)
+
+    @unittest.skipIf(StageResults is None,'Install ui extra')
+    def test_admet_3d_uses_shared_viewer_and_keeps_2d(self):
+        from biomolexplorer.ui.app import WorkspaceUI
+        from biomolexplorer.pdb_view import StructureViewers
+        from rdkit import Chem
+        ui=self.ui();ui.page.web=True;ui.page.url='https://example.org'
+        ui.structure_viewer=StructureViewers(self.store)
+        ui.compound_view_url=lambda *args:WorkspaceUI.compound_view_url(ui,*args)
+        stage=self.store.get_run(self.token,self.rid)['stages'][1]
+        results=StageResults(ui,self.pid,self.rid,stage,True);asyncio.run(results.load())
+        viewer=results.child;asyncio.run(viewer.select('B'))
+        controls=ui.dialogs[-1].content.content.controls
+        button=next(c for c in controls if isinstance(c,ft.TextButton) and c.content=='Visualizar estrutura 3D')
+        self.assertFalse(button.disabled)
+        with patch('flet.UrlLauncher.launch_url',new_callable=AsyncMock) as launch:
+            asyncio.run(button.on_click(None))
+        launch.assert_awaited_once()
+        self.assertEqual(launch.call_args.kwargs['web_only_window_name'],'_blank')
+        record=next(iter(ui.structure_viewer.tickets.values()))
+        self.assertEqual(record['name'],'B.sdf');self.assertEqual(record['pid'],self.pid)
+        mol=Chem.MolFromMolBlock(record['data'].decode(),removeHs=False)
+        self.assertTrue(mol.GetConformer().Is3D())
+        self.assertTrue(any(isinstance(c,ft.Image) for c in controls))
+
+    @unittest.skipIf(StageResults is None,'Install ui extra')
+    def test_admet_3d_rejects_stale_context_before_and_after_generation(self):
+        for change in ('selection','filter','project','token','deactivate'):
+            for during_generation in (False,True):
+                with self.subTest(change=change,during_generation=during_generation):
+                    ui=self.ui();stage=self.store.get_run(self.token,self.rid)['stages'][1]
+                    results=StageResults(ui,self.pid,self.rid,stage,True);asyncio.run(results.load())
+                    viewer=results.child;asyncio.run(viewer.select('A'))
+                    button=next(c for c in viewer.details.controls if isinstance(c,ft.TextButton))
+                    def invalidate():
+                        if change=='selection':viewer.selection_version+=1;viewer.selected='B'
+                        elif change=='filter':viewer.nodes.pop('A')
+                        elif change=='project':ui.current={'id':'other'}
+                        elif change=='token':ui.token=self.guest
+                        else:viewer.active=False
+                    def generate(*args):
+                        if during_generation:invalidate()
+                        return 'https://example.org/viewer'
+                    ui.compound_view_url=Mock(side_effect=generate)
+                    if not during_generation:invalidate()
+                    with patch('flet.UrlLauncher.launch_url',new_callable=AsyncMock) as launch:
+                        asyncio.run(button.on_click(None));launch.assert_not_awaited()
+                    self.assertEqual(ui.compound_view_url.call_count,int(during_generation))
+
+    @unittest.skipIf(StageResults is None,'Install ui extra')
+    def test_admet_3d_rechecks_access_after_generation(self):
+        ui=self.ui();stage=self.store.get_run(self.token,self.rid)['stages'][1]
+        results=StageResults(ui,self.pid,self.rid,stage,True);asyncio.run(results.load())
+        viewer=results.child;asyncio.run(viewer.select('A'))
+        def generate(*args):
+            ui.store=SimpleNamespace(project=Mock(side_effect=AccessDenied('Acesso revogado')))
+            return 'https://example.org/viewer'
+        ui.compound_view_url=generate
+        button=next(c for c in viewer.details.controls if isinstance(c,ft.TextButton))
+        with patch('flet.UrlLauncher.launch_url',new_callable=AsyncMock) as launch:
+            with self.assertRaises(AccessDenied):asyncio.run(button.on_click(None))
+            launch.assert_not_awaited()
+
+    @unittest.skipIf(StageResults is None,'Install ui extra')
+    def test_admet_3d_disabled_for_missing_or_invalid_smiles(self):
+        for smiles in (None,'invalid'):
+            with self.subTest(smiles=smiles):
+                ui=self.ui();stage=self.store.get_run(self.token,self.rid)['stages'][1]
+                results=StageResults(ui,self.pid,self.rid,stage,True);asyncio.run(results.load())
+                viewer=results.child;viewer.nodes['A']['properties']['canonical_smiles']=smiles
+                asyncio.run(viewer.select('A'))
+                button=next(c for c in viewer.details.controls if isinstance(c,ft.TextButton))
+                self.assertTrue(button.disabled)
+
+    @unittest.skipIf(StageResults is None,'Install ui extra')
+    def test_admet_3d_generation_error_preserves_2d_and_properties(self):
+        ui=self.ui();stage=self.store.get_run(self.token,self.rid)['stages'][1]
+        results=StageResults(ui,self.pid,self.rid,stage,True);asyncio.run(results.load())
+        viewer=results.child;asyncio.run(viewer.select('A'))
+        controls=list(viewer.details.controls)
+        ui.compound_view_url=Mock(side_effect=ValueError('Não foi possível gerar um conformero 3D.'))
+        button=next(c for c in controls if isinstance(c,ft.TextButton))
+        with patch('flet.UrlLauncher.launch_url',new_callable=AsyncMock) as launch:
+            with self.assertRaises(ValueError):asyncio.run(button.on_click(None))
+            launch.assert_not_awaited()
+        self.assertEqual(viewer.details.controls,controls)
+        self.assertTrue(any(isinstance(c,ft.Image) for c in controls))
 
     @unittest.skipIf(FileTable is None,'Install ui extra')
     def test_file_tables_have_bounded_pages_and_actions_on_right(self):

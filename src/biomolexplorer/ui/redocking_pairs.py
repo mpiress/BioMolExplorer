@@ -1,8 +1,7 @@
 """Explicit redocking selection and preparation beside input sources."""
 import copy
-import re
 import flet as ft
-from biomolexplorer.redocking_config import DEFAULTS, pair_key, validate_pairs
+from biomolexplorer.redocking_config import pair_key, validate_pairs
 
 
 class RedockingPairs:
@@ -57,51 +56,34 @@ class RedockingPairs:
         fields = [ft.TextField(label=label, value=str(value), disabled=not self.form.writable, width=170,
             on_change=lambda e: self.changed()) for label, value in zip(
                 ('Código PDB', 'Ligante', 'Número do resíduo', 'Cadeia'), record[:4])]
-        cofactors = ft.TextField(label='Cofatores do receptor (códigos separados por vírgula)', value=', '.join(config.get('cofactors', [])), disabled=not self.form.writable)
-        has_cofactors = ft.Switch(label='Considerar cofatores como parte do receptor', value=bool(config.get('cofactors')), disabled=not self.form.writable)
-        cofactors.visible = has_cofactors.value
+        from .preparation_settings import PreparationSettings
+        preparation=PreparationSettings(self.form,config)
+        has_cofactors,cofactors=preparation.has_cofactors,preparation.cofactors
+        settings=preparation.settings
         def toggle(e):
-            cofactors.visible = has_cofactors.value
-            self.form.ui.page.update()
-        has_cofactors.on_change = toggle
-        settings = {}
-        preparation = []
-        for role, title in (('receptor', 'Preparação do receptor'), ('ligand', 'Preparação e conformação do ligante')):
-            values = dict(DEFAULTS, **config.get(role, {}))
-            # Preserve the previous global charge method on initial migration.
-            if role not in config:
-                values['charge_type'] = self.form.stage['parameters'].get('charge_type', 'gas') if role=='ligand' else 'gas'
-                templates=self.form.stage.get('templates',{})
-                legacy=next((templates[n] for n in (('chimera/prepare_ligand.template','chimera/prepare_better_conform.template') if role=='ligand' else ('chimera/prepare_receptor.template',)) if n in templates),None)
-                if legacy is not None:
-                    commands=legacy.splitlines()
-                    values['add_hydrogens']='addh' in commands
-                    values['minimize']=any(line.startswith('minimize') for line in commands)
-                    match=re.search(r'method (gas|am1)',legacy)
-                    if match:values['charge_type']=match.group(1)
-                complex_source=templates.get('chimera/prepare_complex.template')
-                if complex_source is not None:
-                    values['remove_solvent']='delete solvent' in complex_source.splitlines()
-                    values['remove_hydrogens']='delete element.H' in complex_source.splitlines()
-            options = {key: ft.Switch(label=label, value=values[key], disabled=not self.form.writable) for key, label in (
-                ('remove_solvent', 'Remover solvente'), ('remove_hydrogens', 'Remover hidrogênios existentes'),
-                ('add_hydrogens', 'Adicionar hidrogênios'), ('minimize', 'Minimizar energia'))}
-            options['charge_type'] = ft.Dropdown(label='Método de cargas', value=values['charge_type'],
-                options=[ft.DropdownOption(key=v, text=v) for v in ('gas', 'am1')], disabled=not self.form.writable)
-            settings[role] = options
-            preparation.append(ft.Column([ft.Text(title, weight=ft.FontWeight.W_600), *options.values()], spacing=12))
-        panel = ft.Container(content=ft.Column([ft.Row(fields, wrap=True), has_cofactors, cofactors,
-            *preparation], spacing=16), padding=20, border=ft.Border.all(1, '#E2E8F0'), border_radius=12)
+            self.sync_preparation();self.form.ui.page.update()
+        has_cofactors.on_change=toggle
+        panel=ft.Container(content=ft.Column([ft.Row(fields,wrap=True),preparation.control],spacing=16),
+            padding=20,border=ft.Border.all(1,'#E2E8F0'),border_radius=12)
         entry = (fields, record, (has_cofactors, cofactors), settings, panel)
         def remove(e):
             self.rows.remove(entry); self.box.controls.remove(panel); self.changed()
         panel.content.controls.append(ft.TextButton('Remover par', on_click=remove, disabled=not self.form.writable))
         self.rows.append(entry); self.box.controls.append(panel)
+        self.sync_preparation()
         self.summarize()
         if update: self.form.ui.page.update()
 
     def changed(self):
         self.summarize(); self.form.ui.page.update()
+
+    def sync_preparation(self):
+        inactive=not self.form.writable or not self.form.field_controls['prepare_complex'].value
+        for _, _, (has_cofactors,cofactors), settings, _ in self.rows:
+            has_cofactors.disabled=inactive
+            cofactors.disabled=inactive or not has_cofactors.value
+            for options in settings.values():
+                for control in options.values():control.disabled=inactive
 
     def read(self):
         records = []; settings = {}

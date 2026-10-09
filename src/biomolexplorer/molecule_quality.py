@@ -192,7 +192,7 @@ def prepare_inputs(operation, parameters, output, report):
         if not folder.is_dir():continue
         files = [p for p in sorted(folder.glob('*.csv')) if table_kind(p)]
         filename = (parameters.get('mol_filename','')+'.csv' if field=='base_selected_mols' else
-                    parameters.get('input_file') if operation in ('admet','expand_similar_compounds') else
+                    parameters.get('input_file') if operation in ('admet','retrieve_pubchem','expand_similar_compounds') else
                     parameters.get('filename') if operation=='similarity' else None)
         selected = parameters.get('files') if operation=='fingerprints' else [filename] if filename else None
         if selected:files = [p for p in files if p.name in selected]

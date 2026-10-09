@@ -1,4 +1,4 @@
-"""PubChem FastSimilarity 2D expansion of downloaded ChEMBL molecules."""
+"""PubChem FastSimilarity 2D search from molecular references."""
 import ast
 import hashlib
 import json
@@ -98,19 +98,19 @@ class PubChemSimilarMols:
         return pd.DataFrame(rows)
 
     def search(self, chembl):
-        """Exclude ChEMBL CIDs before property retrieval; preserve query provenance.
+        """Exclude reference CIDs before property retrieval; preserve query provenance.
 
         Threshold is a search cutoff, not an individual similarity score. Errors
         propagate so an incomplete retrieval is not silently reported as complete.
         Successful API responses are cached for resumable runs.
         """
         if chembl.empty:
-            raise ValueError('No downloaded ChEMBL molecules available for PubChem search')
+            raise ValueError('Nenhum composto de referência disponível para a busca PubChem.')
         references, known_smiles, known_keys = [], set(), set()
         for row in chembl.to_dict('records'):
             smiles, key = self._identity(row.get('canonical_smiles'))
             if not smiles:
-                self.logger.warning('Skipping invalid ChEMBL SMILES: %s', row.get('molecule_chembl_id'))
+                self.logger.warning('Skipping invalid reference SMILES: %s', row.get('molecule_chembl_id'))
                 continue
             known_keys.add(key)
             supplied_key = row.get('InChIKey')
@@ -120,16 +120,16 @@ class PubChemSimilarMols:
                 references.append((row['molecule_chembl_id'], smiles))
             known_smiles.add(smiles)
         if not references:
-            raise ValueError('No valid ChEMBL structures available for PubChem search')
+            raise ValueError('Nenhuma estrutura de referência válida para a busca PubChem.')
 
-        # Resolve every ChEMBL structure first, including structures with no hits
+        # Resolve every reference structure first, including structures with no hits
         # in their own similarity search, so exclusions apply across all queries.
         excluded = set()
-        report_progress('Identificando no PubChem os compostos já obtidos no ChEMBL…', 0, len(references))
+        report_progress('Identificando os compostos de referência no PubChem…', 0, len(references))
         for index, (_, smiles) in enumerate(references, 1):
             result = self._request('smiles/cids/JSON', {'smiles': smiles})
             excluded.update(result.get('IdentifierList', {}).get('CID', []))
-            report_progress('Identificando no PubChem os compostos já obtidos no ChEMBL…', index, len(references))
+            report_progress('Identificando os compostos de referência no PubChem…', index, len(references))
         matches = []
         report_progress('Consultando compostos similares no PubChem…', 0, len(references))
         for index, (name, smiles) in enumerate(references, 1):
@@ -181,3 +181,27 @@ class PubChemSimilarMols:
         write_dataframe(compounds, self.output_path / 'compounds.csv')
         write_dataframe(provenance, self.output_path / 'matches.csv')
         return compounds
+
+    def reference(self,kind,value):
+        """Resolve a manual SMILES, CID or unambiguous name using PUG REST."""
+        value=value.strip() if isinstance(value,str) else ''
+        if not value:raise ValueError('Informe um SMILES, CID ou nome para a busca PubChem.')
+        if kind=='smiles':
+            smiles,key=self._identity(value)
+            if not smiles:raise ValueError('Informe um SMILES válido para a busca PubChem.')
+            identifier='USER_'+hashlib.sha256(smiles.encode()).hexdigest()[:12]
+        else:
+            if kind=='cid':
+                if not value.isdecimal() or int(value)<1:raise ValueError('Informe um CID PubChem inteiro positivo.')
+                cid=int(value)
+            elif kind=='name':
+                cids=self._request('name/cids/JSON',{'name':value}).get('IdentifierList',{}).get('CID',[])
+                if len(cids)!=1:raise ValueError('O nome não identifica um único composto PubChem. Informe seu CID ou SMILES.')
+                cid=cids[0]
+            else:raise ValueError('Escolha SMILES, CID ou nome para a referência PubChem.')
+            props=self._request('cid/property/SMILES,ConnectivitySMILES,InChIKey/JSON',{'cid':str(cid)}).get('PropertyTable',{}).get('Properties',[])
+            prop=props[0] if props else {}
+            smiles,key=self._identity(prop.get('SMILES') or prop.get('IsomericSMILES') or prop.get('ConnectivitySMILES') or prop.get('CanonicalSMILES'))
+            if not smiles:raise ValueError('A referência PubChem não possui um SMILES válido.')
+            identifier='PUBCHEM'+str(cid)
+        return pd.DataFrame([{'molecule_chembl_id':identifier,'canonical_smiles':smiles,'InChIKey':key}])

@@ -326,7 +326,7 @@ class WorkspaceStore:
         self._require_user(user['id'], project_id, 'editor')
         if Path(name).name != name or not name or '\\' in name or len(name) > 180 or any(c in name for c in '\r\n\x00'):
             raise ValueError('Nome de arquivo inválido.')
-        if kind not in ('compounds', 'structures', 'prepared_structures', 'fingerprints', 'similarity', 'vina', 'dock6', 'scores', 'visualization', 'other'):
+        if kind not in ('compounds', 'structures', 'prepared_structures', 'fingerprints', 'similarity', 'vina', 'dock6', 'scores', 'visualization', 'other','zinc_urls'):
             raise ValueError('Tipo de arquivo inválido.')
         ticket = uuid4().hex
         with self.connect() as db:

@@ -297,7 +297,7 @@ See the [frontend guide](frontend.md) for scientific interpretation and limits.
 
 ## Contract review and localization
 
-`flow.input_types` shares redocking's variable contract across canvas, selector and form. Consensus synchronizes its Vina alias and pairs identifiers in individual mode. `docking_inputs.py` restricts DOCK6 to corresponding candidates and references. Materialization preserves prepared auxiliary files and filters centers/metadata by the same reference. Degenerate consensus scores receive finite normalization.
+`flow.input_types` shares redocking's variable contract across canvas, selector and form. Consensus synchronizes its Vina alias and merges all selections before intersecting receptor and compound identities. `docking_inputs.py` restricts DOCK6 to corresponding candidates and references. Materialization preserves prepared auxiliary files and filters centers/metadata by the same reference. Degenerate consensus scores receive finite normalization.
 
 `ui/localization.py` uses a session-owned translator and packaged JSON catalogs. It translates controls and recognized messages during rendering/updates without changing editable values, selection keys or persisted data. `verbatim` protects user-provided content and scientific identifiers. Selection is available at login and the initial language through `--language`; no shared global user-language state exists. Scientific logs retain their original language.
 
@@ -342,3 +342,25 @@ Automated integration tests replace external tools at the execution boundary. Fo
 `ui/redocking_results.py` presents the paginated RMSD table and per-simulation file dialog. Running or failed stages retain generic artifact inspection. `pdb_view.py` issues temporary access to the PDB/PDBQT/MOL2 viewer; project or session changes invalidate pending actions. Visualization opens in the browser and uses the same 3D component as retrieved PDBs.
 
 See [Logs and diagnostics](logging.md) for the common format, execution context, failure codes, job summary and `python -m biomolexplorer.log_report` command.
+
+
+`docking_data.py` preserves compound ID, SMILES and pose in both Vina ↔ DOCK6 directions. `result_tables` uses every batch summary while excluding redundant receptor tables. `DockingResults` and `DockingResultsTable` share pagination, authorized pose previews and audited row removal across both engines and consensus. DOCK6 sphere selection uses the prepared binding-site center, enabling independent candidates without a prior Vina conformation.
+
+
+`prepare_structures` also accepts `base_selected_mols`, `mol_filename` (default `compounds`), `receptor_prepared` and `docking_engines` (`vina`, `dock6` or `both`). The pipeline detects prepared redocking receptors automatically. Prepared receptors are copied with companion files and binding centers without repeated preparation; raw PDBs use the redocking preparation procedure. External candidates are prepared under `Target/Compounds/compounds.csv`, preserving identifiers and SMILES with `prepared_pdbqt` and/or `prepared_mol2` columns. Vina and DOCK6 reuse these files without further minimization. The manifest records available formats; an engine cannot use an output that excludes its format. The CSV and all referenced files must travel together. Legacy calls without `base_selected_mols` still prepare structures only.
+
+Use a separate block for each receptor mode: do not combine raw PDBs and prepared receptors in the same block. pH remains available for candidate preparation when reusing a receptor. Before preparing compounds, the block checks binding centers (three finite coordinates) and receptor files required by the selected output. Vina requires `.dockprep.pdbqt`; DOCK6 additionally requires `.dockprep.mol2` and `.noH.pdb`. PDBQT remains the receptor selection file for either engine. Missing files stop the process with the required filename, without repeating receptor preparation.
+
+## Typed imports and ZINC retrieval
+
+`import_inputs.py` centralizes per-file types and bundle validation, falling back to `kind` for older blocks. `ui/import_files.py` supports upload and project-file selection in the type, filename and removal table. The interface validates content on upload or type changes; the pipeline revalidates groups and publishes the union of types in `asset_types`.
+
+`zinc_retrieval.py` treats URI lists and download scripts as data without executing them. It extracts and validates links, retries downloads and checks redirects. A `ThreadPoolExecutor` performs up to `download_workers` simultaneous downloads (default 4, maximum 16), with a separate HTTP session per task and bounded prefetch. Molecular consolidation follows list order in the main thread, preventing concurrent writes to the table and conformer selection. Compressed downloads are streamed; MOL2 blocks become individual conformations. Identifiers and structures are consolidated in `compounds.csv`, while `retrieval_report.json` records provenance and hashes. Materialization carries referenced conformations with their table; preparation and engines distinguish library conformations from calculated poses.
+
+## Block help, compound selection and docking confirmation
+
+`ui/block_help.py` uses `flow.py` contracts to describe inputs and outputs in the library and canvas information popup. Validation rejection is an expected interface notice without a traceback; editing remains transactional and preserves undo history.
+
+Docking compound references can include `compound_id`. `InputEditor` and `FileSelection` preserve the choice per file. `_materialize_docking_compounds` filters each reference, preserves conformations and prepared files, then deduplicates compounds. Input configuration is part of the materialization key, separating different selections from the same CSV. A missing identifier is rejected.
+
+`requires_curation` retains later selection for automatic connections. Vina/DOCK6 docking with receptor and compounds already defined by explicit files runs without repeat confirmation. File, parameter and permission validation still occurs during resolution and execution.

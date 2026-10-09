@@ -306,7 +306,7 @@ etapa. Veja o [guia do frontend](frontend.md) para interpretação e limites.
 
 ## Revisão de contratos e localização
 
-`flow.input_types` compartilha o contrato variável de redocking entre canvas, seletor e formulário. O consenso mantém o alias Vina sincronizado e pareia identificadores em individual. `docking_inputs.py` restringe DOCK6 aos candidatos e referências correspondentes. A materialização preserva auxiliares preparados e filtra centros/metadados pela mesma referência. Scores degenerados no consenso recebem normalização finita.
+`flow.input_types` compartilha o contrato variável de redocking entre canvas, seletor e formulário. O consenso mantém o alias Vina sincronizado e reúne todas as seleções antes da interseção por receptor e código molecular. `docking_inputs.py` restringe DOCK6 aos candidatos e referências correspondentes. A materialização preserva auxiliares preparados e filtra centros/metadados pela mesma referência. Scores degenerados no consenso recebem normalização finita.
 
 `ui/localization.py` usa um tradutor por sessão e catálogos JSON empacotados. Traduz controles e mensagens conhecidas ao renderizar/atualizar, sem alterar valores editáveis, chaves de seleção ou dados persistidos. `verbatim` protege conteúdos fornecidos pelo usuário e identificadores científicos. A escolha fica no login e o idioma inicial em `--language`; não há estado global compartilhado entre usuários. Logs científicos permanecem na linguagem original.
 
@@ -352,3 +352,25 @@ Os testes automatizados de integração substituem ferramentas externas na front
 `ui/redocking_results.py` apresenta a tabela paginada de RMSD e o popup de arquivos por simulação. Etapas em execução ou com falha continuam usando a consulta genérica de artefatos. `pdb_view.py` emite acessos temporários ao visualizador PDB/PDBQT/MOL2; troca de projeto ou sessão invalida ações pendentes. A visualização abre no navegador e usa o mesmo componente 3D dos PDBs recuperados.
 
 Consulte [Logs e diagnóstico](logging.md) para o formato comum, contexto por execução, códigos de falha, resumo do job e o comando `python -m biomolexplorer.log_report`.
+
+
+A camada `docking_data.py` preserva código, SMILES e pose nos dois sentidos Vina ↔ DOCK6. `result_tables` usa os resumos de todos os lotes e exclui tabelas redundantes por receptor. `DockingResults` e `DockingResultsTable` compartilham paginação, visualização das poses autorizadas e remoção auditada para os dois motores e o consenso. A seleção de esferas DOCK6 usa o centro do sítio preparado, permitindo candidatos independentes sem conformação Vina prévia.
+
+
+`prepare_structures` também recebe `base_selected_mols`, `mol_filename` (padrão `compounds`), `receptor_prepared` e `docking_engines` (`vina`, `dock6` ou `both`). O pipeline identifica automaticamente receptores preparados nas entradas do redocking. Receptores prontos são copiados com seus arquivos complementares e centros, sem repetir o preparo; PDBs brutos seguem o preparo usado pelo redocking. Os candidatos externos são preparados em `Target/Compounds/compounds.csv`, com códigos e SMILES preservados e colunas `prepared_pdbqt` e/ou `prepared_mol2`. Vina e DOCK6 reutilizam esses arquivos sem outra minimização. O manifesto informa os formatos disponíveis; uma ferramenta cujo formato não foi exportado não pode usar essa saída. O CSV e todos os arquivos referenciados devem acompanhar a entrada. Chamadas legadas sem `base_selected_mols` continuam preparando somente estruturas.
+
+Use um bloco separado para cada modo de receptor: não combine PDBs brutos com receptores preparados no mesmo bloco. O pH continua disponível para o preparo dos candidatos quando o receptor é reutilizado. Antes de preparar os compostos, o bloco verifica os centros do sítio (três coordenadas finitas) e os arquivos do receptor exigidos pela saída escolhida. Vina requer `.dockprep.pdbqt`; DOCK6 requer também `.dockprep.mol2` e `.noH.pdb`. O PDBQT permanece como arquivo de seleção do receptor nos dois casos. Arquivos ausentes interrompem o processo com o nome do arquivo necessário, sem refazer o preparo do receptor.
+
+## Importação tipada e recuperação ZINC
+
+`import_inputs.py` centraliza tipos por arquivo e validação de conjuntos, com fallback para `kind` em blocos antigos. `ui/import_files.py` oferece upload e seleção de arquivos do projeto na tabela de tipos, nomes e remoção. A interface valida o conteúdo ao enviar ou mudar o tipo; o pipeline revalida os grupos e publica a união dos tipos presentes em `asset_types`.
+
+`zinc_retrieval.py` interpreta listas URI e scripts de download como dados, sem executá-los. Extrai e valida links, aplica retentativas e verifica redirecionamentos. Um `ThreadPoolExecutor` realiza até `download_workers` downloads simultâneos (padrão 4, limite 16), com sessão HTTP própria por tarefa e antecipação limitada. A consolidação molecular segue a ordem da lista na thread principal, evitando concorrência sobre a tabela e a escolha de conformeros. Downloads comprimidos são lidos por fluxo; MOL2s são separados em conformações individuais. Identificadores e estruturas são consolidados em `compounds.csv`, e `retrieval_report.json` registra a origem e os hashes. A materialização carrega as conformações referenciadas com a tabela; a preparação e os motores distinguem conformações de biblioteca de poses calculadas.
+
+## Ajuda dos blocos, seleção de compostos e confirmação do docking
+
+`ui/block_help.py` utiliza os contratos de `flow.py` para descrever entradas e saídas no popup de informação da biblioteca e do canvas. Conexões recusadas por validação são avisos esperados na interface, sem traceback; a edição permanece transacional e conserva o histórico de desfazer.
+
+As referências de compostos do docking podem conter `compound_id`. `InputEditor` e `FileSelection` conservam a seleção por arquivo. `_materialize_docking_compounds` filtra cada referência, preserva conformações e arquivos preparados e só depois deduplica os compostos. A configuração da entrada faz parte da chave de materialização, separando seleções distintas do mesmo CSV. Um identificador ausente é recusado.
+
+`requires_curation` preserva a seleção posterior para conexões automáticas. Docking Vina/DOCK6 com receptor e compostos previamente definidos por arquivo explícito executa sem repetir a confirmação. A validação dos arquivos, parâmetros e autorizações continua ocorrendo na resolução e na execução.

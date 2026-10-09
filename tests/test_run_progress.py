@@ -37,7 +37,7 @@ class WorkerRetrievalTests(unittest.TestCase):
             token = store.register('Test', 'test@example.org', 'test-password')
             project = store.create_project(token, 'CHEMBL220 defaults')
             stage = new_stage('retrieve_compounds')
-            self.assertTrue(stage['parameters']['include_pubchem'])
+            self.assertFalse(stage['parameters']['include_pubchem'])
             self.assertEqual(stage['parameters']['search_term'], 'CHEMBL220')
             self.assertEqual(stage['templates'], {})
             self.assertEqual(stage['depends_on'], [])
@@ -57,8 +57,8 @@ class WorkerRetrievalTests(unittest.TestCase):
                     dataset = next(path for path in result['artifacts'] if path.endswith('/compounds/CHEMBL220/compounds.csv'))
                     import pandas as pd
                     compounds = pd.read_csv(dataset)
-                    self.assertEqual(compounds['molecule_chembl_id'].tolist(), ['CHEMBL4087364', 'PUBCHEM3'])
-                    self.assertEqual(compounds['source'].tolist(), ['ChEMBL', 'PubChem'])
+                    self.assertEqual(compounds['molecule_chembl_id'].tolist(), ['CHEMBL4087364'])
+                    self.assertEqual(compounds['source'].tolist(), ['ChEMBL'])
                 finally:
                     service.close()
         self.assertEqual(len(commands), 1)

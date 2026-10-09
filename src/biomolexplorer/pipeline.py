@@ -40,6 +40,18 @@ def execution_stage(stage, mode):
     return effective
 
 
+def requires_curation(stage):
+    if not stage_dependencies(stage):return False
+    if stage['operation']=='redocking' and stage['parameters'].get('pdb_codes'):return False
+    if stage['operation'] in ('docking_vina','docking_dock6'):
+        configured=all(stage['parameters'].get(field) or stage.get('bindings',{}).get(field)
+                       for field in ('base_input_path','base_selected_mols'))
+        explicit=all('asset' in ref or ref.get('selector','auto')!='auto'
+                     for group in stage.get('bindings',{}).values() for ref in input_sources(group))
+        if configured and explicit:return False
+    return True
+
+
 def validate_pipeline(stages):
     if not isinstance(stages,list) or len(stages) > 100:
         raise ValueError('O pipeline deve conter até 100 etapas.')
@@ -52,6 +64,9 @@ def validate_pipeline(stages):
             raise ValueError('Etapa desconhecida.')
         if not isinstance(stage.get('parameters'),dict) or not isinstance(stage.get('bindings',{}),dict):
             raise ValueError('Parâmetros e conexões devem ser objetos JSON.')
+        if stage['operation']=='import_results':
+            from .import_inputs import validate_types
+            validate_types(stage['parameters'])
         if type(stage.get('enabled',True)) is not bool:
             raise ValueError('Estado da etapa inválido.')
         if stage.get('input_processing','merge') not in ('merge','individual'):
@@ -82,7 +97,7 @@ def validate_pipeline(stages):
             if 'sources' in group and (set(group)!={'sources'} or not isinstance(group['sources'],list) or not group['sources']):
                 raise ValueError('Selecione ao menos um arquivo por entrada.')
             for binding in input_sources(group):
-                if not isinstance(binding,dict) or set(binding) - {'stage','asset','selector'} or ('stage' in binding) == ('asset' in binding):
+                if not isinstance(binding,dict) or set(binding) - {'stage','asset','selector','compound_id'} or ('stage' in binding) == ('asset' in binding):
                     raise ValueError('Escolha uma etapa ou um arquivo como entrada.')
                 reference = binding.get('stage',binding.get('asset'))
                 if not isinstance(reference,str) or not re.fullmatch('[a-f0-9]{32}',reference):
@@ -91,6 +106,11 @@ def validate_pipeline(stages):
                 if (not isinstance(selector,str) or not selector or '\\' in selector or
                         any(c in selector for c in '\n\r\x00') or Path(selector).is_absolute() or '..' in Path(selector).parts):
                     raise ValueError('Escolha um nome de arquivo válido para a conexão.')
+                if 'compound_id' in binding:
+                    code=binding['compound_id']
+                    if (stage['operation'] not in ('docking_vina','docking_dock6') or field!='base_selected_mols'
+                            or not isinstance(code,str) or not code.strip() or len(code)>200 or any(c in code for c in '\n\r\x00')):
+                        raise ValueError('Selecione um identificador de composto válido para o docking.')
                 if 'stage' in binding:
                     dependency.add(binding['stage'])
         if provided:
@@ -122,7 +142,7 @@ def validate_pipeline(stages):
             if source['operation'] == 'import_results' and not isinstance(source['parameters'].get('kind','other'),str):
                 raise ValueError('Tipo de importação inválido.')
             if not compatible(source,stage,port):
-                raise ValueError(f'A entrada {LABELS.get(field,field)} do bloco “{stage["name"]}” está conectada a dados incompatíveis.')
+                raise ValueError('Dados incompatíveis. Escolha uma saída do tipo esperado por esta entrada.')
     return ordered
 
 
@@ -255,17 +275,21 @@ class PipelineService:
             if stage['operation'] == 'import_results' or stage.get('provided_results'):
                 names = set()
                 params=stage.get('provided_results') or stage['parameters']
-                paths=[]
+                paths=[];typed_paths=[]
                 for asset in params.get('asset_ids',[]):
                     path = self.store.asset_path(token,project_id,asset)
                     paths.append(path)
+                    typed_paths.append((asset,path))
                     if not path.is_file():
                         raise ValueError(f'O bloco “{stage["name"]}” contém um arquivo indisponível. Envie-o novamente.')
                     if path.name in names:
                         raise ValueError(f'O bloco “{stage["name"]}” contém arquivos com o mesmo nome. Renomeie um deles antes de importar.')
                     names.add(path.name)
                 from .input_validation import validate_bundle
-                validate_bundle(paths,params['kind'],stage['operation'] if stage.get('provided_results') else None)
+                if stage['operation']=='import_results':
+                    from .import_inputs import validate_import_files
+                    validate_import_files(typed_paths,params)
+                else:validate_bundle(paths,params['kind'],stage['operation'])
             for group in ({} if stage.get('provided_results') else stage.get('bindings',{})).values():
               for binding in input_sources(group):
                 if 'asset' in binding:
@@ -275,7 +299,7 @@ class PipelineService:
         snapshot = [{'id':stage['id'],'name':stage['name'],'operation':stage['operation'],
                      'status':'queued' if stage.get('enabled',True) else 'skipped','configuration':stage,'artifacts':[],
                      'input_mode':'curated', 'reuse_results':reuse_results, 'requires_curation':
-                         bool(stage_dependencies(stage))}
+                         requires_curation(stage)}
                     for stage in stages]
         with self._lock:
             if self._closed:
@@ -310,12 +334,12 @@ class PipelineService:
             if field in PATH_FIELDS | {'dock6_app_path'} and value is not None and not isinstance(value,str):
                 raise ValueError(LABELS.get(field,field) + ' deve indicar uma pasta do projeto.')
         if operation == 'import_results':
-            if set(params) - {'kind','asset_ids','target'} or not params.get('asset_ids'):
+            if set(params) - {'kind','asset_ids','target','asset_types'} or not params.get('asset_ids'):
                 raise ValueError('Selecione arquivos para a etapa de importação.')
             if not isinstance(params['asset_ids'],list) or any(not isinstance(asset,str) or not re.fullmatch('[a-f0-9]{32}',asset) for asset in params['asset_ids']):
                 raise ValueError('Selecione arquivos válidos para a etapa de importação.')
-            if params.get('kind') not in ('compounds','structures','prepared_structures','fingerprints','similarity','vina','dock6','scores','other'):
-                raise ValueError('Tipo de importação inválido.')
+            from .import_inputs import validate_types
+            validate_types(params)
         else:
             supplied = dict(params)
             for field in stage.get('bindings',{}):
@@ -325,6 +349,8 @@ class PipelineService:
             if partial:
                 required = set(OPERATIONS[operation].required)
                 if operation == 'expand_similar_compounds':
+                    required.add('base_input_path')
+                if operation=='retrieve_pubchem' and params.get('reference_source','compounds')=='compounds':
                     required.add('base_input_path')
                 fallback = None
                 if params.get('base_input_path'):
@@ -341,7 +367,8 @@ class PipelineService:
                     raise ValueError('Conecte um bloco de origem ou selecione seus arquivos em: ' +
                                      ', '.join(LABELS.get(field,field) for field in sorted(missing)))
             # Connected inputs are curated after retrieval; execution validates the selected pairs.
-            validate_operation(operation,supplied,defer_redocking_selection=partial and bool(stage.get('bindings',{})))
+            validate_operation(operation,supplied,defer_redocking_selection=partial and bool(stage.get('bindings',{})),
+                               defer_pubchem_selection=partial and bool(stage.get('bindings',{})))
         for field,value in params.items():
             if field == 'target' and operation == 'import_results' and (not isinstance(value,str) or not re.fullmatch('[A-Za-z0-9_-]{1,80}',value)):
                 raise ValueError('O nome da pasta do alvo deve conter apenas letras, números, _ e -.')
@@ -385,15 +412,95 @@ class PipelineService:
                 before=read_snapshot(self.store,prior['project_id'],last['id'],'after') if last else None
                 record(self.store,db,prior['project_id'],prior['user_id'],'execution',f'Execução {run_id[:8]}: {status}',before)
 
+    def _docking_sources(self, project_id, refs, results, engine=None):
+        from .input_validation import columns
+        from .docking_data import result_tables
+        selected=[];available=[]
+        for ref in refs:
+            if 'asset' in ref:
+                with self.store.connect() as db:
+                    assets={row['id']:self.store.scoped_path(project_id,row['path']) for row in
+                            db.execute('SELECT id,path FROM assets WHERE project_id=?',(project_id,))}
+                if ref['asset'] not in assets:raise AccessDenied('Arquivo não autorizado.')
+                selected.append(assets[ref['asset']]);available.extend(assets.values());continue
+            files=[self.store.scoped_path(project_id,p) for p in results.get(ref['stage'],[])]
+            available.extend(files);selector=ref.get('selector','auto')
+            if selector!='auto':
+                matches=[p for p in files if p.name==selector or p.as_posix().endswith('/'+selector)]
+                if len(matches)!=1:raise ValueError('Selecione um caminho de arquivo específico para esta entrada.')
+            else:
+                matches=[p for p in files if p.suffix=='.csv' and {'molecule_chembl_id','canonical_smiles'}<=columns(p)]
+                if engine:matches=[p for p in matches if {'engine','score','conformer_file'}<=columns(p)]
+                if matches:
+                    matches.sort(key=lambda p:(p.name not in ('docking_results.csv','compounds.csv','molecules.csv'),len(p.parts),p.name))
+                    summaries=[p for p in matches if p.name=='docking_results.csv']
+                    canonical=[p for p in matches if p.name=='compounds.csv']
+                    matches=result_tables(summaries) if summaries else canonical or matches[:1]
+                else:
+                    matches=[p for p in files if (p.suffix=='.pdbqt' if engine=='vina' else p.name.endswith('_scored.mol2') if engine=='dock6'
+                        else p.suffix in ('.sdf','.mol2','.pdbqt') and not '.dockprep.' in p.name)]
+            selected.extend(matches)
+        if not selected:raise ValueError('Selecione ao menos um arquivo molecular compatível com esta entrada.')
+        return list(dict.fromkeys(selected)),list(dict.fromkeys(available))
+
+    def _docking_destination(self, project_id, stage, field, available, directory):
+        from .project_state import digest
+        import hashlib
+        key=hashlib.sha256(json.dumps([(str(p),digest(p)) for p in available if p.is_file()]+
+            [stage['operation'],field,stage.get('bindings',{}).get(field)],sort_keys=True).encode()).hexdigest()
+        return (directory or self.store.project_dir(project_id)/'.input-cache'/key)/field
+
+    def _materialize_docking_compounds(self, project_id, stage, field, refs, results, directory):
+        from .docking_data import input_records,copy_input_records
+        from .molecule_quality import sanitize_csv
+        selected=[];available=[];rows=[];best={}
+        for ref in refs:
+            files,companions=self._docking_sources(project_id,[ref],results)
+            records=input_records(files,companions)
+            if ref.get('compound_id'):
+                records=[r for r in records if r['molecule_chembl_id']==ref['compound_id']]
+                if not records:raise ValueError('O composto selecionado não está no arquivo de entrada do docking.')
+            selected.extend(files);available.extend(companions);rows.extend(records)
+        selected=list(dict.fromkeys(selected));available=list(dict.fromkeys(available))
+        def docking_score(row):
+            value=row.get('score')
+            return float(value) if value not in (None,'') else float('inf')
+        for row in rows:
+            code=row['molecule_chembl_id']
+            if code not in best or docking_score(row)<docking_score(best[code]):best[code]=row
+        destination=self._docking_destination(project_id,stage,field,available,directory)
+        path=copy_input_records(list(best.values()),destination)
+        sanitize_csv(path,path)
+        return destination,path.stem,selected
+
+    def _materialize_scores(self, project_id, stage, field, refs, results, directory):
+        from .docking_data import input_records,copy_input_records,score
+        engine='dock6' if field=='base_dock6_path' else 'vina'
+        selected,available=self._docking_sources(project_id,refs,results,engine)
+        rows=input_records(selected,available)
+        for row in rows:
+            if row.get('engine') and row['engine']!=engine:raise ValueError('Resultado de docking incompatível com o motor selecionado.')
+            row.setdefault('receptor_id','');row['engine']=engine
+            if row.get('score') is None:row['score']=score(row['conformer_file'],engine)
+        destination=self._docking_destination(project_id,stage,field,available,directory)
+        path=copy_input_records(rows,destination);path.rename(destination/'docking_results.csv')
+        return destination,None,selected
+
     def _materialize_inputs(self, project_id, stage, field, refs, results, directory=None):
         from .input_validation import columns, merge_csv, validate_file
+        from .docking_inputs import target_input, prepared_receptor
         from .project_state import digest
         import hashlib
         operation=stage['operation']
+        receptor_only=target_input(stage,field)
+        if field=='base_selected_mols' and operation in ('docking_vina','docking_dock6','prepare_structures'):
+            return self._materialize_docking_compounds(project_id,stage,field,refs,results,directory)
+        if field in ('base_vina_path','base_dock6_path') or operation=='consensus' and field=='base_input_path':
+            return self._materialize_scores(project_id,stage,field,refs,results,directory)
         kind=('similarity' if field=='similarity_path' else 'fingerprints' if operation=='similarity' else
               'vina' if field=='base_vina_path' or operation=='consensus' and field=='base_input_path' else 'dock6' if field=='base_dock6_path' else
-              'compounds' if field=='base_selected_mols' or operation in ('admet','fingerprints','graphs','expand_similar_compounds') else
-              'other' if operation=='retrieve_zinc' else 'prepared_structures' if operation in ('docking_vina','docking_dock6')
+              'compounds' if field=='base_selected_mols' or operation in ('admet','fingerprints','graphs','retrieve_pubchem','expand_similar_compounds') else
+              'other' if operation=='retrieve_zinc' else 'prepared_structures' if operation in ('docking_vina','docking_dock6') or operation=='prepare_structures' and stage['parameters'].get('receptor_prepared',False)
               or operation=='redocking' and not stage['parameters'].get('prepare_complex',True) else 'structures')
         required={'compounds':{'canonical_smiles'},'fingerprints':{'fingerprint','molecule_chembl_id'},'similarity':{'source','target','value'}}
         selected=[]
@@ -403,12 +510,17 @@ class PipelineService:
                 with self.store.connect() as db:
                     asset=db.execute('SELECT path FROM assets WHERE project_id=? AND id=?',(project_id,ref['asset'])).fetchone()
                 if asset is None:raise AccessDenied('Arquivo não autorizado.')
-                selected.append(self.store.scoped_path(project_id,asset['path']))
+                asset_path=self.store.scoped_path(project_id,asset['path'])
+                if receptor_only and not prepared_receptor(asset_path):
+                    raise ValueError('Selecione um receptor preparado para o alvo do docking.')
+                selected.append(asset_path)
                 continue
             upstream=results.get(ref['stage'])
             if not upstream:raise ValueError('A origem desta entrada não possui resultados disponíveis.')
             selector=ref.get('selector','auto')
             if selector!='auto':
+                if receptor_only and not prepared_receptor(selector):
+                    raise ValueError('Selecione um receptor preparado para o alvo do docking.')
                 folder=select_input(upstream,field,selector)
                 selected.append(next(Path(p) for p in upstream if Path(p).parent==folder and Path(p).name==Path(selector).name))
             elif kind in required:
@@ -417,9 +529,11 @@ class PipelineService:
                 if not matching:raise ValueError('A origem não possui um arquivo compatível. Selecione o resultado nas configurações do bloco.')
                 selected.extend(matching if stage.get('_process_all_inputs') else matching[:1])
             else:
+                from .zinc_retrieval import LIST_SUFFIXES
                 allowed={'structures':{'.pdb'},'prepared_structures':{'.pdb','.pdbqt'},
-                         'vina':{'.pdbqt'},'dock6':{'.mol2'},'other':{'.txt'}}[kind]
+                         'vina':{'.pdbqt'},'dock6':{'.mol2'},'other':LIST_SUFFIXES}[kind]
                 candidates=[Path(p) for p in upstream if Path(p).suffix.lower() in allowed]
+                if receptor_only:candidates=[p for p in candidates if prepared_receptor(p)]
                 if kind=='prepared_structures' and any(p.parent.name=='Prepared' for p in candidates):
                     candidates=[p for p in candidates if p.parent.name=='Prepared']
                 if kind=='structures':
@@ -434,7 +548,7 @@ class PipelineService:
                 if kind=='prepared_structures':
                     receptors={p.name.split('.',1)[0] for p in chosen if '.dockprep.' in p.name}
                     ligands=set()
-                    for metadata in (p for p in files if p.parent in folders and p.name=='pdb_codes.csv'):
+                    for metadata in (p for p in files if not receptor_only and p.parent in folders and p.name=='pdb_codes.csv'):
                         with metadata.open(encoding='utf-8-sig',newline='') as stream:
                             for record in csv.DictReader(stream):
                                 if f"{record.get('PDB_CODE')}_{record.get('CHAIN')}" in receptors:
@@ -463,7 +577,9 @@ class PipelineService:
                 quality.write(destination)
         elif kind=='other':
             filename='selected_urls.txt'
-            (destination/filename).write_text(''.join(p.read_text().rstrip()+'\n' for p in selected),encoding='utf-8')
+            from .zinc_retrieval import read_download_list
+            urls=list(dict.fromkeys(url for p in selected for url in read_download_list(p)))
+            (destination/filename).write_text('\n'.join(urls)+'\n',encoding='utf-8')
         else:
             target=stage['parameters'].get('target','MeuAlvo').replace(' ','')
             data=destination/target if kind in ('structures','prepared_structures') else destination
@@ -525,6 +641,23 @@ class PipelineService:
 
     def _resolve(self, project_id, user_id, stage, results, input_directory=None, item=None, cache_only=False, pipeline=None):
         params = dict(stage['parameters'])
+        if stage['operation']=='prepare_structures':
+            from .docking_inputs import prepared_receptor
+            modes=[]
+            for ref in input_sources(stage.get('bindings',{}).get('base_input_path',{})):
+                if 'stage' in ref:
+                    files=results.get(ref['stage'],[])
+                    selector=ref.get('selector','auto')
+                    modes.append(prepared_receptor(selector) if selector!='auto' else any(prepared_receptor(p) for p in files))
+                elif 'asset' in ref:
+                    with self.store.connect() as db:
+                        asset=db.execute('SELECT name FROM assets WHERE project_id=? AND id=?',(project_id,ref['asset'])).fetchone()
+                    if asset:modes.append(prepared_receptor(asset[0]))
+            if modes:
+                if any(modes) and not all(modes):
+                    raise ValueError('Use receptores brutos ou preparados em um mesmo bloco de preparação.')
+                params['receptor_prepared']=all(modes)
+                stage=dict(stage,parameters=dict(stage['parameters'],receptor_prepared=all(modes)))
         if stage.get('_process_all_inputs') and 'base_input_path' in stage.get('bindings',{}):
             if stage['operation']=='prepare_structures':params.pop('pdb_codes',None)
             elif stage['operation']=='docking_vina':params.pop('pdb_code',None)
@@ -569,7 +702,9 @@ class PipelineService:
                 params['base_input_path'] = params['base_vina_path']
         for field,group in bindings.items():
             refs=input_sources(group)
-            if (stage.get('_process_all_inputs') or
+            if (stage.get('_process_all_inputs') or stage['operation']=='consensus' or
+                    field=='base_selected_mols' and stage['operation'] in ('docking_vina','docking_dock6','prepare_structures') or
+                    stage['operation'] in ('retrieve_pubchem','prepare_structures','retrieve_zinc') or
                     len(refs)>1 or any('asset' in ref for ref in refs) or
                     any(ref.get('selector','auto')!='auto' for ref in refs)):
                 path,filename,selected=self._materialize_inputs(project_id,stage,field,refs,results,input_directory)
@@ -597,7 +732,7 @@ class PipelineService:
                             keys={pair_key(r) for r in chosen}
                             params['preparation_pairs']={k:v for k,v in params.get('preparation_pairs',{}).items() if k in keys}
                 if filename:
-                    if stage['operation'] in ('admet','expand_similar_compounds'):params['input_file']=filename
+                    if stage['operation'] in ('admet','retrieve_pubchem','expand_similar_compounds'):params['input_file']=filename
                     elif stage['operation']=='retrieve_zinc':params['filename']=filename
                     elif stage['operation']=='similarity':params['filename']=filename
                     elif stage['operation']=='fingerprints':params['files']=[filename]
@@ -636,7 +771,7 @@ class PipelineService:
             if item is not None:
                 selected=[p for p in upstream if Path(p).parent==path and (binding.get('selector','auto')=='auto' or Path(p).name==Path(binding['selector']).name)]
                 item.setdefault('input_files',{})[field]=selected
-            if field=='base_selected_mols' and stage['operation'] in ('docking_vina','docking_dock6'):
+            if field=='base_selected_mols' and stage['operation'] in ('docking_vina','docking_dock6','prepare_structures'):
                 selector=binding.get('selector','auto')
                 if selector!='auto':
                     params['mol_filename']=Path(selector).stem
@@ -662,14 +797,8 @@ class PipelineService:
             validate_structure_pairs(Path(params['base_input_path'])/params['target'].replace(' ',''),
                 params['pdb_codes'], params.get('preparation_pairs') or {}, prepared=not params.get('prepare_complex',True))
         if stage['operation']=='retrieve_zinc':
-            from urllib.parse import urlsplit
-            with (Path(params['base_input_path']) / params['filename']).open() as stream:
-                for line in stream:
-                    if not line.strip():
-                        continue
-                    url = urlsplit(line.strip())
-                    if url.scheme!='https' or url.hostname not in ('zinc.docking.org','zinc15.docking.org','zinc20.docking.org','files.docking.org') or url.username or url.password or url.port not in (None,443):
-                        raise ValueError('O arquivo ZINC deve conter endereços HTTPS dos servidores ZINC.')
+            from .zinc_retrieval import read_download_list
+            read_download_list(Path(params['base_input_path'])/params['filename'])
         return params
 
     def _import(self, project_id, params, output):
@@ -677,32 +806,37 @@ class PipelineService:
         target = params.get('target','MeuAlvo')
         if not re.fullmatch('[A-Za-z0-9_-]{1,80}',target):
             raise ValueError('O nome da pasta do alvo deve conter apenas letras, números, _ e -.')
-        destination = output / target if params['kind'] in ('structures','prepared_structures') else output
-        if params['kind'] == 'prepared_structures':
-            destination = destination / 'Prepared'
-        destination.mkdir(parents=True,exist_ok=True)
-        names = set()
+        from .import_inputs import file_kind,validate_import_files,validate_types
+        validate_types(params)
+        selected=[]
         for asset_id in params['asset_ids']:
             with self.store.connect() as db:
-                asset = db.execute('SELECT path,name FROM assets WHERE project_id=? AND id=?', (project_id,asset_id)).fetchone()
-            if asset is None:
-                raise AccessDenied('Arquivo não autorizado.')
-            source = self.store.scoped_path(project_id,asset['path'])
+                asset=db.execute('SELECT path FROM assets WHERE project_id=? AND id=?',(project_id,asset_id)).fetchone()
+            if asset is None:raise AccessDenied('Arquivo não autorizado.')
+            selected.append((asset_id,self.store.scoped_path(project_id,asset['path'])))
+        validate_import_files(selected,params)
+        names = set()
+        for asset_id,source in selected:
+            kind=file_kind(params,asset_id)
+            destination=output/target if kind in ('structures','prepared_structures') else output
+            if kind=='prepared_structures':destination=destination/'Prepared'
+            destination.mkdir(parents=True,exist_ok=True)
             if source.name in names:
                 raise ValueError('Há dois arquivos com o mesmo nome na importação.')
             names.add(source.name)
             file = destination / source.name
-            if source.name == 'pdb_codes.csv' and params['kind'] == 'prepared_structures':
+            if source.name == 'pdb_codes.csv' and kind == 'prepared_structures':
                 file = destination.parent / source.name
             shutil.copyfile(source,file)
-            if params['kind'] == 'compounds' and file.suffix.lower() == '.csv':
+            if kind == 'compounds' and file.suffix.lower() == '.csv':
                 self._normalize_compounds(file)
         return [str(p) for p in output.rglob('*') if p.is_file()]
 
     @staticmethod
     def _normalize_compounds(path):
         from tempfile import NamedTemporaryFile
-        aliases = {'smiles':'canonical_smiles','Canonical_SMILES':'canonical_smiles','name':'molecule_chembl_id'}
+        from .input_validation import ALIASES
+        aliases = ALIASES
         temporary = None
         try:
             with path.open(encoding='utf-8-sig',newline='') as stream, NamedTemporaryFile(mode='w',dir=path.parent,delete=False,newline='',encoding='utf-8') as out:
@@ -735,6 +869,10 @@ class PipelineService:
 
     def _variants(self, project_id, stage, results=None):
         """One job per selected file; distinct input ports form combinations."""
+        if stage['operation']=='consensus':
+            variant=copy.deepcopy(stage);variant['input_processing']='merge'
+            yield variant,stage['name']
+            return
         if stage['operation']=='redocking' and results is not None:
             from .bindings import pack
             stage=copy.deepcopy(stage)
@@ -810,6 +948,7 @@ class PipelineService:
 
     def _execute_stage(self, run_id, project_id, user_id, item, stages, run_dir, results, state):
         stage=execution_stage(item['configuration'],item.get('input_mode'))
+        if stage['operation']=='consensus':stage['input_processing']='merge'
         if stage.get('input_processing')!='individual' or stage.get('provided_results') or stage['operation']=='import_results':
             return self._execute_single(run_id,project_id,user_id,item,stages,run_dir,results,state)
         artifacts=[];inputs={};excluded=0
@@ -896,6 +1035,8 @@ class PipelineService:
                     failure.action = job['result']['diagnostic']['action']
                 raise failure
             from .molecule_quality import REPORT_NAME
+            if job['result'].get('details',{}).get('skipped_reason'):
+                item['skip_reason']=job['result']['details']['skipped_reason']
             reports=list((stage_dir/'inputs').rglob(REPORT_NAME))
             item['excluded_records']=job['result'].get('details',{}).get('excluded_records',0)+sum(
                 json.loads(path.read_text()).get('excluded_records',0) for path in reports)
@@ -1055,7 +1196,7 @@ class PipelineService:
                 stage = item['configuration']
                 dependencies = stage_dependencies(stage)
                 item['input_mode']='curated'
-                item['requires_curation']=bool(dependencies) and not (stage['operation']=='redocking' and stage['parameters'].get('pdb_codes'))
+                item['requires_curation']=requires_curation(stage)
                 unavailable = [by_id[source]['name'] for source in dependencies if by_id[source]['status'] != 'succeeded']
                 if unavailable:
                     item.update(status='skipped', error='Esta etapa depende de blocos que não concluíram: ' + ', '.join(sorted(unavailable)))
@@ -1108,8 +1249,10 @@ class PipelineService:
                     item.update(status='failed',error=str(exc),finished_at=time.time())
                     self._update(run_id,'running',stages)
                     continue
-                item.update(status='succeeded',artifacts=artifacts,finished_at=time.time())
-                results[stage['id']] = artifacts
+                item.update(status='skipped' if item.get('skip_reason') else 'succeeded',
+                            artifacts=artifacts,finished_at=time.time())
+                if item.get('skip_reason'):item['error']=item['skip_reason']
+                else:results[stage['id']] = artifacts
                 self._update(run_id,'running',stages)
             failed = [item for item in stages if item['status'] == 'failed']
             if failed:

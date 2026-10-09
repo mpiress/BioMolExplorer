@@ -113,3 +113,42 @@ class PDBViewerTests(unittest.TestCase):
         self.assertEqual(actions[1].url.target.value,'_blank')
         self.assertIsNone(actions[1].on_click)
         self.assertEqual(actions[2].url,'https://www.rcsb.org/structure/1CRN')
+
+    def test_generated_compounds_share_viewer_and_leave_no_project_artifacts(self):
+        from rdkit import Chem
+        from biomolexplorer.ui.app import WorkspaceUI
+        ui=object.__new__(WorkspaceUI);ui.store=self.store;ui.structure_viewer=self.viewers
+        ui.language='en';ui.page=SimpleNamespace(web=True,url='wss://example.org/ws')
+        before=set(self.store.project_dir(self.pid).rglob('*'))
+        url=ui.compound_view_url(self.pid,'CC(=O)O','CHEMBL1',self.token)
+        self.assertTrue(url.startswith('https://example.org'+PREFIX+'/'))
+        path=PREFIX+'/'+url.rsplit('/',1)[1]
+        response=self.viewers.response(path)
+        self.assertEqual(response[0],200)
+        self.assertEqual(response[3]['Cache-Control'],'no-store')
+        document=response[2].decode()
+        config=json.loads(document.split('type="application/json">',1)[1].split('</script>',1)[0])
+        self.assertEqual(config['format'],'sdf');self.assertTrue(config['ligand']);self.assertTrue(config['generated'])
+        self.assertEqual(config['representation'],'sticks')
+        self.assertIn('3Dmol-min.js',document)
+        sdf=self.viewers.response(path+'/structure')[2].decode()
+        molecule=Chem.MolFromMolBlock(sdf,removeHs=False)
+        self.assertTrue(molecule.GetConformer().Is3D())
+        self.assertIn(2.,[b.GetBondTypeAsDouble() for b in molecule.GetBonds()])
+        self.assertEqual(before,set(self.store.project_dir(self.pid).rglob('*')))
+        self.store.logout(self.token)
+        self.assertEqual(self.viewers.response(path+'/structure')[0],403)
+
+    def test_generated_compounds_require_project_access_and_expire(self):
+        guest=self.store.register('Guest','guest@example.org','guest-password')
+        with self.assertRaises(AccessDenied):self.viewers.issue_compound(guest,self.pid,'CCO','CHEMBL1')
+        with self.assertRaises(ValueError):self.viewers.issue_compound(self.token,self.pid,'invalid','CHEMBL1')
+        self.store.invite(self.token,self.pid,'guest@example.org','viewer');self.store.accept_invitation(guest,self.pid)
+        key=self.viewers.issue_compound(guest,self.pid,'CCO','CHEMBL1')
+        path=PREFIX+'/'+key
+        self.assertEqual(self.viewers.response(path+'/structure')[0],200)
+        self.store.revoke(self.token,self.pid,self.store.user(guest)['id'])
+        self.assertEqual(self.viewers.response(path+'/structure')[0],403)
+        key=self.viewers.issue_compound(self.token,self.pid,'CCO','CHEMBL1')
+        self.now+=self.viewers.TTL+1
+        self.assertEqual(self.viewers.response(PREFIX+'/'+key+'/structure')[0],403)

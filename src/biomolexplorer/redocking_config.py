@@ -10,6 +10,21 @@ def pair_key(record):
     return '|'.join(str(record[i]) for i in range(4))
 
 
+def validate_preparation_settings(config):
+    if not isinstance(config,dict):raise ValueError('Configuração do par inválida.')
+    if config.keys()-{'cofactors','ligand_chain','receptor','ligand'}:raise ValueError('Configuração do par desconhecida.')
+    cofactors=config.get('cofactors',[])
+    if not isinstance(cofactors,list) or any(not isinstance(c,str) or not re.fullmatch(r'[A-Z0-9]{1,5}',c) for c in cofactors):
+        raise ValueError('Informe códigos de cofatores válidos, como FAD, separados por vírgula.')
+    for role in ('receptor','ligand'):
+        options=config.get(role,{})
+        if not isinstance(options,dict) or options.keys()-DEFAULTS.keys():raise ValueError('Opções de preparação inválidas.')
+        for key,value in options.items():
+            if key=='charge_type':
+                if value not in ('gas','am1'):raise ValueError('Método de cargas inválido.')
+            elif type(value) is not bool:raise ValueError('Opção de preparação deve ser booleana.')
+
+
 def validate_pairs(records, settings):
     if not isinstance(records, (list, tuple)) or not records:
         raise ValueError('Selecione pelo menos um par receptor / ligante e sua cadeia na aba Input Data.')
@@ -26,20 +41,9 @@ def validate_pairs(records, settings):
         if key in seen: raise ValueError('O par receptor / ligante já está selecionado.')
         seen.add(key)
         config = settings.get(key, {})
-        if not isinstance(config, dict): raise ValueError('Configuração do par inválida.')
-        if config.keys() - {'cofactors', 'ligand_chain', 'receptor', 'ligand'}: raise ValueError('Configuração do par desconhecida.')
+        validate_preparation_settings(config)
         cofactors = config.get('cofactors', [])
-        if not isinstance(cofactors, list) or any(not isinstance(c, str) or not re.fullmatch(r'[A-Z0-9]{1,5}', c) for c in cofactors):
-            raise ValueError('Informe códigos de cofatores válidos, como FAD, separados por vírgula.')
         if record[1] in cofactors: raise ValueError('O ligante de redocking não pode ser também um cofator.')
-        # Older projects may contain two chain fields; CHAIN is now authoritative.
-        for role in ('receptor', 'ligand'):
-            options = config.get(role, {})
-            if not isinstance(options, dict) or options.keys() - DEFAULTS.keys(): raise ValueError('Opções de preparação inválidas.')
-            for option, value in options.items():
-                if option == 'charge_type':
-                    if value not in ('gas', 'am1'): raise ValueError('Método de cargas inválido.')
-                elif type(value) is not bool: raise ValueError('Opção de preparação deve ser booleana.')
         # Legacy docking identifies receptors by PDB and chain; prevent silent overwrites.
         receptor_key = (record[0], record[3])
         receptor_config = (sorted(set(cofactors)), dict(DEFAULTS, **config.get('receptor', {})))

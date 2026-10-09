@@ -102,7 +102,7 @@ gerados a partir dessas escolhas. O modo **Avançado** permite editar parâmetro
 conexões em JSON e os templates científicos completos. **Aplicar configuração**
 valida e confirma a edição; **Cancelar** preserva o bloco anterior.
 
-Exceto pelo redocking com pares previamente configurados, ao concluir uma etapa o pipeline pausa antes do próximo bloco conectado e abre
+Exceto pelo redocking com pares previamente configurados e pelo docking Vina/DOCK6 com arquivos de entrada já selecionados, ao concluir uma etapa o pipeline pausa antes do próximo bloco conectado e abre
 automaticamente **Selecionar arquivos**. Marque os arquivos desejados em cada
 entrada e clique em **Continuar com os arquivos selecionados**. O popup lista
 somente resultados compatíveis das origens conectadas nesta execução. Em **Como
@@ -111,7 +111,7 @@ processar os arquivos selecionados?**, escolha **Processar individualmente**
 em separado, preserva seu nome e disponibiliza resultados separados para a próxima
 seleção. Merge reúne os arquivos selecionados em uma entrada. Com vários tipos de
 entrada (por exemplo, receptores e compostos), individual executa cada combinação
-de arquivos. DOCK6 restringe as combinações aos receptores/compostos/poses correspondentes; o consenso pareia identificadores Vina/DOCK6. Metadados necessários acompanham as estruturas escolhidas em ambos
+de arquivos. DOCK6 restringe as combinações aos receptores/compostos/poses correspondentes; o consenso sempre reúne as seleções e calcula a interseção por código e receptor. Metadados necessários acompanham as estruturas escolhidas em ambos
 os modos. A escolha pode mudar a cada etapa e fica registrada na execução.
 
 **Selecionar depois** fecha o popup e mantém a execução pausada. Para reabrir,
@@ -333,10 +333,11 @@ Os formulários de cada bloco oferecem **Enviar meus arquivos**, **Adicionar ent
 e um modo separado para **resultados prontos**. A mensagem de validação informa o
 formato esperado. O bloco de importação continua disponível como alternativa:
 
-1. Abra **Arquivos**, escolha o tipo e envie os arquivos.
-2. Adicione **Importar meus arquivos** ao pipeline e selecione os arquivos enviados.
-3. Configure o tipo de importação e, para estruturas, a pasta do alvo.
-4. Conecte a saída da importação à etapa que consumirá os dados.
+1. Adicione **Importar meus arquivos** ao pipeline e abra sua configuração.
+2. Escolha **Tipo dos arquivos a adicionar** e clique em **Selecionar arquivos no disco**. Selecione todos os arquivos necessários; cada arquivo é validado antes de entrar no projeto.
+3. Para aproveitar arquivos existentes, use **Arquivo já enviado ao projeto** ou **Adicionar todos os arquivos do projeto**.
+4. Confira a tabela **Tipo / Arquivo / Ações**. Você pode alterar o tipo por linha (com nova validação) ou usar **Remover da lista**. A remoção dessa lista preserva o arquivo na biblioteca do projeto.
+5. Para receptores preparados, inclua também os metadados e formatos complementares. Configure a pasta do alvo para estruturas e aplique a configuração. Um bloco pode publicar vários tipos, conectados às entradas correspondentes dos consumidores.
 
 Cada arquivo pode ter até 200 MB. No navegador, o upload usa uma URL assinada e
 temporária; o arquivo entra na biblioteca apenas após nova verificação da sessão,
@@ -352,8 +353,7 @@ CSV no seletor **Resultado usado nesta entrada**. Ele lista arquivos importados 
 resultados das execuções anteriores; durante a execução, confirme os arquivos no popup. O modo
 avançado permite especificar outros seletores (`selector`).
 
-Para PDBs próprios, use importação **Complexos PDB**, seguida de **Preparar meus
-complexos**, e adicione os complexos no formulário (PDB, ligante, resíduo e cadeia). Você também
+Para PDBs próprios, use importação **Complexos PDB**, seguida de **Preparar para docking**, e adicione os complexos no formulário (PDB, ligante, resíduo e cadeia). Você também
 pode enviar `pdb_codes.csv` com `PDB_CODE,LIGAND,RESNUM,CHAIN`. Assim, não é necessário
 incluir recuperação PDB ou redocking.
 
@@ -481,3 +481,29 @@ Use o botão de download de cada linha para baixar um arquivo, ou **Baixar todos
 O botão **Visualizar estrutura 3D** abre o visualizador no navegador, como na consulta dos PDBs. Ele aceita PDB, PDBQT e MOL2 para examinar receptor, ligante e poses antes do download. Para saídas com várias poses, use **Modelo** no visualizador. As legendas e ações acompanham o idioma selecionado. Leitores também podem consultar e baixar os resultados.
 
 Consulte [Logs e diagnóstico](logging.md) para o formato comum, contexto por execução, códigos de falha, resumo do job e o comando `python -m biomolexplorer.log_report`.
+
+
+## Entradas e resultados de docking
+
+**Docking com Vina** e **Docking com DOCK6** recebem compostos de qualquer bloco que publique moléculas: ChEMBL, PubChem, ZINC, ADMET, fingerprints, grafos, consenso ou importação do usuário. Selecione a tabela na entrada de compostos e conecte separadamente o receptor preparado. Não é obrigatório passar por grafos, ADMET ou pelo outro motor. PubMed fornece referências bibliográficas; moléculas obtidas dessas referências devem ser importadas com código e SMILES ou estrutura válida.
+
+Para reutilizar conformações, conecte **Vina → DOCK6** ou **DOCK6 → Vina** na entrada de compostos, escolhendo `docking_results.csv` ou a pose desejada. A identidade e o SMILES são preservados; a conversão utiliza a conformação selecionada, sem gerar outra a partir do SMILES. Sem uma pose de entrada, a preparação gera um conformero 3D. DOCK6 usa o centro do sítio do receptor para selecionar esferas e posicionar ligantes recém-gerados; a entrada opcional de poses Vina continua disponível para refinamento de candidatos correspondentes.
+
+Confira a caixa, pH e esforço do Vina e as cargas, superfície, distância, raio, busca flexível/rígida e footprint do DOCK6. Ambos exigem receptores preparados, metadados e centros; DOCK6 também exige MOL2 do receptor e PDB sem hidrogênios. Seus resultados apresentam código molecular, receptor, score, SMILES, **3D** da pose calculada e **Remover**. O botão abre a estrutura obtida no docking.
+
+**Consenso de docking** reúne os resultados selecionados de cada motor, incluindo vários lotes e ramificações. Calcula somente a interseção por código molecular e receptor, usando o menor score quando há poses repetidas. Resultados do mesmo código com estruturas diferentes são recusados. Não havendo interseção, o bloco é marcado como não executado e explica que os motores não avaliaram compostos em comum para o mesmo receptor.
+
+A tabela de consenso apresenta os scores Vina e DOCK6, SMILES, receptor e normalizações z-score/min-max, com botões **3D Vina**, **3D DOCK6** e **Remover** em cada linha. O score DOCK6 usado no consenso é `min(0, Grid_Score + repulsion_weight × Internal_energy_repulsive)`; a repulsão ausente vale zero. Para um composto ou scores constantes, as normalizações são zero. A remoção exige permissão de edição, fica registrada e afeta próximas entradas; não recalcula análises já concluídas. As tabelas principais de cada lote são usadas sem reintroduzir linhas removidas a partir das tabelas auxiliares.
+
+
+Em **Preparar para docking**, conecte **Receptor PDB (retrieval ou redocking)** e **Compostos selecionados** separadamente. Para um PDB bruto do retrieval, informe os registros `[PDB, ligante de referência, resíduo, cadeia]` ou forneça `pdb_codes.csv`; as opções de preparo do receptor permanecem disponíveis. Para receptores do redocking, escolha o arquivo `.dockprep.pdbqt` no campo **Receptor que deseja utilizar**: os arquivos exclusivos do ligante ficam ocultos e as opções de preparo do receptor são desabilitadas. Os arquivos complementares e os centros acompanham o receptor; ele é reutilizado sem novo preparo.
+
+Adicione uma ou mais fontes de compostos de **ChEMBL**, **PubChem**, **ZINC** ou arquivos próprios em **Compostos selecionados**. O grupo **Preparação e conformação do ligante** configura esses candidatos externos e permanece disponível. O ligante de referência do PDB serve para definir o sítio de docking, não integra a lista de candidatos. Escolha **Preparar saída para → Vina, DOCK6 ou Vina e DOCK6**. O bloco prepara cada candidato e exporta os formatos selecionados a partir da mesma conformação. Conecte a saída deste bloco tanto à entrada de receptor quanto à entrada de compostos de cada ferramenta escolhida. Para reunir várias fontes em uma execução, selecione **Mesclar arquivos (merge)**; o modo individual prepara cada combinação separadamente. Confira os receptores, compostos e centros produzidos.
+
+Use um bloco separado para cada modo de receptor: não combine PDBs brutos com receptores preparados no mesmo bloco. O pH continua disponível para o preparo dos candidatos quando o receptor é reutilizado. Antes de preparar os compostos, o bloco verifica os centros do sítio (três coordenadas finitas) e os arquivos do receptor exigidos pela saída escolhida. Vina requer `.dockprep.pdbqt`; DOCK6 requer também `.dockprep.mol2` e `.noH.pdb`. O PDBQT permanece como arquivo de seleção do receptor nos dois casos. Arquivos ausentes interrompem o processo com o nome do arquivo necessário, sem refazer o preparo do receptor.
+
+## Ajuda dos blocos e seleção de composto
+
+O ícone **ⓘ** aparece na biblioteca e em cada bloco do canvas, inclusive para leitores. O popup explica a função do bloco, suas entradas e suas saídas. Similaridade recebe fingerprints; conectar diretamente ChEMBL ou PubChem apresenta um aviso padrão de incompatibilidade, sem traceback. A recusa não altera conexões nem o histórico de desfazer.
+
+Na configuração do docking e no popup de arquivos, cada tabela de compostos oferece **Composto para docking (opcional)**. O seletor permite busca por identificador e usa todos quando vazio. A escolha é conservada ao reabrir a configuração; trocar o arquivo limpa o identificador. Com receptor e arquivos de compostos explícitos, Vina e DOCK6 não repetem o popup durante a execução. Origens ainda automáticas solicitam a escolha quando seus dados estiverem disponíveis.

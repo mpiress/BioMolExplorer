@@ -3,14 +3,15 @@ import copy
 import json
 import re
 import flet as ft
-from biomolexplorer.catalog import operation_fields, template_names, TITLES
+from biomolexplorer.catalog import operation_fields, template_names, TITLES, CHOICE_LABELS
 from biomolexplorer.retrieval import MODES
 from biomolexplorer.templates import RESOURCE_ROOT, validate_templates
 from biomolexplorer.flow import compatible
 from .localization import verbatim
 from .template_labels import TEMPLATE_FIELDS
+from .dependencies import bind_dependencies
 
-TEMPLATE_LABELS={'target':'Filtros do alvo molecular','bioactivity':'Filtros de atividade biológica','molecules':'Filtros das moléculas ChEMBL','similarmols':'Filtros dos similares ChEMBL','config':'Vina · opções do motor','prepare_complex':'Chimera · preparação do complexo','prepare_ligand':'Chimera · preparação do ligante','prepare_receptor':'Chimera · preparação do receptor','prepare_better_conform':'Chimera · conformação do ligante','prepare_md':'Chimera · preparação adicional','docking':'DOCK6 · docking','grid':'DOCK6 · grade','min':'DOCK6 · minimização','footprint':'DOCK6 · footprint','showbox':'DOCK6 · caixa','INSPH':'DOCK6 · esferas'}
+TEMPLATE_LABELS={'target':'Filtros do alvo molecular','bioactivity':'Filtros de atividade biológica','molecules':'Filtros das moléculas ChEMBL','similarmols':'Filtros dos similares ChEMBL','config':'Vina · opções do motor','prepare_complex':'Separação do complexo','prepare_ligand':'Preparação do ligante','prepare_receptor':'Preparação do receptor','prepare_better_conform':'Conformação do ligante','prepare_md':'Preparação adicional','docking':'DOCK6 · docking','grid':'DOCK6 · grade','min':'DOCK6 · minimização','footprint':'DOCK6 · footprint','showbox':'DOCK6 · caixa','INSPH':'DOCK6 · esferas'}
 LISTS={'organism':['Homo sapiens','Mus musculus','Rattus norvegicus'],
  'PolymerEntityTypeID':['Protein','DNA','RNA','NA-hybrid','Other'],
  'ExperimentalMethodID':['X-RAY DIFFRACTION','SOLUTION NMR','ELECTRON MICROSCOPY','ELECTRON CRYSTALLOGRAPHY','EPR','FIBER DIFFRACTION','FLUORESCENCE TRANSFER','INFRARED SPECTROSCOPY','NEUTRON DIFFRACTION','POWDER DIFFRACTION','SOLID-STATE NMR','SOLUTION SCATTERING','THEORETICAL MODEL']}
@@ -21,14 +22,14 @@ class GuidedForm:
     def __init__(self,ui,stage,assets,writable):
         self.ui,self.stage,self.assets,self.writable=ui,stage,assets,writable
         self.readers={}; self.binding_readers={}; self.direct_path_readers={}; self.template_readers={}
-        self.input_editors={};self.field_controls={};self.conditional_cells={};self.filter_tiles={};self.filter_cells={}
+        self.input_editors={};self.field_controls={};self.conditional_cells={};self.filter_tiles={};self.filter_cells={};self.template_controls={}
         # Consensus uses its Vina input to derive the legacy base_input_path.
         # Do not keep a second, hidden dependency on the previously linked block.
         self.derived_consensus_input=(stage['operation']=='consensus'
             and not stage['parameters'].get('base_input_path')
             and stage.get('bindings',{}).get('base_input_path') in
                 (None,stage.get('bindings',{}).get('base_vina_path')))
-        self.title=ft.TextField(label='Nome do bloco',value=stage['name'],disabled=not writable,data='wide')
+        self.title=ft.TextField(label='Nome do bloco',value=TITLES['prepare_structures'][0] if stage['operation']=='prepare_structures' and stage['name'] in ('Preparar meus complexos','Prepare my complexes') else stage['name'],disabled=not writable,data='wide')
         self.enabled=ft.Switch(label='Incluir este bloco na execução',value=stage.get('enabled',True),disabled=not writable)
         self.controls=[self.title,self.enabled]
         if stage['operation']!='import_results':
@@ -37,7 +38,7 @@ class GuidedForm:
                     ft.DropdownOption(key='individual',text='Processar individualmente'),
                     ft.DropdownOption(key='merge',text='Mesclar arquivos (merge)')])
             self.controls.append(self.processing)
-        if stage['operation'] in ('retrieve_compounds','retrieve_structures','retrieve_zinc'):
+        if stage['operation'] in ('retrieve_compounds','retrieve_pubchem','retrieve_structures','retrieve_zinc'):
             self.controls.append(ft.Text(
                 'Ao concluir cada etapa, selecione no popup os arquivos que seguirão para o próximo bloco.',
                 size=13,color='#64748B'))
@@ -45,13 +46,16 @@ class GuidedForm:
             self.controls.append(ft.Text('Escolha texto, IDs PDB, UniProt, EC ou filtros. Campos preenchidos são combinados; o nome da coleção só organiza a saída.',size=13))
         elif stage['operation']=='retrieve_compounds':
             self.controls.append(ft.Text('Busque alvos para obter bioatividades ou compostos diretamente por nome, IDs, similaridade ou subestrutura. Limpe filtros para ampliar a seleção.',size=13))
+        elif stage['operation']=='retrieve_pubchem':
+            self.controls.append(ft.Text('Informe um SMILES, CID ou nome, envie um CSV de compostos ou conecte uma origem. A saída contém os novos similares PubChem. Conecte ChEMBL e PubChem às próximas etapas para analisar separadamente ou mesclar.',size=13))
         if stage['operation']=='import_results':
-            from .app import KINDS
-            self.add('kind','Tipo de dados',stage['parameters'].get('kind','compounds'),list(KINDS))
+            from .import_files import ImportFiles
             self.add('target','Nome do alvo',stage['parameters'].get('target','MeuAlvo'))
-            checks={a['id']:verbatim(ft.Checkbox(label=a['name'],value=a['id'] in stage['parameters'].get('asset_ids',[]),disabled=not writable),'label') for a in assets}
-            self.controls += [ft.Text('Selecione arquivos na aba Arquivos; depois volte ao pipeline.',size=12),*checks.values()]
-            self.readers['asset_ids']=lambda:[k for k,c in checks.items() if c.value]
+            self.import_files=ImportFiles(self)
+            self.controls.append(self.import_files.control)
+            self.readers['kind']=self.import_files.primary_kind
+            self.readers['asset_ids']=lambda:list(self.import_files.entries)
+            self.readers['asset_types']=self.import_files.asset_types
             return
         from .input_editor import ProvidedResults
         self.provided=ProvidedResults(ui,stage,assets,writable)
@@ -67,7 +71,9 @@ class GuidedForm:
             for k in KINDS:self.readers[k]=lambda k=k:self.fingerprint_choice.value==k
         for field in operation_fields(stage['operation']):
             key=field['name']; value=stage['parameters'].get(key,field['default'])
+            if stage['operation']=='retrieve_zinc' and key=='filename':continue
             if key=='graph_inputs':continue
+            if stage['operation']=='prepare_structures' and key in ('charge_type','preparation_options','receptor_prepared','mol_filename'):continue
             if stage['operation']=='redocking' and key in ('pdb_codes','preparation_pairs','charge_type'):continue
             if stage['operation']=='fingerprints' and key in ('morgan','maccs','pharmacophore'):continue
             if key=='base_input_path' and self.derived_consensus_input:
@@ -78,10 +84,16 @@ class GuidedForm:
                     field=dict(field,label='Arquivo externo de compostos e SMILES · opcional')
                 editor=InputEditor(ui,stage,field,assets,writable)
                 self.input_editors[key]=editor
+                if stage['operation']=='retrieve_pubchem':self.field_controls[key]=editor.control
                 self.controls.append(editor.control)
                 self.direct_path_readers[key]=editor.direct_path
                 self.binding_readers[key]=editor.read
             elif key=='chembl_filters': continue # Resource filters below also cover this parameter.
+            elif stage['operation']=='retrieve_pubchem' and key=='compound_id':
+                control=ft.Dropdown(label=field['label'],value=value or '',options=[],
+                    enable_filter=True,enable_search=True,disabled=not writable,
+                    helper_text='Escolha entre os compostos disponíveis. Novos resultados poderão ser selecionados no popup de entradas.')
+                self.controls.append(control);self.field_controls[key]=control;self.readers[key]=lambda:control.value or ''
             elif key in ('pdb_code','pdb_codes'):
                 self.records(key,field['label'],value)
             elif key=='sizeof_box':
@@ -89,7 +101,24 @@ class GuidedForm:
                 self.controls.append(ft.Row(fields,wrap=True,spacing=24,run_spacing=24)); self.readers[key]=lambda f=fields:[float(c.value) for c in f]
             elif key in LISTS or key=='files':
                 self.list_field(key,field['label'],value,LISTS.get(key,[]))
-            else: self.add(key,'Nome da coleção PDB (opcional)' if stage['operation']=='retrieve_structures' and key=='target' else field['label'],value,field['choices'])
+            elif stage['operation']=='prepare_structures' and key=='pH':self.add(key,'pH de protonação do receptor e ligante',value)
+            else: self.add(key,'Nome da coleção PubChem' if stage['operation']=='retrieve_pubchem' and key=='target' else 'Nome da coleção PDB (opcional)' if stage['operation']=='retrieve_structures' and key=='target' else field['label'],value,field['choices'])
+        if stage['operation']=='prepare_structures':
+            from .preparation_settings import PreparationSettings
+            self.preparation_settings=PreparationSettings(self,stage['parameters'].get('preparation_options'))
+            self.controls.append(ft.Text('Selecione o receptor e uma ou mais fontes de compostos. Receptores do redocking serão reutilizados sem novo preparo.',size=12,data='input'))
+            self.controls.append(self.preparation_settings.control)
+            self.readers['preparation_options']=self.preparation_settings.read
+            editor=self.input_editors['base_input_path']
+            def sync_preparation():
+                selected=[editor.prepared_source(source.value,selector.value) for source,selector,_ in editor.rows if source.value]
+                prepared=bool(selected) and all(selected)
+                self.preparation_settings.receptor_inactive=prepared
+                self.preparation_settings.sync()
+                stage['parameters']['receptor_prepared']=prepared
+            editor.on_change=sync_preparation
+            self.readers['receptor_prepared']=lambda:bool(self.preparation_settings.receptor_inactive)
+            sync_preparation()
         if stage['operation']=='redocking':
             from .redocking_pairs import RedockingPairs
             self.redocking_pairs=RedockingPairs(self)
@@ -105,6 +134,7 @@ class GuidedForm:
                     source.options=editor.source_options()
                     if source.value not in {option.key for option in source.options}:
                         source.value='';selector.value='auto';selector.options=editor.selectors('')
+                self.redocking_pairs.sync_preparation()
                 ui.page.update()
             self.field_controls['prepare_complex'].on_change=redocking_inputs
         if stage['operation']=='fingerprints':
@@ -124,12 +154,17 @@ class GuidedForm:
             self.controls.append(self.graph_notice)
             self.sync_graph_mode()
         for name in template_names(stage['operation']):
-            if stage['operation']=='redocking' and name.startswith('chimera/'):continue
+            if stage['operation'] in ('prepare_structures','redocking') and name.startswith('chimera/'):continue
             self.template(name)
         if stage['operation']=='retrieve_compounds':
             self.field_controls['search_mode'].on_change=self.sync_retrieval
+            self.field_controls['search_mode'].on_select=self.sync_retrieval
             self.field_controls['expand_chembl'].on_change=self.sync_retrieval
             self.sync_retrieval()
+        if stage['operation']=='retrieve_pubchem':
+            for key in ('reference_source','selection_mode'):self.field_controls[key].on_select=self.sync_pubchem
+            self.input_editors['base_input_path'].on_change=self.sync_pubchem
+            self.sync_pubchem()
     def layout(self):
         """Group fields into roomy cards; expansion content has explicit spacing."""
         from .branding import BRAND_BLUE
@@ -142,7 +177,7 @@ class GuidedForm:
                 col=12 if control.data=='wide' or long_label or not isinstance(control,(ft.TextField,ft.Dropdown)) else {'xs':12,'md':6}
                 cells.append(ft.Container(content=control,col=col,padding=ft.Padding.symmetric(vertical=6),visible=control.visible))
                 # Hidden conditional fields also release their space in the form.
-                conditional=('radius','morgan_n_bits') if self.stage['operation']=='fingerprints' else ('max_targets','expand_chembl','similarity_threshold') if self.stage['operation']=='retrieve_compounds' else ()
+                conditional=('radius','morgan_n_bits') if self.stage['operation']=='fingerprints' else ('max_targets','expand_chembl','similarity_threshold') if self.stage['operation']=='retrieve_compounds' else ('base_input_path','input_file','reference_type','reference','selection_mode','compound_id') if self.stage['operation']=='retrieve_pubchem' else ()
                 if control in [self.field_controls.get(k) for k in conditional]:
                     key=next(k for k in conditional if self.field_controls[k] is control)
                     self.conditional_cells[key]=cells[-1]
@@ -178,9 +213,10 @@ class GuidedForm:
             control=ft.Switch(label=label,value=value,disabled=not self.writable); getter=lambda:bool(control.value)
         elif choices:
             from .app import KINDS
-            control=ft.Dropdown(label=label,value=value,options=[ft.DropdownOption(key=str(v),text=MODES.get(v,str(v)) if key=='search_mode' else KINDS.get(v,str(v)) if key=='kind' else str(v)) for v in choices],disabled=not self.writable); getter=lambda:control.value
+            control=ft.Dropdown(label=label,value=value,options=[ft.DropdownOption(key=str(v),text=MODES.get(v,str(v)) if key=='search_mode' else KINDS.get(v,str(v)) if key=='kind' else CHOICE_LABELS.get(key,{}).get(v,str(v))) for v in choices],disabled=not self.writable); getter=lambda:control.value
         else:
             control=ft.TextField(label=label,value='' if value is None else str(value),disabled=not self.writable)
+            if key=='download_workers':control.helper='De 1 a 16; padrão: 4. Use 1 para baixar sequencialmente.'
             if key=='dock6_app_path': control.value=str(self.ui.service.dock6_path or ''); control.read_only=True; control.helper='Configuração da instalação feita pelo administrador.'
             integers={'threshold','pubchem_threshold','pubchem_max_records','max_records','morgan_n_bits','num_modes','exhaustiveness','chunk_size','plot_max_residues','max_targets','similarity_threshold'}
             if key=='radius' and self.stage['operation']=='fingerprints': integers.add('radius')
@@ -202,9 +238,35 @@ class GuidedForm:
             'substructure':'SMILES do fragmento que os compostos devem conter',
         }.get(mode,'Digite o nome ou texto da consulta.')
         for group,tile in self.filter_tiles.items():
-            visible=group=='molecules' or (not direct and (group!='similarmols' or self.field_controls['expand_chembl'].value))
+            visible=group=='molecules' or not direct
             tile.visible=visible
+            tile.disabled=not self.writable or (group=='similarmols' and (direct or not self.field_controls['expand_chembl'].value))
+            for control in self.template_controls.get('crawlers/'+group+'.json',{}).values():
+                control.disabled=tile.disabled
             if group in self.filter_cells:self.filter_cells[group].visible=visible
+        if e:self.ui.page.update()
+
+    def sync_pubchem(self,e=None):
+        manual=self.field_controls['reference_source'].value=='manual'
+        single=self.field_controls['selection_mode'].value=='single'
+        for key,visible in (('base_input_path',not manual),('input_file',False),('reference_type',manual),
+                            ('reference',manual),('selection_mode',not manual),('compound_id',not manual and single)):
+            self.field_controls[key].visible=visible
+            self.field_controls[key].disabled=not self.writable or not visible
+            if key in self.conditional_cells:self.conditional_cells[key].visible=visible
+        choice=self.field_controls['compound_id'];value=choice.value
+        available={}
+        catalog=getattr(self.ui,'pubchem_references',{})
+        editor=self.input_editors['base_input_path']
+        for source,selector,_ in editor.rows:
+            for filename,records in catalog.get(source.value,{}).items():
+                if selector.value in (None,'auto') or filename.endswith('/'+selector.value) or filename==selector.value:
+                    available.update(records)
+        choice.options=[verbatim(ft.DropdownOption(key=k,text=k+' · '+v),'text') for k,v in sorted(available.items())]
+        if value and value not in available:choice.options.append(verbatim(ft.DropdownOption(key=value,text=value),'text'))
+        choice.value=value or ''
+        if not manual and single:self.processing.value='merge'
+        self.processing.disabled=not self.writable or manual or single
         if e:self.ui.page.update()
 
     def sync_fingerprint(self):
@@ -239,8 +301,7 @@ class GuidedForm:
     def records(self,key,label,value):
         multi=key=='pdb_codes' or self.stage['operation']=='docking_vina'
         rows=[]; box=ft.Column()
-        automatic=ft.Checkbox(label='Detectar complexos pelos metadados dos arquivos',value=value is None,disabled=not self.writable or self.stage['operation']=='docking_dock6')
-        if self.stage['operation']=='docking_dock6': automatic.value=False
+        automatic=ft.Checkbox(label='Detectar complexos pelos metadados dos arquivos',value=value is None,disabled=not self.writable)
         def add(record=None):
             record=record or ['', '', '', 'A']; fields=[ft.TextField(label=l,value=str(v),width=w,disabled=not self.writable) for l,v,w in zip(['Código PDB','Ligante','Número do resíduo','Cadeia'],record[:4],[150,120,150,90])]
             fields.append(ft.TextField(label='Resolução (Å, opcional)',value=str(record[4]) if len(record)>4 and record[4] is not None else '',width=170,disabled=not self.writable))
@@ -249,21 +310,26 @@ class GuidedForm:
             row.controls.append(ft.IconButton(icon=ft.Icons.DELETE_OUTLINE,on_click=remove,disabled=not self.writable)); rows.append(fields); box.controls.append(row)
         records=(value if isinstance(value[0],(list,tuple)) else [value]) if value else []
         for record in records: add(record)
-        def append(e): add(); automatic.value=False; self.ui.page.update()
-        self.controls.append(ft.ExpansionTile(title=ft.Text(label),controls=[automatic,box,ft.TextButton('Adicionar complexo',on_click=append,disabled=not self.writable)]))
+        def append(e): add(); self.ui.page.update()
+        append_button=ft.TextButton('Adicionar complexo',on_click=append,disabled=not self.writable)
+        bind_dependencies({'automatic':automatic,'records':box,'append':append_button},
+            {k:lambda:not automatic.value for k in ('records','append')},self.writable,self.ui.page)
+        self.controls.append(ft.ExpansionTile(title=ft.Text(label),controls=[automatic,box,append_button]))
         def read():
             if automatic.value: return None
             parsed=[[f[0].value.strip(),f[1].value.strip(),int(f[2].value),f[3].value.strip()]+([float(f[4].value)] if f[4].value else []) for f in rows]
             return parsed if multi else parsed[0] if parsed else None
         self.readers[key]=read
     def template(self,name):
-        source=self.stage.get('templates',{}).get(name,(RESOURCE_ROOT/name).read_text()); controls=[]
+        source=self.stage.get('templates',{}).get(name,(RESOURCE_ROOT/name).read_text()); controls=[];named_controls={}
+        self.template_controls[name]=named_controls
         if name.endswith('.json'):
             group={'target':'target','bioactivity':'bioactivity','molecules':'molecules','similarmols':'similars'}[name.split('/')[-1][:-5]]
             data=copy.deepcopy(self.stage['parameters'].get('chembl_filters',{}).get(group,json.loads(source))); getters={}
             if group=='target':data.setdefault('organism','')
             if group=='bioactivity':
                 data.setdefault('standard_type__in',[]);data.setdefault('assay_type','')
+            if group in ('molecules','similars'):data.setdefault('molecule_type','')
             for key,value in data.items():
                 if key=='standard_type__in':
                     from .activity_measures import ActivityMeasures
@@ -286,6 +352,15 @@ class GuidedForm:
                     field=ft.Dropdown(label='Tipo de ensaio',value=value or '',helper_text='Classificação do ensaio na ChEMBL.',
                         options=[ft.DropdownOption(key='',text='Qualquer')]+[ft.DropdownOption(key=k,text=k+' - '+label) for k,label in choices],disabled=not self.writable)
                     getter=lambda c=field:c.value or None
+                elif key=='molecule_type':
+                    from .molecule_types import MOLECULE_TYPES
+                    selected=str(value or '').strip().lower()
+                    if selected and selected not in {v.lower() for v in MOLECULE_TYPES}:
+                        raise ValueError('Selecione um tipo de molécula válido da ChEMBL.')
+                    field=ft.Dropdown(label=FILTER_LABELS[key],value=selected,editable=False,
+                        options=[ft.DropdownOption(key='',text='Qualquer')]+[
+                            ft.DropdownOption(key=v.lower(),text=v) for v in MOLECULE_TYPES],disabled=not self.writable)
+                    getter=lambda c=field:c.value or None
                 elif isinstance(value,list) and key=='type__in':
                     suggested=['SINGLE PROTEIN','PROTEIN FAMILY','PROTEIN COMPLEX','CELL-LINE','TISSUE','ORGANISM'] if key=='type__in' else ['Ki','IC50','EC50','Kd']
                     checks=[ft.Checkbox(label=v,value=v in value,disabled=not self.writable,data=v) for v in dict.fromkeys(suggested+value)]
@@ -302,11 +377,14 @@ class GuidedForm:
                     field=ft.Switch(label=FILTER_LABELS.get(key,key),value=value,disabled=not self.writable) if isinstance(value,bool) else ft.TextField(label=FILTER_LABELS.get(key,key),value='' if value is None else str(value),disabled=not self.writable)
                     kind=int if key=='similarity' else float if key in ('molecule_weight','max_value_ref') else type(value) if value is not None else str
                     getter=lambda c=field,k=kind:k(c.value) if c.value not in (None,'') else None
-                controls.append(field); getters[key]=getter
-            def read(data=data,getters=getters):
+                controls.append(field); getters[key]=getter;named_controls[key]=field
+            def read(data=data,getters=getters,fields=named_controls):
                 result=copy.deepcopy(data)
                 for k,g in getters.items():
-                    value=g()
+                    try:value=g()
+                    except (ValueError,TypeError):
+                        if not fields[k].disabled:raise
+                        continue
                     if value is None or value=='' or value==[]: result.pop(k,None)
                     else: result[k]=value
                 return json.dumps(result,indent=2,ensure_ascii=False)
@@ -321,7 +399,7 @@ class GuidedForm:
             for i,line in enumerate(lines):
                 match=re.search(r'\bmethod (gas|am1)\b',line)
                 if match:
-                    c=ft.Dropdown(label='Método de cargas do receptor',value=match.group(1),options=[ft.DropdownOption(key=v,text=v) for v in ('gas','am1')],disabled=not self.writable)
+                    c=ft.Dropdown(label='Método de cargas do ligante' if name.endswith(('prepare_ligand.template','prepare_better_conform.template')) else 'Método de cargas do receptor',value=match.group(1),options=[ft.DropdownOption(key=v,text=v) for v in ('gas','am1')],disabled=not self.writable)
                     controls.append(c); charges[i]=c
             def read_chimera(lines=lines,t=toggles,charges=charges):
                 return ''.join(re.sub(r'\bmethod (gas|am1)\b','method '+charges[i].value,line) if i in charges else line for i,line in enumerate(lines) if not any(i in ids and not c.value for c,ids in t.values()))
@@ -352,13 +430,16 @@ class GuidedForm:
                     try: float(value); numeric=True
                     except ValueError: numeric=False
                     def getter(c=c,numeric=numeric):
-                        if numeric: float(c.value)
+                        if numeric and not c.disabled: float(c.value)
                         if '\n' in c.value or '\r' in c.value: raise ValueError('Use um valor por configuração.')
                         return c.value
-                controls.append(c); readers[i]=('' if positional else key,getter,'' if positional else ' = ' if '=' in line else ' ')
+                controls.append(c);named_controls[key]=c; readers[i]=('' if positional else key,getter,'' if positional else ' = ' if '=' in line else ' ')
+            if name.startswith('dock6/'):
+                self.bind_dock6_dependencies(named_controls)
             def read(lines=lines,readers=readers):
                 result=lines[:]
-                for i,(key,getter,sep) in readers.items(): result[i]=key+sep+getter()+'\n'
+                for i,(key,getter,sep) in readers.items():
+                    result[i]=key+sep+getter()+'\n'
                 return ''.join(result)
             self.template_readers[name]=read
         if controls:
@@ -366,6 +447,40 @@ class GuidedForm:
             self.controls.append(tile)
             if name.startswith('crawlers/'):
                 self.filter_tiles[name.split('/')[-1].split('.')[0]]=tile
+    def bind_dock6_dependencies(self,controls):
+        # Dependencies follow the DOCK6 score and optimization parameters:
+        # https://dock.compbio.ucsf.edu/DOCK_6/dock6_manual.htm
+        def enabled(*keys):
+            return any(key in controls and controls[key].value for key in keys)
+        groups={
+            ('use_internal_energy',):('internal_energy_rep_exp','internal_energy_cutoff'),
+            ('pruning_use_clustering',):('pruning_clustering_cutoff',),
+            ('calculate_rmsd',):('use_rmsd_reference_mol',),
+            ('orient_ligand',):('automated_matching','max_orientations','critical_points','chemical_matching','use_ligand_spheres'),
+            ('score_molecules',):tuple(k for k in controls if k.endswith(('_primary','_secondary'))),
+            ('minimize_ligand',):('minimize_anchor','minimize_flexible_growth'),
+            ('minimize_flexible_growth',):('minimize_flexible_growth_ramp',),
+            ('bump_filter',):('bump_overlap',),
+            ('rank_ligands',):('score_threshold',),
+            ('compute_grids',):('grid_spacing','contact_score','energy_score','bump_filter'),
+            ('energy_score',):('energy_cutoff_distance','attractive_exponent','repulsive_exponent','distance_dielectric','dielectric_factor'),
+        }
+        rules={}
+        for parents,children in groups.items():
+            for key in children:rules.setdefault(key,[]).append(parents)
+        for key in controls:
+            if (key.startswith('grid_score_') and not key.endswith(('_primary','_secondary'))) or key=='grid_lig_efficiency':
+                rules[key]=[('score_molecules',),('grid_score_primary','grid_score_secondary')]
+            elif key.startswith('fps_score_'):
+                rules[key]=[('score_molecules',),('footprint_similarity_score_primary','footprint_similarity_score_secondary')]
+            elif key.startswith('simplex_') or key=='use_advanced_simplex_parameters':
+                rules[key]=[('minimize_ligand',)]
+        # Include ancestor switches so nested options stay blocked together.
+        def active(key,visited=()):
+            if key in visited:return False
+            return all(any(enabled(parent) and active(parent,visited+(key,)) for parent in parents)
+                       for parents in rules.get(key,[]))
+        bind_dependencies(controls,{key:lambda key=key:active(key) for key in rules},self.writable,self.ui.page)
     def read(self):
         result=copy.deepcopy(self.stage); result['name']=self.title.value or TITLES[result['operation']][0]; result['enabled']=bool(self.enabled.value)
         if 'process_all' in result:result['process_all']=False
@@ -388,6 +503,14 @@ class GuidedForm:
         if self.derived_consensus_input:
             result['parameters'].pop('base_input_path',None)
             result['bindings'].pop('base_input_path',None)
+        if result['operation']=='retrieve_compounds':
+            result['parameters']['include_pubchem']=False
+            for key in ('pubchem_threshold','pubchem_max_records'):result['parameters'].pop(key,None)
+        if result['operation']=='retrieve_pubchem':
+            if result['parameters'].get('reference_source')=='manual':
+                result['bindings'].pop('base_input_path',None)
+                for key in ('base_input_path','input_file','compound_id'):result['parameters'].pop(key,None)
+            elif result['parameters'].get('selection_mode')=='single':result['input_processing']='merge'
         for name,getter in self.template_readers.items():
             value=getter()
             original=(RESOURCE_ROOT/name).read_text()
@@ -406,6 +529,7 @@ class GuidedForm:
             result['parameters']['pdb_codes']=records
             result['parameters']['preparation_pairs']=settings
             result['parameters'].pop('charge_type',None)
+        if hasattr(self,'preparation_settings'):result['parameters'].pop('charge_type',None)
         validate_templates(result.get('templates',{}))
         if result['operation']=='similarity':
             from biomolexplorer.fingerprint_selection import generated_kind

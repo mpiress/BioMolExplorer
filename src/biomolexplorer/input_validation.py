@@ -6,7 +6,7 @@ import math
 import re
 from pathlib import Path
 
-ALIASES={'smiles':'canonical_smiles','Canonical_SMILES':'canonical_smiles','name':'molecule_chembl_id'}
+ALIASES={'smiles':'canonical_smiles','smile':'canonical_smiles','Canonical_SMILES':'canonical_smiles','name':'molecule_chembl_id','zinc_id':'molecule_chembl_id'}
 EXPECTED={
     'compounds':'CSV UTF-8 com canonical_smiles e molecule_chembl_id. Também aceitamos smiles e name; códigos ausentes são gerados. Exemplo: molecule_chembl_id,canonical_smiles\nMOL1,CCO',
     'graph_compounds':'CSV UTF-8 com molecule_chembl_id e canonical_smiles preenchidos. Também aceitamos name e smiles. Use os mesmos códigos de source/target; nós isolados podem ter códigos adicionais. Exemplo: molecule_chembl_id,canonical_smiles\nMOL1,CCO',
@@ -19,7 +19,8 @@ EXPECTED={
     'dock6':'Resultado *_scored.mol2 com as seções @<TRIPOS>MOLECULE e @<TRIPOS>ATOM e um Grid_Score numérico.',
     'scores':'CSV com um código de composto e colunas numéricas de score (vina/dock6 ou score).',
     'visualization':'PNG/JPEG ou arquivo *.biomol-view.json exportado pela plataforma.',
-    'other':'Arquivo de dados. Para recuperar ZINC, forneça um .txt com um endereço HTTPS autorizado por linha.',
+    'other':'Arquivo de dados gerais. Para listas de download ZINC, escolha o tipo Lista de downloads ZINC.',
+    'zinc_urls':'Lista de downloads ZINC (TXT/URI ou script exportado), com links SMI/MOL2, inclusive .gz ou .bz2. Links HTTP oficiais são convertidos para HTTPS; comandos não são executados.',
 }
 
 
@@ -53,6 +54,10 @@ def validate_file(path,kind,operation=None,validate_rows=True):
             raise ValueError('O arquivo está indisponível.')
         if kind=='other':
             return
+        if kind=='zinc_urls':
+            from .zinc_retrieval import read_download_list
+            read_download_list(path)
+            return
         if kind=='visualization':
             if path.name.endswith('.biomol-view.json'):
                 from .visualizations import load_view
@@ -60,6 +65,11 @@ def validate_file(path,kind,operation=None,validate_rows=True):
             else:
                 from PIL import Image
                 with Image.open(path) as image:image.verify()
+            return
+        if kind in ('vina','dock6') and path.suffix=='.csv':
+            if not {'molecule_chembl_id','canonical_smiles','engine','score','conformer_file'}<=columns(path):
+                raise ValueError('Tabela de docking incompleta.')
+            validate_file(path,'scores',operation,validate_rows)
             return
         if kind in ('compounds','fingerprints','similarity','scores'):
             if path.suffix.lower()!='.csv':raise ValueError('Selecione um arquivo CSV.')

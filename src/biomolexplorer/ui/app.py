@@ -33,7 +33,8 @@ STATUS = {'queued':'Aguardando', 'running':'Executando', 'succeeded':'Concluído
           'awaiting_input':'Aguardando seleção de arquivos'}
 KINDS = {'compounds':'Compostos (CSV)', 'structures':'Complexos PDB', 'prepared_structures':'Receptores preparados',
          'fingerprints':'Fingerprints', 'similarity':'Relações de similaridade', 'vina':'Resultados Vina',
-         'dock6':'Resultados DOCK6', 'scores':'Scores consolidados (CSV)', 'visualization':'Gráficos e visualizações', 'other':'Outros arquivos'}
+         'dock6':'Resultados DOCK6', 'scores':'Scores consolidados (CSV)', 'visualization':'Gráficos e visualizações',
+         'zinc_urls':'Lista de downloads ZINC (TXT/URI/SH)', 'other':'Outros arquivos'}
 
 
 def text(value, size=14, color=INK, weight=None):
@@ -601,9 +602,36 @@ class WorkspaceUI(ProjectTools):
             if source['operation']=='import_results' or source.get('provided_results'):
                 params=source.get('provided_results') or source['parameters']
                 self.artifact_choices.setdefault(source['id'],set()).update(a['name'] for a in assets if a['id'] in params.get('asset_ids',[]))
-            elif source['operation']=='retrieve_compounds':
+            elif source['operation'] in ('retrieve_compounds','retrieve_pubchem','retrieve_zinc'):
                 self.artifact_choices.setdefault(source['id'],set()).add('compounds.csv')
         self.redocking_records={}
+        if draft['operation'] in ('retrieve_pubchem','docking_vina','docking_dock6'):
+            from biomolexplorer.pubchem_retrieval import reference_choices
+            references={};seen=set()
+            if draft['operation']=='retrieve_pubchem':self.pubchem_references=references
+            else:self.docking_compounds=references
+            for run in runs:
+                for item in run['stages']:
+                    if item['status']!='succeeded' or item['id'] in seen:continue
+                    seen.add(item['id']);records={}
+                    for filename in item.get('artifacts',[]):
+                        path=self.store.scoped_path(project['id'],filename)
+                        if path.suffix.lower()=='.csv':records[str(path)]=await self.call(reference_choices,[path])
+                    references['stage:'+item['id']]=records
+            for asset in assets:
+                if asset['kind'] not in ('compounds','other'):continue
+                path=await self.call(self.store.asset_path,token,project['id'],asset['id'])
+                references['asset:'+asset['id']]={str(path):await self.call(reference_choices,[path])}
+            for source in project['pipeline']:
+                if source['operation']=='import_results' or source.get('provided_results'):
+                    params=source.get('provided_results') or source['parameters']
+                    references['stage:'+source['id']]={p:r for a in params.get('asset_ids',[])
+                        for p,r in references.get('asset:'+a,{}).items()}
+            direct=draft['parameters'].get('base_input_path' if draft['operation']=='retrieve_pubchem' else 'base_selected_mols')
+            if direct:
+                folder=self.store.scoped_path(project['id'],direct)
+                references['configured-path']={str(p):await self.call(reference_choices,[p]) for p in folder.glob('*.csv')}
+            if self.token!=token or self.current is not project:return
         if draft['operation']=='redocking':
             from biomolexplorer.redocking_config import metadata_records
             seen=set()
@@ -666,7 +694,9 @@ class WorkspaceUI(ProjectTools):
                 spec=OPERATIONS[updated['operation']]
                 parameters={key:'pendente' for key in spec.required}
                 parameters.update(updated['parameters'])
-                validate_operation(updated['operation'],parameters)
+                parameters.update({key:'pending-input' for key in updated.get('bindings',{})})
+                validate_operation(updated['operation'],parameters,
+                                   defer_pubchem_selection=bool(updated.get('bindings',{})))
             candidate=[updated if s['id']==stage_id else s for s in self.current['pipeline']]
             validate_pipeline(candidate)
             if waiting_run_id:
@@ -700,15 +730,16 @@ class WorkspaceUI(ProjectTools):
     def auto_bind(self,stage,previous):
         operation=stage['operation']
         wanted={
+            'retrieve_pubchem': {'base_input_path':['retrieve_compounds','admet','graphs','import_results']},
             'expand_similar_compounds': {'base_input_path':['retrieve_compounds']},
-            'admet': {'base_input_path':['graphs','retrieve_compounds','import_results']},
-            'fingerprints': {'base_input_path':['admet','retrieve_compounds','import_results']},
+            'admet': {'base_input_path':['graphs','retrieve_compounds','retrieve_pubchem','import_results']},
+            'fingerprints': {'base_input_path':['admet','retrieve_compounds','retrieve_pubchem','import_results']},
             'similarity': {'base_input_path':['fingerprints','import_results']},
             'graphs': {'base_input_path':['retrieve_compounds','import_results'], 'similarity_path':['similarity']},
             'prepare_structures': {'base_input_path':['import_results','retrieve_structures']},
             'redocking': {'base_input_path':['retrieve_structures','import_results']},
-            'docking_vina': {'base_input_path':['prepare_structures','redocking','import_results'], 'base_selected_mols':['admet','graphs','retrieve_compounds']},
-            'docking_dock6': {'base_input_path':['prepare_structures','redocking','import_results'], 'base_selected_mols':['admet','graphs','retrieve_compounds'], 'base_vina_path':['docking_vina']},
+            'docking_vina': {'base_input_path':['prepare_structures','redocking','import_results'], 'base_selected_mols':['admet','graphs','retrieve_compounds','retrieve_pubchem']},
+            'docking_dock6': {'base_input_path':['prepare_structures','redocking','import_results'], 'base_selected_mols':['admet','graphs','retrieve_compounds','retrieve_pubchem'], 'base_vina_path':['docking_vina']},
             'consensus': {'base_input_path':['docking_vina'], 'base_vina_path':['docking_vina','import_results'], 'base_dock6_path':['docking_dock6','import_results']},
         }.get(operation,{})
         for field,candidates in wanted.items():
@@ -717,15 +748,16 @@ class WorkspaceUI(ProjectTools):
                     return False
                 if s['operation']!='import_results':
                     return True
-                kind=s['parameters'].get('kind')
-                if field=='base_selected_mols' or operation in ('admet','fingerprints','graphs'):
-                    return kind=='compounds'
+                from biomolexplorer.flow import output_types
+                kinds=output_types(s)
+                if field=='base_selected_mols' or operation in ('retrieve_pubchem','admet','fingerprints','graphs'):
+                    return 'compounds' in kinds
                 if field=='base_vina_path':
-                    return kind=='vina'
+                    return 'vina' in kinds
                 if field=='base_dock6_path':
-                    return kind=='dock6'
+                    return 'dock6' in kinds
                 if operation in ('prepare_structures','redocking','docking_vina','docking_dock6'):
-                    return kind in ('structures','prepared_structures')
+                    return bool(kinds & {'structures','prepared_structures'})
                 return True
             source=next((s for s in reversed(previous) if compatible(s)),None)
             if source:
@@ -747,6 +779,10 @@ class WorkspaceUI(ProjectTools):
                 if operation=='import_results' and choice.value=='Meus PDBs → preparação':
                     stage['parameters']['kind']='structures'
                 self.auto_bind(stage,stages)
+                if choice.value=='ChEMBL + PubChem → ADMET' and operation=='admet':
+                    stage['bindings']['base_input_path']={'sources':[{'stage':s['id'],'selector':'auto'}
+                        for s in stages if s['operation'] in ('retrieve_compounds','retrieve_pubchem')]}
+                    stage['input_processing']='merge'
                 stages.append(stage)
             from biomolexplorer.flow import arrange
             self.current['pipeline']+=stages
@@ -1037,9 +1073,15 @@ class WorkspaceUI(ProjectTools):
         key=self.structure_viewer.issue(self.token,project_id,path,getattr(self,'language','pt'))
         return self.structure_viewer.url(key,web=self.page.web,page_url=self.page.url if self.page.web else None)
 
+    def compound_view_url(self,project_id,smiles,name,token):
+        from biomolexplorer.pdb_view import StructureViewers
+        if not getattr(self,'structure_viewer',None):self.structure_viewer=StructureViewers(self.store)
+        key=self.structure_viewer.issue_compound(token,project_id,smiles,name,getattr(self,'language','pt'))
+        return self.structure_viewer.url(key,web=self.page.web,page_url=self.page.url if self.page.web else None)
+
     async def preview_artifact(self,project_id,path):
         token = self.token
-        if Path(path).suffix.lower() in ('.pdb','.pdbqt','.mol2'):
+        if Path(path).suffix.lower() in ('.pdb','.pdbqt','.mol2','.sdf'):
             url=await self.call(self.pdb_view_url,project_id,path)
             if self.token!=token or not self.current or self.current['id']!=project_id:return
             await ft.UrlLauncher().launch_url(url,mode=ft.LaunchMode.EXTERNAL_APPLICATION,web_only_window_name='_blank')
@@ -1122,7 +1164,22 @@ class WorkspaceUI(ProjectTools):
             if stage['operation']!='retrieve_structures':return []
             results=StageResults(self,run['project_id'],run_id,stage,True)
             return PDBActions(results,True).actions({'path':str(path),'name':path.name})
-        form=FileSelection(run,pending,assets,state=drafts.get(key),file_actions=file_actions)
+        compound_references=None
+        if pending['configuration']['operation'] in ('retrieve_pubchem','docking_vina','docking_dock6'):
+            from biomolexplorer.pubchem_retrieval import reference_choices
+            compound_references={}
+            for item in run['stages']:
+                if item['status']!='succeeded':continue
+                for filename in item.get('artifacts',[]):
+                    path=self.store.scoped_path(project['id'],filename)
+                    if path.suffix.lower()=='.csv':compound_references[str(path)]=await self.call(reference_choices,[path])
+            for asset in assets:
+                if asset['kind'] not in ('compounds','other'):continue
+                path=await self.call(self.store.asset_path,token,project['id'],asset['id'])
+                compound_references['asset:'+asset['id']]=await self.call(reference_choices,[path])
+            if self.token!=token or self.current is not project:return
+        form=FileSelection(run,pending,assets,state=drafts.get(key),file_actions=file_actions,
+                           compound_references=compound_references,page=self.page)
         inactive=False
         def remember():drafts[key]=form.state()
         def dismiss(e=None):
@@ -1149,6 +1206,8 @@ class WorkspaceUI(ProjectTools):
                 if stage['id']==pending['id']:
                     stage['bindings']=copy.deepcopy(updated['bindings'])
                     stage['input_processing']=updated.get('input_processing','individual')
+                    if stage['operation']=='retrieve_pubchem':
+                        for field in ('selection_mode','compound_id'):stage['parameters'][field]=updated['parameters'].get(field,'')
                     self.dirty=True
                     break
             await self.save_draft(silent=True)

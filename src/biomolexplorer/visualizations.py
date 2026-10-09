@@ -252,7 +252,7 @@ def molecule_image(smiles):
     return output.getvalue()
 
 
-def molecule_conformer(smiles):
+def _conformer_molecule(smiles):
     """Generate a reproducible local 3D conformer; this is not a docking pose."""
     from rdkit import Chem
     from rdkit.Chem import AllChem
@@ -266,6 +266,18 @@ def molecule_conformer(smiles):
         raise ValueError('Não foi possível gerar um conformero 3D para este SMILES. A estrutura 2D continua disponível.')
     if AllChem.UFFHasAllMoleculeParams(molecule):
         AllChem.UFFOptimizeMolecule(molecule,maxIters=200)
+    return molecule
+
+
+def molecule_sdf(smiles):
+    """Preserve coordinates, elements and bond orders for the shared 3D viewer."""
+    from rdkit import Chem
+    return Chem.MolToMolBlock(_conformer_molecule(smiles))+'\n$$$$\n'
+
+
+def molecule_conformer(smiles):
+    """Return coordinates and bonds for local molecular analyses."""
+    molecule=_conformer_molecule(smiles)
     conformer=molecule.GetConformer()
     return {'atoms':[{'element':atom.GetSymbol(),'x':float(conformer.GetAtomPosition(atom.GetIdx()).x),
         'y':float(conformer.GetAtomPosition(atom.GetIdx()).y),'z':float(conformer.GetAtomPosition(atom.GetIdx()).z)} for atom in molecule.GetAtoms()],

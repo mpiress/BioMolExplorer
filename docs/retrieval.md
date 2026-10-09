@@ -83,7 +83,7 @@ A saída consolidada continua em `compounds/<coleção>/compounds.csv`, com `mol
 
 **Expandir similares** continua aceitando downloads ChEMBL ou uma tabela curada escolhida pelo usuário. A expansão PubChem conserva limiar/máximo por referência, cache, controle de frequência, repetição de falhas e exportação de relações. Compostos adicionais passam pela validação e deduplicação da consolidação. Eles também não constituem evidência de atividade no alvo.
 
-**Recuperar ZINC** continua recebendo um arquivo de URLs. O parser agora tolera espaços repetidos/tabs e verifica duas colunas SMILES/identificador nas tabelas recebidas; erros de formato deixam de produzir colunas desalinhadas silenciosamente. Retentativas e execução de uma URL por vez continuam no fluxo. Para tabelas locais já disponíveis, use **Importar meus arquivos**, sem downloads obrigatórios.
+**Recuperar ZINC** recebe listas de downloads TXT/URI e scripts exportados pelas tranches. Consulte [Tranches ZINC 2D e 3D](#tranches-zinc-2d-e-3d) para entradas, formatos e saídas padronizadas.
 
 ## Exemplos de backend
 
@@ -158,3 +158,26 @@ PYTHONPATH=src python scripts/validate_pdb_viewer.py --chrome /usr/bin/google-ch
 ```
 
 O script usa apenas um servidor temporário em loopback e um perfil de navegador temporário, confirma rotação, zoom, representações e PNG e recusa chamadas a serviços externos. A captura visual padrão fica em `/tmp/biomol-pdb-modern.png`; `--screenshot` permite outro destino.
+
+
+## PubChem como bloco independente
+
+**Recuperar ChEMBL** e **Recuperar PubChem** são blocos separados na interface. PubChem aceita referência manual por SMILES, CID ou nome, ou compostos conectados/enviados por CSV. Com uma tabela, escolha todas as referências ou um código específico. O limiar padrão é 75% e o limite padrão é 1.000 similares por referência. A saída contém somente novos similares, sem repetir as referências; preserva códigos `PUBCHEM<CID>` e SMILES. Conecte essa saída diretamente a Vina ou DOCK6, a ADMET ou a fingerprints. A operação backend é `retrieve_pubchem`; a API legada ChEMBL ainda aceita ampliação integrada, mas essa opção não aparece no bloco ChEMBL da interface.
+
+## Tranches ZINC 2D e 3D
+
+No navegador de [tranches ZINC20](https://zinc20.docking.org/tranches/home/), selecione 2D/SMI ou 3D/MOL2 e exporte a lista de downloads. O bloco aceita listas TXT/URI/URLS e arquivos de comandos cURL, wget ou PowerShell. São extraídos somente os links; os comandos não são executados. Links HTTP dos servidores oficiais são convertidos para HTTPS, inclusive nos redirecionamentos. Os formatos aceitos são `.smi`, `.mol2`, `.smi.gz`, `.mol2.gz` e as versões `.bz2`.
+
+Abra **Recuperar ZINC**, use **Enviar meus arquivos** em **Lista de downloads das tranches ZINC** e escolha o arquivo exportado. Alternativamente, importe-o com o tipo **Lista de downloads ZINC** e conecte a importação. Selecione uma ou mais listas; merge reúne seus links sem repetições. Um [exemplo pequeno](../examples/zinc_tranches.uri) está disponível para conferir o fluxo. A distribuição [2D oficial](https://cache.docking.org/2D/) descreve os arquivos SMI, e o [guia oficial de screening](https://wiki.docking.org/index.php?title=ZINC15:examples:screening) descreve as exportações 3D comprimidas.
+
+| Saída | Conteúdo e uso |
+| --- | --- |
+| `compounds.csv` | `molecule_chembl_id` com código ZINC, `canonical_smiles`, `source`, `source_url`, `structure_format`, `conformer_file` e `conformer_origin` |
+| `Conformers/<ZINC>.mol2` | Estrutura 3D original, preservando coordenadas, tipos atômicos e cargas; acompanha a tabela |
+| `retrieval_report.json` | URLs, formato, número de registros/compostos, duplicatas e SHA-256 de cada download |
+
+Em **Downloads simultâneos**, escolha de 1 a 16 threads (padrão: 4). Use 1 para execução sequencial; aumente conforme a conexão e a capacidade dos servidores. O ganho depende da rede e dos limites do ZINC. Cada download mantém as validações de endereço e redirecionamento e as tentativas automáticas para falhas HTTP temporárias. O número de arquivos baixados antecipadamente é limitado às threads configuradas; os arquivos temporários são removidos após o processamento. A consolidação segue a ordem da lista, preservando a deduplicação e a escolha do primeiro conformero. `retrieval_report.json` registra o número de downloads simultâneos efetivamente usado.
+
+A leitura SMI aceita cabeçalho opcional, espaços e tabs. Um identificador numérico recebe o prefixo ZINC; códigos ZINC existentes são preservados. Os blocos de um MOL2 com várias moléculas são separados por código. Duplicatas idênticas são reunidas; se há 2D e 3D para o mesmo código, a conformação 3D acompanha o registro. O primeiro conformero válido é mantido. Códigos com estruturas divergentes, SMILES inválidos, arquivos vazios e formatos incompatíveis interrompem a etapa.
+
+Conecte `compounds.csv` a ADMET, fingerprints, similaridade/grafos por seu fluxo habitual, **Preparar para docking**, Vina ou DOCK6. Em 2D, o preparo gera uma conformação; em 3D, parte do MOL2 fornecido. O manifesto marca as estruturas 3D como conformações de biblioteca (`conformer_origin=library`), para posicioná-las no centro do sítio ao preparar a entrada DOCK6. Poses já calculadas conservam seu posicionamento. Não se aplica o tipo **Resultados DOCK6** ao MOL2 da biblioteca, pois ele ainda não contém scores de docking. Mantenha a tabela e os arquivos referenciados no mesmo conjunto ao exportar/importar resultados.

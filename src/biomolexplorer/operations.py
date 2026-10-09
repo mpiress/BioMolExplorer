@@ -8,6 +8,8 @@ from .contracts import OperationResult, OperationSpec
 from .paths import resolve_path
 
 OPERATIONS = {
+    'retrieve_pubchem': OperationSpec('biomolexplorer.pubchem_retrieval','retrieve_pubchem',(),
+        ('target','reference_source','reference_type','reference','selection_mode','compound_id','threshold','max_records','base_input_path','input_file')),
     'retrieve_compounds': OperationSpec('wrappers.crawlers', 'retrieve_compounds',
         ('search_term',), ('include_pubchem', 'pubchem_threshold', 'pubchem_max_records', 'chembl_filters', 'search_mode', 'max_targets', 'max_records', 'expand_chembl', 'similarity_threshold')),
     'expand_similar_compounds': OperationSpec('wrappers.crawlers', 'expand_similar_compounds',
@@ -16,9 +18,9 @@ OPERATIONS = {
         ('target', 'pdb_query', 'pdb_ids', 'uniprot_ids', 'ligand_ids', 'max_records', 'pdb_ec', 'organism', 'PolymerEntityTypeID', 'ExperimentalMethodID', 'max_resolution', 'must_have_ligand'),
         {'PolymerEntityTypeID': 'crawlers.complex:PolymerEntityType',
          'ExperimentalMethodID': 'crawlers.complex:ExperimentalMethod'}),
-    'retrieve_zinc': OperationSpec('wrappers.crawlers', 'load_zinc', ('filename', 'base_input_path'), ('verbose',)),
+    'retrieve_zinc': OperationSpec('wrappers.crawlers', 'load_zinc', ('base_input_path',), ('filename','verbose','download_workers')),
     'prepare_structures': OperationSpec('wrappers.redocking', 'prepare_structures', ('base_input_path', 'target'),
-        ('pdb_codes', 'pH', 'charge_type')),
+        ('pdb_codes', 'pH', 'charge_type', 'preparation_options', 'base_selected_mols', 'mol_filename', 'receptor_prepared', 'docking_engines')),
     'admet': OperationSpec('wrappers.admet', 'ADMETWrapper', ('base_input_path',), ('input_file', 'verbose')),
     'fingerprints': OperationSpec('wrappers.molecular_analyzer', 'generate_fingerprints',
         ('base_input_path',), ('morgan_n_bits', 'radius', 'files', 'morgan', 'maccs', 'pharmacophore', 'chunk_size')),
@@ -34,14 +36,14 @@ OPERATIONS = {
         ('base_input_path', 'target', 'base_selected_mols', 'mol_filename'),
         ('pdb_code', 'pH', 'sizeof_box', 'exhaustiveness', 'num_modes')),
     'docking_dock6': OperationSpec('wrappers.docking', 'perform_docking_dock6',
-        ('base_input_path', 'target', 'base_selected_mols', 'dock6_app_path', 'charge_type', 'mol_filename', 'pdb_code', 'base_vina_path'),
-        ('density', 'radius', 'distance', 'conformer_search_type', 'plot_max_residues')),
+        ('base_input_path', 'target', 'base_selected_mols', 'dock6_app_path', 'charge_type', 'mol_filename'),
+        ('pdb_code', 'base_vina_path','density', 'radius', 'distance', 'conformer_search_type', 'plot_max_residues')),
     'consensus': OperationSpec('wrappers.docking', 'generate_consensus', ('base_input_path', 'target'),
         ('repulsion_weight', 'base_vina_path', 'base_dock6_path')),
 }
 
 
-def validate_operation(operation, parameters, *, defer_redocking_selection=False):
+def validate_operation(operation, parameters, *, defer_redocking_selection=False, defer_pubchem_selection=False):
     if operation not in OPERATIONS:
         raise ValueError(f'Unknown operation: {operation}')
     if not isinstance(parameters, dict):
@@ -54,6 +56,9 @@ def validate_operation(operation, parameters, *, defer_redocking_selection=False
     for name in spec.required:
         if parameters[name] is None or parameters[name] == '':
             raise ValueError(f'{name} cannot be empty')
+    if operation=='retrieve_zinc':
+        from .zinc_retrieval import validate_download_workers
+        validate_download_workers(parameters.get('download_workers',4))
     for name in ('search_term', 'target'):
         if name in parameters:
             value = parameters[name]
@@ -87,6 +92,21 @@ def validate_operation(operation, parameters, *, defer_redocking_selection=False
         threshold = parameters.get('similarity_threshold', 70)
         if type(threshold) is not int or not 1 <= threshold <= 100:
             raise ValueError('similarity_threshold deve ser inteiro entre 1 e 100.')
+    if operation=='retrieve_pubchem':
+        source=parameters.get('reference_source','compounds')
+        if source not in ('compounds','manual'):raise ValueError('Escolha uma origem válida para as referências PubChem.')
+        if parameters.get('reference_type','smiles') not in ('smiles','cid','name'):raise ValueError('Escolha SMILES, CID ou nome para a referência PubChem.')
+        if parameters.get('selection_mode','all') not in ('all','single'):raise ValueError('Selecione todas as referências ou um composto específico.')
+        if source=='manual':
+            value=parameters.get('reference','')
+            if not isinstance(value,str) or not value.strip() or any(c in value for c in ('\x00','\n','\r')):
+                raise ValueError('Informe um SMILES, CID ou nome para a busca PubChem.')
+            if parameters.get('reference_type')=='cid' and (not value.strip().isdecimal() or int(value.strip())<1):
+                raise ValueError('Informe um CID PubChem inteiro positivo.')
+        elif not defer_pubchem_selection:
+            if not parameters.get('base_input_path'):raise ValueError('Conecte compostos ou envie um arquivo CSV para a busca PubChem.')
+            if parameters.get('selection_mode')=='single' and not parameters.get('compound_id'):
+                raise ValueError('Selecione um composto de referência para a busca PubChem.')
     if operation == 'retrieve_structures':
         from .retrieval import identifiers
         for key, kind in (('pdb_ids','pdb'), ('uniprot_ids','uniprot'), ('ligand_ids','ligand')):
@@ -99,6 +119,11 @@ def validate_operation(operation, parameters, *, defer_redocking_selection=False
     if operation == 'redocking' and not (defer_redocking_selection and not parameters.get('pdb_codes')):
         from .redocking_config import validate_pairs
         validate_pairs(parameters.get('pdb_codes'), parameters.get('preparation_pairs') or {})
+    if operation=='prepare_structures' and parameters.get('docking_engines','both') not in ('vina','dock6','both'):
+        raise ValueError('Selecione Vina, DOCK6 ou ambos para a saída de preparação.')
+    if operation=='prepare_structures' and 'preparation_options' in parameters:
+        from .redocking_config import validate_preparation_settings
+        validate_preparation_settings(parameters['preparation_options'])
     if 'chembl_filters' in parameters:
         filters = parameters['chembl_filters']
         if not isinstance(filters, dict) or filters.keys() - {'target', 'bioactivity', 'molecules', 'similars'}:
@@ -193,6 +218,6 @@ def _execute_operation(operation, parameters, output_path):
             result = result.run_pipeline()
     artifacts = [str(p) for p in sorted(output.rglob('*')) if p.is_file()
                  and 'cache' not in p.parts and '.quality-inputs' not in p.parts
-                 and p.suffix in ('.csv', '.png', '.json', '.pdb', '.pdbqt', '.mol2')]
-    details = {'rows': len(result)} if hasattr(result, 'columns') else {}
+                 and p.suffix in ('.csv', '.png', '.json', '.pdb', '.pdbqt', '.mol2', '.sdf')]
+    details = {'rows': len(result)} if hasattr(result, 'columns') else result if isinstance(result,dict) else {}
     return OperationResult(operation, artifacts, details)

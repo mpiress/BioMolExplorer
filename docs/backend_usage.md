@@ -108,12 +108,12 @@ Consulte `biomolexplorer.operations.OPERATIONS` para os parâmetros completos.
 | `retrieve_compounds` | `search_term`, opções PubChem e filtros ChEMBL | Dados por fonte e `compounds/<alvo>/compounds.csv` |
 | `expand_similar_compounds` | `search_term`, `base_input_path` contendo `ChEMBL/molecules` e `ChEMBL/similars` | Compostos novos, relações e conjunto consolidado |
 | `retrieve_structures` | Texto/IDs/UniProt/ligantes ou filtros; `target` opcional | PDBs, `pdb_codes.csv`, relatório |
-| `retrieve_zinc` | `filename`, `base_input_path` contendo o arquivo de URIs | CSV ZINC |
+| `retrieve_zinc` | `base_input_path`, `filename` do arquivo de tranches | `compounds.csv`, MOL2 individuais e relatório |
 | `admet` | `base_input_path`, opcional `input_file` | CSVs de avaliação, subconjuntos e figura |
 | `fingerprints` | `base_input_path`, algoritmos, `chunk_size` | CSVs de fingerprints |
 | `similarity` | `base_input_path` dos fingerprints, métrica, limiar e `approximate` | CSVs de arestas na subpasta `Similarity` |
 | `graphs` | `similarity_path`; `base_input_path` opcional dos compostos; opções MCS | Grafos/MCC independentes, fragmentos e CSVs |
-| `prepare_structures` | PDBs próprios, `target`, registros PDB, pH e cargas | Estruturas preparadas, centros e `pdb_codes.csv` |
+| `prepare_structures` | Receptor PDB bruto ou preparado, compostos, `target`, registros PDB e opções por papel | Receptores, centros, `pdb_codes.csv` e candidatos nos formatos selecionados |
 | `redocking` | Diretório PDB, `target`, parâmetros de preparação | Cópias de trabalho, resultados Vina e RMSD |
 | `docking_vina` | Complexos preparados, compostos selecionados, `mol_filename` | PDBQT e resultados Vina |
 | `docking_dock6` | Complexos preparados, compostos, `base_vina_path`, `pdb_code`, instalação DOCK6 | Conformações, scores e footprints |
@@ -236,3 +236,55 @@ exija código, SMILES, TPSA e WLOGP. Consulte [projetos e versões](projects.md)
 Consulte [recuperação da informação](retrieval.md) para os modos ChEMBL `search_mode`, exemplos sem alvo/EC obrigatório, limites, filtros e relatórios. Os nomes das operações e contratos CSV das etapas seguintes permanecem disponíveis.
 
 Consulte [Logs e diagnóstico](logging.md) para o formato comum, contexto por execução, códigos de falha, resumo do job e o comando `python -m biomolexplorer.log_report`.
+
+
+## Contrato interoperável de docking
+
+**Docking com Vina** e **Docking com DOCK6** recebem compostos de qualquer bloco que publique moléculas: ChEMBL, PubChem, ZINC, ADMET, fingerprints, grafos, consenso ou importação do usuário. Selecione a tabela na entrada de compostos e conecte separadamente o receptor preparado. Não é obrigatório passar por grafos, ADMET ou pelo outro motor. PubMed fornece referências bibliográficas; moléculas obtidas dessas referências devem ser importadas com código e SMILES ou estrutura válida.
+
+Para reutilizar conformações, conecte **Vina → DOCK6** ou **DOCK6 → Vina** na entrada de compostos, escolhendo `docking_results.csv` ou a pose desejada. A identidade e o SMILES são preservados; a conversão utiliza a conformação selecionada, sem gerar outra a partir do SMILES. Sem uma pose de entrada, a preparação gera um conformero 3D. DOCK6 usa o centro do sítio do receptor para selecionar esferas e posicionar ligantes recém-gerados; a entrada opcional de poses Vina continua disponível para refinamento de candidatos correspondentes.
+
+Confira a caixa, pH e esforço do Vina e as cargas, superfície, distância, raio, busca flexível/rígida e footprint do DOCK6. Ambos exigem receptores preparados, metadados e centros; DOCK6 também exige MOL2 do receptor e PDB sem hidrogênios. Seus resultados apresentam código molecular, receptor, score, SMILES, **3D** da pose calculada e **Remover**. O botão abre a estrutura obtida no docking.
+
+**Consenso de docking** reúne os resultados selecionados de cada motor, incluindo vários lotes e ramificações. Calcula somente a interseção por código molecular e receptor, usando o menor score quando há poses repetidas. Resultados do mesmo código com estruturas diferentes são recusados. Não havendo interseção, o bloco é marcado como não executado e explica que os motores não avaliaram compostos em comum para o mesmo receptor.
+
+A tabela de consenso apresenta os scores Vina e DOCK6, SMILES, receptor e normalizações z-score/min-max, com botões **3D Vina**, **3D DOCK6** e **Remover** em cada linha. O score DOCK6 usado no consenso é `min(0, Grid_Score + repulsion_weight × Internal_energy_repulsive)`; a repulsão ausente vale zero. Para um composto ou scores constantes, as normalizações são zero. A remoção exige permissão de edição, fica registrada e afeta próximas entradas; não recalcula análises já concluídas. As tabelas principais de cada lote são usadas sem reintroduzir linhas removidas a partir das tabelas auxiliares.
+
+As saídas nativas usam `docking_results.csv`: `molecule_chembl_id,canonical_smiles,receptor_id,engine,score,conformer_file`. Caminhos de pose são relativos à tabela. Importe também os arquivos de conformação. No backend direto, `base_selected_mols` é a pasta da tabela e `mol_filename` é seu nome sem `.csv`; `base_vina_path` do DOCK6 é opcional. O consenso recebe pastas em `base_vina_path` e `base_dock6_path`, exporta as duas poses em `poses/` e retorna `skipped_reason` quando não há interseção.
+
+
+A operação `prepare_structures` aceita `preparation_options` com `receptor`, `ligand` e `cofactors`. Cada papel aceita `remove_solvent`, `remove_hydrogens`, `add_hydrogens`, `minimize` (booleanos) e `charge_type` (`gas` ou `am1`). O wrapper aplica essas opções aos registros explícitos ou inferidos de `pdb_codes.csv`. O pH permanece comum aos dois papéis. Chamadas legadas sem esse parâmetro conservam a preparação anterior; a interface usa as opções por papel e migra configurações antigas sem alterar templates personalizados.
+
+
+`prepare_structures` também recebe `base_selected_mols`, `mol_filename` (padrão `compounds`), `receptor_prepared` e `docking_engines` (`vina`, `dock6` ou `both`). O pipeline identifica automaticamente receptores preparados nas entradas do redocking. Receptores prontos são copiados com seus arquivos complementares e centros, sem repetir o preparo; PDBs brutos seguem o preparo usado pelo redocking. Os candidatos externos são preparados em `Target/Compounds/compounds.csv`, com códigos e SMILES preservados e colunas `prepared_pdbqt` e/ou `prepared_mol2`. Vina e DOCK6 reutilizam esses arquivos sem outra minimização. O manifesto informa os formatos disponíveis; uma ferramenta cujo formato não foi exportado não pode usar essa saída. O CSV e todos os arquivos referenciados devem acompanhar a entrada. Chamadas legadas sem `base_selected_mols` continuam preparando somente estruturas.
+
+Use um bloco separado para cada modo de receptor: não combine PDBs brutos com receptores preparados no mesmo bloco. O pH continua disponível para o preparo dos candidatos quando o receptor é reutilizado. Antes de preparar os compostos, o bloco verifica os centros do sítio (três coordenadas finitas) e os arquivos do receptor exigidos pela saída escolhida. Vina requer `.dockprep.pdbqt`; DOCK6 requer também `.dockprep.mol2` e `.noH.pdb`. O PDBQT permanece como arquivo de seleção do receptor nos dois casos. Arquivos ausentes interrompem o processo com o nome do arquivo necessário, sem refazer o preparo do receptor.
+
+## Importação por arquivo e tranches ZINC
+
+A etapa `import_results` aceita `asset_types`, um mapa `{asset_id: tipo}` cobrindo exatamente os `asset_ids` selecionados. Um bloco pode reunir CSVs de compostos, estruturas e listas ZINC, publicando seus respectivos tipos. Sem `asset_types`, o parâmetro legado `kind` continua valendo para todos os arquivos. O pipeline revalida arquivos e conjuntos antes da execução; receptores preparados continuam exigindo os metadados. Remover um arquivo da tabela do formulário altera apenas a seleção do bloco.
+
+`download_workers` configura os downloads paralelos de `retrieve_zinc` e `wrappers.crawlers.load_zinc`: inteiro de 1 a 16, padrão 4; 1 executa sequencialmente. Cada tarefa usa sua própria sessão HTTP. A fila de antecipação é limitada ao número de threads; a normalização molecular ocorre na ordem da lista. A configuração é validada antes dos downloads e o relatório registra `download_workers` efetivo, limitado ao número de links.
+
+`retrieve_zinc` chama `wrappers.crawlers.load_zinc`. `base_input_path` indica a pasta da lista e `filename` seu nome (padrão `zinc_urls.txt`); na interface, o pipeline resolve ambos a partir dos arquivos selecionados. A saída tem nome estável `compounds.csv`, independentemente do nome da lista. MOL2s individuais ficam em `Conformers/`, com caminhos autorizados no manifesto. `conformer_origin=library` identifica conformações que ainda precisam de posicionamento no sítio; o bloco de preparo preserva essa origem em `prepared_origin`.
+
+```python
+from biomolexplorer.operations import execute_operation
+
+execute_operation('retrieve_zinc', {
+    'base_input_path': '/path/to/lists',
+    'filename': 'zinc-download.uri',
+}, '/path/to/output')
+```
+
+Consulte [tranches 2D e 3D](retrieval.md#tranches-zinc-2d-e-3d) para formatos e organização dos artefatos.
+
+## Composto específico e entradas pré-configuradas do docking
+
+Referências de `base_selected_mols` em `docking_vina` e `docking_dock6` aceitam `compound_id` opcional, junto de `stage`/`asset` e `selector`. Sem essa chave, todos os compostos do arquivo participam. O filtro ocorre por referência antes da deduplicação e preserva conformações e arquivos preparados. Um código ausente interrompe a etapa com mensagem de validação. A seleção integra a configuração, o cache e a proveniência dos arquivos materializados.
+
+```json
+{"stage": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "selector": "compounds.csv", "compound_id": "CHEMBL1"}
+```
+
+`requires_curation` dispensa uma nova confirmação de Vina/DOCK6 quando receptor e compostos estão configurados e todas as referências identificam arquivos (`asset` ou `selector` explícito). Referências `stage` com `selector=auto` continuam exigindo seleção. A configuração é revalidada antes de executar. Conexões incompatíveis são recusadas com a mesma mensagem padrão no canvas e em `validate_pipeline`.

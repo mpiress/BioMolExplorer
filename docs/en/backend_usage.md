@@ -108,12 +108,12 @@ See `biomolexplorer.operations.OPERATIONS` for the complete parameters.
 | `retrieve_compounds` | `search_term`, PubChem options and ChEMBL filters | Source-specific data and `compounds/<target>/compounds.csv` |
 | `expand_similar_compounds` | `search_term`, `base_input_path` containing `ChEMBL/molecules` and `ChEMBL/similars` | New compounds, relationships and consolidated dataset |
 | `retrieve_structures` | Text/IDs/UniProt/ligands or attribute filters; optional `target` | PDB files, `pdb_codes.csv`, retrieval report |
-| `retrieve_zinc` | `filename`, `base_input_path` containing the URI file | ZINC CSV |
+| `retrieve_zinc` | `base_input_path`, tranche-list `filename` | `compounds.csv`, individual MOL2 files and report |
 | `admet` | `base_input_path`, optional `input_file` | Assessment CSVs, subsets and plot |
 | `fingerprints` | `base_input_path`, algorithms, `chunk_size` | Fingerprint CSVs |
 | `similarity` | Fingerprint `base_input_path`, metric, threshold and `approximate` | Edge CSVs in the `Similarity` subdirectory |
 | `graphs` | `similarity_path`; optional compound `base_input_path`; MCS options | Independent graph/MCC models, fragments and CSVs |
-| `prepare_structures` | User-supplied PDBs, `target`, PDB records, pH and charges | Prepared structures, centers and `pdb_codes.csv` |
+| `prepare_structures` | Raw or prepared PDB receptor, compounds, `target`, PDB records and role options | Receptors, centers, `pdb_codes.csv` and candidates in selected formats |
 | `redocking` | PDB directory, `target`, preparation parameters | Working copies, Vina results and RMSD |
 | `docking_vina` | Prepared complexes, selected compounds, `mol_filename` | PDBQT files and Vina results |
 | `docking_dock6` | Prepared complexes, compounds, `base_vina_path`, `pdb_code`, DOCK6 installation | Conformations, scores and footprints |
@@ -235,3 +235,55 @@ requires identifiers, SMILES, TPSA and WLOGP. See [projects and versions](projec
 See the [retrieval guide](retrieval.md) for all ChEMBL `search_mode` values, direct compound search examples, optional PDB collection names, limits, filters and report files. Existing operation names and downstream CSV contracts remain available.
 
 See [Logs and diagnostics](logging.md) for the common format, execution context, failure codes, job summary and `python -m biomolexplorer.log_report` command.
+
+
+## Interoperable docking contract
+
+**Docking with Vina** and **Docking with DOCK6** accept compounds from any block publishing molecules: ChEMBL, PubChem, ZINC, ADMET, fingerprints, graphs, consensus or user imports. Select a table at the compound input and connect the prepared receptor separately. Graphs, ADMET and the other engine are optional. PubMed provides literature references; molecules obtained from those references must be imported with identifiers and SMILES or valid structures.
+
+Reuse conformations by connecting **Vina → DOCK6** or **DOCK6 → Vina** at the compound input and selecting `docking_results.csv` or a specific pose. Identity and SMILES are retained; conversion uses the selected conformation instead of generating one from SMILES. Without an input pose, preparation generates a 3D conformer. DOCK6 uses the receptor site center to select spheres and position newly generated ligands; its optional Vina pose input remains available for refining corresponding candidates.
+
+Review Vina box, pH and search effort and DOCK6 charges, surface, distance, radius, flexible/rigid search and footprint. Both require prepared receptors, metadata and centers; DOCK6 also needs receptor MOL2 and hydrogen-free PDB. Results show compound ID, receptor, score, SMILES, **3D** of the calculated pose and **Remove**. This viewer opens the structure produced by docking.
+
+**Docking consensus** gathers selected results from both engines, including multiple batches and branches. It computes only the intersection by compound ID and receptor, choosing the lowest score for repeated poses. Matching identifiers with different structures are rejected. With no intersection, the block is skipped and explains that the engines did not evaluate common compounds against the same receptor.
+
+The consensus table shows Vina and DOCK6 scores, SMILES, receptor and z-score/min-max normalizations, with **3D Vina**, **3D DOCK6** and **Remove** buttons per row. The DOCK6 consensus score is `min(0, Grid_Score + repulsion_weight × Internal_energy_repulsive)`; missing repulsion is zero. Singleton or constant scores normalize to zero. Removal requires editing permission, is audited and affects subsequent inputs; completed analyses are not recalculated. Each batch summary is authoritative, preventing deleted rows from returning from auxiliary tables.
+
+Native outputs use `docking_results.csv`: `molecule_chembl_id,canonical_smiles,receptor_id,engine,score,conformer_file`. Pose paths are relative to the table. Import the conformation files too. For direct backend calls, `base_selected_mols` is the table directory and `mol_filename` its name without `.csv`; DOCK6 `base_vina_path` is optional. Consensus accepts directories through `base_vina_path` and `base_dock6_path`, exports both poses into `poses/` and returns `skipped_reason` for an empty intersection.
+
+
+`prepare_structures` accepts `preparation_options` containing `receptor`, `ligand` and `cofactors`. Each role accepts boolean `remove_solvent`, `remove_hydrogens`, `add_hydrogens`, `minimize` and a `charge_type` of `gas` or `am1`. The wrapper applies these settings to explicit records or records inferred from `pdb_codes.csv`. pH remains shared across roles. Legacy calls without this parameter retain previous preparation behavior; the UI uses role settings and migrates earlier configurations while retaining custom templates.
+
+
+`prepare_structures` also accepts `base_selected_mols`, `mol_filename` (default `compounds`), `receptor_prepared` and `docking_engines` (`vina`, `dock6` or `both`). The pipeline detects prepared redocking receptors automatically. Prepared receptors are copied with companion files and binding centers without repeated preparation; raw PDBs use the redocking preparation procedure. External candidates are prepared under `Target/Compounds/compounds.csv`, preserving identifiers and SMILES with `prepared_pdbqt` and/or `prepared_mol2` columns. Vina and DOCK6 reuse these files without further minimization. The manifest records available formats; an engine cannot use an output that excludes its format. The CSV and all referenced files must travel together. Legacy calls without `base_selected_mols` still prepare structures only.
+
+Use a separate block for each receptor mode: do not combine raw PDBs and prepared receptors in the same block. pH remains available for candidate preparation when reusing a receptor. Before preparing compounds, the block checks binding centers (three finite coordinates) and receptor files required by the selected output. Vina requires `.dockprep.pdbqt`; DOCK6 additionally requires `.dockprep.mol2` and `.noH.pdb`. PDBQT remains the receptor selection file for either engine. Missing files stop the process with the required filename, without repeating receptor preparation.
+
+## Per-file imports and ZINC tranches
+
+`import_results` accepts `asset_types`, a mapping `{asset_id: type}` covering exactly the selected `asset_ids`. A block can combine compound CSVs, structures and ZINC lists, publishing their respective types. Without `asset_types`, legacy `kind` still applies to every file. The pipeline revalidates files and bundles before execution; prepared receptors still require metadata. Removing a file from the form table changes the block's selection only.
+
+`download_workers` configures parallel downloads in `retrieve_zinc` and `wrappers.crawlers.load_zinc`: integer from 1 to 16, default 4; 1 runs sequentially. Each task owns its HTTP session. Prefetch is bounded by the thread count; molecular normalization follows list order. The setting is validated before downloads and the report records the effective `download_workers`, limited to the number of links.
+
+`retrieve_zinc` calls `wrappers.crawlers.load_zinc`. `base_input_path` identifies the list folder and `filename` its name (default `zinc_urls.txt`); the interface resolves both from selected files. The output has the stable name `compounds.csv` regardless of the list name. Individual MOL2 files reside in `Conformers/`, with authorized paths in the manifest. `conformer_origin=library` identifies conformations still requiring binding-site placement; the preparation block preserves this origin as `prepared_origin`.
+
+```python
+from biomolexplorer.operations import execute_operation
+
+execute_operation('retrieve_zinc', {
+    'base_input_path': '/path/to/lists',
+    'filename': 'zinc-download.uri',
+}, '/path/to/output')
+```
+
+See [2D and 3D tranches](retrieval.md#zinc-2d-and-3d-tranches) for formats and artifact organization.
+
+## Specific compounds and preconfigured docking inputs
+
+Input references under `base_selected_mols` in `docking_vina` and `docking_dock6` accept optional `compound_id` alongside `stage`/`asset` and `selector`. Without this key, every compound in the file participates. Filtering occurs per reference before deduplication and preserves conformations and prepared files. A missing code stops the stage with a validation message. The selection is part of configuration, caching and materialized input provenance.
+
+```json
+{"stage": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "selector": "compounds.csv", "compound_id": "CHEMBL1"}
+```
+
+`requires_curation` skips repeat confirmation for Vina/DOCK6 when receptor and compounds are configured and every reference identifies files (`asset` or an explicit `selector`). Stage references with `selector=auto` still require selection. Configuration is revalidated before execution. Incompatible connections use the same standard message in the canvas and `validate_pipeline`.

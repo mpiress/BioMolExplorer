@@ -10,9 +10,9 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 from biomolexplorer.catalog import new_stage
-from biomolexplorer.compound_tables import CompoundTables
+from biomolexplorer.compound_tables import CompoundTables,compound_links
 from biomolexplorer.stage_cache import artifact_manifest
-from biomolexplorer.visualizations import molecule_conformer
+from biomolexplorer.visualizations import molecule_conformer,molecule_sdf
 from biomolexplorer.workspace import AccessDenied,WorkspaceStore
 
 try:
@@ -65,6 +65,17 @@ class CompoundTablesTests(unittest.TestCase):
         self.assertEqual(filtered['matched'],1);self.assertEqual(filtered['rows'][0]['index'],1)
         self.assertEqual(self.page(query='cco')['rows'][0]['id'],'CHEMBL1')
         self.assertEqual(self.page(offset=100)['rows'],[])
+
+    def test_provider_links_use_compound_ids_and_optional_pubchem_metadata(self):
+        rows=self.page()['rows']
+        self.assertEqual(rows[0]['links'],[{'provider':'ChEMBL','url':'https://www.ebi.ac.uk/chembl/explore/compound/CHEMBL1'}])
+        self.assertEqual(rows[1]['links'],[{'provider':'PubChem','url':'https://pubchem.ncbi.nlm.nih.gov/compound/3'}])
+        self.assertEqual(compound_links({'molecule_chembl_id':'Imported1','PubChem_CID':'2244.0'}),
+            [{'provider':'PubChem','url':'https://pubchem.ncbi.nlm.nih.gov/compound/2244'}])
+        self.assertEqual(len(compound_links({'molecule_chembl_id':'CHEMBL25','PubChem_CID':'2244'})),2)
+        for identifier in ('Imported1','CHEMBL1/other','PUBCHEM0','PUBCHEM3?cid=4','2244'):
+            with self.subTest(identifier=identifier):
+                self.assertEqual(compound_links({'molecule_chembl_id':identifier,'PubChem_CID':'invalid'}),[])
 
     def test_removal_preserves_metadata_other_tables_and_audit_backup(self):
         original_manifest=self.store.get_run(self.owner,self.rid)['stages'][0]['artifact_manifest']
@@ -130,6 +141,17 @@ class CompoundTablesTests(unittest.TestCase):
         for smiles in ('',None,'invalid'):
             with self.subTest(smiles=smiles),self.assertRaises(ValueError):molecule_conformer(smiles)
 
+    def test_sdf_preserves_three_dimensions_and_bond_orders(self):
+        from rdkit import Chem
+        smiles='CC(=O)O'
+        sdf=molecule_sdf(smiles)
+        self.assertEqual(sdf,molecule_sdf(smiles))
+        molecule=Chem.MolFromMolBlock(sdf,removeHs=False)
+        self.assertTrue(molecule.GetConformer().Is3D())
+        self.assertEqual(molecule.GetNumAtoms(),len(molecule_conformer(smiles)['atoms']))
+        self.assertIn(2.,[b.GetBondTypeAsDouble() for b in molecule.GetBonds()])
+        self.assertTrue(sdf.endswith('$$$$\n'))
+
     @unittest.skipIf(CompoundTableViewer is None,'Install ui extra')
     def test_native_table_buttons_show_generated_views_and_enforce_read_only(self):
         self.share('viewer')
@@ -142,6 +164,11 @@ class CompoundTablesTests(unittest.TestCase):
         viewer.build();asyncio.run(viewer.load())
         self.assertEqual(len(viewer.table.rows),2)
         self.assertTrue(viewer.table.rows[0].cells[3].content.disabled)
+        for row,provider,url in zip(viewer.table.rows,('ChEMBL','PubChem'),
+                ('https://www.ebi.ac.uk/chembl/explore/compound/CHEMBL1','https://pubchem.ncbi.nlm.nih.gov/compound/3')):
+            link=row.cells[0].content.controls[1]
+            self.assertEqual(link.tooltip,'Abrir no '+provider)
+            self.assertEqual(link.url.url,url);self.assertEqual(link.url.target.value,'_blank')
         viewer.selector.value=next(t['path'] for t in viewer.tables if t['name']=='CHEMBL220_MOLS.csv')
         asyncio.run(viewer.change_table(None))
         self.assertIn('CHEMBL220_MOLS.csv',viewer.count.value)
@@ -153,6 +180,29 @@ class CompoundTablesTests(unittest.TestCase):
         notification=ft.SnackBar(content=ft.Text('Saved'),open=True);dialogs.append(notification)
         molecule_dialog.actions[-1].on_click(None)
         self.assertFalse(molecule_dialog.open);self.assertTrue(notification.open)
-        asyncio.run(viewer.preview(viewer.data['rows'][0],True));self.assertTrue(dialogs[-1].title.value.endswith('3D'))
-        ui.token='new-session';count=len(dialogs)
-        asyncio.run(viewer.preview(viewer.data['rows'][0],True));self.assertEqual(len(dialogs),count)
+        from unittest.mock import AsyncMock,Mock,patch
+        ui.compound_view_url=Mock(return_value='https://example.org/molecular-viewer/compound-ticket')
+        count=len(dialogs)
+        with patch('flet.UrlLauncher.launch_url',new_callable=AsyncMock) as launch:
+            asyncio.run(viewer.preview(viewer.data['rows'][0],True))
+            launch.assert_awaited_once()
+            self.assertEqual(launch.call_args.args[0],'https://example.org/molecular-viewer/compound-ticket')
+            self.assertEqual(launch.call_args.kwargs['web_only_window_name'],'_blank')
+            ui.compound_view_url.assert_called_once_with(self.pid,'CCO','CHEMBL1',self.guest)
+            self.assertEqual(len(dialogs),count)
+            ui.token='new-session';launch.reset_mock()
+            asyncio.run(viewer.preview(viewer.data['rows'][0],True));launch.assert_not_awaited()
+
+    @unittest.skipIf(CompoundTableViewer is None,'Install ui extra')
+    def test_stale_compound_preview_does_not_launch_browser(self):
+        from unittest.mock import AsyncMock,patch
+        async def call(function,*args):return function(*args)
+        ui=SimpleNamespace(token=self.owner,current={'id':self.pid},store=self.store,call=call)
+        viewer=CompoundTableViewer(ui,self.pid,self.rid,self.sid,self.tables.tables(self.owner,self.pid,self.rid,self.sid),inline=True)
+        def generated(*args):
+            viewer.preview_version+=1
+            return 'https://example.org/molecular-viewer/stale'
+        ui.compound_view_url=generated
+        with patch('flet.UrlLauncher.launch_url',new_callable=AsyncMock) as launch:
+            asyncio.run(viewer.preview({'id':'CHEMBL1','smiles':'CCO'},True))
+            launch.assert_not_awaited()

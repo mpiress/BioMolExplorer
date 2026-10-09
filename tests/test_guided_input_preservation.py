@@ -13,6 +13,16 @@ from biomolexplorer.catalog import LABELS, PATH_FIELDS, TITLES, new_stage, opera
 
 @unittest.skipIf(GuidedForm is None, 'Install the ui extra to test Flet controls')
 class GuidedInputPreservationTests(unittest.TestCase):
+    def test_zinc_download_workers_default_and_edit_survive_form(self):
+        stage=new_stage('retrieve_zinc')
+        self.assertEqual(stage['parameters']['download_workers'],4)
+        form=GuidedForm(self.ui([stage]),stage,[],True)
+        field=form.field_controls['download_workers']
+        self.assertEqual(field.label,'Downloads simultâneos')
+        self.assertIn('1 a 16',field.helper)
+        field.value='8'
+        self.assertEqual(form.read()['parameters']['download_workers'],8)
+
     def controls(self, form):
         def walk(control):
             yield control
@@ -54,8 +64,9 @@ class GuidedInputPreservationTests(unittest.TestCase):
                 source=new_stage('similarity' if operation=='graphs' else 'import_results')
                 if source['operation']=='import_results':source['parameters']['kind']=next(iter(sorted(kinds)))
                 origins.append(source)
-                expected[field]={'sources':[{'stage':source['id'],'selector':'first/selected.csv'},
-                                           {'stage':source['id'],'selector':'second/selected.csv'}]}
+                suffix='.dockprep.pdbqt' if operation in ('docking_vina','docking_dock6','prepare_structures') and field=='base_input_path' else '.csv'
+                expected[field]={'sources':[{'stage':source['id'],'selector':'first/selected'+suffix},
+                                           {'stage':source['id'],'selector':'second/selected'+suffix}]}
             stage['bindings']=expected
             for mode in ('individual','merge'):
                 with self.subTest(operation=operation,mode=mode):

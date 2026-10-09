@@ -43,3 +43,7 @@ Use each row's download button for an individual file, or **Download all (ZIP)**
 The table summarizes finite, nonnegative values from the `RMSD` column of `pdb_codes.csv`, displayed to three decimal places; the file retains its original precision. RMSD compares the reference ligand with the redocking result. The interface does not impose an automatic scientific acceptance threshold. PDB / ligand / residue / chain identifies each simulation. Failed or running stages retain the general file list for diagnosis.
 
 [Backend usage](backend_usage.md) includes a complete parameter dictionary and the output file layout.
+
+## Reuse the receptor for candidate docking
+
+Connect redocking to **PDB receptor (retrieval or redocking)** in **Prepare for docking** and select the `.dockprep.pdbqt` receptor under **Receptor to use**. Ligand-only files are hidden. Receptor preparation controls are disabled while companion formats and binding centers are reused. Candidates from one or more ChEMBL, PubChem, ZINC or uploaded sources still undergo preparation. Choose Vina, DOCK6 or both, then connect receptor and compounds to each selected engine. See the [user manual](user_manual.md#preparation-and-redocking) for individual and merge processing.

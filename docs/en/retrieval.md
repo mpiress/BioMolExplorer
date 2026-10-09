@@ -65,7 +65,7 @@ The consolidated `compounds/<collection>/compounds.csv` retains `molecule_chembl
 
 PubChem expansion accepts downloaded ChEMBL collections or a selected curated compound table. Thresholds/limits per reference, cache, rate control, retries and relation exports remain available. Additional structures pass through consolidated validation/deduplication; similarity does not establish target activity.
 
-ZINC retrieval still accepts a URL list. Its table parser now accepts repeated spaces/tabs and verifies exactly two SMILES/identifier columns, instead of silently misaligning fields. Retries and one-at-a-time URL processing remain. Local tables can be imported without mandatory retrieval.
+**Retrieve ZINC** accepts TXT/URI download lists and tranche-browser export scripts. See [ZINC 2D and 3D tranches](#zinc-2d-and-3d-tranches) for inputs, formats and standardized outputs.
 
 ## Backend examples
 
@@ -153,3 +153,26 @@ PYTHONPATH=src python scripts/validate_pdb_viewer.py --chrome /usr/bin/google-ch
 ```
 
 The script uses only a temporary loopback server and browser profile, verifies rotation, zoom, representations and PNG export and rejects external service requests. Its default screenshot is `/tmp/biomol-pdb-modern.png`; use `--screenshot` for another destination.
+
+
+## PubChem as an independent block
+
+**Retrieve ChEMBL** and **Retrieve PubChem** are separate UI blocks. PubChem accepts a manual SMILES, CID or name reference, or connected/uploaded compound CSVs. With a table, select every reference or one compound ID. Defaults are a 75% threshold and up to 1,000 similars per reference. Output contains only new similars, excluding references, and retains `PUBCHEM<CID>` IDs and SMILES. Connect it directly to Vina or DOCK6, ADMET or fingerprints. The backend operation is `retrieve_pubchem`; the legacy ChEMBL API still supports integrated expansion, but that option is hidden in the UI ChEMBL block.
+
+## ZINC 2D and 3D tranches
+
+In the [ZINC20 tranche browser](https://zinc20.docking.org/tranches/home/), select 2D/SMI or 3D/MOL2 and export the download list. The block accepts TXT/URI/URLS lists and cURL, wget or PowerShell command files. It extracts links only; commands are not executed. Official HTTP links are converted to HTTPS, including redirects. Supported formats are `.smi`, `.mol2`, `.smi.gz`, `.mol2.gz` and their `.bz2` variants.
+
+Open **Retrieve ZINC**, use **Upload my files** under **ZINC tranche download list** and select the exported file. Alternatively, import it as **ZINC download list** and connect the import. Select one or more lists; merge combines their links without duplicates. A [small example](../../examples/zinc_tranches.uri) is available. The [official 2D distribution](https://cache.docking.org/2D/) describes SMI files, and the [official screening guide](https://wiki.docking.org/index.php?title=ZINC15:examples:screening) describes compressed 3D exports.
+
+| Output | Contents and use |
+| --- | --- |
+| `compounds.csv` | ZINC code in `molecule_chembl_id`, `canonical_smiles`, `source`, `source_url`, `structure_format`, `conformer_file` and `conformer_origin` |
+| `Conformers/<ZINC>.mol2` | Original 3D structure, retaining coordinates, atom types and charges; travels with the table |
+| `retrieval_report.json` | URLs, format, record/compound counts, duplicates and SHA-256 for each download |
+
+Under **Concurrent downloads**, select 1 to 16 threads (default: 4). Use 1 for sequential execution; increase according to your connection and server capacity. Speed gains depend on the network and ZINC limits. Each download retains URL and redirect validation and automatic retries for transient HTTP failures. Prefetched files are bounded by the configured thread count and removed after processing. Consolidation follows list order, preserving deduplication and the first-conformer choice. `retrieval_report.json` records the effective concurrent download count.
+
+SMI reading supports optional headers, spaces and tabs. Numeric identifiers receive the ZINC prefix; existing ZINC identifiers are retained. Multi-molecule MOL2 blocks are split by identifier. Identical duplicates are combined; a record available in 2D and 3D retains its 3D conformation. The first valid conformer is kept. Conflicting structures for an identifier, invalid SMILES, empty files and incompatible formats stop the stage.
+
+Connect `compounds.csv` to ADMET, fingerprints, similarity/graphs through their usual workflow, **Prepare for docking**, Vina or DOCK6. 2D candidates generate conformations during preparation; 3D candidates start from the supplied MOL2. The manifest marks 3D structures as library conformations (`conformer_origin=library`), positioning them at the binding-site center when creating DOCK6 inputs. Calculated poses retain their position. Library MOL2 files are not **DOCK6 results**, since they do not yet contain docking scores. Keep the table and its referenced files together when exporting/importing results.

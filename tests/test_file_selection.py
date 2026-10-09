@@ -210,6 +210,7 @@ class FileSelectionTests(unittest.TestCase):
         atom='ATOM      1  C   LIG A   1       0.000   0.000   0.000  1.00  0.00           C\n'
         for chain in ('A','B'):
             (prepared/f'1ABC_{chain}.dockprep.pdbqt').write_text(atom)
+            (prepared/f'1ABC_{chain}.dockprep.mol2').write_text('@<TRIPOS>MOLECULE\nreceptor\n@<TRIPOS>ATOM\n1 C1 0 0 0 C.3\n')
             (prepared/f'1ABC_LIG_1_{chain}.lig.pdbqt').write_text(atom)
         (root/'pdb_codes.csv').write_text('PDB_CODE,LIGAND,RESNUM,CHAIN\n1ABC,LIG,1,A\n1ABC,LIG,1,B\n')
         (prepared/'centers.csv').write_text('1ABC_LIG_1_A,1ABC_LIG_1_B\n0,1\n0,1\n0,1\n')
@@ -220,9 +221,85 @@ class FileSelectionTests(unittest.TestCase):
                 [{'stage':source['id'],'selector':'1ABC_A.dockprep.pdbqt'}],{source['id']:files})
             data=path/'MeuAlvo'
             self.assertTrue((data/'Prepared'/'1ABC_A.dockprep.pdbqt').exists())
-            self.assertTrue((data/'Prepared'/'1ABC_LIG_1_A.lig.pdbqt').exists())
+            self.assertTrue((data/'Prepared'/'1ABC_A.dockprep.mol2').exists())
+            self.assertFalse((data/'Prepared'/'1ABC_LIG_1_A.lig.pdbqt').exists())
             self.assertFalse((data/'Prepared'/'1ABC_B.dockprep.pdbqt').exists())
             self.assertFalse((data/'Prepared'/'1ABC_LIG_1_B.lig.pdbqt').exists())
             self.assertNotIn('1ABC,LIG,1,B',(data/'pdb_codes.csv').read_text())
             self.assertEqual((data/'Prepared'/'centers.csv').read_text().splitlines()[0],'1ABC_LIG_1_A')
+            for operation in ('docking_vina','docking_dock6'):
+                path,_,selected=service._materialize_inputs(self.project_id,new_stage(operation),'base_input_path',
+                    [{'stage':source['id']}],{source['id']:files})
+                self.assertFalse(any('.lig.' in p.name for p in selected))
+                self.assertEqual({p.name for p in selected if p.suffix=='.pdbqt'},
+                                 {'1ABC_A.dockprep.pdbqt','1ABC_B.dockprep.pdbqt'})
+                self.assertTrue((path/'MeuAlvo'/'Prepared'/'1ABC_A.dockprep.mol2').exists())
+            redocking=new_stage('redocking');redocking['parameters']['prepare_complex']=False
+            path,_,_=service._materialize_inputs(self.project_id,redocking,'base_input_path',
+                [{'stage':source['id'],'selector':'1ABC_A.dockprep.pdbqt'}],{source['id']:files})
+            self.assertTrue((path/'MeuAlvo'/'Prepared'/'1ABC_LIG_1_A.lig.pdbqt').exists())
+        finally:service.close()
+
+    def test_docking_target_labels_and_configuration_only_offer_receptors(self):
+        from biomolexplorer.catalog import operation_fields
+        from biomolexplorer.flow import input_ports
+        from biomolexplorer.ui.input_editor import InputEditor
+        from biomolexplorer.ui.localization import Translator
+        source=new_stage('prepare_structures')
+        names={'Prepared/1ABC_A.dockprep.pdbqt','Prepared/1ABC_A.dockprep.mol2',
+               'Prepared/1ABC_LIG_1_A.lig.pdbqt','Prepared/1ABC_LIG_1_A.lig.mol2','1ABC.pdb','pdb_codes.csv'}
+        assets=[dict(id=str(i),name=name,kind='prepared_structures') for i,name in enumerate(sorted(names))]
+        ui=SimpleNamespace(current={'pipeline':[source]},artifact_choices={source['id']:names},
+                           page=SimpleNamespace(update=lambda:None))
+        for operation in ('docking_vina','docking_dock6'):
+            with self.subTest(operation=operation):
+                stage=new_stage(operation)
+                field=next(f for f in operation_fields(operation) if f['name']=='base_input_path')
+                self.assertEqual(field['label'],'Alvo');self.assertEqual(Translator('en')(field['label']),'Target')
+                self.assertEqual(input_ports(stage)[0]['label'],'Alvo')
+                stage['bindings']['base_input_path']={'stage':source['id'],'selector':'Prepared/1ABC_LIG_1_A.lig.pdbqt'}
+                editor=InputEditor(ui,stage,field,assets,True)
+                self.assertEqual([o.key for o in editor.selectors('stage:'+source['id'])],
+                                 ['auto','Prepared/1ABC_A.dockprep.pdbqt'])
+                self.assertEqual([o.text for o in editor.source_options() if o.key.startswith('asset:')],
+                                 ['Prepared/1ABC_A.dockprep.pdbqt'])
+                # Old ligand selections must not be added back to the menu.
+                self.assertEqual(editor.rows[0][1].value,'auto')
+                editor.rows[0][1].value='Prepared/1ABC_LIG_1_A.lig.pdbqt'
+                with self.assertRaisesRegex(ValueError,'receptor preparado'):editor.read()
+
+    def test_docking_handoff_only_offers_prepared_receptors_and_labels_target(self):
+        source=new_stage('prepare_structures')
+        root=self.store.project_dir(self.project_id)/'files'/'Prepared'
+        files=[str(root/name) for name in ('1ABC_A.dockprep.pdbqt','1ABC_A.dockprep.mol2',
+               '1ABC_LIG_1_A.lig.pdbqt','1ABC_LIG_1_A.lig.mol2','1ABC.pdb','centers.csv')]
+        for operation in ('docking_vina','docking_dock6'):
+            with self.subTest(operation=operation):
+                stage=new_stage(operation);stage['bindings']['base_input_path']={'stage':source['id']}
+                pending={'configuration':stage,'name':stage['name']}
+                run={'stages':[dict(id=source['id'],name=source['name'],operation=source['operation'],status='succeeded',artifacts=files)]}
+                form=FileSelection(run,pending)
+                self.assertEqual([r['selector'] for _,r in form.rows['base_input_path']],['1ABC_A.dockprep.pdbqt'])
+                self.assertTrue(any(isinstance(c,ft.Text) and c.value=='Alvo' for c in form.control.controls))
+                receptor={'id':'receptor','name':'1ABC_A.dockprep.pdbqt'}
+                ligand={'id':'ligand','name':'1ABC_LIG_1_A.lig.pdbqt'}
+                stage['bindings']['base_input_path']={'sources':[{'asset':'receptor'},{'asset':'ligand'}]}
+                form=FileSelection(run,pending,assets=[receptor,ligand])
+                self.assertEqual([r for _,r in form.rows['base_input_path']],[{'asset':'receptor'}])
+
+    def test_docking_backend_rejects_ligands_as_targets(self):
+        source=new_stage('prepare_structures')
+        root=self.store.project_dir(self.project_id)/'prepared';root.mkdir()
+        ligand=root/'1ABC_LIG_1_A.lig.pdbqt'
+        ligand.write_text('ATOM      1  C   LIG A   1       0.000   0.000   0.000  1.00  0.00           C\n')
+        asset=self.store.import_local_file(self.token,self.project_id,str(ligand),'prepared_structures')
+        service=PipelineService(self.store)
+        try:
+            for operation in ('docking_vina','docking_dock6'):
+                with self.subTest(operation=operation):
+                    with self.assertRaisesRegex(ValueError,'receptor preparado'):
+                        service._materialize_inputs(self.project_id,new_stage(operation),'base_input_path',
+                            [{'stage':source['id'],'selector':ligand.name}],{source['id']:[str(ligand)]})
+                    with self.assertRaisesRegex(ValueError,'receptor preparado'):
+                        service._materialize_inputs(self.project_id,new_stage(operation),'base_input_path',[{'asset':asset}],{})
         finally:service.close()

@@ -2,8 +2,7 @@
 from pathlib import Path
 import flet as ft
 from biomolexplorer.compound_tables import CompoundTables
-from biomolexplorer.visualizations import molecule_image, molecule_conformer
-from .molecule_3d import Molecule3D
+from biomolexplorer.visualizations import molecule_image
 from .feedback import close_dialog
 from .localization import verbatim
 
@@ -65,7 +64,10 @@ class CompoundTableViewer:
             async def show_3d(e,row=row):await self.ui.guard(lambda:self.preview(row,True))
             async def remove(e,row=row):await self.ui.guard(lambda:self.confirm_remove(row))
             smiles=verbatim(ft.Text(row['smiles'] or '—',size=12,max_lines=2,overflow=ft.TextOverflow.ELLIPSIS,selectable=True,tooltip=row['smiles']))
-            rows.append(ft.DataRow(cells=[ft.DataCell(verbatim(ft.Text(row['id'] or '—',size=13))),
+            identity=[verbatim(ft.Text(row['id'] or '—',size=13))]
+            identity.extend(ft.IconButton(ft.Icons.OPEN_IN_NEW,tooltip='Abrir no '+link['provider'],
+                url=ft.Url(link['url'],target=ft.UrlTarget.BLANK)) for link in row.get('links',[]))
+            rows.append(ft.DataRow(cells=[ft.DataCell(ft.Row(identity,spacing=4)),
                 ft.DataCell(ft.Container(verbatim(ft.Semantics(label=row['smiles'],exclude_semantics=True,content=smiles),'label'),width=300)),
                 ft.DataCell(ft.Row([ft.TextButton('2D',on_click=show_2d,disabled=not bool(row['smiles'])),
                                     ft.TextButton('3D',on_click=show_3d,disabled=not bool(row['smiles']))],spacing=0)),
@@ -95,15 +97,19 @@ class CompoundTableViewer:
         if not self.valid():return
         self.preview_version+=1;version=self.preview_version
         await self.ui.call(self.ui.store.project,self.token,self.project_id)
-        model=await self.ui.call(molecule_conformer if three_d else molecule_image,row['smiles'])
+        if three_d:
+            url=await self.ui.call(self.ui.compound_view_url,self.project_id,row['smiles'],row['id'],self.token)
+            if not self.valid() or version!=self.preview_version:return
+            await self.ui.call(self.ui.store.project,self.token,self.project_id)
+            if not self.valid() or version!=self.preview_version:return
+            await ft.UrlLauncher().launch_url(url,mode=ft.LaunchMode.EXTERNAL_APPLICATION,web_only_window_name='_blank')
+            return
+        model=await self.ui.call(molecule_image,row['smiles'])
         if not self.valid() or version!=self.preview_version:return
         await self.ui.call(self.ui.store.project,self.token,self.project_id)
         if not self.valid() or version!=self.preview_version:return
         width=max(280,min(620,(self.ui.page.width or 1440)-140))
-        if three_d:
-            viewer=Molecule3D(self.ui.page,model,width=width)
-            content=viewer.build()
-        elif model:
+        if model:
             content=ft.Image(src=model,width=width,height=300,fit=ft.BoxFit.CONTAIN)
         else:
             raise ValueError('A estrutura 2D está indisponível para este SMILES.')

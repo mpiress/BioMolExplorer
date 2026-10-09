@@ -20,7 +20,7 @@ from wrappers.docking import generate_consensus,perform_docking_dock6
 from wrappers.redocking import perform_redocking
 
 ATOM='ATOM      1  C   LIG A   1       0.000   0.000   0.000  1.00  0.00           C\n'
-MOL2='@<TRIPOS>MOLECULE\nreference\n1 0 0 0 0\nSMALL\nNO_CHARGES\n@<TRIPOS>ATOM\n1 C 0.0 0.0 0.0 C.3 1 LIG 0.0\n'
+MOL2='@<TRIPOS>MOLECULE\nreference\n1 0 1 0 0\nSMALL\nNO_CHARGES\n@<TRIPOS>ATOM\n1 C 0.0 0.0 0.0 C.3 1 LIG 0.0\n@<TRIPOS>BOND\n@<TRIPOS>SUBSTRUCTURE\n1 LIG 1\n'
 
 class DockingHandoffTests(unittest.TestCase):
     setUp=execution.PipelineExecutionTests.setUp
@@ -61,7 +61,7 @@ class DockingHandoffTests(unittest.TestCase):
         self.assertEqual(len(commands),2)
         self.assertEqual((root/'out/surface/Molecules/M1.sph').read_text(),'spheres')
 
-    def test_preparation_copies_native_centers_ligands_and_dock6_companions(self):
+    def test_docking_target_copies_centers_and_receptor_companions_without_reference_ligands(self):
         source,stage=new_stage('prepare_structures'),new_stage('docking_dock6')
         files=self.prepared(source)+self.prepared(source,'2ABC')
         service=PipelineService(self.store)
@@ -71,7 +71,8 @@ class DockingHandoffTests(unittest.TestCase):
             folder=path/'MeuAlvo'/'Prepared'
             self.assertTrue((folder/'1ABC_A.dockprep.mol2').is_file())
             self.assertTrue((folder/'1ABC_A.noH.pdb').is_file())
-            self.assertTrue((folder/'1ABC_LIG_1A.lig.pdb').is_file())
+            self.assertFalse((folder/'1ABC_LIG_1A.lig.pdb').exists())
+            self.assertFalse((folder/'1ABC_LIG_1A.lig.pdbqt').exists())
             self.assertFalse(any('2ABC' in p.name for p in folder.iterdir()))
             self.assertEqual(pd.read_csv(folder/'centers.csv').columns.tolist(),['1ABC_LIG_1A'])
             self.assertEqual(pd.read_csv(path/'MeuAlvo'/'pdb_codes.csv')['PDB_CODE'].tolist(),['1ABC'])
@@ -84,7 +85,7 @@ class DockingHandoffTests(unittest.TestCase):
             obj.centers=pd.DataFrame({key:[1.,2.,3.]})
             self.assertEqual(list(obj.retrieve_centerofmass_dataset('unused','1ABC','LIG','1','A')),[1.,2.,3.])
 
-    def test_individual_consensus_pairs_inputs_instead_of_cartesian_product(self):
+    def test_consensus_combines_selected_inputs_in_one_intersection(self):
         stage=new_stage('consensus')
         vina=[self.upload(f'{name}.lig.pdbqt',ATOM+'REMARK VINA RESULT: -7.0 0 0\n','vina') for name in ('A','B')]
         dock6=[self.upload(f'{name}_scored.mol2',MOL2+'########## Grid_Score: -5.0\n','dock6') for name in ('A','B')]
@@ -93,13 +94,13 @@ class DockingHandoffTests(unittest.TestCase):
         stage['bindings']['base_input_path']=stage['bindings']['base_vina_path'].copy()
         service=PipelineService(self.store)
         try:
-            variants=list(service._variants(self.project_id,stage));self.assertEqual(len(variants),2)
+            variants=list(service._variants(self.project_id,stage));self.assertEqual(len(variants),1)
             for variant,_ in variants:self.assertEqual(variant['bindings']['base_input_path'],variant['bindings']['base_vina_path'])
             form=FileSelection({'stages':[]},{'configuration':stage,'name':stage['name']})
             self.assertEqual(set(form.rows),{'base_vina_path','base_dock6_path'})
             stage['bindings']['base_vina_path']={'asset':vina[0]};stage['bindings']['base_input_path']=stage['bindings']['base_vina_path'].copy()
             stage['bindings']['base_dock6_path']={'asset':dock6[1]}
-            with self.assertRaisesRegex(ValueError,'mesmos identificadores'):list(service._variants(self.project_id,stage))
+            self.assertEqual(len(list(service._variants(self.project_id,stage))),1)
         finally:service.close()
 
     def test_dock6_batches_pair_receptor_compounds_and_poses(self):
@@ -126,15 +127,20 @@ class DockingHandoffTests(unittest.TestCase):
 
     def test_dock6_uses_selected_compounds_and_a_string_receptor_identifier(self):
         root=self.store.project_dir(self.project_id);poses=root/'poses';poses.mkdir()
-        (root/'compounds.csv').write_text('name,smiles\nM1,CCO\n')
+        (root/'compounds.csv').write_text('molecule_chembl_id,canonical_smiles\nM1,CCO\n')
         for name in ('1ABC_LIG_1A_M1','1ABC_LIG_1A_M2','1ABC_LIG_1B_M1'):
-            (poses/(name+'.lig.pdbqt')).write_text(ATOM)
-        with patch('wrappers.docking.Dock6') as engine:
+            (poses/(name+'.lig.pdbqt')).write_text(ATOM+'REMARK VINA RESULT: -7 0 0\n')
+        def docking_result():
+            output=root/'out'/'MeuAlvo'/'1ABC_A'/'Dock6'/'flex';output.mkdir(parents=True,exist_ok=True)
+            (output/'M1_scored.mol2').write_text(MOL2+'########## Grid_Score: -5\n')
+        with patch('wrappers.docking.Dock6') as engine,patch('biomolexplorer.docking_data.prepare_ligands') as prepare,patch('biomolexplorer.docking_data.binding_center',return_value=[1.,2.,3.]):
+            engine.return_value.perform_dock6_evaluation.side_effect=docking_result
             perform_docking_dock6(str(root),'MeuAlvo',str(root/'out'),str(root),
                 '/engines/dock6','gas','compounds',['1ABC','LIG',1,'A'],base_vina_path=str(poses))
             self.assertEqual(engine.call_args.kwargs['pdb_code'],'1ABC_A')
-            engine.return_value.recover_better_conforms_of_vina.assert_called_once_with(
-                charge_type='gas',filename=['1ABC_LIG_1A_M1.lig.pdbqt'])
+            rows=pd.read_csv(prepare.call_args.args[0])
+            self.assertEqual(rows['molecule_chembl_id'].tolist(),['M1'])
+            self.assertTrue(rows['conformer_file'].iloc[0].endswith('1ABC_LIG_1A_M1.lig.pdbqt'))
 
     def test_vina_reference_names_do_not_collide_or_skip_other_chains(self):
         root=self.store.project_dir(self.project_id);ligands=root/'ligands';output=root/'poses'
@@ -169,7 +175,8 @@ class DockingHandoffTests(unittest.TestCase):
             self.assertTrue(unselected.exists())
             self.assertTrue(unselected_prepared.exists())
 
-    def test_consensus_singleton_and_equal_scores_are_finite_and_importable(self):
+    @patch('biomolexplorer.docking_data.structure_smiles',return_value='C')
+    def test_consensus_singleton_and_equal_scores_are_finite_and_importable(self,converter):
         root=self.store.project_dir(self.project_id);vina=root/'vina';dock6=root/'dock6';out=root/'consensus'
         vina.mkdir();dock6.mkdir();out.mkdir()
         for size in (1,2):
@@ -189,7 +196,8 @@ class DockingHandoffTests(unittest.TestCase):
         (dock6/'M1_scored.mol2').write_text(MOL2+'########## Grid_Score: -5.0\n')
         args=(str(root),str(out),'example')
         kwargs={'base_vina_path':str(vina),'base_dock6_path':str(dock6)}
-        with self.assertRaisesRegex(ValueError,'pose Vina correspondente'):generate_consensus(*args,**kwargs)
+        result=generate_consensus(*args,**kwargs)
+        self.assertIn('não avaliaram compostos em comum',result['skipped_reason'])
         (vina/'M1.lig.pdbqt').write_text(ATOM+'REMARK VINA RESULT: nan 0 0\n')
         with self.assertRaisesRegex(ValueError,'não finito'):generate_consensus(*args,**kwargs)
 

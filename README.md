@@ -38,7 +38,8 @@ portable configuration, inputs, results and version history. Project cards offer
 export/import and an attributed change history with owner-controlled rollback.
 Shared pipelines autosave and update across collaborators. Blocks support multiple
 validated input files or supplied completed results, and ADMET EGG points reveal
-compound identifiers and 2D structures.
+compound identifiers and 2D structures, with a button to open the shared molecular
+3D viewer used for proteins and retrieved compounds.
 
 Graph blocks accept fingerprints, ready similarity files, or both, with separate
 results for each input. Explore the full network and its highlighted MCC, inspect
@@ -65,6 +66,8 @@ Complete documentation, installation instructions, workflow descriptions, and ex
 * Graph-based molecular network modeling.
 * Redocking using AutoDock Vina, with explicit pair selection, per-pair preparation and an RMSD results table with simulation downloads and 3D inspection.
 * Consensus docking using AutoDock Vina and Dock6.
+* Block information popups describing inputs and outputs, with concise notices for incompatible connections.
+* Optional per-file compound selection for Vina/DOCK6, with no repeat input prompt when docking files are already configured.
 * ADMET profiling for early-stage compound prioritization.
 * Support for drug discovery and drug repositioning studies.
 
@@ -836,6 +839,25 @@ fontes mantêm os nomes ChEMBL e PubChem para indicar a origem dos dados.
 
 ### Camada de aplicação para integração com Flet
 
+Na interface, **Recuperar ChEMBL** e **Recuperar PubChem** são blocos separados.
+O bloco ChEMBL recupera suas moléculas e bioatividades sem consultar PubChem.
+PubChem aceita um SMILES, CID ou nome informado, um CSV enviado pelo usuário
+ou compostos conectados de outro bloco. Os CSVs usam o mesmo contrato:
+`molecule_chembl_id,canonical_smiles` (também são aceitos `name,smiles`).
+
+Para entradas conectadas ou enviadas, escolha todas as referências ou um composto
+específico no combo. Quando a origem ainda não foi executada, escolha o composto
+no popup de entradas, após selecionar os arquivos. O limite de registros é aplicado
+por referência. A saída PubChem contém somente os novos similares, em
+`compounds/<coleção>/compounds.csv`; `PubChem/similars/<coleção>/matches.csv`
+registra quais referências encontraram cada resultado.
+
+Conecte as saídas ChEMBL e PubChem a ADMET, fingerprints ou docking. Use
+**Processar individualmente** para analisar os arquivos separadamente ou
+**Mesclar arquivos (merge)** para reuni-los. O modelo **ChEMBL + PubChem → ADMET**
+já conecta as duas saídas ao ADMET com merge. A API de expansão integrada e os
+blocos antigos continuam compatíveis com scripts e pipelines existentes.
+
 A aplicação dispõe de serviços independentes da interface, CLI e supervisão de
 tarefas em processos separados. O histórico, os estados, erros e caminhos dos
 resultados são persistidos em SQLite. Cada tarefa possui seu próprio diretório,
@@ -872,3 +894,12 @@ Na tela de login, selecione inglês ou português. Sem `--language`, a interface
 Information retrieval now supports optional EC/collection names for PDB searches and direct ChEMBL compound searches by name, IDs, similarity or substructure. See the [retrieval guide](docs/en/retrieval.md) ([Português](docs/retrieval.md)) for modes, limits, filters and query reports.
 
 For troubleshooting, see [Logs and diagnostics](docs/en/logging.md) ([Português](docs/logging.md)): contextual text and JSONL events, per-job summaries, scientific command failure codes and filtered reports.
+
+
+### Docking independente e consenso
+
+Vina e DOCK6 aceitam compostos de qualquer bloco molecular ou arquivos do usuário, com receptores preparados em uma entrada separada. As poses podem ser reutilizadas nos dois sentidos Vina ↔ DOCK6. Ambos exportam `docking_results.csv` com código, SMILES, receptor, motor, score e caminho da conformação. As tabelas oferecem a pose calculada em 3D e remoção auditada. O consenso reúne todos os lotes selecionados e calcula somente a interseção por composto e receptor; quando vazia, informa o motivo e não calcula o bloco. Consulte o [manual](docs/user_manual.md#vina-dock6-e-consenso) e a [validação](docs/pipeline_validation.md). PubMed é uma fonte bibliográfica; não há um bloco de recuperação molecular PubMed.
+
+O bloco **Prepare for docking** aceita receptor PDB bruto ou preparado no redocking e uma ou mais fontes de compostos (ChEMBL, PubChem, ZINC ou arquivos próprios). Selecione o receptor pronto sem os arquivos exclusivos do ligante; suas opções de preparo ficam desabilitadas. Receptores brutos e todos os candidatos externos mantêm suas configurações de preparo disponíveis. Escolha saída para Vina, DOCK6 ou ambos e conecte receptor e compostos às ferramentas selecionadas. Use merge para reunir fontes em uma execução. Consulte a [preparação no manual](docs/user_manual.md#preparacao-e-redocking) e o [relatório de validação](docs/validation/preparation_2026-10-08.json).
+
+**Import my files** permite selecionar arquivos no disco ou aproveitar os já enviados, com tipos por arquivo, validação do conteúdo e remoção da seleção em uma tabela. **Retrieve ZINC** aceita listas TXT/URI e scripts exportados pelas tranches, baixa SMI/MOL2 (inclusive gzip/bzip2) e publica `compounds.csv` com conformações 3D quando disponíveis. Veja o [guia de tranches ZINC](docs/retrieval.md#tranches-zinc-2d-e-3d) e a [lista de exemplo](examples/zinc_tranches.uri).

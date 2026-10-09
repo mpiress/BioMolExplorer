@@ -190,7 +190,7 @@ class WorkspaceTests(unittest.TestCase):
 
     def test_catalog_matches_all_operations(self):
         for operation,spec in OPERATIONS.items():
-            self.assertEqual({f['name'] for f in operation_fields(operation)},set(spec.required+spec.optional)-{'verbose'})
+            self.assertEqual({f['name'] for f in operation_fields(operation)},set(spec.required+spec.optional)-({'verbose','include_pubchem','pubchem_threshold','pubchem_max_records'} if operation=='retrieve_compounds' else {'verbose'}))
 
     def test_templates_preserve_contract_and_are_scoped(self):
         name='vina/config.template'
@@ -274,7 +274,7 @@ class WorkspaceTests(unittest.TestCase):
         for index in range(3):
             (vina/f'MOL{index}.lig.pdbqt').write_text(f'REMARK VINA RESULT: {-5.0-index}\n')
             (dock6/f'MOL{index}_scored.mol2').write_text(f'Grid_Score: {-20.0-index*2}\nInternal_energy_repulsive: 1.0\n')
-        with patch('wrappers.docking.plot_scatter_comparison'):
+        with patch('wrappers.docking.plot_scatter_comparison'),patch('biomolexplorer.docking_data.structure_smiles',return_value='CCO'):
             generate_consensus(str(Path(self.temp.name)/'unused'),str(output),'Target',
                                base_vina_path=str(vina),base_dock6_path=str(dock6))
         with (output/'Target.csv').open() as stream:

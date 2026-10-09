@@ -5,7 +5,6 @@ import flet as ft
 from .localization import verbatim, stage_control
 import flet.canvas as canvas
 from biomolexplorer import flow
-from biomolexplorer.diagnostics import get_logger
 from biomolexplorer.catalog import TITLES, new_stage
 from biomolexplorer.bindings import sources,input_labels
 from .zoom import zoomable_view
@@ -64,6 +63,7 @@ class FlowCanvas:
         async def select(e): self.ui.selected=stage['id']; self.refresh()
         async def configure(e): await self.ui.guard(lambda:self.ui.open_stage_dialog(stage['id']))
         async def results(e): await self.ui.guard(lambda:self.ui.open_stage_results(stage['id']))
+        async def information(e): self.show_information(stage)
         def begin(e):
             if self.writable: self.remember()
         def move(e):
@@ -103,6 +103,7 @@ class FlowCanvas:
             overflow=ft.TextOverflow.ELLIPSIS,tooltip='\n'.join(labels))))
         rows.append(ft.Row([ft.Icon(ft.Icons.ERROR_OUTLINE if issues else ft.Icons.CHECK_CIRCLE_OUTLINE,size=14,color='#D97706' if issues else color),
             ft.Text(issues[0] if issues else 'Resultados fornecidos · concluído' if stage.get('provided_results') else 'Pronto para executar',size=10,expand=True),
+            icon_button(icon=ft.Icons.INFO_OUTLINE,icon_size=18,tooltip='Informações do bloco',on_click=information),
             icon_button(icon=ft.Icons.INSIGHTS,icon_size=18,tooltip='Resultados de '+stage['name'],on_click=results),
             icon_button(icon=ft.Icons.TUNE,icon_size=18,tooltip='Configurar '+stage['name'],on_click=configure)],height=32,spacing=4))
         node=ft.Container(left=pos['x'],top=pos['y'],width=flow.NODE_WIDTH,
@@ -125,10 +126,23 @@ class FlowCanvas:
         before=copy.deepcopy(self.stages)
         try: flow.connect(self.stages,source,target,field)
         except ValueError as exc:
-            get_logger('frontend').exception('Conexão rejeitada; source=%s target=%s field=%s',source,target,field)
+            self.pending=None
+            self.status.value=str(exc)
             self.ui.notify(str(exc)); return
         self.history.append(before); self.history=self.history[-50:]; self.future.clear(); self.pending=None
         self.status.value='Conexão criada. A execução respeitará as dependências.'; self.changed()
+    def show_information(self,stage):
+        from .block_help import block_information
+        from .feedback import close_dialog
+        description,inputs,outputs,note=block_information(stage)
+        body=[ft.Text(description),ft.Text('O que recebe',weight=ft.FontWeight.W_600),
+              *[ft.Text(value) for value in inputs],ft.Text('O que fornece',weight=ft.FontWeight.W_600),
+              *[ft.Text(value) for value in outputs]]
+        if note:body.append(ft.Text(note))
+        dialog=ft.AlertDialog(title=ft.Text(TITLES[stage['operation']][0]),
+            content=ft.Container(width=520,content=ft.Column(body,tight=True,spacing=12,scroll=ft.ScrollMode.AUTO)),
+            actions=[ft.TextButton('Fechar',on_click=lambda e:close_dialog(self.ui.page,dialog))])
+        self.ui.page.show_dialog(dialog)
     async def drop(self,e):
         if self.writable: await self.add(e.src.data,e.local_position.x,e.local_position.y)
     async def add(self,operation,x=None,y=None):
@@ -165,11 +179,14 @@ class FlowCanvas:
         for category in COLORS:
             blocks=[]
             for operation,(title,help_,group) in TITLES.items():
+                if operation=='expand_similar_compounds':continue # Retain legacy pipelines, offer the independent PubChem block.
                 if group!=category: continue
                 async def add(e,op=operation): await self.add(op)
+                async def information(e,op=operation):self.show_information(new_stage(op))
                 blocks.append(ft.Container(padding=8,bgcolor='#FFFFFF',border_radius=10,border=ft.Border.all(1,'#E2E8F0'),tooltip=help_,content=ft.Row([ft.Draggable(group='stage-library',data=operation,max_simultaneous_drags=1 if self.writable else 0,
                     content_feedback=ft.Container(ft.Text(title,color='#FFFFFF'),bgcolor=COLORS[category],padding=16,border_radius=12),
-                    content=ft.Container(width=150,padding=4,content=ft.Row([ft.Icon(ft.Icons.DRAG_INDICATOR,size=16,color=COLORS[category]),ft.Text(title,size=12,expand=True)],spacing=4))),
+                    content=ft.Container(width=126,padding=4,content=ft.Row([ft.Icon(ft.Icons.DRAG_INDICATOR,size=16,color=COLORS[category]),ft.Text(title,size=12,expand=True)],spacing=4))),
+                    icon_button(icon=ft.Icons.INFO_OUTLINE,icon_size=18,tooltip='Informações do bloco',on_click=information),
                     icon_button(icon=ft.Icons.ADD,icon_size=18,tooltip='Adicionar '+title,on_click=add,disabled=not self.writable)],spacing=0)))
                 items.append((title,blocks[-1]))
             section=ft.ExpansionTile(title=ft.Text(category,size=13,color=COLORS[category],weight=ft.FontWeight.W_600),

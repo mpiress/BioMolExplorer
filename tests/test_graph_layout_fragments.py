@@ -138,7 +138,7 @@ class GraphNavigationTests(unittest.TestCase):
         highlighted = [shape for shape in viewer.drawing.shapes if isinstance(shape, canvas.Line)
                        and shape.paint.stroke_width == 2]
         self.assertEqual(len(highlighted), 50)
-        relations = [control for control in viewer.details.controls if isinstance(control, ft.TextButton)]
+        relations = [control for control in viewer.details.controls if isinstance(control, ft.TextButton) and ' · similaridade ' in str(control.content)]
         self.assertEqual(len(relations), 50)
         asyncio.run(relations[0].on_click(None))
         self.assertEqual(viewer.selected, '1')

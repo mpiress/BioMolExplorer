@@ -74,11 +74,11 @@ The pipeline defines dependencies. Block positions help visual organization; the
 
 ## 5. Upload and check your own files
 
-1. Open **Files**, choose the data type and upload the file. Each file can be up to 200 MB through the interface.
-2. Confirm that it appears in the project library.
-3. Add **Import my files** to the pipeline or use **Upload my files** in the consuming block's configuration.
-4. Choose the correct type and files. Applying the configuration confirms the input; uploading a file alone does not connect it to every stage.
-5. Check the expected format shown in the form. For prepared datasets, also select the necessary metadata.
+1. Add **Import my files** to the pipeline and open its configuration.
+2. Choose **Type of files to add** and click **Select files from disk**. Select all required files; each file is validated before entering the project.
+3. Reuse existing uploads through **File already uploaded to the project** or **Add all project files**.
+4. Review the **Type / File / Actions** table. You can change each row's type (with fresh validation) or use **Remove from list**. Removing a row preserves the file in the project library.
+5. Include metadata and companion formats for prepared receptors. Set the target folder for structures and apply the configuration. One block can publish several types, connected to the corresponding consumer inputs.
 
 A minimal compound CSV is:
 
@@ -101,7 +101,8 @@ PYRIDINE,c1ccncc1
 | Vina | `.pdbqt` with coordinates and `REMARK VINA RESULT` |
 | DOCK6 | `*_scored.mol2` with MOLECULE/ATOM sections and a numeric `Grid_Score` |
 | Scores | CSV with an identifier (`molecule`, `molecule_chembl_id` or `id`) and numeric scores |
-| Other | For ZINC, `.txt` with one authorized HTTPS address per line |
+| ZINC download list | TXT/URI file or exported tranche-browser script with SMI/MOL2 links, including compressed files |
+| Other | General data files; choose a specific type to validate scientific formats |
 
 For prepared receptors, preserve `<PDB>_<CHAIN>.dockprep.pdbqt`, `pdb_codes.csv` with `PDB_CODE,LIGAND,RESNUM,CHAIN` and `centers.csv` containing three coordinate rows per complex. DOCK6 also uses `.dockprep.mol2` and `.noH.pdb`; redocking uses reference ligands. Auxiliary files produced by preparation automatically accompany receptors selected through pipeline connections. For an external import, upload the complete dataset.
 
@@ -118,6 +119,8 @@ For prepared receptors, preserve `<PDB>_<CHAIN>.dockprep.pdbqt`, `pdb_codes.csv`
 
 Incompatible inputs, cycles and dependencies on disabled blocks are rejected. **Advanced** allows JSON and template editing; use it for options outside the form. Preserve technical parameter names and required template placeholders. Correct any validation error before applying.
 
+The **ⓘ** icon on each block, in the library and canvas, opens a short explanation of accepted inputs and outputs. Incompatible connections show only “Incompatible data. Choose an output of the type expected by this input.” and preserve the pipeline. For similarity, use **ChEMBL / PubChem / ZINC → Generate fingerprints → Calculate similarity**.
+
 **Ctrl+Z** undoes, **Ctrl+Y** redoes and **Delete** removes the selection when no configuration form is open. **Escape** cancels a connection in progress. Duplicate a block to compare parameters and rename the alternatives. Automatic layout, navigation, zoom and recentering help explore large workflows.
 
 ## 7. Understand the available connections
@@ -125,17 +128,17 @@ Incompatible inputs, cycles and dependencies on disabled blocks are rejected. **
 | Consumer | Permitted canvas input |
 | --- | --- |
 | Expand similar compounds | ChEMBL retrieval with original downloads; a generic compound CSV does not replace this source |
-| Retrieve ZINC | Data of type `other`, containing the address list |
-| Prepare my complexes | Raw PDB structures |
+| Retrieve ZINC | Download list of type `zinc_urls` or `other`, with tranche links |
+| Prepare for docking | Raw PDB or redocking receptor, plus one or more compound sources |
 | Evaluate ADMET / Generate fingerprints | Compounds from retrieval, import, ADMET or graphs |
 | Calculate similarity | Compatible fingerprints; do not mix types or widths |
 | Filter by graphs | Output from **Calculate similarity**; an external CSV can be selected in the form |
 | Run redocking | Raw PDBs with preparation enabled; prepared receptors with preparation disabled |
 | Docking with Vina | Prepared receptors and selected compounds |
-| Docking with DOCK6 | Prepared receptors, selected compounds and corresponding Vina poses |
+| Docking with DOCK6 | Prepared receptors and selected compounds or poses; optional Vina poses |
 | Docking consensus | Vina poses and DOCK6 results with matching identifiers |
 
-Compound and structure retrieval can begin independent branches. **Import my files** publishes the selected type. A block's **ready-made results** mode validates existing outputs and skips its calculation; it does not turn any CSV into that block's result. See the [validation matrix and tests](pipeline_validation.md) for additional conditions.
+Compound and structure retrieval can begin independent branches. **Import my files** publishes the types of the selected files. A block's **ready-made results** mode validates existing outputs and skips its calculation; it does not turn any CSV into that block's result. See the [validation matrix and tests](pipeline_validation.md) for additional conditions.
 
 ## 8. Execute, select files and choose individual or merge
 
@@ -157,6 +160,10 @@ For operations with distinct inputs, such as receptors and compound tables, indi
 Structure metadata accompanies selections in both modes. **Select later** closes the window while keeping the run paused; **Configure inputs and continue** reopens it. Closing and reopening during the session preserves checked files and processing mode. Confirmed choices remain in the block configuration when you open it later. When filenames repeat, select the path distinguishing each result.
 
 Selection occurs before consuming blocks that need execution; blocks without input do not need this decision. Reused stages do not repeat selection. The final stage makes results available for inspection without requiring another consumer. Readers follow progress; editors and owners confirm choices.
+
+In Vina or DOCK6 docking, choosing a compound file reveals **Compound for docking (optional)**. Select an identifier to use only that molecule; **All compounds** or an empty selection uses the entire table. Each file has its own choice. Changing the file clears the previous compound. Options become available after the source produces its data; uploaded or imported files can be configured before execution.
+
+When receptor and compound inputs already identify explicit files in the Vina/DOCK6 configuration, execution proceeds without asking again. Connections using **Identify automatically**, without a chosen file, still pause for input configuration. Files and identifiers are revalidated at execution; a choice that no longer exists produces a validation message.
 
 ## 9. Reuse data after restarting
 
@@ -195,13 +202,17 @@ A small dataset may produce isolated components or be entirely removed by ADMET 
 
 Under **Retrieve compounds**, choose a target search by name/IDs/UniProt/text or a direct compound search by name/IDs/similarity/substructure. Review optional filters and limits, and choose ChEMBL/PubChem expansion. Threshold and maximum similar compounds control expansion. After execution, inspect `compounds.csv` and available ChEMBL downloads; use the appropriate table for the next analysis.
 
-**Expand similar compounds** uses ChEMBL downloads from existing retrieval. Connect that source and review threshold/maximum; do not substitute an ordinary CSV for the ChEMBL context. **Retrieve ZINC** requires an authorized address list; select the `.txt` and inspect the produced compounds.
+**Expand similar compounds** uses ChEMBL downloads from existing retrieval. Connect that source and review threshold/maximum; do not substitute an ordinary CSV for the ChEMBL context. **Retrieve ZINC** accepts the TXT/URI file or download script exported by ZINC tranches. Upload it directly under **ZINC tranche download list** or connect an import of type **ZINC download list**. SMI/MOL2 tranches, including `.gz` and `.bz2`, generate `compounds.csv`; MOL2 conformations travel with the table. Connect it to ADMET/fingerprints or preparation and docking. See the [retrieval guide](retrieval.md#zinc-2d-and-3d-tranches).
 
 **Retrieve PDB structures** accepts text, PDB IDs, UniProt accessions and ligand codes; EC and collection names are optional. Organism, resolution, polymer and method refine the search. See the [retrieval guide](retrieval.md) and retrieval_report.json for criteria and outcomes. Use each PDB’s **Ligands** button to review, remove or add records before preparation or redocking. The browser-based 3D explorer offers mouse rotation, zoom and representation options; the RCSB button opens its official page. `pdb_codes.csv` and `retrieval_report.json` remain on disk but are hidden in this listing. If retrieval finds no compatible structures, revise the filters rather than proceeding with an empty dataset.
 
 ### Preparation and redocking
 
-Under **Prepare my complexes**, select raw PDBs and enter `[PDB, ligand, residue, chain]` records or provide `pdb_codes.csv`. Configure pH and charge method. Check the generated receptors, ligands and centers.
+Under **Prepare for docking**, connect **PDB receptor (retrieval or redocking)** and **Selected compounds** separately. For a raw retrieval PDB, enter `[PDB, reference ligand, residue, chain]` records or provide `pdb_codes.csv`; receptor preparation options remain available. For redocking receptors, select the `.dockprep.pdbqt` file under **Receptor to use**: ligand-only files are hidden and receptor preparation options are disabled. Companion receptor files and binding centers follow the selection, and the receptor is reused without preparation.
+
+Add one or more **ChEMBL**, **PubChem**, **ZINC** or uploaded compound sources under **Selected compounds**. **Ligand preparation and conformation** configures these external candidates and remains available. The PDB reference ligand defines the docking site and is not a candidate. Choose **Prepare output for → Vina, DOCK6 or Vina and DOCK6**. Each candidate is prepared once and selected formats are exported from the same conformation. Connect this block to both the receptor and compound inputs of each selected engine. Use **Merge files (merge)** to combine sources in one execution; individual mode prepares each selected combination separately. Inspect the generated receptors, candidates and centers.
+
+Use a separate block for each receptor mode: do not combine raw PDBs and prepared receptors in the same block. pH remains available for candidate preparation when reusing a receptor. Before preparing compounds, the block checks binding centers (three finite coordinates) and receptor files required by the selected output. Vina requires `.dockprep.pdbqt`; DOCK6 additionally requires `.dockprep.mol2` and `.noH.pdb`. PDBQT remains the receptor selection file for either engine. Missing files stop the process with the required filename, without repeating receptor preparation.
 
 Under **Run redocking**, keep **Prepare complexes before redocking** enabled for raw PDBs. Disable it only for a prepared dataset. Check records, box dimensions, search effort and pose count. Examine RMSDs and logs; establish the study's protocol acceptance criteria before using its receptors to dock candidates.
 
@@ -229,11 +240,15 @@ Use each row's download button for an individual file, or **Download all (ZIP)**
 
 ### Vina, DOCK6 and consensus
 
-**Docking with Vina** receives prepared receptors and the candidate table. Check target/folder, reference complex, box, pH, search effort and pose count. In individual mode, datasets receive separate outputs. Native pose names include PDB, ligand, residue, chain and compound to distinguish references.
+**Docking with Vina** and **Docking with DOCK6** accept compounds from any block publishing molecules: ChEMBL, PubChem, ZINC, ADMET, fingerprints, graphs, consensus or user imports. Select a table at the compound input and connect the prepared receptor separately. Graphs, ADMET and the other engine are optional. PubMed provides literature references; molecules obtained from those references must be imported with identifiers and SMILES or valid structures.
 
-**Docking with DOCK6** requires prepared receptors and auxiliary files, selected candidates, Vina poses and an explicit reference. Check installation, charges, surface, distance, radius, flexible/rigid search and footprint parameters. Candidate selection restricts the poses passed to refinement. A candidate table different from the one producing the poses must contain corresponding identifiers.
+Reuse conformations by connecting **Vina → DOCK6** or **DOCK6 → Vina** at the compound input and selecting `docking_results.csv` or a specific pose. Identity and SMILES are retained; conversion uses the selected conformation instead of generating one from SMILES. Without an input pose, preparation generates a 3D conformer. DOCK6 uses the receptor site center to select spheres and position newly generated ligands; its optional Vina pose input remains available for refining corresponding candidates.
 
-**Docking consensus** receives corresponding Vina and DOCK6 results. Review the repulsion weight. Outputs contain scores and z-score/min-max normalizations; for one compound or constant scores, the normalized contribution is zero because there is no dispersion to compare. Preserve raw scores in interpretation. Files lacking a finite score or corresponding pose are rejected.
+Review Vina box, pH and search effort and DOCK6 charges, surface, distance, radius, flexible/rigid search and footprint. Both require prepared receptors, metadata and centers; DOCK6 also needs receptor MOL2 and hydrogen-free PDB. Results show compound ID, receptor, score, SMILES, **3D** of the calculated pose and **Remove**. This viewer opens the structure produced by docking.
+
+**Docking consensus** gathers selected results from both engines, including multiple batches and branches. It computes only the intersection by compound ID and receptor, choosing the lowest score for repeated poses. Matching identifiers with different structures are rejected. With no intersection, the block is skipped and explains that the engines did not evaluate common compounds against the same receptor.
+
+The consensus table shows Vina and DOCK6 scores, SMILES, receptor and z-score/min-max normalizations, with **3D Vina**, **3D DOCK6** and **Remove** buttons per row. The DOCK6 consensus score is `min(0, Grid_Score + repulsion_weight × Internal_energy_repulsive)`; missing repulsion is zero. Singleton or constant scores normalize to zero. Removal requires editing permission, is audited and affects subsequent inputs; completed analyses are not recalculated. Each batch summary is authoritative, preventing deleted rows from returning from auxiliary tables.
 
 ## 12. Explore results and navigate graphs
 

@@ -2,7 +2,7 @@
 import copy
 import math
 
-from .catalog import LABELS, operation_fields
+from .catalog import LABELS, operation_fields, field_label
 from .pipeline import validate_pipeline
 from .bindings import sources, dependencies, pack
 
@@ -14,22 +14,24 @@ PORT_LABELS = {'base_input_path':'Dados de entrada','base_selected_mols':'Compos
                'similarity_path':'Similaridades',
                'base_vina_path':'Resultados Vina','base_dock6_path':'Resultados DOCK6'}
 OUTPUTS = {
+    'retrieve_pubchem': {'compounds'},
     'retrieve_compounds': {'compounds','chembl'}, 'expand_similar_compounds': {'compounds'},
     'retrieve_zinc': {'compounds'}, 'retrieve_structures': {'structures'},
-    'prepare_structures': {'prepared_structures'}, 'redocking': {'structures','prepared_structures','redocking'},
-    'admet': {'compounds'}, 'fingerprints': {'fingerprints'}, 'similarity': {'similarity'},
-    'graphs': {'compounds'}, 'docking_vina': {'vina'}, 'docking_dock6': {'dock6'}, 'consensus': {'scores'},
+    'prepare_structures': {'prepared_structures','compounds'}, 'redocking': {'structures','prepared_structures','redocking'},
+    'admet': {'compounds'}, 'fingerprints': {'fingerprints','compounds'}, 'similarity': {'similarity'},
+    'graphs': {'compounds'}, 'docking_vina': {'vina','compounds'}, 'docking_dock6': {'dock6','compounds'}, 'consensus': {'scores','compounds'},
 }
 INPUTS = {
+    'retrieve_pubchem': {'base_input_path':{'compounds'}},
     'expand_similar_compounds': {'base_input_path':{'chembl'}},
-    'retrieve_zinc': {'base_input_path':{'other'}},
+    'retrieve_zinc': {'base_input_path':{'zinc_urls','other'}},
     'admet': {'base_input_path':{'compounds'}}, 'fingerprints': {'base_input_path':{'compounds'}},
     'similarity': {'base_input_path':{'fingerprints'}},
     'graphs': {'similarity_path':{'similarity'}},
-    'prepare_structures': {'base_input_path':{'structures'}},
+    'prepare_structures': {'base_input_path':{'structures','prepared_structures'},'base_selected_mols':{'compounds'}},
     'redocking': {'base_input_path':{'structures','prepared_structures'}},
-    'docking_vina': {'base_input_path':{'prepared_structures'},'base_selected_mols':{'compounds'}},
-    'docking_dock6': {'base_input_path':{'prepared_structures'},'base_selected_mols':{'compounds'},'base_vina_path':{'vina'}},
+    'docking_vina': {'base_input_path':{'prepared_structures'},'base_selected_mols':{'compounds','vina','dock6'}},
+    'docking_dock6': {'base_input_path':{'prepared_structures'},'base_selected_mols':{'compounds','vina','dock6'},'base_vina_path':{'vina'}},
     'consensus': {'base_vina_path':{'vina'},'base_dock6_path':{'dock6'}},
 }
 # These inputs are configured with uploaded files, never with canvas connections.
@@ -45,20 +47,28 @@ def input_types(stage, field):
 def output_types(stage):
     if stage.get('provided_results'):
         return {stage['provided_results']['kind']}
-    return {stage['parameters'].get('kind','other')} if stage['operation']=='import_results' else OUTPUTS[stage['operation']]
+    if stage['operation']=='import_results':
+        params=stage['parameters']
+        types=params.get('asset_types')
+        return {types.get(asset,params.get('kind','other')) for asset in params.get('asset_ids',[])} if types else {params.get('kind','other')}
+    return OUTPUTS[stage['operation']]
 
 
 def input_ports(stage):
     operation=stage['operation']
     if operation=='import_results' or stage.get('provided_results'):
         return []
+    if operation=='retrieve_pubchem' and stage['parameters'].get('reference_source')=='manual':return []
     fields={f['name']:f for f in operation_fields(operation)}
-    return [{'field':field,'label':PORT_LABELS[field], 'types':input_types(stage,field),
-             'required': fields[field]['required'] or operation in ('expand_similar_compounds','consensus')}
+    return [{'field':field,'label':field_label(operation,field) if field=='base_input_path' else PORT_LABELS[field], 'types':input_types(stage,field),
+             'required': fields[field]['required'] or operation in ('retrieve_pubchem','expand_similar_compounds','consensus') or operation=='prepare_structures' and field=='base_selected_mols'}
             for field,types in INPUTS.get(operation,{}).items()]
 
 
 def compatible(source,target,field):
+    if source['operation']=='prepare_structures' and target['operation'] in ('docking_vina','docking_dock6'):
+        engine='vina' if target['operation']=='docking_vina' else 'dock6'
+        if source['parameters'].get('docking_engines','both') not in ('both',engine):return False
     if target['operation']=='graphs' and source['operation']!='similarity':
         return False
     return source['id']!=target['id'] and bool(output_types(source) & input_types(target,field))
@@ -77,15 +87,19 @@ def connect(stages, source_id, target_id, field):
     proposed=next(s for s in candidate if s['id']==target_id)
     old=proposed.setdefault('bindings',{}).get(field)
     proposed['bindings'][field]=pack((sources(old) if old else [])+[{'stage':source_id,'selector':'auto'}])
+    if target['operation']=='prepare_structures' and field=='base_input_path':
+        proposed['parameters']['receptor_prepared']='prepared_structures' in output_types(source)
     if target['operation']=='consensus' and field=='base_vina_path':
         proposed['bindings']['base_input_path']=copy.deepcopy(proposed['bindings']['base_vina_path'])
     validate_pipeline(candidate)
     target['bindings']=proposed['bindings']
+    target['parameters']=proposed['parameters']
     target['parameters'].pop(field,None)
     if field=='base_input_path' and 'target' in target['parameters'] and 'target' in source['parameters']:
         target['parameters']['target']=source['parameters']['target']
     if target['operation']=='expand_similar_compounds':
         target['parameters']['search_term']=source['parameters']['search_term']
+    if target['operation']=='retrieve_pubchem':target['parameters']['reference_source']='compounds'
 
 
 def disconnect(stage,field):

@@ -133,88 +133,31 @@ def plot_scatter_comparison(df:DataFrame, output_path:str):
 
 
 def generate_consensus(base_input_path:str, base_output_path:str, target:str, repulsion_weight: float = 1.0,
-                       base_vina_path:str=None, base_dock6_path:str=None) -> None:
-
-    vinapath = str(Path(base_vina_path or Path(base_input_path) / 'Vina')) + '/'
-    dock6root = Path(base_dock6_path or Path(base_input_path) / 'Dock6')
-    dock6path = str(dock6root / 'flex' if (dock6root / 'flex').is_dir() else dock6root / 'rigid' if (dock6root / 'rigid').is_dir() else dock6root) + '/'
-    path      = str(Path.cwd())
-
-    if not os.path.isdir(directory(vinapath)):
-        print(f'[ERROR] The path {vinapath} is not valid!')
-        raise ValueError('Required inputs or directories are missing; see logs')
-
-    if not os.path.isdir(dock6path):
-        print(f'[ERROR] The path {dock6path} is not valid!')
-        raise ValueError('Required inputs or directories are missing; see logs')
-
-    dock6  = sorted(f for f in os.listdir(dock6path) if f.endswith('_scored.mol2'))
-    poses={}
-    for filename in sorted(Path(vinapath).glob('*.pdbqt')):
-        key=filename.name.removesuffix('.pdbqt').removesuffix('.lig')
-        if key in poses:raise ValueError('Há mais de uma pose Vina para o mesmo identificador: '+key)
-        poses[key]=filename
-    if not dock6:raise ValueError('Selecione ao menos um resultado DOCK6 para o consenso.')
-
-    def read_score(content,label,required=True):
-        match=re.search(re.escape(label)+r':\s*(\S+)',content)
-        if not match:
-            if required:raise ValueError('Score ausente no resultado: '+label)
-            return 0.0
-        score=float(match.group(1))
-        if not math.isfinite(score):raise ValueError('Score não finito no resultado: '+label)
-        return score
-
-    molecules = {}
-    for filename in dock6:
-        file=filename.removesuffix('_scored.mol2').removesuffix('.lig')
-        if file not in poses:
-            raise ValueError('Resultado DOCK6 sem a pose Vina correspondente: '+file)
-
-        with poses[file].open() as fp:
-            content = fp.read()
-
-        # Expressão regular para capturar o resultado do Vina
-        vina_score = read_score(content,'REMARK VINA RESULT')
-
-        with (Path(dock6path)/filename).open() as fp:
-            content = fp.read()
-
-        # Expressão regular para capturar o Grid_Score
-        dock6_score = read_score(content,'Grid_Score')
-
-        # Captura da energia repulsiva interna
-        repulsion_energy = read_score(content,'Internal_energy_repulsive',required=False)
-
-        # Penalização do Grid_Score pela energia repulsiva com peso (λ)
-        dock6_score = (dock6_score + (repulsion_weight * repulsion_energy)) if (dock6_score + (repulsion_weight * repulsion_energy)) < 0 else 0.0
-
-        molecules[file] = (vina_score, dock6_score)
-
-    df = DataFrame.from_dict(molecules, orient='index', columns=['vina', 'dock6'])
-    df.reset_index(inplace=True)
-    df.rename(columns={'index': 'molecule'}, inplace=True)
-
-
-    # Z-score
-    df['z-score'] = (normalized_score(df['vina'],'z-score')+normalized_score(df['dock6'],'z-score'))/2
-
-
-    # Min-Max
-    df['min-max'] = (normalized_score(df['vina'],'min-max')+normalized_score(df['dock6'],'min-max'))/2
-
-    # Arredondamento para duas casas decimais
-    df = df.round(2)
-
-    plot_scatter_comparison(df, base_output_path)
-
-    # Ordenação por ambas as colunas (primeiro por Z-score, depois por Min-Max)
-    df = df.sort_values(by=['z-score', 'min-max'], ascending=[False, False])
-
-    f1 = fileHandling(input_path=base_output_path+'/', output_path=base_output_path+'/')
-    f1.dataframe_to_csv(target, df)
-
-
+                       base_vina_path:str=None, base_dock6_path:str=None):
+    from biomolexplorer.docking_data import read_results, consensus_rows, write_csv, NO_INTERSECTION
+    output=Path(base_output_path);output.mkdir(parents=True,exist_ok=True)
+    rows=consensus_rows(read_results(base_vina_path or Path(base_input_path)/'Vina','vina'),
+                        read_results(base_dock6_path or Path(base_input_path)/'Dock6','dock6'),repulsion_weight)
+    if not rows:
+        import json
+        (output/(target+'.csv')).unlink(missing_ok=True)
+        (output/'consensus_report.json').write_text(json.dumps({'skipped_reason':NO_INTERSECTION},ensure_ascii=False),encoding='utf-8')
+        return {'skipped_reason':NO_INTERSECTION,'rows':0}
+    (output/'consensus_report.json').unlink(missing_ok=True)
+    for index,row in enumerate(rows):
+        for key in ('vina_pose','dock6_pose'):
+            source=Path(row[key]);destination=output/'poses'/f'{index}_{key}{source.suffix}'
+            destination.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(source,destination)
+            row[key]=destination.relative_to(output).as_posix()
+        row['conformer_file']=row['dock6_pose']
+    df=DataFrame(rows)
+    df['z-score']=(normalized_score(df['vina'],'z-score')+normalized_score(df['dock6'],'z-score'))/2
+    df['min-max']=(normalized_score(df['vina'],'min-max')+normalized_score(df['dock6'],'min-max'))/2
+    df[['vina','dock6','z-score','min-max']]=df[['vina','dock6','z-score','min-max']].round(3)
+    df=df.sort_values(['z-score','min-max'],ascending=False)
+    plot_scatter_comparison(df,str(output))
+    df.to_csv(output/(target+'.csv'),index=False)
+    return df
 
 
 def perform_docking_vina(base_input_path:str, target:str, base_output_path:str, base_selected_mols:str,
@@ -224,6 +167,8 @@ def perform_docking_vina(base_input_path:str, target:str, base_output_path:str, 
 
     try:
 
+        output_root=Path(base_output_path)
+        dataset=Path(base_selected_mols)/(mol_filename+'.csv')
         base_prepared_complexes = f'{base_input_path}/{target.replace(' ','')}/Prepared/'
         base_input_path         = f'{base_input_path}/{target.replace(' ','')}/'
         base_input_mols         = f'{base_output_path}/Molecules/'
@@ -247,12 +192,14 @@ def perform_docking_vina(base_input_path:str, target:str, base_output_path:str, 
                         exhaustiveness=exhaustiveness, num_modes=num_modes, mol_filename=mol_filename)
 
 
-        if len(os.listdir(directory(base_input_mols))) == 0:
-            vina.prepare_compounds_for_vina(pH=pH)
+        from biomolexplorer.docking_data import prepare_ligands, write_results
+        prepare_ligands(dataset,base_input_mols,'pdbqt',ph=pH)
 
         vina.set_ligandpath(base_input_mols)
         vina.set_outputpath(f'{base_output_path}/Vina/')
         vina.docking(base_selected_mols)
+        records=list(pdb_code)
+        write_results('vina',Path(base_output_path,'Vina').glob('*.pdbqt'),dataset,records,output_root)
         del vina
 
     except Exception as e:
@@ -269,50 +216,46 @@ def perform_docking_dock6(base_input_path:str, target:str, base_output_path:str,
                           radius:Optional[float]=1.4, distance:Optional[float]=10.0,
                           conformer_search_type:Optional[Literal['flex', 'rigid']] = 'flex',
                           plot_max_residues:Optional[int]=50, base_vina_path:Optional[str]=None) -> None:
-
-    try:
-
-        base_input_path         = f'{base_input_path}/{target.replace(' ','')}/'
-        base_selected_mols      = f'{base_selected_mols}/'
-        base_output_path        = f'{base_output_path}/{target.replace(' ','')}'
-
-        from biomolexplorer.docking_inputs import compound_codes,matching_poses
-        codes=compound_codes(Path(base_selected_mols)/(mol_filename+'.csv'))
-        selected_poses=matching_poses(Path(base_vina_path).glob('*.pdbqt'),[pdb_code],codes) if base_vina_path else None
-        if selected_poses is not None and not selected_poses:
-            raise ValueError('As poses Vina não correspondem ao receptor e aos compostos selecionados.')
-        pdb_code=f'{pdb_code[0]}_{pdb_code[3]}'
-
-        if os.path.exists(f'{directory(base_output_path)}/Dock6/'):
-            print(f'[INFO] The path {directory(base_output_path)}/Dock6/ already exists!')
-            return
-
-        gbvp = Dock6(ligand_input_path=directory(base_vina_path or f'{base_output_path}/Vina/'),
-                     base_output_path=f'{base_output_path}/Molecules')
-        gbvp.recover_better_conforms_of_vina(charge_type=charge_type,
-            filename=[p.name for p in selected_poses] if selected_poses is not None else None)
-        del gbvp
-
-        dock6 = Dock6(dock6_path=dock6_app_path, ligand_input_path=f'{base_output_path}/Molecules/',
-                    receptor_input_path=f'{base_input_path}Prepared/', base_output_path=f'{base_output_path}/Dock6',
-                    pdb_code=pdb_code, density=density, radius=radius, distance=distance,
-                    max_residues=plot_max_residues, conformer_search_type=conformer_search_type, mol_filename=mol_filename)
-
-        dock6.prepare_surface()
-        dock6.prepare_showbox()
-        dock6.prepare_gridbox()
-        dock6.prepare_minimization()
-        dock6.prepare_footprint()
-        dock6.plot_footprint_results()
-        dock6.perform_dock6_evaluation()
-        del dock6
-
-    except Exception as e:
-        logger.error(f'Error during to perform the {target} in perform_docking wrapper function', exc_info=True)
-        raise
-
-
-
+    from biomolexplorer.docking_data import prepare_ligands,read_compounds,read_results,write_csv,write_results,binding_center
+    output=Path(base_output_path);data=Path(base_input_path)/target.replace(' ','')
+    dataset=Path(base_selected_mols)/(mol_filename+'.csv')
+    if pdb_code is None:
+        import pandas as pd
+        records=pd.read_csv(data/'pdb_codes.csv')[['PDB_CODE','LIGAND','RESNUM','CHAIN']].values.tolist()
+    elif isinstance(pdb_code[0],(list,tuple)):records=list(pdb_code)
+    else:records=[pdb_code]
+    for record in records:
+        receptor=f'{record[0]}_{record[3]}'
+        root=output/target.replace(' ','')/receptor
+        prepared_dataset=dataset
+        if base_vina_path:
+            poses=read_results(base_vina_path,'vina');rows=read_compounds(dataset)
+            for row in rows:
+                matches=[p for p in poses if p['molecule_chembl_id']==row['molecule_chembl_id'] and p['receptor_id'] in ('',receptor)]
+                # Legacy pose names include receptor and reference-ligand prefixes.
+                matches+= [p for p in poses if p['molecule_chembl_id']==f'{record[0]}_{record[1]}_{record[2]}{record[3]}_'+row['molecule_chembl_id']]
+                if matches:
+                    row['conformer_file']=min(matches,key=lambda p:p['score'])['conformer_file']
+                    for key in ('prepared_pdbqt','prepared_mol2','docking_engines','prepared_origin'):row.pop(key,None)
+                elif not row.get('conformer_file'):raise ValueError('As poses Vina não correspondem ao receptor e aos compostos selecionados.')
+            root.mkdir(parents=True,exist_ok=True);prepared_dataset=root/'input_compounds.csv';write_csv(prepared_dataset,rows)
+        center=binding_center(data/'Prepared',record)
+        prepare_ligands(prepared_dataset,root/'Molecules','mol2',charge_type=charge_type,center=center)
+        dock6=Dock6(dock6_path=dock6_app_path,ligand_input_path=str(root/'Molecules'),
+                    receptor_input_path=str(data/'Prepared'),base_output_path=str(root/'Dock6'),
+                    pdb_code=receptor,density=density,radius=radius,distance=distance,
+                    max_residues=plot_max_residues,conformer_search_type=conformer_search_type,mol_filename=mol_filename,
+                    binding_site_center=center)
+        dock6.prepare_surface();dock6.prepare_showbox();dock6.prepare_gridbox()
+        dock6.prepare_minimization();dock6.prepare_footprint();dock6.plot_footprint_results();dock6.perform_dock6_evaluation()
+        dock6.export_results()
+        write_results('dock6',(root/'Dock6'/conformer_search_type).glob('*_scored.mol2'),dataset,[record],root)
+    # One table represents all receptors so automatic consumers keep every result.
+    rows=[]
+    for table in sorted(output.rglob('docking_results.csv')):
+        for row in read_compounds(table):
+            row['conformer_file']=(table.parent/row['conformer_file']).relative_to(output).as_posix();rows.append(row)
+    write_csv(output/'docking_results.csv',rows)
 
 
 def perform_consensus(base_input_path:str, target:str, base_output_path:str, base_selected_mols:str,  dock6_app_path:str,

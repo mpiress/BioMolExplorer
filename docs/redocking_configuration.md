@@ -43,3 +43,7 @@ O botão **Visualizar estrutura 3D** abre o visualizador no navegador, como na c
 A tabela resume os valores finitos e não negativos da coluna `RMSD` de `pdb_codes.csv`, com três casas decimais na apresentação; o arquivo conserva a precisão original. O RMSD compara o ligante de referência com o resultado do redocking. A interface não aplica um limiar automático de aprovação científica. A identificação PDB / ligante / resíduo / cadeia permite distinguir cada simulação. Etapas com falha ou ainda em execução mantêm a lista geral de arquivos para diagnóstico.
 
 [Uso do backend](backend_usage.md) inclui um exemplo completo do dicionário de parâmetros e a organização dos arquivos de saída.
+
+## Reutilizar o receptor no docking de candidatos
+
+Conecte o redocking a **Receptor PDB (retrieval ou redocking)** do bloco **Preparar para docking**. Escolha o receptor `.dockprep.pdbqt` no campo **Receptor que deseja utilizar**; arquivos exclusivos do ligante não aparecem nessa seleção. O receptor, os formatos complementares e os centros são reutilizados, com as opções de preparo do receptor desabilitadas. Os candidatos vêm de uma ou mais fontes ChEMBL, PubChem, ZINC ou arquivos próprios e continuam sendo preparados. Escolha Vina, DOCK6 ou ambos como saída e conecte receptor e compostos a cada motor. Consulte o [manual do usuário](user_manual.md#preparacao-e-redocking) para processamento individual e merge.

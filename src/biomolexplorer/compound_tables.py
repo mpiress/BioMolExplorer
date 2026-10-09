@@ -4,6 +4,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import shutil
 import time
 from pathlib import Path
@@ -12,6 +13,21 @@ from uuid import uuid4
 
 from .stage_cache import artifact_manifest
 from .workspace import AccessDenied
+
+
+def compound_links(row):
+    """Build provider links only from recognized compound identifiers."""
+    identifier = str(row.get('molecule_chembl_id') or '').strip().upper()
+    links = []
+    if re.fullmatch(r'CHEMBL[1-9][0-9]*', identifier):
+        links.append({'provider': 'ChEMBL', 'url': 'https://www.ebi.ac.uk/chembl/explore/compound/' + identifier})
+    pubchem = re.fullmatch(r'PUBCHEM([1-9][0-9]*)', identifier)
+    cid = pubchem.group(1) if pubchem else str(row.get('PubChem_CID') or '').strip()
+    # CSVs produced by pandas can serialize an optional numeric CID as 2244.0.
+    match = re.fullmatch(r'([1-9][0-9]*)(?:\.0+)?', cid)
+    if match:
+        links.append({'provider': 'PubChem', 'url': 'https://pubchem.ncbi.nlm.nih.gov/compound/' + match.group(1)})
+    return links
 
 
 class CompoundTables:
@@ -75,7 +91,7 @@ class CompoundTables:
                 if query.lower() not in (identifier+' '+smiles).lower():
                     continue
                 if offset<=matched<offset+limit:
-                    rows.append({'index':index,'id':identifier,'smiles':smiles})
+                    rows.append({'index':index,'id':identifier,'smiles':smiles,'links':compound_links(row),'properties':row})
                 matched+=1
         project=self.store.project(token,project_id)
         with self.store.connect() as db:

@@ -8,17 +8,19 @@ from biomolexplorer.pipeline import validate_pipeline
 
 # Independent reference for the public stage contract (not imported from flow).
 OUTPUTS={'retrieve_compounds':{'compounds','chembl'},'expand_similar_compounds':{'compounds'},
-    'retrieve_structures':{'structures'},'retrieve_zinc':{'compounds'},'prepare_structures':{'prepared_structures'},
-    'admet':{'compounds'},'fingerprints':{'fingerprints'},'similarity':{'similarity'},'graphs':{'compounds'},
-    'redocking':{'structures','prepared_structures'},'docking_vina':{'vina'},'docking_dock6':{'dock6'},'consensus':{'scores'}}
-INPUTS={'expand_similar_compounds':{'base_input_path':{'chembl'}},'retrieve_zinc':{'base_input_path':{'other'}},
-    'prepare_structures':{'base_input_path':{'structures'}},'admet':{'base_input_path':{'compounds'}},
+    'retrieve_pubchem':{'compounds'},
+    'retrieve_structures':{'structures'},'retrieve_zinc':{'compounds'},'prepare_structures':{'prepared_structures','compounds'},
+    'admet':{'compounds'},'fingerprints':{'fingerprints','compounds'},'similarity':{'similarity'},'graphs':{'compounds'},
+    'redocking':{'structures','prepared_structures'},'docking_vina':{'vina','compounds'},'docking_dock6':{'dock6','compounds'},'consensus':{'scores','compounds'}}
+INPUTS={'expand_similar_compounds':{'base_input_path':{'chembl'}},'retrieve_zinc':{'base_input_path':{'other','zinc_urls'}},
+    'retrieve_pubchem':{'base_input_path':{'compounds'}},
+    'prepare_structures':{'base_input_path':{'structures','prepared_structures'},'base_selected_mols':{'compounds'}},'admet':{'base_input_path':{'compounds'}},
     'fingerprints':{'base_input_path':{'compounds'}},'similarity':{'base_input_path':{'fingerprints'}},
     'graphs':{'similarity_path':{'similarity'}},'redocking':{'base_input_path':{'structures'}},
-    'docking_vina':{'base_input_path':{'prepared_structures'},'base_selected_mols':{'compounds'}},
-    'docking_dock6':{'base_input_path':{'prepared_structures'},'base_selected_mols':{'compounds'},'base_vina_path':{'vina'}},
+    'docking_vina':{'base_input_path':{'prepared_structures'},'base_selected_mols':{'compounds','vina','dock6'}},
+    'docking_dock6':{'base_input_path':{'prepared_structures'},'base_selected_mols':{'compounds','vina','dock6'},'base_vina_path':{'vina'}},
     'consensus':{'base_vina_path':{'vina'},'base_dock6_path':{'dock6'}}}
-KINDS=('compounds','structures','prepared_structures','fingerprints','similarity','vina','dock6','scores','other')
+KINDS=('compounds','structures','prepared_structures','fingerprints','similarity','vina','dock6','scores','other','zinc_urls')
 
 
 class ConnectionMatrixTests(unittest.TestCase):
@@ -76,6 +78,13 @@ class ConnectionMatrixTests(unittest.TestCase):
             target=new_stage(operation)
             for port in input_ports(target):self.assertFalse(compatible(target,target,port['field']))
         source,target=new_stage('admet'),new_stage('fingerprints');source['enabled']=False
+        stages=[source,target];before=copy.deepcopy(stages)
+        with self.assertRaises(ValueError):connect(stages,source['id'],target['id'],'base_input_path')
+        self.assertEqual(stages,before)
+
+    def test_rejected_cycle_preserves_receptor_preparation_mode(self):
+        source,target=new_stage('redocking'),new_stage('prepare_structures')
+        source['depends_on']=[target['id']]
         stages=[source,target];before=copy.deepcopy(stages)
         with self.assertRaises(ValueError):connect(stages,source['id'],target['id'],'base_input_path')
         self.assertEqual(stages,before)

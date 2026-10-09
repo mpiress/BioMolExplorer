@@ -175,5 +175,18 @@
   "O diretório do ligante não existe: {0}": "Ligand directory does not exist: {0}",
   "O diretório do receptor não existe: {0}": "Receptor directory does not exist: {0}",
   "O diretório do complexo não existe: {0}": "Complex directory does not exist: {0}",
-  "O diretório de saída não pôde ser criado: {0}": "Output directory could not be created: {0}"
+  "O diretório de saída não pôde ser criado: {0}": "Output directory could not be created: {0}",
+  "Arquivo do receptor necessário para {0}: {1}": "Receptor file required for {0}: {1}",
+  "Centro do sítio de docking ausente ou inválido para {0}.": "The docking site center is missing or invalid for {0}.",
+  "{0} arquivos selecionados": "{0} selected files",
+  "Endereço ZINC não autorizado: {0}": "Unauthorized ZINC address: {0}",
+  "Formato de tranche ZINC não suportado: {0}": "Unsupported ZINC tranche format: {0}",
+  "Linha {0}: informe um link de tranche ZINC SMI ou MOL2.": "Line {0}: enter a ZINC SMI or MOL2 tranche link.",
+  "O download ZINC está vazio: {0}": "The ZINC download is empty: {0}",
+  "Redirecionamentos excessivos no download ZINC: {0}": "Too many redirects in the ZINC download: {0}",
+  "Identificador ZINC inválido: {0}": "Invalid ZINC identifier: {0}",
+  "Linha {0}: tabela SMI ZINC incompleta.": "Line {0}: incomplete ZINC SMI table.",
+  "SMILES ZINC inválido: {0}": "Invalid ZINC SMILES: {0}",
+  "Estruturas ZINC conflitantes para {0}": "Conflicting ZINC structures for {0}",
+  "A tranche ZINC não contém moléculas: {0}": "The ZINC tranche contains no molecules: {0}"
 }
