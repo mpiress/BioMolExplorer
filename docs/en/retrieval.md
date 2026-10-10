@@ -133,7 +133,7 @@ Click **View 3D structure** beside a PDB in results or file selection. The explo
 
 - Left-drag to rotate; use the mouse wheel to zoom.
 - Right-drag to pan. **Recenter** fits the camera to the selection.
-- Choose ribbons with ligands, sticks, spheres or lines; color by chain, element or sequence.
+- Choose ribbons, sticks, spheres or lines under **Receptor style**; **Ligand style** independently selects sticks, spheres or lines. Color the receptor by chain, element or sequence.
 - Select a chain or another model in multimodel PDBs. The first model is shown initially.
 - Toggle ligands and water. Click an atom to inspect its residue, chain, atom name and element.
 - Use **Fullscreen** and **Save image** to export the current view as PNG.
@@ -176,3 +176,12 @@ Under **Concurrent downloads**, select 1 to 16 threads (default: 4). Use 1 for s
 SMI reading supports optional headers, spaces and tabs. Numeric identifiers receive the ZINC prefix; existing ZINC identifiers are retained. Multi-molecule MOL2 blocks are split by identifier. Identical duplicates are combined; a record available in 2D and 3D retains its 3D conformation. The first valid conformer is kept. Conflicting structures for an identifier, invalid SMILES, empty files and incompatible formats stop the stage.
 
 Connect `compounds.csv` to ADMET, fingerprints, similarity/graphs through their usual workflow, **Prepare for docking**, Vina or DOCK6. 2D candidates generate conformations during preparation; 3D candidates start from the supplied MOL2. The manifest marks 3D structures as library conformations (`conformer_origin=library`), positioning them at the binding-site center when creating DOCK6 inputs. Calculated poses retain their position. Library MOL2 files are not **DOCK6 results**, since they do not yet contain docking scores. Keep the table and its referenced files together when exporting/importing results.
+
+## Shared structure controls
+
+**Receptor style** and **Ligand style** choose representations independently.
+**Ligand hydrogens** shows or hides H present in the file. The same component
+views Vina/DOCK6 poses with receptor/reference overlays, dashed traces by type and
+hover identification when sufficient chemistry is available for classification.
+See the [viewer guide](molecular_viewer.md) to distinguish conformers, poses,
+contacts and footprint energies.

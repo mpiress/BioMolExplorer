@@ -138,7 +138,7 @@ Clique no ícone **Visualizar estrutura 3D** da estrutura desejada, nos resultad
 
 - Arraste com o botão esquerdo para rotacionar a estrutura; use a roda do mouse para aproximar ou afastar.
 - Arraste com o botão direito para deslocar a estrutura. **Recentrar** ajusta a câmera à seleção.
-- Escolha a representação: fitas com ligantes, bastões, esferas ou linhas. Selecione a coloração por cadeia, elemento ou sequência.
+- Escolha **Estilo do receptor**: fitas, bastões, esferas ou linhas. **Estilo do ligante** controla bastões, esferas ou linhas separadamente. Selecione a coloração do receptor por cadeia, elemento ou sequência.
 - Filtre uma cadeia ou selecione outro modelo quando o PDB contiver vários modelos. O primeiro modelo é mostrado inicialmente.
 - Ligue/desligue ligantes e água. Clique em um átomo para identificar resíduo, cadeia, nome do átomo e elemento.
 - Use **Tela inteira** para ampliar a área e **Salvar imagem** para baixar o enquadramento atual em PNG.
@@ -181,3 +181,11 @@ Em **Downloads simultâneos**, escolha de 1 a 16 threads (padrão: 4). Use 1 par
 A leitura SMI aceita cabeçalho opcional, espaços e tabs. Um identificador numérico recebe o prefixo ZINC; códigos ZINC existentes são preservados. Os blocos de um MOL2 com várias moléculas são separados por código. Duplicatas idênticas são reunidas; se há 2D e 3D para o mesmo código, a conformação 3D acompanha o registro. O primeiro conformero válido é mantido. Códigos com estruturas divergentes, SMILES inválidos, arquivos vazios e formatos incompatíveis interrompem a etapa.
 
 Conecte `compounds.csv` a ADMET, fingerprints, similaridade/grafos por seu fluxo habitual, **Preparar para docking**, Vina ou DOCK6. Em 2D, o preparo gera uma conformação; em 3D, parte do MOL2 fornecido. O manifesto marca as estruturas 3D como conformações de biblioteca (`conformer_origin=library`), para posicioná-las no centro do sítio ao preparar a entrada DOCK6. Poses já calculadas conservam seu posicionamento. Não se aplica o tipo **Resultados DOCK6** ao MOL2 da biblioteca, pois ele ainda não contém scores de docking. Mantenha a tabela e os arquivos referenciados no mesmo conjunto ao exportar/importar resultados.
+
+## Controles compartilhados de estruturas
+
+**Hidrogênios do ligante** mostra ou oculta os H presentes no arquivo. O mesmo
+componente visualiza poses Vina/DOCK6 com receptor e referência, traçados
+tracejados por tipo e identificação pelo mouse quando há química suficiente
+para classificar interações. Consulte o [guia do visualizador](molecular_viewer.md)
+para distinguir conformeros, poses, contatos e energias de footprint.

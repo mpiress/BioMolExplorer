@@ -15,7 +15,7 @@ Molecular Data Exploration for Intelligent Drug Discovery
 <img align="center" height="15px" width="80px" src="https://img.shields.io/badge/Python-14354C?style=for-the-badge&logo=python&logoColor=green"/> 
 <img align="center" height="15px" width="100px" src="https://img.shields.io/badge/Made_for-VSCode-green.svg"/> 
 <img align="center" height="15px" width="120px" src="https://img.shields.io/badge/contributions-welcome-green.svg?style=flat"/>
-<img align="center" height="15px" width="80px" src="https://img.shields.io/badge/License-GPLv3-green.svg"/>
+<img align="center" height="15px" width="80px" src="https://img.shields.io/badge/License-MIT-green.svg"/>
 <img align="center" height="15px" width="120px" src="https://img.shields.io/badge/Virtual_Screening-yes-green.svg"/>
 <img align="center" height="15px" width="150px" src="https://img.shields.io/badge/Structure_Based_Analysis-yes-green.svg"/>
 </div>
@@ -27,7 +27,7 @@ Molecular Data Exploration for Intelligent Drug Discovery
 
 BioMolExplorer is an integrated computational framework designed to support Computer-Aided Drug Design (CADD) workflows through molecular information retrieval, similarity analysis, graph-based molecular exploration, consensus docking, redocking validation, and ADMET profiling.
 
-The platform integrates data from major public repositories, including PDB, ChEMBL, and ZINC, enabling the construction of research-ready datasets for drug discovery, drug repositioning, virtual screening, and polypharmacology investigations.
+The platform integrates data from major public repositories, including PDB, ChEMBL, PubChem, and ZINC, enabling the construction of research-ready datasets for drug discovery, drug repositioning, virtual screening, and polypharmacology investigations.
 
 </div>
 
@@ -41,14 +41,33 @@ validated input files or supplied completed results, and ADMET EGG points reveal
 compound identifiers and 2D structures, with a button to open the shared molecular
 3D viewer used for proteins and retrieved compounds.
 
-Graph blocks accept fingerprints, ready similarity files, or both, with separate
-results for each input. Explore the full network and its highlighted MCC, inspect
+Graph blocks receive outputs from similarity stages, or validated external
+similarity CSVs selected in their settings, with separate results for each input.
+The pipeline follows fingerprints → similarity → graphs. Explore the full network and its highlighted MCC, inspect
 molecular 2D structures, and download degree reports containing the common
 fragment image. The [workspace guide](docs/en/frontend.md) explains the color
 scales, source selection and fragment search status.
 
 Read [Projects and versions](docs/en/projects.md) or
 [Projetos e versões](docs/projects.md) for migration, sharing and input formats.
+
+## Docking poses and molecular interactions
+
+Vina and DOCK6 result viewers overlay the best pose with its docking receptor and
+an available reference, preserving original coordinates. Receptor and ligand
+styles are independent; ligand hydrogens can be shown or hidden when present in
+the file. Colored dashed traces identify hydrogen bonds, parallel/T-shaped π–π,
+hydrophobic contacts and geometric van der Waals contacts. Hover over a trace for
+type, residue, chain and distance; use the matching legend and filters to inspect
+individual types.
+
+Classification requires valid chemistry and residue identities; hydrogen bonds
+require explicit H. Unavailable classification is explained while distance
+contacts remain accessible. DOCK6 Footprint is a separate per-residue energy
+comparison with the final pose. Consensus exposes each engine’s 3D pose and an
+available footprint; structural attachments are optional for score computation.
+See the [viewer guide](docs/en/molecular_viewer.md)
+([Português](docs/molecular_viewer.md)) for controls and interpretation.
 
 ## 🌐 Project Website
 
@@ -60,12 +79,12 @@ Complete documentation, installation instructions, workflow descriptions, and ex
 ## 🚀 Core Capabilities
 
 * Automated retrieval of molecular, structural, and bioactivity data.
-* Integration with PDB, ChEMBL, and ZINC databases.
+* Integration with PDB, ChEMBL, PubChem, and ZINC databases.
 * Molecular fingerprint generation (Morgan, MACCS, and Pharmacophore).
 * Similarity analysis using Tanimoto-based metrics.
 * Graph-based molecular network modeling.
 * Redocking using AutoDock Vina, with explicit pair selection, per-pair preparation and an RMSD results table with simulation downloads and 3D inspection.
-* Consensus docking using AutoDock Vina and Dock6.
+* Independent and consensus docking using AutoDock Vina and DOCK6, with pose/receptor overlays, interaction hover details and per-residue DOCK6 footprint inspection.
 * Block information popups describing inputs and outputs, with concise notices for incompatible connections.
 * Optional per-file compound selection for Vina/DOCK6, with no repeat input prompt when docking files are already configured.
 * ADMET profiling for early-stage compound prioritization.
@@ -863,6 +882,7 @@ tarefas em processos separados. O histórico, os estados, erros e caminhos dos
 resultados são persistidos em SQLite. Cada tarefa possui seu próprio diretório,
 com limites de concorrência, timeout e cancelamento.
 
+- [Visualizador molecular e interações 3D](docs/molecular_viewer.md) · [English viewer guide](docs/en/molecular_viewer.md)
 - [Manual do usuário: passo a passo completo](docs/user_manual.md) · [English user manual](docs/en/user_manual.md)
 - [Instalação e configuração: GitHub, Chimera 1.17 e DOCK6 6.11](docs/installation.md) · [English installation guide](docs/en/installation.md)
 - [Validação das etapas e conexões](docs/pipeline_validation.md)

@@ -374,3 +374,26 @@ Use um bloco separado para cada modo de receptor: não combine PDBs brutos com r
 As referências de compostos do docking podem conter `compound_id`. `InputEditor` e `FileSelection` conservam a seleção por arquivo. `_materialize_docking_compounds` filtra cada referência, preserva conformações e arquivos preparados e só depois deduplica os compostos. A configuração da entrada faz parte da chave de materialização, separando seleções distintas do mesmo CSV. Um identificador ausente é recusado.
 
 `requires_curation` preserva a seleção posterior para conexões automáticas. Docking Vina/DOCK6 com receptor e compostos previamente definidos por arquivo explícito executa sem repetir a confirmação. A validação dos arquivos, parâmetros e autorizações continua ocorrendo na resolução e na execução.
+
+## Cenas moleculares e interações: revisão de 10 de outubro de 2026
+
+`docking_scene.py` seleciona a pose e calcula contatos entre átomos pesados nas
+coordenadas originais. `docking_interactions.py` recupera a topologia com RDKit,
+classifica π–π paralelo/em T, ligações de hidrogênio com H explícitos, contatos
+hidrofóbicos e van der Waals geométricos. Cada relação inclui tipo, cor, resíduo,
+distância e extremos 3D; a paleta acompanha o payload da cena. A classificação
+não executa o PLIP completo nem calcula energia.
+
+`docking-viewer.js` usa os controles independentes de receptor/ligante e de H
+preservados no arquivo. Formas 3D tracejadas mantêm espessura e geometria para
+picking: callbacks de hover mostram tipo, resíduo, cadeia e distância. A legenda,
+os filtros e a lista usam a mesma paleta. Relações coincidentes recebem um desvio
+apenas no traçado, preservando extremos e distância química. Redesenho, filtros e
+ocultação das camadas limpam formas e tooltip anteriores. `pdb-viewer.js` aplica os
+mesmos estilos e filtro de H a estruturas isoladas.
+
+`pdb_view.py` mantém as autorizações e os assets locais versionados por hash.
+Topologia insuficiente desabilita classificação, preservando contatos. O guia
+[Visualizador molecular](molecular_viewer.md) descreve o fluxo; o
+[relatório de validação](validation/viewer_controls_2026-10-10.md) delimita a
+cobertura geométrica e WebGL.

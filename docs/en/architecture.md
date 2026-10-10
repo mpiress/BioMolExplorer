@@ -364,3 +364,26 @@ Use a separate block for each receptor mode: do not combine raw PDBs and prepare
 Docking compound references can include `compound_id`. `InputEditor` and `FileSelection` preserve the choice per file. `_materialize_docking_compounds` filters each reference, preserves conformations and prepared files, then deduplicates compounds. Input configuration is part of the materialization key, separating different selections from the same CSV. A missing identifier is rejected.
 
 `requires_curation` retains later selection for automatic connections. Vina/DOCK6 docking with receptor and compounds already defined by explicit files runs without repeat confirmation. File, parameter and permission validation still occurs during resolution and execution.
+
+## Molecular scenes and interactions: October 10, 2026 review
+
+`docking_scene.py` selects poses and computes heavy-atom contacts in original
+coordinates. `docking_interactions.py` recovers topology through RDKit and
+classifies parallel/T-shaped π–π, hydrogen bonds with explicit H, hydrophobic
+contacts and geometric van der Waals contacts. Each relation includes type,
+color, residue, distance and 3D endpoints; the scene payload carries the palette.
+Classification does not run the complete PLIP engine or calculate energy.
+
+`docking-viewer.js` applies independent receptor/ligand styles and visibility of
+H retained in the file. Dashed 3D shapes retain thickness and picking geometry;
+hover callbacks display type, residue, chain and distance. Legend, filters and
+list share the palette. Coincident relations receive a presentation offset only,
+retaining chemical endpoints and distances. Redrawing, filtering and hiding
+layers clear previous shapes and tooltips. `pdb-viewer.js` applies the same styles
+and H filter to standalone structures.
+
+`pdb_view.py` retains authorization and local assets versioned by content hash.
+Insufficient topology disables classification while retaining distance contacts.
+The [Molecular viewer guide](molecular_viewer.md) describes the workflow; the
+[validation report](../validation/viewer_controls_2026-10-10.md) (Portuguese)
+delimits geometric and WebGL coverage.

@@ -12,13 +12,13 @@ import unicodedata
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / 'docs'
-GUIDES = ('installation', 'user_manual', 'frontend', 'backend_usage', 'architecture', 'projects', 'pipeline_validation', 'chimera_migration', 'dms_migration', 'retrieval', 'redocking_configuration', 'logging')
+GUIDES = ('installation', 'user_manual', 'frontend', 'backend_usage', 'architecture', 'projects', 'pipeline_validation', 'chimera_migration', 'dms_migration', 'retrieval', 'redocking_configuration', 'logging', 'molecular_viewer')
 LABELS = {
     'en': {'language':'English','other':'Português','home':'Platform overview','docs':'Documentation',
            'source':'Markdown source','contents':'On this page','diagram':'Application architecture',
            'diagram_source':'Mermaid source','intro':'Choose your path into BioMolExplorer.',
            'description':'Guides for using the workspace, running scientific operations and extending the platform.',
-           'titles':['Installation and configuration','User manual','Flet workspace','Backend usage','Architecture and technical review','Projects and versions','Pipeline validation','Chimera replacement assessment','Native DMS port and validation','Flexible information retrieval','Redocking configuration','Logs and diagnostics'],
+           'titles':['Installation and configuration','User manual','Flet workspace','Backend usage','Architecture and technical review','Projects and versions','Pipeline validation','Chimera replacement assessment','Native DMS port and validation','Flexible information retrieval','Redocking configuration','Logs and diagnostics','Molecular viewer and 3D interactions'],
            'summaries':['Download from GitHub, install Chimera 1.17 and DOCK6 6.11, and check your environment before starting.',
                         'Detailed walkthrough from language selection and your first study to results and migration.',
                         'Accounts, private projects, sharing, flexible pipelines and your own files.',
@@ -30,14 +30,15 @@ LABELS = {
                         'Native SES generation and comparisons with the original UCSF C algorithm.',
                         'PDB search criteria, direct ChEMBL searches, optional filters and query reports.',
                         'Explicit pairs, shared chain, cofactors, preparation, RMSD tables, downloads and 3D inspection.',
-                        'Correlated events, failure codes, per-job summaries and filtered log reports.'],
+                        'Correlated events, failure codes, per-job summaries and filtered log reports.',
+                        'Pose/receptor overlays, independent styles, ligand hydrogens, colored interaction traces and hover identification.'],
            'read':'Read guide','start':'First installation? Download the project and configure the required tools before starting.',
            'footer':'Documentation generated from the project Markdown sources. MIT license.'},
     'pt': {'language':'Português','other':'English','home':'Apresentação da plataforma','docs':'Documentação',
            'source':'Fonte Markdown','contents':'Nesta página','diagram':'Arquitetura da aplicação',
            'diagram_source':'Fonte Mermaid','intro':'Escolha seu caminho no BioMolExplorer.',
            'description':'Guias para usar o workspace, executar operações científicas e estender a plataforma.',
-           'titles':['Instalação e configuração','Manual do usuário','Workspace Flet','Uso do backend','Arquitetura e revisão técnica','Projetos e versões','Validação do pipeline','Avaliação da substituição do Chimera','Porte nativo DMS e validação','Recuperação flexível da informação','Configuração do redocking','Logs e diagnóstico'],
+           'titles':['Instalação e configuração','Manual do usuário','Workspace Flet','Uso do backend','Arquitetura e revisão técnica','Projetos e versões','Validação do pipeline','Avaliação da substituição do Chimera','Porte nativo DMS e validação','Recuperação flexível da informação','Configuração do redocking','Logs e diagnóstico','Visualizador molecular e interações 3D'],
            'summaries':['Download pelo GitHub, instalação de Chimera 1.17 e DOCK6 6.11 e verificação antes de iniciar.',
                         'Passo a passo do idioma e primeiro estudo aos resultados e à migração.',
                         'Contas, projetos privados, compartilhamento, pipelines flexíveis e arquivos próprios.',
@@ -49,7 +50,8 @@ LABELS = {
                         'Geração SES nativa e comparação com o algoritmo C original da UCSF.',
                         'Critérios PDB, busca direta ChEMBL, filtros opcionais e relatórios das consultas.',
                         'Pares explícitos, cadeia comum, cofatores, preparação, tabela de RMSD, downloads e visualização 3D.',
-                        'Eventos correlacionados, códigos de falha, resumos por job e consultas filtradas.'],
+                        'Eventos correlacionados, códigos de falha, resumos por job e consultas filtradas.',
+                        'Comparação pose/receptor, estilos independentes, hidrogênios do ligante, traçados coloridos e identificação pelo mouse.'],
            'read':'Ler guia','start':'Primeira instalação? Baixe o projeto e configure as ferramentas obrigatórias antes de iniciar.',
            'footer':'Documentação gerada a partir dos arquivos Markdown do projeto. Licença MIT.'},
 }
@@ -216,7 +218,7 @@ def build():
             output.write_text(page(labels['titles'][index],language,content,'../../index.html','../index.html' if language=='en' else 'index.html',f'../{"pt" if language=="en" else "en"}/{guide}.html'),encoding='utf-8')
         portal = DOCS/'index.html' if language=='en' else DOCS/'pt/index.html'
         prefix = 'en/' if language=='en' else ''
-        cards = ''.join(f'<section class="card"><span class="number">0{n+1}</span><h2>{labels["titles"][n]}</h2><p>{labels["summaries"][n]}</p><a href="{prefix}{guide}.html">{labels["read"]} →</a></section>' for n,guide in enumerate(GUIDES))
+        cards = ''.join(f'<section class="card"><span class="number">{n+1:02d}</span><h2>{labels["titles"][n]}</h2><p>{labels["summaries"][n]}</p><a href="{prefix}{guide}.html">{labels["read"]} →</a></section>' for n,guide in enumerate(GUIDES))
         content = f'<main class="portal"><p class="eyebrow">BioMolExplorer · {labels["docs"]}</p><h1>{labels["intro"]}</h1><p class="lead">{labels["description"]}</p><div class="cards">{cards}</div><p class="note">{labels["start"]} <a href="{prefix}{GUIDES[0]}.html">{labels["titles"][0]} →</a></p></main>'
         portal.write_text(page(labels['docs'],language,content,'../index.html' if language=='en' else '../../index.html','./index.html' if language=='en' else 'index.html','pt/index.html' if language=='en' else '../index.html'),encoding='utf-8')
     print(f'Built {len(GUIDES)*len(LABELS)} documentation pages and {len(LABELS)} language portals.')

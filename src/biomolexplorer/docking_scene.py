@@ -31,6 +31,19 @@ def best_pose(text, fmt):
 
 def atoms(text,fmt,include_hydrogens=False):
     result=[];active=False
+    if fmt=='sdf':
+        from rdkit import Chem
+        molecule=Chem.MolFromMolBlock(text.split('$$$$')[0],sanitize=False,removeHs=False)
+        if molecule is None or not molecule.GetNumConformers():raise ValueError('Estrutura SDF inválida.')
+        conformer=molecule.GetConformer()
+        for atom in molecule.GetAtoms():
+            element=atom.GetSymbol().upper()
+            if not include_hydrogens and element in ('H','D'):continue
+            xyz=list(conformer.GetAtomPosition(atom.GetIdx()))
+            if not all(math.isfinite(v) for v in xyz):raise ValueError('A estrutura contém coordenadas inválidas.')
+            result.append(dict(atom=f'{element}{atom.GetIdx()+1}',resn='LIG',resi=1,chain='',icode='',elem=element,xyz=xyz))
+        if not result:raise ValueError('A conformação selecionada não contém átomos.')
+        return result
     for line in text.splitlines():
         if fmt=='mol2':
             if line.startswith('@<TRIPOS>'):active=line=='@<TRIPOS>ATOM';continue

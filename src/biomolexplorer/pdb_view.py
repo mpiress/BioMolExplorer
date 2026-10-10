@@ -37,9 +37,9 @@ TEXT={
        'atoms':'atoms','chains':'chains','picked':'Select an atom to see its details.',
        'conformer':'Conformer generated locally from SMILES; this is not a docking pose.'}}
 
-TEXT['pt'].update(receptor_style='Estilo do receptor',ligand_style='Estilo do ligante',hydrogens='Hidrogênios',
+TEXT['pt'].update(receptor_style='Estilo do receptor',ligand_style='Estilo do ligante',hydrogens='Hidrogênios do ligante',
     hydrogen_hint='Exibe apenas os hidrogênios presentes no arquivo.',interaction_view='Interações 2D',close='Voltar ao 3D')
-TEXT['en'].update(receptor_style='Receptor style',ligand_style='Ligand style',hydrogens='Hydrogens',
+TEXT['en'].update(receptor_style='Receptor style',ligand_style='Ligand style',hydrogens='Ligand hydrogens',
     hydrogen_hint='Shows only hydrogen atoms present in the file.',interaction_view='2D interactions',close='Back to 3D')
 
 @lru_cache(maxsize=32)

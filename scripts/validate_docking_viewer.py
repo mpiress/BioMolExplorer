@@ -85,7 +85,7 @@ with tempfile.TemporaryDirectory(prefix='biomol-webgl-') as tmp:
    deadline=time.monotonic()+20
    while evaluate('document.body && document.body.dataset.ready')!='true':
     if evaluate('document.body && document.body.dataset.ready')=='error' or time.monotonic()>deadline:
-     raise RuntimeError(evaluate('document.body.innerText'))
+     raise RuntimeError({'page':evaluate('document.body.innerText'), 'errors':[e for e in events if e.get('method') in ('Runtime.exceptionThrown','Runtime.consoleAPICalled')]})
     time.sleep(.1)
    first=evaluate('biomolViewer.getView()')
    command('Input.dispatchMouseEvent',{'type':'mousePressed','x':800,'y':400,'button':'left','clickCount':1})
@@ -96,13 +96,14 @@ with tempfile.TemporaryDirectory(prefix='biomol-webgl-') as tmp:
    time.sleep(.2);zoomed=evaluate('biomolViewer.getView()');assert rotated!=zoomed,'Zoom failed'
    representations=('sticks','spheres','lines') if args.smiles else ('sticks','spheres','lines','cartoon')
    for value in representations:
-    evaluate(f'document.getElementById("representation").value="{value}";document.getElementById("representation").dispatchEvent(new Event("change"));true')
+    control_id='ligand-representation' if args.smiles else 'representation'
+    evaluate(f'document.getElementById("{control_id}").value="{value}";document.getElementById("{control_id}").dispatchEvent(new Event("change"));true')
     if args.smiles:
-     styles=evaluate('biomolViewer.getModel().selectedAtoms({}).map(atom => Object.keys(atom.style))')
+     styles=evaluate('biomolViewer.getModel().selectedAtoms({}).filter(atom => !["H","D"].includes(atom.elem)).map(atom => Object.keys(atom.style))')
      expected={'sticks':'stick','spheres':'sphere','lines':'line'}[value]
      assert all(expected in style for style in styles),'Compound representation did not change'
    if args.smiles:
-    evaluate('document.getElementById("representation").value="sticks";document.getElementById("representation").dispatchEvent(new Event("change"));true')
+    evaluate('document.getElementById("ligand-representation").value="sticks";document.getElementById("ligand-representation").dispatchEvent(new Event("change"));true')
     assert evaluate('!document.getElementById("conformer").hidden'),'Conformer provenance missing'
    evaluate('document.getElementById("center").click();true')
    downloads=Path(tmp)/'downloads';downloads.mkdir()
@@ -136,8 +137,41 @@ with tempfile.TemporaryDirectory(prefix='biomol-webgl-') as tmp:
    errors=[event['params'] for event in events if event.get('method')=='Runtime.exceptionThrown']
    assert not errors,errors
    if args.redocking_root or args.docking_root:
+    if evaluate('biomolDockingScene.interactions.length'):
+     assert evaluate('biomolDockingScene.layers.find(l=>l.role==="receptor").model.selectedAtoms({}).some(a=>a.style.stick)'), 'Interacting residues not visible in cartoon mode'
     assert evaluate('biomolDockingScene.layers.length')>=2,'Receptor/pose overlay missing'
     assert evaluate('biomolDockingScene.layers.every(layer => layer.model.selectedAtoms({}).length>0)'),'Empty layer'
+    evaluate('document.getElementById("representation").value="lines";document.getElementById("representation").dispatchEvent(new Event("change"));document.getElementById("ligand-representation").value="spheres";document.getElementById("ligand-representation").dispatchEvent(new Event("change"));true')
+    assert evaluate('biomolDockingScene.layers.find(l=>l.role==="pose").model.selectedAtoms({}).filter(a=>!["H","D"].includes(a.elem)).every(a=>a.style.sphere && !a.style.line)'), 'Ligand style is not independent'
+    assert evaluate('biomolDockingScene.layers.find(l=>l.role==="receptor").model.selectedAtoms({}).filter(a=>a.resn==="PHE").every(a=>a.style.line && !a.style.sphere)'), 'Receptor style changed with ligand'
+    assert evaluate('biomolDockingScene.layers.find(l=>l.role==="pose").model.selectedAtoms({elem:"H"}).every(a=>Object.keys(a.style).length===0)'), 'Ligand H not hidden'
+    evaluate('document.getElementById("hydrogens").click();true')
+    assert evaluate('biomolDockingScene.layers.find(l=>l.role==="pose").model.selectedAtoms({elem:"H"}).every(a=>a.style.sphere)'), 'Ligand H not shown'
+    evaluate('document.getElementById("hydrogens").click();true')
+    if evaluate('biomolDockingScene.interactions.length'):
+     assert evaluate('biomolDockingScene.shapes.length===biomolDockingScene.interactions.length'), '3D interaction lines missing'
+     assert evaluate('biomolDockingScene.shapes.every(s=>s.hoverable && s.intersectionShape.cylinder.length>1)'), 'Dashed interactive geometry missing'
+     kinds=evaluate('[...new Set(biomolDockingScene.interactions.map(r=>r.kind))]')
+     for kind in kinds:
+      # Use real projected dash centres: callbacks alone cannot verify picking.
+      candidates=evaluate(f'biomolDockingScene.shapes.filter(s=>s.interaction.kind==={json.dumps(kind)}).flatMap(s=>s.intersectionShape.cylinder.map(c=>biomolViewer.modelToScreen({{x:(c.c1.x+c.c2.x)/2,y:(c.c1.y+c.c2.y)/2,z:(c.c1.z+c.c2.z)/2}})))')
+      found=False
+      for point in candidates:
+       command('Input.dispatchMouseEvent',{'type':'mouseMoved','x':point['x'],'y':point['y']})
+       time.sleep(.2)
+       if evaluate(f'biomolDockingScene.hoveredInteraction?.kind==={json.dumps(kind)} && !document.getElementById("interaction-tooltip").hidden'):
+        found=True;break
+      assert found, 'Mouse hover did not identify '+kind
+      assert evaluate('document.getElementById("interaction-tooltip").textContent.includes("Å")'), 'Hover distance missing'
+      command('Input.dispatchMouseEvent',{'type':'mouseMoved','x':1200,'y':100});time.sleep(.2)
+      assert evaluate('document.getElementById("interaction-tooltip").hidden'), 'Tooltip did not clear on mouse exit'
+     evaluate('document.getElementById("show-interactions").click();true')
+     assert evaluate('document.getElementById("interaction-tooltip").hidden'), 'Tooltip survived hidden interactions'
+     assert evaluate('biomolDockingScene.shapes.length===0'), 'Interaction visibility failed'
+     evaluate('document.getElementById("show-interactions").click();true')
+     evaluate('document.querySelector("#interaction-types input").click();true')
+     assert evaluate('biomolDockingScene.shapes.length===biomolDockingScene.interactions.filter(r=>biomolDockingScene.enabledTypes.has(r.kind)).length'), 'Interaction type filter failed'
+     evaluate('document.querySelector("#interaction-types input").click();true')
     before=evaluate('document.querySelectorAll(".contact-residue").length')
     evaluate('document.getElementById("cutoff").value="2";document.getElementById("cutoff").dispatchEvent(new Event("change"));true')
     assert evaluate('document.querySelectorAll(".contact-residue").length')<=before,'Contact cutoff did not filter residues'
@@ -150,6 +184,8 @@ with tempfile.TemporaryDirectory(prefix='biomol-webgl-') as tmp:
     evaluate('document.querySelector(".scene-layer.pose input").click();true')
     assert not evaluate('biomolDockingScene.layers.find(layer => layer.role==="pose").visible'),'Pose visibility toggle failed'
     evaluate('document.querySelector(".scene-layer.pose input").click();true')
-   print(json.dumps({'websocket_url_converted':True,'rendered':True,'atoms':evaluate('biomolViewer.getModel().selectedAtoms({}).length'),'mouse_rotation':first!=rotated,'wheel_zoom':rotated!=zoomed,'representations':len(representations),'png_export':True,'external_requests':len(external),'javascript_errors':len(errors),'screenshot':str(args.screenshot), 'layers':evaluate('window.biomolDockingScene ? biomolDockingScene.layers.map(l => ({role:l.role,atoms:l.model.selectedAtoms({}).length})) : []'), 'residue_contacts':evaluate('document.querySelectorAll(".contact-residue").length')}))
+   errors=[event['params'] for event in events if event.get('method')=='Runtime.exceptionThrown' or (event.get('method')=='Runtime.consoleAPICalled' and event['params']['type']=='error')]
+   assert not errors,errors
+   print(json.dumps({'websocket_url_converted':True,'rendered':True,'atoms':evaluate('biomolViewer.getModel().selectedAtoms({}).length'),'mouse_rotation':first!=rotated,'wheel_zoom':rotated!=zoomed,'representations':len(representations),'png_export':True,'external_requests':len(external),'javascript_errors':len(errors),'screenshot':str(args.screenshot), 'interaction_hover':bool(args.docking_root or args.redocking_root) and bool(evaluate('window.biomolDockingScene?.interactions.length')), 'interactions_3d':evaluate('window.biomolDockingScene ? biomolDockingScene.interactions.length : 0'), 'layers':evaluate('window.biomolDockingScene ? biomolDockingScene.layers.map(l => ({role:l.role,atoms:l.model.selectedAtoms({}).length})) : []'), 'residue_contacts':evaluate('document.querySelectorAll(".contact-residue").length')}))
  finally:
   proc.terminate();proc.wait(timeout=15);error.close();views.close()

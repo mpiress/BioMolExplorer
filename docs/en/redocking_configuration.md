@@ -38,7 +38,7 @@ Expanding a completed stage in **Runs** shows a table of PDB, ligand, residue, c
 
 Use each row's download button for an individual file, or **Download all (ZIP)** for the simulation bundle. The ZIP preserves directories, including when the reference ligand and Vina output share a filename. Files from other simulations are excluded.
 
-**View 3D structure** opens the browser viewer, following the same flow as PDB inspection. It accepts PDB, PDBQT and MOL2 for inspecting receptors, ligands and poses before downloading. Use **Model** in the viewer for files containing multiple poses. Labels and actions follow the selected language. Readers can also inspect and download results.
+**View 3D structure** opens the browser viewer, following the same flow as PDB inspection. It accepts PDB, PDBQT and MOL2 for inspecting receptors, ligands and poses before downloading. Use **Model** when opening a file containing multiple poses. The scene opened by the table’s **3D** button automatically selects the lowest-scoring pose, or the first unscored pose; that scene does not offer model switching. Labels and actions follow the selected language. Readers can also inspect and download results.
 
 The table summarizes finite, nonnegative values from the `RMSD` column of `pdb_codes.csv`, displayed to three decimal places; the file retains its original precision. RMSD compares the reference ligand with the redocking result. The interface does not impose an automatic scientific acceptance threshold. PDB / ligand / residue / chain identifies each simulation. Failed or running stages retain the general file list for diagnosis.
 
@@ -47,3 +47,14 @@ The table summarizes finite, nonnegative values from the `RMSD` column of `pdb_c
 ## Reuse the receptor for candidate docking
 
 Connect redocking to **PDB receptor (retrieval or redocking)** in **Prepare for docking** and select the `.dockprep.pdbqt` receptor under **Receptor to use**. Ligand-only files are hidden. Receptor preparation controls are disabled while companion formats and binding centers are reused. Candidates from one or more ChEMBL, PubChem, ZINC or uploaded sources still undergo preparation. Choose Vina, DOCK6 or both, then connect receptor and compounds to each selected engine. See the [user manual](user_manual.md#preparation-and-redocking) for individual and merge processing.
+
+## Styles and 3D interactions
+
+The **3D** scene compares pose, receptor and reference in their original
+coordinates. Choose independent ligand/receptor styles and use **Ligand
+hydrogens** to show only H present in the file. Classified interactions have
+colored dashed traces, filters and hover identification. PDBQT requires an
+associated SMILES to recover topology; redocking results lacking it retain
+distance contacts and explain chemical classification unavailability. See the
+[viewer guide](molecular_viewer.md) for colors, requirements and classification
+limits.

@@ -224,12 +224,32 @@ Ao expandir uma etapa concluída em **Execuções**, a tabela mostra PDB, ligant
 
 Use o botão de download de cada linha para baixar um arquivo, ou **Baixar todos (ZIP)** para obter o conjunto da simulação. O ZIP conserva as pastas, inclusive quando o ligante de referência e a saída do Vina têm o mesmo nome. Arquivos de outras simulações ficam fora desse conjunto.
 
-O botão **Visualizar estrutura 3D** abre o visualizador no navegador, como na consulta dos PDBs. Ele aceita PDB, PDBQT e MOL2 para examinar receptor, ligante e poses antes do download. Para saídas com várias poses, use **Modelo** no visualizador. As legendas e ações acompanham o idioma selecionado. Leitores também podem consultar e baixar os resultados.
+O botão **Visualizar estrutura 3D** abre o visualizador no navegador, como na consulta dos PDBs. Ele aceita PDB, PDBQT e MOL2 para examinar receptor, ligante e poses antes do download. Ao abrir um arquivo com várias poses, use **Modelo** no visualizador. A cena aberta pelo botão **3D** da tabela seleciona automaticamente a pose de menor score, ou a primeira sem score; essa cena não oferece troca de modelo. As legendas e ações acompanham o idioma selecionado. Leitores também podem consultar e baixar os resultados.
 
 
 O botão **3D** de cada resultado abre uma comparação com a melhor pose do Vina em ciano, o ligante cristalográfico em dourado e o receptor utilizado. O complexo cristalográfico completo pode ser ativado no painel de camadas. As coordenadas são mantidas, sem realinhamento que pudesse ocultar deslocamentos. Quando o PDB original não estiver disponível, uma referência preparada, se existente, aparece identificada dessa forma.
 
-**Resíduos** apresenta as menores distâncias entre átomos pesados do receptor e do ligante, para a pose e a referência. O limite inicial é 4 Å, ajustável entre 2 e 8 Å. É possível baixar a tabela em CSV e selecionar um resíduo no visualizador para destacá-lo. Esses contatos indicam proximidade geométrica; não classificam ligações de hidrogênio ou outros tipos de interação.
+**Resíduos** apresenta as menores distâncias entre átomos pesados do receptor e do ligante, para a pose e a referência. O limite inicial é 4 Å, ajustável entre 2 e 8 Å. É possível baixar a tabela em CSV e selecionar um resíduo no visualizador para destacá-lo. Essa tabela indica proximidade geométrica. A classificação por tipo aparece separadamente nos traçados do visualizador, quando os dados químicos permitem, conforme a seção seguinte.
+
+### Estilos, hidrogênios e interações da pose
+
+No visualizador, **Estilo do receptor** e **Estilo do ligante** são independentes:
+por exemplo, receptor em fitas e ligante em esferas. **Hidrogênios do ligante**
+mostra ou oculta somente os H presentes no arquivo, sem gerar os ausentes no Vina
+nem alterar a preparação ou os scores.
+
+**Mostrar interações em 3D** desenha cada relação classificada com traçado
+tracejado: verde para ligação de hidrogênio, rosa/coral para π–π paralelo/em T,
+lilás para contato hidrofóbico e verde-lima para van der Waals geométrico. Passe o
+mouse sobre o traçado para ver tipo, resíduo, cadeia e distância. A legenda e os
+filtros usam as mesmas cores; a lista permite destacar o resíduo pelo clique.
+
+A classificação depende de topologia química e resíduos válidos; ligações de
+hidrogênio exigem H explícitos. Sem os dados necessários, a tela informa a
+limitação e mantém os contatos por distância. A análise 3D é geométrica e difere
+das energias por resíduo de **Footprint**. Consulte o
+[guia do visualizador](molecular_viewer.md) para camadas, seleção de poses,
+controles, interpretação e atualização.
 
 ### Fingerprints, similaridade e grafos
 

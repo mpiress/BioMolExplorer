@@ -8,3 +8,13 @@
 #contacts p {font-size:12px;margin:4px 0}.contact-residue {text-align:left;font-size:12px}
 body[data-scene="true"] .panel {width:280px;max-height:calc(100% - 48px);overflow:auto}
 @media(max-width:720px){body[data-scene="true"] .panel{width:210px;max-height:calc(100% - 24px)}}
+
+.panel {max-height:calc(100% - 48px);overflow:auto}.toggles{flex-wrap:wrap;gap:10px}
+#interaction-controls{margin-top:16px;font-size:12px}#interaction-types{display:grid;gap:7px;margin-top:10px}
+#interaction-types label{display:flex;align-items:center;gap:6px}#interaction-status{line-height:1.5;color:#94a9c5}
+#interaction-list{display:grid;gap:6px;max-height:240px;overflow:auto}.interaction-row{text-align:left;font-size:11px}
+
+.interaction-swatch{display:inline-block;width:24px;flex-shrink:0;border-top:3px dashed}
+.interaction-row{border-left:4px solid}
+#interaction-tooltip{position:fixed;z-index:20;max-width:min(440px,calc(100vw - 16px));padding:10px 12px;background:#111b2bf5;color:#e5edf9;border:2px solid;border-radius:9px;font-size:12px;line-height:1.4;pointer-events:none;box-shadow:0 5px 18px #0006}
+#interaction-tooltip[hidden]{display:none}

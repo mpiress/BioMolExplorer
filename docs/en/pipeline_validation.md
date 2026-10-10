@@ -192,3 +192,24 @@ Real Vina and DOCK6 validation also completed using REF and ETHANOL with the
 1ABE_A receptor from the DOCK6 example: preparation for both engines, independent
 runs, pose exchange in both directions, consensus and empty-intersection handling.
 See the [docking report](../validation/docking_2026-10-09.json).
+
+## Viewer and interactions: October 10, 2026 review
+
+Focused geometry, scene/authorization, viewer, redocking-result and result
+visualization tests passed 40 checks; two localhost checks were skipped in the
+sandbox. Separate Chrome validation opened equivalent synthetic Vina and DOCK6
+scenes and a standalone conformer, checking independent styles, H, rotation,
+zoom, PNG, traces, filters and visibility. Actual mouse movement over dashes
+verified tooltips for each present type and dismissal on exit, without JavaScript
+errors or external requests.
+
+This covers the workflow and controlled geometry; it does not replace scientific
+validation on experimental complexes or cover all interaction types supported by
+other classifiers. See the [viewer report](../validation/viewer_controls_2026-10-10.md)
+(Portuguese) and [user guide](molecular_viewer.md).
+
+```bash
+PYTHONPATH=src:tests python -m unittest test_docking_interactions test_docking_scene test_pdb_viewer test_redocking_results test_result_visualizations
+python scripts/build_docs.py
+python scripts/validate_docs.py
+```

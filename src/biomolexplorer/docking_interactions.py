@@ -22,7 +22,7 @@ ACCEPTORS={'ASP':{'OD1','OD2'},'GLU':{'OE1','OE2'},'ASN':{'OD1'},'GLN':{'OE1'},
 DONORS={'LYS':{'NZ'},'ARG':{'NE','NH1','NH2'},'ASN':{'ND2'},'GLN':{'NE2'},
         'SER':{'OG'},'THR':{'OG1'},'TYR':{'OH'},'TRP':{'NE1'},
         'HIS':{'ND1','NE2'},'HID':{'ND1'},'HIE':{'NE2'},'HIP':{'ND1','NE2'}}
-COLORS={'pi_parallel':'#7c3aed','pi_t':'#db2777','hydrogen_bond':'#0284c7','hydrophobic':'#d97706'}
+COLORS={'pi_parallel':'#f472b6','pi_t':'#fb7185','hydrogen_bond':'#22c55e','hydrophobic':'#c084fc','van_der_waals':'#a3e635'}
 
 
 def ligand_molecule(layer,smiles=None):
@@ -41,6 +41,7 @@ def ligand_molecule(layer,smiles=None):
                 ''.join(f'{v:8.3f}' for v in a['xyz'])+'  1.00  0.00          '+f'{a["elem"]:>2}'
                 for i,a in enumerate(records,1))+'\nEND\n'
             mol=Chem.MolFromPDBBlock(block,sanitize=False,removeHs=False)
+        if mol is not None:mol=Chem.RemoveHs(mol, sanitize=False)
         if mol is None or mol.GetNumAtoms()!=template.GetNumHeavyAtoms():return None
         mol=AllChem.AssignBondOrdersFromTemplate(template,mol)
         # Stereo labels may be absent in docking files; connectivity must agree.
@@ -65,7 +66,7 @@ def interaction_diagram(receptor,pose,smiles=None):
         mol=ligand_molecule(pose,smiles)
         if mol is None:return dict(available=False,reason='chemical_topology')
         return _diagram(receptor,pose,mol)
-    except (ValueError,RuntimeError,IndexError,KeyError):
+    except (ValueError,RuntimeError,IndexError,KeyError,ImportError):
         return dict(available=False,reason='chemical_topology')
 
 
@@ -102,6 +103,9 @@ def _diagram(receptor,pose,mol):
         seen.add(identity)
         row=dict(kind=kind,color=COLORS[kind],chain=key[0],resi=key[1],icode=key[2],resn=key[3],
             ligand_atoms=list(indices),receptor_atom=protein_atom,distance=round(float(distance),3))
+        receptor_points=[a['xyz'] for a in residues[key] if a['atom'] in protein_atom.split('/')]
+        row['ligand_position']=xyz[list(indices)].mean(axis=0).tolist()
+        row['receptor_position']=np.asarray(receptor_points).mean(axis=0).tolist()
         if angle is not None:row['angle']=round(float(angle),1)
         interactions.append(row)
     def hydrogen_bond(donor,hydrogens,acceptor):
@@ -139,6 +143,20 @@ def _diagram(receptor,pose,mol):
         if pairs:
             distance,a,i=min(pairs,key=lambda item:item[0])
             if .5<distance<=4:add('hydrophobic',key,[i],distance,a['atom'])
+        # A geometric contact near the sum of van der Waals radii, not an energy.
+        periodic=Chem.GetPeriodicTable()
+        vdw=[]
+        for a in heavy:
+            try:radius=periodic.GetRvdw(a['elem'].title())
+            except RuntimeError:continue
+            for i,ligand_atom in enumerate(mol.GetAtoms()):
+                if ligand_atom.GetAtomicNum()==1:continue
+                distance=math.dist(a['xyz'],xyz[i])
+                gap=distance-radius-periodic.GetRvdw(ligand_atom.GetAtomicNum())
+                if distance>.5 and -.4<=gap<=.5:vdw.append((distance,a,i))
+        if vdw:
+            distance,a,i=min(vdw,key=lambda item:item[0])
+            add('van_der_waals',key,[i],distance,a['atom'])
         for a in heavy:
             is_donor=(a['atom']=='N' and key[3]!='PRO') or a['atom'] in DONORS.get(key[3],set())
             is_acceptor=a['atom'] in ('O','OXT') or a['atom'] in ACCEPTORS.get(key[3],set())
@@ -158,5 +176,5 @@ def _diagram(receptor,pose,mol):
     drawer.DrawMolecule(drawing);drawer.FinishDrawing()
     positions=[[drawer.GetDrawCoords(i).x,drawer.GetDrawCoords(i).y] for i in range(mol.GetNumAtoms())]
     return dict(available=True,molecule_svg=drawer.GetDrawingText(),atom_positions=positions,
-        interactions=interactions,types=list(COLORS),method='geometry',
+        interactions=interactions,types=list(COLORS),colors=dict(COLORS),method='geometry',
         hydrogen_bonds_require_explicit_hydrogens=True)

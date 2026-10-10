@@ -13,7 +13,7 @@ class Page(HTMLParser):
         for attr in ('href','src'):
             if attr in attrs:self.links.append(attrs[attr])
 root=Path(__file__).resolve().parents[1];pages={}
-for p in [root/'index.html',*(root/'docs').rglob('*.html')]:
+for p in [root/'index.html',root/'index_doc.html',*(root/'docs').rglob('*.html')]:
     page=Page(p);page.feed(p.read_text());pages[p.resolve()]=page
 errors=[]
 for p,page in pages.items():

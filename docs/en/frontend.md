@@ -446,7 +446,7 @@ Expanding a completed stage in **Runs** shows a table of PDB, ligand, residue, c
 
 Use each row's download button for an individual file, or **Download all (ZIP)** for the simulation bundle. The ZIP preserves directories, including when the reference ligand and Vina output share a filename. Files from other simulations are excluded.
 
-**View 3D structure** opens the browser viewer, following the same flow as PDB inspection. It accepts PDB, PDBQT and MOL2 for inspecting receptors, ligands and poses before downloading. Use **Model** in the viewer for files containing multiple poses. Labels and actions follow the selected language. Readers can also inspect and download results.
+**View 3D structure** opens the browser viewer, following the same flow as PDB inspection. It accepts PDB, PDBQT and MOL2 for inspecting receptors, ligands and poses before downloading. Use **Model** when opening a file containing multiple poses. The scene opened by the table’s **3D** button automatically selects the lowest-scoring pose, or the first unscored pose; that scene does not offer model switching. Labels and actions follow the selected language. Readers can also inspect and download results.
 
 See [Logs and diagnostics](logging.md) for the common format, execution context, failure codes, job summary and `python -m biomolexplorer.log_report` command.
 
@@ -501,3 +501,23 @@ Output selections retain the batch and logical file path while excluding the
 worker's temporary job ID. Repeating PDB retrieval or docking therefore preserves
 selection of the same result. Older selections are also supported. Missing or
 ambiguous results still require a new selection.
+
+## Molecular viewer and 3D interactions
+
+**Receptor style** and **Ligand style** are independent: for example, show receptor
+ribbons with ligand spheres. **Ligand hydrogens** shows or hides only H present in
+the file; it does not generate H absent from Vina output or change preparation or
+scores.
+
+**Show 3D interactions** draws each classified relation as a dashed trace: green
+for hydrogen bonds, pink/coral for parallel/T-shaped π–π, lilac for hydrophobic
+contacts and lime green for geometric van der Waals contacts. Hover over a trace
+for type, residue, chain and distance. The legend and filters use matching
+colors; click the list to highlight a residue.
+
+Classification requires valid chemical topology and residue identities;
+hydrogen bonds require explicit H. If necessary data is missing, the interface
+explains the limitation and retains distance contacts. The 3D analysis is
+geometric and differs from **Footprint** per-residue energies. See the
+[viewer guide](molecular_viewer.md) for layers, pose selection, controls,
+interpretation and updates.

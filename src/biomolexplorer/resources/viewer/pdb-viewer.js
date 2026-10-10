@@ -53,8 +53,10 @@
         model.setStyle({chain, predicate: isPolymer}, tinted);
       });
     }
-    if (control("ligands").checked) model.setStyle({...selected, predicate: isLigand}, config.ligand && representation !== "cartoon" ? style : {
-      stick: {colorscheme: "Jmol", radius: .2}, sphere: {colorscheme: "Jmol", scale: .22}});
+    const ligandStyle = control("ligand-representation").value;
+    const ligandVisible = atom => isLigand(atom) && (control("hydrogens").checked || !["H", "D"].includes(atom.elem.toUpperCase()));
+    if (control("ligands").checked) model.setStyle({...selected, predicate: ligandVisible}, ligandStyle === "spheres" ? {sphere: {colorscheme: "Jmol", scale: .65}} :
+      ligandStyle === "lines" ? {line: {colorscheme: "Jmol"}} : {stick: {colorscheme: "Jmol", radius: .2}, sphere: {colorscheme: "Jmol", scale: .22}});
     if (control("water").checked) model.setStyle({...selected, predicate: isWater}, {
       sphere: {color: "#60a5fa", scale: .18, opacity: .7}});
     model.setClickable(selected, true, atom => {
@@ -102,6 +104,7 @@
     if (config.ligand) {
       control("color").value = "element";
       control("color").querySelector('option[value="spectrum"]').disabled = true;
+      control("representation").disabled = true;
       control("representation").querySelector('option[value="cartoon"]').disabled = true;
       control("chain").disabled = true;
       control("water").disabled = true;
@@ -111,7 +114,7 @@
       control("conformer").hidden = false;
     }
     chains(); draw(); viewer.zoomTo({model: modelIndex}); viewer.render();
-    for (const id of ["representation", "color", "ligands", "water"]) control(id).addEventListener("change", draw);
+    for (const id of ["representation", "ligand-representation", "hydrogens", "color", "ligands", "water"]) control(id).addEventListener("change", draw);
     control("chain").addEventListener("change", () => {draw(); viewer.zoomTo({model: modelIndex, ...selection()}); viewer.render();});
     control("model").addEventListener("change", () => {modelIndex = Number(control("model").value); chains(); draw(); viewer.zoomTo({model: modelIndex}); viewer.render();});
     control("center").addEventListener("click", () => {viewer.zoomTo({model: modelIndex, ...selection()}); viewer.render();});

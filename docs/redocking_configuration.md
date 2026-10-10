@@ -38,7 +38,7 @@ Ao expandir uma etapa concluída em **Execuções**, a tabela mostra PDB, ligant
 
 Use o botão de download de cada linha para baixar um arquivo, ou **Baixar todos (ZIP)** para obter o conjunto da simulação. O ZIP conserva as pastas, inclusive quando o ligante de referência e a saída do Vina têm o mesmo nome. Arquivos de outras simulações ficam fora desse conjunto.
 
-O botão **Visualizar estrutura 3D** abre o visualizador no navegador, como na consulta dos PDBs. Ele aceita PDB, PDBQT e MOL2 para examinar receptor, ligante e poses antes do download. Para saídas com várias poses, use **Modelo** no visualizador. As legendas e ações acompanham o idioma selecionado. Leitores também podem consultar e baixar os resultados.
+O botão **Visualizar estrutura 3D** abre o visualizador no navegador, como na consulta dos PDBs. Ele aceita PDB, PDBQT e MOL2 para examinar receptor, ligante e poses antes do download. Ao abrir um arquivo com várias poses, use **Modelo** no visualizador. A cena aberta pelo botão **3D** da tabela seleciona automaticamente a pose de menor score, ou a primeira sem score; essa cena não oferece troca de modelo. As legendas e ações acompanham o idioma selecionado. Leitores também podem consultar e baixar os resultados.
 
 A tabela resume os valores finitos e não negativos da coluna `RMSD` de `pdb_codes.csv`, com três casas decimais na apresentação; o arquivo conserva a precisão original. O RMSD compara o ligante de referência com o resultado do redocking. A interface não aplica um limiar automático de aprovação científica. A identificação PDB / ligante / resíduo / cadeia permite distinguir cada simulação. Etapas com falha ou ainda em execução mantêm a lista geral de arquivos para diagnóstico.
 
@@ -47,3 +47,14 @@ A tabela resume os valores finitos e não negativos da coluna `RMSD` de `pdb_cod
 ## Reutilizar o receptor no docking de candidatos
 
 Conecte o redocking a **Receptor PDB (retrieval ou redocking)** do bloco **Preparar para docking**. Escolha o receptor `.dockprep.pdbqt` no campo **Receptor que deseja utilizar**; arquivos exclusivos do ligante não aparecem nessa seleção. O receptor, os formatos complementares e os centros são reutilizados, com as opções de preparo do receptor desabilitadas. Os candidatos vêm de uma ou mais fontes ChEMBL, PubChem, ZINC ou arquivos próprios e continuam sendo preparados. Escolha Vina, DOCK6 ou ambos como saída e conecte receptor e compostos a cada motor. Consulte o [manual do usuário](user_manual.md#preparacao-e-redocking) para processamento individual e merge.
+
+## Estilos e interações em 3D
+
+A cena **3D** compara pose, receptor e referência nas coordenadas originais.
+Escolha estilos independentes para ligante e receptor e use **Hidrogênios do
+ligante** para mostrar apenas os H existentes no arquivo. Interações classificadas
+recebem linhas tracejadas coloridas, filtros e identificação pelo mouse. PDBQT
+exige SMILES associado para recuperar topologia; resultados de redocking sem essa
+informação continuam oferecendo contatos por distância, com a indisponibilidade
+química indicada. Consulte o [guia do visualizador](molecular_viewer.md) para a
+legenda, requisitos e limites da classificação.

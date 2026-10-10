@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
         name="description"
-        content="BioMolExplorer is an integrated computational platform for molecular exploration and information retrieval, specifically designed to support computer-aided drug discovery through molecular similarity analysis, virtual screening, and automated redocking validation workflows."
+        content="BioMolExplorer is an integrated computational platform for molecular exploration and information retrieval, specifically designed to support computer-aided drug discovery through molecular similarity analysis, virtual screening, redocking validation, and interactive 3D inspection of docking poses and receptor–ligand interactions."
     />
 
     <title>BioMolExplorer | Molecular Exploration & Flexible Pipelines</title>
@@ -113,7 +113,7 @@
                 <a href="#capabilities" class="hover:text-white transition">Capabilities</a>
                 <a href="#workflow" class="hover:text-white transition">Workflow</a>
                 <a href="#installation" class="hover:text-white transition">Installation</a>
-                <a href="#analysis" class="hover:text-white transition">Analysis</a>
+                <a href="#molecular-viewer" class="hover:text-white transition">3D viewer</a>
                 <a href="#documentation" class="hover:text-white transition">Documentation</a>
             </nav>
 
@@ -421,7 +421,7 @@
 
                     <h3 class="text-xl font-bold text-slate-900 mb-4">Consensus Docking</h3>
                     <p class="text-slate-600 text-sm leading-relaxed text-justify">
-                        Independent AutoDock Vina and DOCK6 docking from retrieved or imported compounds, with pose exchange in both directions. Consensus ranks their common compound/receptor pairs and offers scores, SMILES, calculated 3D poses and row removal.
+                        Independent AutoDock Vina and DOCK6 docking from retrieved or imported compounds, with pose exchange in both directions. Consensus ranks common compound/receptor pairs with sortable normalized scores. Inspect each engine’s pose with its receptor, geometric interactions and available DOCK6 footprint, or curate rows with an audit history.
                     </p>
                 </div>
 
@@ -614,7 +614,7 @@
             <h2 class="text-4xl font-black mt-3">Run the workspace in your scientific environment</h2>
             <p class="text-slate-300 mt-6 max-w-3xl leading-relaxed">Download the <a href="https://github.com/mpiress/BioMolExplorer" class="text-emerald-300 underline">GitHub project</a> using Git or Code → Download ZIP, then open a terminal in the source code folder. The Python package requires Python 3.12 or newer.</p>
             <div class="mt-6 rounded-2xl border border-amber-400/40 bg-amber-400/10 p-6">
-                <p class="font-bold text-amber-200">Before starting: install UCSF Chimera 1.17, DOCK6 6.11 and DMS.</p>
+                <p class="font-bold text-amber-200">Before starting: install UCSF Chimera 1.17 and DOCK6 6.11.</p>
                 <p class="text-slate-300 mt-3">These tools must be installed and configured on the computer running calculations. Installing the Python package or Conda environment does not install them. The interface may open without them, but dependent preparation, redocking and docking stages will fail.</p>
                 <p class="mt-3"><a href="docs/en/installation.html" class="text-emerald-300 underline">Installation and executable checks (English)</a> · <a href="docs/pt/installation.html" class="text-emerald-300 underline">Instalação e verificação (Português)</a></p>
             </div>
@@ -712,11 +712,46 @@ biomolexplorer-ui --web --dock6-path /path/to/dock6-6.11</code></pre>
         </div>
     </section>
 
+    <section id="molecular-viewer" class="py-24 bg-slate-950 text-white">
+        <div class="max-w-7xl mx-auto px-6">
+            <span class="text-emerald-400 font-semibold uppercase tracking-widest text-sm">Molecular inspection</span>
+            <h2 class="text-4xl font-black mt-3">Explore the pose in its receptor, relation by relation</h2>
+            <p class="text-slate-300 mt-6 max-w-3xl leading-relaxed">Open Vina or DOCK6 results in the local WebGL viewer. Compare the best pose with its docking receptor and an available reference in their original coordinates. Redocking adds crystallographic ligand and complex layers; consensus offers separate 3D views for each engine.</p>
+            <div class="grid lg:grid-cols-2 gap-8 mt-10">
+                <article class="bg-slate-900 border border-slate-800 rounded-3xl p-7">
+                    <h3 class="text-2xl font-bold mb-5">Choose how to inspect each molecule</h3>
+                    <ul class="space-y-4 text-slate-300 list-disc pl-5">
+                        <li>Set receptor and ligand styles independently: ribbons, sticks, spheres or lines as appropriate.</li>
+                        <li>Show or hide ligand hydrogens retained in the file. Missing hydrogen atoms are not generated.</li>
+                        <li>Toggle pose, receptor and reference layers; filter receptor chains and inspect atom details.</li>
+                        <li>Rotate, pan and zoom, then export the current scene as PNG.</li>
+                    </ul>
+                </article>
+                <article class="bg-slate-900 border border-slate-800 rounded-3xl p-7">
+                    <h3 class="text-2xl font-bold mb-3">Follow the dashed interaction traces</h3>
+                    <p class="text-slate-300 mb-5">Hover over a trace for its type, residue, chain and distance. Matching legend colors and type filters help identify each relation; coincident traces are separated for inspection.</p>
+                    <ul class="space-y-3 text-sm text-slate-200" aria-label="Interaction color legend">
+                        <li class="flex items-center gap-3"><span class="inline-block w-8 border-t-4 border-dashed" style="border-color:#22c55e" aria-hidden="true"></span>Green · Hydrogen bond</li>
+                        <li class="flex items-center gap-3"><span class="inline-block w-8 border-t-4 border-dashed" style="border-color:#f472b6" aria-hidden="true"></span>Pink · Parallel π–π</li>
+                        <li class="flex items-center gap-3"><span class="inline-block w-8 border-t-4 border-dashed" style="border-color:#fb7185" aria-hidden="true"></span>Coral · T-shaped π–π</li>
+                        <li class="flex items-center gap-3"><span class="inline-block w-8 border-t-4 border-dashed" style="border-color:#c084fc" aria-hidden="true"></span>Lilac · Hydrophobic contact</li>
+                        <li class="flex items-center gap-3"><span class="inline-block w-8 border-t-4 border-dashed" style="border-color:#a3e635" aria-hidden="true"></span>Lime green · Geometric van der Waals contact</li>
+                    </ul>
+                </article>
+            </div>
+            <p class="text-slate-300 mt-8 max-w-4xl leading-relaxed">Classification requires valid chemistry and residue identities; hydrogen bonds require explicit H. When classification is unavailable, heavy-atom distance contacts remain accessible. These 3D relations describe geometry. DOCK6 Footprint separately compares reference/final-pose energies per residue; neither display establishes experimental binding.</p>
+            <div class="flex flex-wrap gap-5 mt-8">
+                <a href="docs/en/molecular_viewer.html" class="inline-flex bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-6 py-3 rounded-xl font-semibold" lang="en">Viewer guide in English →</a>
+                <a href="docs/pt/molecular_viewer.html" class="inline-flex border border-emerald-400 text-emerald-300 px-6 py-3 rounded-xl font-semibold" lang="pt-BR">Visualizador e interações em português →</a>
+            </div>
+        </div>
+    </section>
+
     <section id="documentation" class="py-24 bg-slate-50">
         <div class="max-w-7xl mx-auto px-6">
             <span class="text-emerald-700 font-semibold uppercase tracking-widest text-sm">Documentation · Documentação</span>
             <h2 class="section-title text-4xl font-black text-slate-900 mt-3">A guide for every way of using the platform</h2>
-            <p class="text-slate-600 mt-6 max-w-3xl">Read the complete guides in English or Portuguese. Browser pages and Markdown sources cover the same implementation and can be opened locally.</p>
+            <p class="text-slate-600 mt-6 max-w-3xl">Read the complete guides in English or Portuguese. Browser pages and Markdown sources cover the same implementation and can be opened locally, including the current molecular viewer, docking results and interaction controls.</p>
             <div class="grid md:grid-cols-3 gap-6 mt-10">
                 <article class="bg-white border border-slate-200 rounded-3xl p-7"><h3 class="text-xl font-bold mb-3">Workspace &amp; pipelines</h3><p class="text-slate-600 mb-6">Installation, authentication, project sharing, stage configuration, uploads and execution monitoring.</p><a href="docs/en/frontend.html" class="text-emerald-700 font-semibold underline" lang="en">Read in English</a><br><a href="docs/pt/frontend.html" class="text-emerald-700 font-semibold underline" lang="pt-BR">Ler em português</a></article>
                 <article class="bg-white border border-slate-200 rounded-3xl p-7"><h3 class="text-xl font-bold mb-3">Backend &amp; scientific operations</h3><p class="text-slate-600 mb-6">Conda environment, command line, job services, available operations, inputs and outputs.</p><a href="docs/en/backend_usage.html" class="text-emerald-700 font-semibold underline" lang="en">Read in English</a><br><a href="docs/pt/backend_usage.html" class="text-emerald-700 font-semibold underline" lang="pt-BR">Ler em português</a></article>

@@ -195,3 +195,25 @@ receptor 1ABE_A do exemplo de DOCK6: preparação para ambos os motores, execuç
 independentes, reutilização de poses Vina → DOCK6 e DOCK6 → Vina, consenso e
 tratamento da interseção vazia. Consulte o
 [relatório de docking](validation/docking_2026-10-09.json).
+
+## Visualizador e interações: revisão de 10 de outubro de 2026
+
+Os testes focados de geometria, cenas/autorização, visualizador, resultados de
+redocking e visualizações executaram 40 verificações com sucesso; duas verificações
+de servidor local foram ignoradas no sandbox. A validação Chrome separada abriu
+cenas sintéticas equivalentes de Vina e DOCK6 e um conformero isolado, verificando
+estilos independentes, H, rotação, zoom, PNG, traçados, filtros e visibilidade.
+Movimentos reais do mouse sobre os segmentos confirmaram o tooltip de cada tipo
+presente e seu fechamento ao sair, sem erros JavaScript ou requisições externas.
+
+Essa cobertura valida o fluxo e a geometria controlada; não substitui validação
+científica em complexos experimentais nem cobre todos os tipos de interação de
+outros classificadores. Consulte o
+[relatório do visualizador](validation/viewer_controls_2026-10-10.md) e o
+[guia de uso](molecular_viewer.md).
+
+```bash
+PYTHONPATH=src:tests python -m unittest test_docking_interactions test_docking_scene test_pdb_viewer test_redocking_results test_result_visualizations
+python scripts/build_docs.py
+python scripts/validate_docs.py
+```

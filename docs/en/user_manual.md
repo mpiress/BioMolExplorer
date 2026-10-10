@@ -224,12 +224,32 @@ Expanding a completed stage in **Runs** shows a table of PDB, ligand, residue, c
 
 Use each row's download button for an individual file, or **Download all (ZIP)** for the simulation bundle. The ZIP preserves directories, including when the reference ligand and Vina output share a filename. Files from other simulations are excluded.
 
-**View 3D structure** opens the browser viewer, following the same flow as PDB inspection. It accepts PDB, PDBQT and MOL2 for inspecting receptors, ligands and poses before downloading. Use **Model** in the viewer for files containing multiple poses. Labels and actions follow the selected language. Readers can also inspect and download results.
+**View 3D structure** opens the browser viewer, following the same flow as PDB inspection. It accepts PDB, PDBQT and MOL2 for inspecting receptors, ligands and poses before downloading. Use **Model** when opening a file containing multiple poses. The scene opened by the table’s **3D** button automatically selects the lowest-scoring pose, or the first unscored pose; that scene does not offer model switching. Labels and actions follow the selected language. Readers can also inspect and download results.
 
 
 The **3D** button on each result opens an overlay of the best Vina pose in cyan, the crystallographic ligand in gold and the docking receptor. Enable the full crystallographic complex in the layers panel. Coordinates are preserved without realignment that could conceal displacement. If the original PDB is unavailable, an existing prepared reference is explicitly labeled as such.
 
-**Residues** lists minimum heavy-atom distances between receptor and ligand for the pose and reference. The default cutoff is 4 Å, adjustable between 2 and 8 Å. Download the table as CSV or select a residue in the viewer to highlight it. Contacts represent geometric proximity; they do not classify hydrogen bonds or other interaction types.
+**Residues** lists minimum heavy-atom distances between receptor and ligand for the pose and reference. The default cutoff is 4 Å, adjustable between 2 and 8 Å. Download the table as CSV or select a residue in the viewer to highlight it. This table represents geometric proximity. Type classification appears separately in viewer traces when chemical data allows it, as described in the next section.
+
+### Styles, hydrogens and pose interactions
+
+**Receptor style** and **Ligand style** are independent: for example, show receptor
+ribbons with ligand spheres. **Ligand hydrogens** shows or hides only H present in
+the file; it does not generate H absent from Vina output or change preparation or
+scores.
+
+**Show 3D interactions** draws each classified relation as a dashed trace: green
+for hydrogen bonds, pink/coral for parallel/T-shaped π–π, lilac for hydrophobic
+contacts and lime green for geometric van der Waals contacts. Hover over a trace
+for type, residue, chain and distance. The legend and filters use matching
+colors; click the list to highlight a residue.
+
+Classification requires valid chemical topology and residue identities;
+hydrogen bonds require explicit H. If necessary data is missing, the interface
+explains the limitation and retains distance contacts. The 3D analysis is
+geometric and differs from **Footprint** per-residue energies. See the
+[viewer guide](molecular_viewer.md) for layers, pose selection, controls,
+interpretation and updates.
 
 ### Fingerprints, similarity and graphs
 
