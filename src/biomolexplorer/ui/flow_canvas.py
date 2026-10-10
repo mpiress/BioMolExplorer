@@ -34,13 +34,14 @@ class FlowCanvas:
         self.ui.dirty=True; self.refresh()
         if hasattr(self.ui,'schedule_save'):self.ui.schedule_save()
     def refresh(self,update=True,nodes=True):
-        height=max(1600,max((flow.position(s,i)['y']+flow.node_height(s)+120 for i,s in enumerate(self.stages)),default=0))
-        self.stack.height=height
-        if not hasattr(self,'grid') or self.grid.height!=height:
+        width=min(flow.CANVAS_WIDTH,max(4000,max((flow.position(s,i)['x']+flow.NODE_WIDTH+400 for i,s in enumerate(self.stages)),default=0)))
+        height=max(2800,max((flow.position(s,i)['y']+flow.node_height(s)+120 for i,s in enumerate(self.stages)),default=0))
+        self.stack.height=height;self.stack.width=width
+        if not hasattr(self,'grid') or self.grid.height!=height or self.grid.width!=width:
             grid=[]
-            for x in range(0,flow.CANVAS_WIDTH,40): grid.append(canvas.Line(x,0,x,height,paint=ft.Paint(color='#E8EDF5',stroke_width=1)))
-            for y in range(0,int(height),40): grid.append(canvas.Line(0,y,flow.CANVAS_WIDTH,y,paint=ft.Paint(color='#E8EDF5',stroke_width=1)))
-            self.grid=canvas.Canvas(shapes=grid,width=flow.CANVAS_WIDTH,height=height)
+            for x in range(0,int(width),40): grid.append(canvas.Line(x,0,x,height,paint=ft.Paint(color='#E8EDF5',stroke_width=1)))
+            for y in range(0,int(height),40): grid.append(canvas.Line(0,y,width,y,paint=ft.Paint(color='#E8EDF5',stroke_width=1)))
+            self.grid=canvas.Canvas(shapes=grid,width=width,height=height)
         shapes=[]
         by_id={s['id']:s for s in self.stages}
         for index,target in enumerate(self.stages):
@@ -54,7 +55,7 @@ class FlowCanvas:
                 endx=pos['x']+28; endy=pos['y']+117+j*34
                 shapes.append(canvas.Path([canvas.Path.MoveTo(x,y),canvas.Path.CubicTo(x+100,y,endx-100,endy,endx,endy)],
                     paint=ft.Paint(color=COLORS[TITLES[source['operation']][2]],stroke_width=3,style=ft.PaintingStyle.STROKE)))
-        self.stack.controls=[self.grid,canvas.Canvas(shapes=shapes,width=flow.CANVAS_WIDTH,height=height)]+([self.node(s,i) for i,s in enumerate(self.stages)] if nodes else self.stack.controls[2:])
+        self.stack.controls=[self.grid,canvas.Canvas(shapes=shapes,width=width,height=height)]+([self.node(s,i) for i,s in enumerate(self.stages)] if nodes else self.stack.controls[2:])
         self.selection.options=[stage_control(ft.DropdownOption(key=s['id'],text=s['name']),s,'text') for s in self.stages]
         self.selection.value=self.ui.selected if self.ui.selected in by_id else None
         if update: self.ui.page.update()
@@ -133,16 +134,14 @@ class FlowCanvas:
         self.status.value='Conexão criada. A execução respeitará as dependências.'; self.changed()
     def show_information(self,stage):
         from .block_help import block_information
-        from .feedback import close_dialog
+        from .action_help import show_help
         description,inputs,outputs,note=block_information(stage)
-        body=[ft.Text(description),ft.Text('O que recebe',weight=ft.FontWeight.W_600),
-              *[ft.Text(value) for value in inputs],ft.Text('O que fornece',weight=ft.FontWeight.W_600),
-              *[ft.Text(value) for value in outputs]]
-        if note:body.append(ft.Text(note))
-        dialog=ft.AlertDialog(title=ft.Text(TITLES[stage['operation']][0]),
-            content=ft.Container(width=520,content=ft.Column(body,tight=True,spacing=12,scroll=ft.ScrollMode.AUTO)),
-            actions=[ft.TextButton('Fechar',on_click=lambda e:close_dialog(self.ui.page,dialog))])
-        self.ui.page.show_dialog(dialog)
+        paragraphs=[description,'O que recebe',*inputs,'O que fornece',*outputs]
+        body=[ft.Text(description,size=14),ft.Text('O que recebe',weight=ft.FontWeight.W_600),
+            *[ft.Text(value,size=14) for value in inputs],ft.Text('O que fornece',weight=ft.FontWeight.W_600),
+            *[ft.Text(value,size=14) for value in outputs]]
+        if note:body.append(ft.Text(note,size=14));paragraphs.append(note)
+        show_help(self.ui,TITLES[stage['operation']][0],body,paragraphs)
     async def drop(self,e):
         if self.writable: await self.add(e.src.data,e.local_position.x,e.local_position.y)
     async def add(self,operation,x=None,y=None):
@@ -152,7 +151,7 @@ class FlowCanvas:
         self.remember(); stage=new_stage(operation)
         if hasattr(self.ui,'tr'):stage['name']=self.ui.tr(stage['name'])
         if operation=='docking_dock6' and self.ui.service.dock6_path: stage['parameters']['dock6_app_path']=str(self.ui.service.dock6_path)
-        stage['position']=flow.bounded_position(x,y,stage) if x is not None and y is not None else flow.available_position(self.stages,stage)
+        stage['position']=flow.available_position(self.stages,stage,x,y)
         self.stages.append(stage); self.ui.selected=stage['id']; self.changed()
     async def undo(self,e):
         if self.writable and self.history:
@@ -167,14 +166,15 @@ class FlowCanvas:
         if self.writable and stage:
             if len(self.stages)>=100:
                 self.ui.notify('Um pipeline pode conter até 100 blocos.'); return
-            self.remember(); clone=copy.deepcopy(stage); clone['id']=uuid4().hex; clone['name']+=' (cópia)'; pos=flow.position(stage); clone['position']=flow.bounded_position(pos['x']+40,pos['y']+60,clone)
+            self.remember(); clone=copy.deepcopy(stage); clone['id']=uuid4().hex; clone['name']+=' (cópia)'; pos=flow.position(stage); clone['position']=flow.available_position(self.stages,clone,pos['x']+flow.COLUMN_SPACING,pos['y'])
             self.stages.append(clone); self.ui.selected=clone['id']; self.changed()
     async def arrange(self,e):
         if self.writable: self.remember(); flow.arrange(self.stages); self.changed()
     async def zoom_in(self,e): await self.viewer.zoom(1.2)
     async def zoom_out(self,e): await self.viewer.zoom(.8)
     async def reset(self,e): await self.viewer.reset()
-    def build(self):
+    def build(self,include_library=True):
+        if not hasattr(self.ui,'sidebar_expanded'):self.ui.sidebar_expanded={}
         palette=[]; items=[]; sections=[]
         for category in COLORS:
             blocks=[]
@@ -189,8 +189,9 @@ class FlowCanvas:
                     icon_button(icon=ft.Icons.INFO_OUTLINE,icon_size=18,tooltip='Informações do bloco',on_click=information),
                     icon_button(icon=ft.Icons.ADD,icon_size=18,tooltip='Adicionar '+title,on_click=add,disabled=not self.writable)],spacing=0)))
                 items.append((title,blocks[-1]))
+            def category_changed(e,key='library-'+category):self.ui.sidebar_expanded[key]=str(e.data).lower()=='true'
             section=ft.ExpansionTile(title=ft.Text(category,size=13,color=COLORS[category],weight=ft.FontWeight.W_600),
-                controls=blocks,expanded=False,maintain_state=True,dense=True,min_tile_height=44,
+                controls=blocks,expanded=self.ui.sidebar_expanded.get('library-'+category,False),on_change=category_changed,maintain_state=True,dense=True,min_tile_height=44,
                 shape=ft.RoundedRectangleBorder(radius=10,side=ft.BorderSide(0,ft.Colors.TRANSPARENT)),
                 collapsed_shape=ft.RoundedRectangleBorder(radius=10,side=ft.BorderSide(0,ft.Colors.TRANSPARENT)),
                 tile_padding=ft.Padding.symmetric(horizontal=4,vertical=4),controls_padding=ft.Padding.only(bottom=8),
@@ -220,11 +221,16 @@ class FlowCanvas:
             (ft.Icons.CONTENT_COPY,'Duplicar bloco',self.duplicate,not self.writable),(ft.Icons.DELETE_OUTLINE,'Excluir bloco',self.delete,not self.writable),
             (ft.Icons.AUTO_FIX_HIGH,'Organizar blocos',self.arrange,not self.writable),(ft.Icons.ZOOM_IN,'Ampliar',self.zoom_in,False),
             (ft.Icons.ZOOM_OUT,'Reduzir',self.zoom_out,False),(ft.Icons.CENTER_FOCUS_STRONG,'Redefinir visão',self.reset,False)]],spacing=0)
-        return ft.Column([ft.Row([ft.Button('Salvar',on_click=self.ui.event(self.ui.save_draft),disabled=not self.writable),
-            ft.Button('Modelos prontos',on_click=self.ui.event(self.ui.preset_dialog),disabled=not self.writable),
-            ft.Button('Executar pipeline',icon=ft.Icons.PLAY_ARROW,on_click=self.ui.event(self.ui.run_pipeline),disabled=not self.writable),
-            ft.Button('Executar até seleção',on_click=self.ui.event(self.ui.run_pipeline,True),disabled=not self.writable),bar],wrap=True),
-            ft.Row([self.selection,ft.Button('Configurar seleção',icon=ft.Icons.TUNE,on_click=self.configure_selected)],wrap=True),
-            self.status,ft.Row([ft.Container(width=235,padding=14,bgcolor='#F8FAFC',border_radius=14,
-                content=ft.Column([ft.Text('Biblioteca de etapas',weight=ft.FontWeight.W_600),search,ft.Text('Arraste ou use + para adicionar.',size=11,color='#64748B'),*palette],scroll=ft.ScrollMode.AUTO)),
-                ft.Container(self.viewer,expand=True,bgcolor='#F5F7FC',border_radius=14,border=ft.Border.all(1,'#DDE5F0'))],expand=True,spacing=14,vertical_alignment=ft.CrossAxisAlignment.STRETCH)],expand=True,spacing=8)
+        from .action_help import show_action_help
+        bar.controls.append(icon_button(icon=ft.Icons.INFO_OUTLINE,tooltip='Controles do canvas',
+            on_click=lambda e:show_action_help(self.ui,'canvas')))
+        self.library=ft.Column([ft.Text('Biblioteca de etapas',size=14,weight=ft.FontWeight.W_600),search,
+            ft.Text('Arraste ou use + para adicionar.',size=11,color='#64748B'),*palette],tight=True,spacing=10)
+        canvas_panel=ft.Container(self.viewer,expand=True,bgcolor='#F5F7FC',border_radius=14,
+            border=ft.Border.all(1,'#DDE5F0'))
+        workspace=ft.Row([ft.Container(width=250,padding=14,bgcolor='#F8FAFC',border_radius=14,
+            content=ft.Column([self.library],scroll=ft.ScrollMode.AUTO)),canvas_panel],expand=True,spacing=14,
+            vertical_alignment=ft.CrossAxisAlignment.STRETCH) if include_library else canvas_panel
+        return ft.Column([ft.Row([self.selection,
+            ft.Button('Configurar seleção',icon=ft.Icons.TUNE,on_click=self.configure_selected),bar],wrap=True,spacing=12),
+            self.status,workspace],expand=True,spacing=8)

@@ -11,7 +11,7 @@ class AppConfig:
     max_jobs: int = 1
     cpu_workers: int = 2
     max_queued_jobs: int = 100
-    job_timeout: float = 86400
+    job_timeout: float | None = None
     worker_python: Path | None = None
     resource_dir: Path | None = None
 
@@ -31,7 +31,7 @@ class AppConfig:
             value = getattr(self, name)
             if type(value) is not int or value < 1:
                 raise ValueError(f'{name} must be a positive integer')
-        if type(self.job_timeout) not in (int, float) or not math.isfinite(self.job_timeout) or self.job_timeout <= 0:
+        if self.job_timeout is not None and (type(self.job_timeout) not in (int, float) or not math.isfinite(self.job_timeout) or self.job_timeout <= 0):
             raise ValueError('job_timeout must be positive and finite')
 
     @property

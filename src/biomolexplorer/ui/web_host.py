@@ -3,10 +3,15 @@ from fastapi import Request
 from fastapi.responses import Response
 import flet_web.fastapi as flet_fastapi
 from biomolexplorer.pdb_view import PREFIX
+from .branding import image_bytes
 
 
 def create_web_app(session,store,viewers,secret_key=None):
     app=flet_fastapi.FastAPI()
+
+    @app.get('/favicon.png')
+    async def favicon():
+        return Response(image_bytes('logo.png'),media_type='image/png',headers={'Cache-Control':'no-cache'})
 
     @app.get(PREFIX+'/{resource:path}')
     async def structure(request:Request,resource:str):

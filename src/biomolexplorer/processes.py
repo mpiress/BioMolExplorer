@@ -1,4 +1,4 @@
-"""Bounded scientific commands with correlated lifecycle and failure diagnostics."""
+"""Scientific commands with correlated diagnostics and no implicit time limit."""
 import logging
 import os
 import re
@@ -29,7 +29,7 @@ def run_command(command, cwd=None, check=True, timeout=None):
     logger = get_logger('scientific_tools')
     tool = os.path.basename(str(arguments[0]))
     working_dir = str(resolve_path(cwd or '.'))
-    configuration = next((str(a) for a in arguments[1:] if str(a).endswith(('.com', '.vina'))), None)
+    configuration = next((str(a) for a in arguments[1:] if str(a).endswith(('.com', '.vina', '.in'))), None)
     with log_context(command_id=uuid4().hex[:12]), ExitStack() as stack:
         stdin = None
         if '<' in arguments:
@@ -45,7 +45,7 @@ def run_command(command, cwd=None, check=True, timeout=None):
         try:
             result = subprocess.run(arguments, cwd=resolve_path(cwd) if cwd else None,
                 stdin=stdin, capture_output=True, text=True, check=False,
-                timeout=timeout if timeout is not None else float(os.environ.get('BIOMOL_COMMAND_TIMEOUT', '3600')))
+                timeout=timeout)
         except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
             elapsed = round((time.monotonic()-started)*1000)
             if isinstance(exc, FileNotFoundError):

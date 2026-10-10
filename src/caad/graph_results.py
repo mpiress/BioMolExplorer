@@ -66,7 +66,7 @@ def fragment_molecule(smarts, reference_smiles):
     return molecule
 
 
-def common_fragment(smiles,timeout=30,ring_matches_ring_only=True,complete_rings_only=False):
+def common_fragment(smiles,timeout=0,ring_matches_ring_only=True,complete_rings_only=False):
     result={'status':'empty','smarts':'','smiles':'','atoms':0,'bonds':0,'image':'','compounds':len(smiles),
             'timeout':timeout,'ring_matches_ring_only':ring_matches_ring_only,'complete_rings_only':complete_rings_only}
     if not smiles:return result
@@ -218,7 +218,7 @@ def report_png(model):
     return out.getvalue()
 
 
-def export_analysis(dataset,edges,output,identifier,title,origin=None,mcs_timeout=30,ring_matches_ring_only=True,complete_rings_only=False):
+def export_analysis(dataset,edges,output,identifier,title,origin=None,mcs_timeout=0,ring_matches_ring_only=True,complete_rings_only=False):
     output=Path(output);graph=build_graph(dataset,edges)
     model=graph_view(graph,dataset,title)
     mcc=graph.subgraph(model['mcc']);selected=dataset[dataset['molecule_chembl_id'].isin(model['mcc'])].copy()
@@ -257,7 +257,7 @@ def folder_inputs(compounds_path,fingerprints_path,similarity_path,metric,finger
     return result
 
 
-def analyze_inputs(entries,output,metric='Tanimoto',fingerprint='morgan',threshold=70,mcs_timeout=30,ring_matches_ring_only=True,complete_rings_only=False):
+def analyze_inputs(entries,output,metric='Tanimoto',fingerprint='morgan',threshold=70,mcs_timeout=0,ring_matches_ring_only=True,complete_rings_only=False):
     output=Path(output);selected_frames=[]
     quality=CURRENT_REPORT.get() or QualityReport('graphs')
     for index,entry in enumerate(entries):

@@ -41,16 +41,32 @@ def execution_stage(stage, mode):
     return effective
 
 
+def configured_inputs(stage):
+    """Honor filenames saved in the block as well as explicit binding selectors."""
+    stage=copy.deepcopy(stage)
+    params=stage['parameters'];operation=stage['operation']
+    names=([params['input_file']] if params.get('input_file') else []) if operation in ('admet','retrieve_pubchem','expand_similar_compounds') else (
+        list(params.get('files') or []) if operation=='fingerprints' else
+        [params['filename']] if operation in ('similarity','retrieve_zinc') and params.get('filename') else [])
+    group=stage.get('bindings',{}).get('base_input_path')
+    if group and names:
+        from .bindings import pack
+        refs=[]
+        for ref in input_sources(group):
+            if 'stage' in ref and ref.get('selector','auto')=='auto':refs.extend(dict(ref,selector=name) for name in names)
+            else:refs.append(ref)
+        stage['bindings']['base_input_path']=pack(refs)
+    return stage
+
+
 def requires_curation(stage):
-    if stage['operation']=='consensus':return False
+    stage=configured_inputs(stage)
+    if stage['operation']=='consensus' or stage.get('provided_results'):return False
     if not stage_dependencies(stage):return False
     if stage['operation']=='redocking' and stage['parameters'].get('pdb_codes'):return False
-    if stage['operation'] in ('docking_vina','docking_dock6'):
-        configured=all(stage['parameters'].get(field) or stage.get('bindings',{}).get(field)
-                       for field in ('base_input_path','base_selected_mols'))
-        explicit=all('asset' in ref or ref.get('selector','auto')!='auto'
-                     for group in stage.get('bindings',{}).values() for ref in input_sources(group))
-        if configured and explicit:return False
+    refs=[ref for group in stage.get('bindings',{}).values() for ref in input_sources(group)]
+    if refs and all('asset' in ref or ref.get('selector','auto')!='auto' for ref in refs):return False
+    if not refs and any(stage['parameters'].get(k) for k in PATH_FIELDS):return False
     return True
 
 
@@ -202,7 +218,7 @@ def select_input(artifacts, field, selector='auto'):
 
 
 class PipelineService:
-    def __init__(self, store, worker_python=None, max_runs=2, cpu_workers=2, job_timeout=86400, dock6_path=None):
+    def __init__(self, store, worker_python=None, max_runs=2, cpu_workers=2, job_timeout=None, dock6_path=None):
         self.store = store
         config = AppConfig(workspace=store.root,worker_python=worker_python,cpu_workers=cpu_workers,job_timeout=job_timeout)
         self.worker_python = config.worker_python
@@ -1213,7 +1229,8 @@ class PipelineService:
                 self.store._require_user(user_id,project_id,'editor')
                 if item['status'] in ('skipped','succeeded','failed'):
                     continue
-                stage = item['configuration']
+                stage = configured_inputs(item['configuration'])
+                item['configuration']=stage
                 dependencies = stage_dependencies(stage)
                 item['input_mode']='curated'
                 item['requires_curation']=requires_curation(stage)

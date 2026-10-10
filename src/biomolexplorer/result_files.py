@@ -10,8 +10,9 @@ from uuid import uuid4
 from .workspace import AccessDenied
 from .visualizations import MAX_VIEW_BYTES, SUFFIX, egg_view, load_view
 
-FILTERS = {'all': 'Todos os compostos avaliados', 'BBB+': 'Apenas BBB+',
-           'BBB-': 'Apenas BBB−', 'HIA+': 'Apenas HIA+'}
+FILTERS = {'all': 'Todos os compostos da tabela', 'BBB+': 'Apenas BBB+',
+           'BBB-': 'Apenas BBB−', 'HIA+': 'Apenas HIA+', 'HIA-':'Apenas HIA−',
+           'selected':'Atendem à hipótese', 'rejected':'Não atendem à hipótese'}
 
 
 class ResultFiles:
@@ -33,7 +34,15 @@ class ResultFiles:
                 for name in stage.get('artifacts', [])
                 if (p := self.store.scoped_path(pid, name)).is_file()
                 and not (stage['operation']=='retrieve_structures' and p.name in ('pdb_codes.csv','retrieval_report.json'))
-                and not (stage['operation'] == 'admet' and p.suffix.lower() == '.json' and p.name!='molecule_exclusions.json')]
+                and not (stage['operation'] == 'admet' and p.suffix.lower() == '.json' and p.name!='molecule_exclusions.json' and not p.name.endswith('_admet_report.json'))]
+
+    def preparation_failures(self,token,pid,rid,sid,filename):
+        from .preparation_failures import REPORT_NAME
+        stage=self.stage(token,pid,rid,sid);path=self.store.scoped_path(pid,filename)
+        if path.name!=REPORT_NAME or str(path) not in stage.get('artifacts',[]):
+            raise AccessDenied('Relatório não autorizado para esta etapa.')
+        data=self.store.read_file(token,pid,str(path),MAX_VIEW_BYTES)
+        return list(csv.DictReader(io.StringIO(data.decode('utf-8-sig'))))
 
     def pdb_ligands(self, token, pid, rid, sid, filename):
         stage=self.stage(token,pid,rid,sid)
@@ -140,6 +149,36 @@ class ResultFiles:
             raise
         self._cleanup_backup(backup)
 
+    def remove_all(self, token, pid, rid, sid):
+        """Remove a stage's artifacts atomically, including shared cache references."""
+        backups=[]
+        try:
+            with self.store.change(token,pid,'editor','remove_stage_results','Resultados da etapa removidos') as db:
+                if db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running','awaiting_input')",(pid,)).fetchone():
+                    raise ValueError('Aguarde a execução terminar antes de remover arquivos.')
+                stage=self.stage(token,pid,rid,sid)
+                paths={str(self.store.scoped_path(pid,p)) for p in stage.get('artifacts',[])}
+                backup_dir=self.store.project_dir(pid)/'.history'/'.removed'
+                backup_dir.mkdir(parents=True,exist_ok=True)
+                for filename in sorted(paths):
+                    path=Path(filename)
+                    if path.is_file():
+                        backup=backup_dir/uuid4().hex
+                        path.replace(backup);backups.append((path,backup))
+                for row in db.execute('SELECT id,stages FROM runs WHERE project_id=?',(pid,)).fetchall():
+                    stages=json.loads(row[1]);changed=False
+                    for item in stages:
+                        if paths.intersection(item.get('artifacts',[])):
+                            item['artifacts']=[p for p in item['artifacts'] if p not in paths]
+                            item['outputs_removed']=True;item['curated_at']=time.time();changed=True
+                    if changed:db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(stages),row[0]))
+        except Exception:
+            for path,backup in reversed(backups):
+                if backup.exists():backup.replace(path)
+            raise
+        for _,backup in backups:self._cleanup_backup(backup)
+        return len(backups)
+
     @staticmethod
     def _cleanup_backup(backup):
         if backup is not None:
@@ -162,7 +201,7 @@ class ResultFiles:
                 columns = set(csv.DictReader(source).fieldnames or [])
             if {'TPSA', 'WLOGP', 'molecule_chembl_id', 'canonical_smiles'} <= columns:
                 result.append({'path': str(path), 'name': path.name})
-        return result
+        return sorted(result,key=lambda item:(item['name'].endswith('_evaluated.csv'),len(item['name']),item['name']))
 
     def graph_datasets(self,token,pid,rid,sid):
         stage=self.stage(token,pid,rid,sid)
@@ -227,6 +266,20 @@ class ResultFiles:
             raise
         self._cleanup_backup(backup)
 
+    def admet_report(self,token,pid,rid,sid,filename):
+        stage=self.stage(token,pid,rid,sid)
+        if filename not in {c['path'] for c in self.admet_datasets(token,pid,rid,sid)}:
+            raise AccessDenied('Tabela ADMET não autorizada.')
+        path=self.store.scoped_path(pid,filename)
+        stems=[path.stem]
+        for suffix in ('_evaluated','_selected','_rejected','_BBB+','_BBB-','_HIA+','_HIA-'):
+            if path.stem.endswith(suffix):stems.append(path.stem[:-len(suffix)])
+        for stem in stems:
+            report=path.with_name(stem+'_admet_report.json')
+            if str(report) in stage.get('artifacts',[]) and report.is_file():
+                return json.loads(self.store.read_file(token,pid,str(report),MAX_VIEW_BYTES+1))
+        return None
+
     def admet_model(self, token, pid, rid, sid, filename, subset='all'):
         if subset not in FILTERS:
             raise ValueError('Filtro ADMET inválido.')
@@ -259,9 +312,12 @@ class ResultFiles:
                             return value if type(value) in (int,float) and math.isfinite(value) else extra[name]
                         props['BBB'] = evaluator.classify_bbb(node['x'], node['y'],
                             descriptor('MW'),descriptor('HBD'),descriptor('RB'))
-        if subset != 'all':
+        if subset in ('selected','rejected'):
+            expected=subset=='selected'
+            nodes=[n for n in nodes if str(n['properties'].get('ADMET_selected','')).lower()==str(expected).lower()]
+        elif subset != 'all':
             nodes = [n for n in nodes if n['properties'].get(subset[:3]) == subset]
-        return dict(model, nodes=nodes, title=path.stem+' · '+FILTERS[subset])
+        return dict(model,nodes=nodes,title=path.stem+' · '+FILTERS[subset],admet_report=self.admet_report(token,pid,rid,sid,filename))
 
     def admet_csv(self, token, pid, rid, sid, filename, subset):
         model = self.admet_model(token, pid, rid, sid, filename, subset)
@@ -277,20 +333,5 @@ class ResultFiles:
 
     def admet_png(self, token, pid, rid, sid, filename, subset):
         model = self.admet_model(token, pid, rid, sid, filename, subset)
-        # Object-oriented Agg avoids pyplot's global state in concurrent sessions.
-        from matplotlib.figure import Figure
-        from matplotlib.backends.backend_agg import FigureCanvasAgg
-        from matplotlib.patches import Ellipse
-        figure = Figure(figsize=(11, 8)); FigureCanvasAgg(figure)
-        ax = figure.subplots(); ax.set_facecolor('#EEF2F7')
-        for center, width, height, color in [((75, 2), 150, 6, 'white'), ((42, 2.3), 94, 4.4, '#FFE066')]:
-            ax.add_patch(Ellipse(center, width, height, facecolor=color, edgecolor='#64748B'))
-        for classification, color in [('BBB+', '#DC2626'), ('BBB-', '#2552E8')]:
-            nodes = [n for n in model['nodes'] if n['properties'].get('BBB') == classification]
-            ax.scatter([n['x'] for n in nodes], [n['y'] for n in nodes], c=color, label=classification, s=35)
-        ax.set(xlim=(min([0]+[n['x'] for n in model['nodes']]), max([200]+[n['x'] for n in model['nodes']])),
-               ylim=(min([-2]+[n['y'] for n in model['nodes']]), max([7]+[n['y'] for n in model['nodes']])),
-               xlabel='TPSA (Å²)', ylabel='WLOGP', title=model['title'])
-        ax.legend(); figure.tight_layout()
-        stream = io.BytesIO(); figure.savefig(stream, format='png', dpi=200)
-        return stream.getvalue()
+        from .egg_plot import egg_png
+        return egg_png(model)

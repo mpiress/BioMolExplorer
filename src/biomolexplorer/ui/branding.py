@@ -1,4 +1,4 @@
-"""Original project logos bundled for web, desktop and installed-package use."""
+"""Current project logos bundled for web, desktop and installed-package use."""
 from functools import lru_cache
 from pathlib import Path
 import flet as ft
@@ -11,7 +11,7 @@ def image_bytes(name):
     return (Path(__file__).parents[1]/'resources'/'branding'/name).read_bytes()
 
 def logo(size=48):
-    return ft.Image(src=image_bytes('logo.png'),width=size,height=size,fit=ft.BoxFit.CONTAIN,semantics_label='Logo BioMolExplorer')
+    return ft.Image(src=image_bytes('logo.png'),width=size,height=size*231/247,fit=ft.BoxFit.CONTAIN,semantics_label='Logo BioMolExplorer')
 
 def wordmark(width=240):
     return ft.Image(src=image_bytes('wordmark.png'),width=width,height=width*209/662,fit=ft.BoxFit.CONTAIN,semantics_label='BioMolExplorer')

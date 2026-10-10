@@ -213,3 +213,17 @@ PYTHONPATH=src:tests python -m unittest test_docking_interactions test_docking_s
 python scripts/build_docs.py
 python scripts/validate_docs.py
 ```
+
+## Vina and DOCK6 batch validation
+
+The [DOCK6 review evidence](../validation/dock6_review_2026-10-10.json) records real runs using the tutorial 1ABE receptor, reference ligand and ethanol: independent engines, Vina → DOCK6 and DOCK6 → Vina exchange, rigid/flexible search, footprints and consensus. Grids are shared per site. This checks functionality/interoperability, not screening performance or scientific generalization.
+
+`tests/test_dock6_failures.py` covers individual minimization/docking/footprint failures, absent/empty outputs, invalid MOL2, dotted identifiers and global errors. SIGSEGV is simulated at the command boundary; native crashes are not claimed to be reproduced for every chemical series. `test_vina_reuse.py` checks map reuse/invalidation; `test_preparation_failures.py` checks continuation/reports. `test_configured_handoff.py`, `test_frontend_navigation.py` and `test_unbounded_execution.py` cover saved selections, navigation and absent implicit duration limits.
+
+To reproduce real cases in the destination installation:
+
+```bash
+PYTHONPATH=src python scripts/validate_docking.py --dock6-root /path/to/dock6 --output /tmp/biomol-validation
+```
+
+`test_admet_research.py` covers profiles, reasons and descriptors. Real ADMET-AI inference verified adapter functionality in the isolated environment; models have not been externally validated for new chemical libraries. Presentation images have [documented provenance](../../imgs/examples/README.md).

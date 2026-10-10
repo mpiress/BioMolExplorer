@@ -17,6 +17,7 @@ __doc__ = HeaderBuilder.build(
 from pathlib import Path
 import pandas as pd
 import os
+import json
 #----------------------------------------------------------------------------------------------
 
 #----------------------------------------------------------------------------------------------
@@ -27,7 +28,15 @@ from biomolexplorer.visualizations import egg_view, write_view, SUFFIX
 
 class ADMETWrapper:
 
-    def __init__(self, base_output_path, base_input_path=None, input_file=None, verbose=0):
+    def __init__(self, base_output_path, base_input_path=None, input_file=None, verbose=0,
+                 admet_profile='legacy', admet_mode=None, prediction_backend='rdkit',
+                 bbb_target=None, hia_target=None, rule_set=None, max_rule_violations=None,
+                 alert_policy=None, alert_catalogs=None, property_limits=None):
+        from biomolexplorer.admet_config import resolve_config
+        self.config=resolve_config(dict(admet_profile=admet_profile,admet_mode=admet_mode,
+            prediction_backend=prediction_backend,bbb_target=bbb_target,hia_target=hia_target,
+            rule_set=rule_set,max_rule_violations=max_rule_violations,alert_policy=alert_policy,
+            alert_catalogs=alert_catalogs,property_limits=property_limits))
         self.base_output_path = base_output_path
         self.set_output_path()
 
@@ -71,54 +80,60 @@ class ADMETWrapper:
 
 
     def run_pipeline(self):
-
+        from biomolexplorer.admet_config import selection_reasons,DESCRIPTORS
+        from rdkit import rdBase
         for filename in self.csv_files:
-
-            filename = Path(filename).stem
-            df_input = self._load_data(filename)
-
-            rows = []
-            self.excluded_count = 0
-
-            for _, row in df_input.iterrows():
-                smiles = row['canonical_smiles']
-                name = row['molecule_chembl_id']
-
-                props = self.evaluator.calculate_properties(smiles)
-
-                if props is None:
-                    continue
-
-                # Filtro Toxicológico usando o Kernel
-                if self.evaluator.is_toxic(props['Mol']):
-                    self.excluded_count += 1
-                    continue
-
-                # Extração de descritores e predições
-                tpsa, logp, mw = props['TPSA'], props['WLOGP'], props['MW']
-                hbd, hba, rb = props['HBD'], props['HBA'], props['RB']
-
-                bbb = self.evaluator.classify_bbb(tpsa, logp, mw, hbd, rb)
-                hia = self.evaluator.classify_hia(tpsa, logp)
-                pgp = self.evaluator.predict_pgp(mw, tpsa, logp, hbd)
-
-                result = row.to_dict()
-                result.update({
-                    'canonical_smiles': smiles, 'molecule_chembl_id': name,
-                    'TPSA': round(tpsa, 2), 'WLOGP': round(logp, 2), 'MW': round(mw, 2),
-                    'HBD': hbd, 'HBA': hba, 'RB': rb,
-                    'BBB': bbb, 'HIA': hia, 'PGP': pgp
-                })
+            filename=Path(filename).stem;df_input=self._load_data(filename)
+            rows=[];self.excluded_count=0
+            provider=dict(provider='RDKit',version=rdBase.rdkitVersion,domain_assessment='not_assessed')
+            predictions={}
+            if self.config['prediction_backend']=='admet_ai' and len(df_input):
+                from biomolexplorer.admet_predictors import predict_admet_ai
+                predictions,provider=predict_admet_ai(df_input['canonical_smiles'].tolist())
+            for _,row in df_input.iterrows():
+                smiles=row['canonical_smiles'];props=self.evaluator.calculate_properties(smiles)
+                if props is None:continue
+                result=row.to_dict()
+                result.update({key:value for key,value in props.items() if key!='Mol'})
+                result.update(self.evaluator.screening_properties(props,self.config['alert_catalogs']))
+                result.update(BBB=self.evaluator.classify_bbb(props['TPSA'],props['WLOGP'],props['MW'],props['HBD'],props['RB']),
+                    HIA=self.evaluator.classify_hia(props['TPSA'],props['WLOGP']),
+                    PGP='not_evaluated',
+                    BBB_method='BioMolExplorer legacy ellipse + penalties v1',HIA_method='BioMolExplorer local ellipse v1',
+                    ADMET_profile=self.config['admet_profile'],Prediction_backend=self.config['prediction_backend'])
+                result.update(predictions.get(smiles,{}))
+                reasons=selection_reasons(result,self.config)
+                if self.config['admet_profile']=='legacy':
+                    result['PGP']=self.evaluator.predict_pgp(props['MW'],props['TPSA'],props['WLOGP'],props['HBD'])
+                    result['PGP_method']='Legacy descriptor heuristic; not a validated substrate model'
+                    if self.evaluator.is_toxic(props['Mol']):reasons.append('Legacy structural exclusion (not measured toxicity)')
+                result.update(ADMET_selected=not reasons,ADMET_reasons='; '.join(reasons))
                 rows.append(result)
-
-            columns = list(dict.fromkeys([*df_input.columns, 'canonical_smiles', 'molecule_chembl_id',
-                'TPSA', 'WLOGP', 'MW', 'HBD', 'HBA', 'RB', 'BBB', 'HIA', 'PGP']))
-            results = pd.DataFrame(rows, columns=columns)
-            self.df_results = results
-            self.export_results(results, filename)
-            self.generate_plot(results, filename)
+            columns=list(dict.fromkeys([*df_input.columns,*DESCRIPTORS,'BBB','HIA','PGP','BBB_method','HIA_method',
+                'StructuralAlert_count','StructuralAlerts','ADMET_warnings','ADMET_profile','Prediction_backend','ADMET_selected','ADMET_reasons',
+                *[key for row in rows for key in row]]))
+            evaluated=pd.DataFrame(rows,columns=columns)
+            selected=evaluated[evaluated['ADMET_selected']==True].copy()
+            self.excluded_count=len(evaluated)-len(selected)
+            results=selected if self.config['admet_mode']=='filter' else evaluated
+            self.df_results=results;self.evaluated=evaluated
+            # Preserve every valid molecule and each failed criterion even when filtering.
+            evaluated.to_csv(Path(self.base_output_path)/(filename+'_evaluated.csv'),index=False)
+            self.export_results(results,filename);self.generate_plot(results,filename)
+            metadata=dict(schema_version=2,configuration=self.config,provider=provider,rdkit_version=rdBase.rdkitVersion,
+                evaluated=len(evaluated),selected=len(selected),output=len(results),
+                descriptors=DESCRIPTORS,methods=dict(
+                    BBB='Local legacy ellipse with penalties; not validated BOILED-Egg',
+                    HIA='Local ellipse approximation; passive permeability only',
+                    ESOL_logS='RDKit ESOL-style refit by Pat Walters, log10 mol/L',
+                    logKp='Potts–Guy-style regression with RDKit logP substitution, log10 cm/s',
+                    alerts='RDKit PAINS/BRENK/NIH matches; not proof of toxicity'),
+                unavailable_without_trained_model=['CYP inhibition/substrate','hERG','AMES','DILI','clearance','half-life','PPBR','VDss'],
+                limitations=['No pH-dependent logD/pKa or unbound brain exposure model',
+                    'No validated applicability-domain or prediction-interval assessment',
+                    'Rules and thresholds are research hypotheses, not efficacy/safety certification'])
+            (Path(self.base_output_path)/(filename+'_admet_report.json')).write_text(json.dumps(metadata,ensure_ascii=False,indent=2)+'\n')
         return self.df_results
-
 
     def export_results(self, results, filename):
         f1 = fileHandling(input_path=self.base_input_path, output_path=self.base_output_path)
@@ -128,13 +143,12 @@ class ADMETWrapper:
 
         f1.dataframe_to_csv(filename, results)
 
-        # Filtros e exportações parciais (SMILES e Name sem header/índice)
-        for criteria, data in [( 'BBB==\"BBB+\"', filename+'_BBB+'),
-                               ( 'BBB==\"BBB-\"', filename+'_BBB-'),
-                               ( 'HIA==\"HIA+\"', filename+'_HIA+')]:
-
-            tmp = results.query(criteria)[['canonical_smiles', 'molecule_chembl_id']]
-            f1.dataframe_to_csv(data, tmp)
+        for field,label in [('BBB','BBB+'),('BBB','BBB-'),('HIA','HIA+'),('HIA','HIA-')]:
+            results[results[field]==label].to_csv(Path(self.base_output_path)/(filename+'_'+label+'.csv'),index=False)
+        if self.config['admet_profile']!='legacy':
+            for label,chosen in [('selected',True),('rejected',False)]:
+                self.evaluated[self.evaluated['ADMET_selected']==chosen].to_csv(
+                    Path(self.base_output_path)/(filename+'_'+label+'.csv'),index=False)
 
 
     def generate_plot(self, results, filename):
@@ -151,7 +165,7 @@ class ADMETWrapper:
         total_valid = len(results)
         print('\n========== SUMMARY ==========')
         print(f'Total molecules input: {total_valid + self.excluded_count}')
-        print(f'Excluded toxic compounds: {self.excluded_count}')
+        print(f'Compounds outside configured research criteria: {self.excluded_count}')
         print(f'Molecules processed: {total_valid}')
         print(f'BBB+: {len(results[results["BBB"]=="BBB+"])}')
         print(f'BBB-: {len(results[results["BBB"]=="BBB-"])}')

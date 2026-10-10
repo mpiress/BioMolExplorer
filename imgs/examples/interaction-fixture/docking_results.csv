@@ -1,0 +1,2 @@
+molecule_chembl_id,canonical_smiles,receptor_id,engine,score,conformer_file,receptor_file
+benzene,c1ccccc1,fixture,vina,-7,pose.pdbqt,receptor.pdb

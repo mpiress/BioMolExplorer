@@ -49,7 +49,7 @@ class GuidedForm:
             self.controls.append(self.processing)
         if stage['operation'] in ('retrieve_compounds','retrieve_pubchem','retrieve_structures','retrieve_zinc'):
             self.controls.append(ft.Text(
-                'Ao concluir cada etapa, selecione no popup os arquivos que seguirão para o próximo bloco.',
+                'Escolhas de arquivos salvas nos blocos são respeitadas. A execução solicita uma seleção apenas para entradas ainda não configuradas.',
                 size=13,color='#64748B'))
         if stage['operation']=='retrieve_structures':
             self.controls.append(ft.Text('Escolha texto, IDs PDB, UniProt, EC ou filtros. Campos preenchidos são combinados; o nome da coleção só organiza a saída.',size=13))
@@ -81,6 +81,9 @@ class GuidedForm:
             for k in KINDS:self.readers[k]=lambda k=k:self.fingerprint_choice.value==k
         for field in operation_fields(stage['operation']):
             key=field['name']; value=stage['parameters'].get(key,field['default'])
+            if stage['operation']=='admet':
+                from biomolexplorer.admet_config import PARAMETERS
+                if key in PARAMETERS:continue
             if stage['operation']=='consensus' and key in ('target','repulsion_weight'):continue
             if stage['operation']=='retrieve_zinc' and key=='filename':continue
             if key=='graph_inputs':continue
@@ -115,6 +118,10 @@ class GuidedForm:
                 self.list_field(key,field['label'],value,LISTS.get(key,[]))
             elif stage['operation']=='prepare_structures' and key=='pH':self.add(key,'pH de protonação do receptor e ligante',value)
             else: self.add(key,'Nome da coleção PubChem' if stage['operation']=='retrieve_pubchem' and key=='target' else 'Nome da coleção PDB (opcional)' if stage['operation']=='retrieve_structures' and key=='target' else field['label'],value,field['choices'])
+        if stage['operation']=='admet':
+            from .admet_settings import AdmetSettings
+            self.admet_settings=AdmetSettings(self)
+            self.controls.append(self.admet_settings.control)
         if stage['operation'] in ('prepare_structures','docking_vina','docking_dock6'):
             from .preparation_settings import PreparationSettings
             self.preparation_settings=PreparationSettings(self,stage['parameters'].get('preparation_options'))
@@ -197,6 +204,10 @@ class GuidedForm:
                     control.width=None
                 long_label=len(str(getattr(control,'label','')))>34
                 col=12 if control.data=='wide' or long_label or not isinstance(control,(ft.TextField,ft.Dropdown)) else {'xs':12,'md':6}
+                if self.stage['operation']=='admet':
+                    if control is self.title:col={'xs':12,'lg':8}
+                    elif control is self.enabled:col={'xs':12,'lg':4}
+                    elif isinstance(control,(ft.TextField,ft.Dropdown)):col={'xs':12,'lg':6}
                 cells.append(ft.Container(content=control,col=col,padding=ft.Padding.symmetric(vertical=6),visible=control.visible))
                 # Hidden conditional fields also release their space in the form.
                 conditional=('radius','morgan_n_bits') if self.stage['operation']=='fingerprints' else ('max_targets','expand_chembl','similarity_threshold') if self.stage['operation']=='retrieve_compounds' else ('base_input_path','input_file','reference_type','reference','selection_mode','compound_id') if self.stage['operation']=='retrieve_pubchem' else ()
@@ -205,7 +216,7 @@ class GuidedForm:
                     self.conditional_cells[key]=cells[-1]
             return ft.ResponsiveRow(cells,spacing=24,run_spacing=20)
         def card(title,description,controls):
-            return ft.Container(padding=24,bgcolor='#FFFFFF',border_radius=16,border=ft.Border.all(1,'#E2E8F0'),content=ft.Column([
+            return ft.Container(padding=16 if self.stage['operation']=='admet' else 24,bgcolor='#FFFFFF',border_radius=16,border=ft.Border.all(1,'#E2E8F0'),content=ft.Column([
                 ft.Text(title,size=17,weight=ft.FontWeight.W_600,color='#172B4D'),
                 ft.Text(description,size=12,color='#64748B'),ft.Container(height=4),fields(controls)],spacing=12))
         sections=[card('Identificação','Nomeie a etapa e escolha se ela participa da execução.',self.controls[:2])]

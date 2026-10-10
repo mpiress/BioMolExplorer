@@ -1,0 +1,15 @@
+REMARK VINA RESULT: -7.0 0.0 0.0
+REMARK  Name = benzene
+REMARK  0 active torsions:
+REMARK  status: ('A' for Active; 'I' for Inactive)
+REMARK                            x       y       z     vdW  Elec       q    Type
+REMARK                         _______ _______ _______ _____ _____    ______ ____
+ROOT
+ATOM      1  C1  LIG A   1       1.400   0.000   0.000  0.00  0.00    +0.000 A 
+ATOM      2  C2  LIG A   1       0.700   1.212   0.000  0.00  0.00    +0.000 A 
+ATOM      3  C3  LIG A   1      -0.700   1.212   0.000  0.00  0.00    +0.000 A 
+ATOM      4  C4  LIG A   1      -1.400   0.000   0.000  0.00  0.00    +0.000 A 
+ATOM      5  C5  LIG A   1      -0.700  -1.212   0.000  0.00  0.00    +0.000 A 
+ATOM      6  C6  LIG A   1       0.700  -1.212   0.000  0.00  0.00    +0.000 A 
+ENDROOT
+TORSDOF 0

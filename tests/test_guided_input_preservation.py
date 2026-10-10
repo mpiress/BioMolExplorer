@@ -27,6 +27,8 @@ class GuidedInputPreservationTests(unittest.TestCase):
         def walk(control):
             yield control
             for child in getattr(control,'controls',[]) or []:yield from walk(child)
+            child=getattr(control,'content',None)
+            if child is not None and not isinstance(child,str):yield from walk(child)
         return [c for root in form.controls for c in walk(root)]
 
     def ui(self, stages):

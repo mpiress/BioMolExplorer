@@ -144,11 +144,11 @@ Recuperar compostos e recuperar estruturas podem iniciar ramificações independ
 
 1. Clique em executar o pipeline inteiro ou a etapa selecionada com suas dependências.
 2. Se houver resultados concluídos salvos, responda à pergunta sobre reaproveitamento conforme a seção seguinte.
-3. Acompanhe a janela de execução. Quando uma etapa precisar de entradas de seus blocos de origem, a execução pausa e abre **Selecionar arquivos**.
+3. Acompanhe a janela de execução. Quando uma entrada conectada ainda exigir seleção automática, a execução pausa e abre **Selecionar arquivos**. Seleções explícitas salvas no bloco dispensam essa pergunta.
 4. Marque somente os arquivos desejados em cada entrada. A lista mostra arquivos compatíveis das origens conectadas, sem selecionar automaticamente todos os resultados novos.
 5. Escolha **Processar individualmente** ou **Mesclar arquivos (merge)**.
 6. Para ajustar parâmetros, clique em **Configurar etapa**. As escolhas já feitas são incluídas no formulário, evitando outra seleção do mesmo conjunto.
-7. Clique em **Continuar com os arquivos selecionados**. Repita a decisão nas próximas etapas que precisam de processamento.
+7. Clique em **Continuar com os arquivos selecionados**. Repita a decisão somente nas próximas etapas que ainda precisarem de seleção.
 
 | Escolha | Efeito | Exemplo |
 | --- | --- | --- |
@@ -261,7 +261,11 @@ controles, interpretação e atualização.
 
 ### ADMET
 
-**Avaliar ADMET** calcula propriedades e aplica os filtros moleculares disponíveis. Examine tabelas, exclusões e o gráfico BOILED-Egg. BBB/HIA e os demais indicadores são estimativas e regras computacionais; não substituem validação experimental. Consulte o backend para conhecer os cálculos efetivamente implementados.
+**Avaliar ADMET** oferece perfis de pesquisa exploratória, oral, SNC, periférica, fragmentos, produtos naturais e critérios personalizados. Escolha entre **Anotar todos os compostos** e **Filtrar pela hipótese**; configure BBB/HIA, regras, alertas e intervalos em seções organizadas. RDKit fornece descritores e heurísticas locais. O método opcional ADMET-AI acrescenta 41 endpoints de modelos treinados e informa sua disponibilidade na configuração. Para instalar seu ambiente isolado, execute `python scripts/setup_admet_ai.py` na raiz do projeto.
+
+O gráfico EGG adapta-se ao painel, identifica compostos ao passar o mouse e permite consultar estrutura e propriedades. As classes BBB/HIA locais não representam uma reprodução validada do BOILED-Egg publicado. Examine também o CSV `_evaluated` e o relatório de métodos e versões. Consulte a [análise científica ADMET](admet_research.md) para interpretar os métodos e seus limites.
+
+Seleções de arquivos já salvas nos blocos dispensam nova escolha durante a execução. Em **Execuções**, cada etapa oferece **Remover todos os resultados**, com confirmação; os arquivos podem ser restaurados pelo histórico. A remoção preserva registro e log e fica bloqueada durante execuções ativas.
 
 ### Vina, DOCK6 e consenso
 
@@ -358,3 +362,40 @@ Antes de calcular, o sistema verifica os resíduos, a cadeia e os cofatores nos 
 Falhas de ferramentas mostram o executável, o código de saída e a mensagem do processo. Scripts Chimera que falharam são preservados para diagnóstico. Corrija a entrada ou a instalação indicada e tente novamente. Não há controle de verbose: a verbosidade do Vina permanece em zero.
 
 Consulte [Configuração do redocking](redocking_configuration.md) para o fluxo completo.
+
+## ADMET por objetivo de pesquisa
+
+O bloco ADMET oferece perfis editáveis, modo descritivo ou filtragem, BBB/HIA positivos e negativos, regras físico-químicas, alertas estruturais e intervalos personalizados. Novos blocos começam em exploração ampla. Consulte a [revisão científica e o guia de configuração ADMET](admet_research.md) para os métodos, arquivos gerados, bibliotecas opcionais e limitações.
+
+### Compostos não utilizados na preparação
+
+A preparação de candidatos para Vina e DOCK6 trata cada composto separadamente. Quando a conformação, a conversão, a atribuição de cargas ou a minimização falha, esse composto é excluído das entradas do docking e os demais continuam. Arquivos parciais do composto são removidos. Se nenhum candidato puder ser preparado, o motor não é iniciado e a etapa informa o motivo.
+
+Em **Execuções → Resultados por etapa**, use **Compostos não utilizados** para consultar a listagem paginada e **Baixar lista de compostos não utilizados** para baixar `preparation_failures.csv`. O relatório registra identificador, SMILES enviado, arquivo/linha de entrada, contexto da preparação e motivo. As falhas também entram no relatório geral de exclusões. As entradas originais são preservadas. Falhas de infraestrutura, como motor ausente ou disco cheio, continuam sendo erros da etapa.
+
+## Reutilização do receptor no Vina
+
+Ao conectar a saída preparada do redocking ao docking, o pipeline reutiliza o receptor e o centro do sítio em todos os lotes. Antes de iniciar, verifica os arquivos exigidos pelo motor e as coordenadas do centro. Um arquivo preparado ausente gera um erro de entrada; não dispara uma nova preparação silenciosa. Na preparação de estruturas brutas, a conversão do receptor ocorre uma vez por PDB/cadeia, mesmo quando existem vários ligantes de referência.
+
+No fluxo padrão, a API Python do Vina mantém o receptor e os mapas de afinidade em memória durante o lote. Os mapas são calculados antes de carregar qualquer ligante, incluindo todos os tipos atômicos, conforme a [documentação oficial do Vina](https://autodock-vina.readthedocs.io/en/latest/docking_python.html). Mudanças no receptor, centro, tamanho da caixa ou parâmetros de inicialização criam uma nova sessão. As opções dos templates continuam sendo respeitadas; opções especiais não suportadas pela API ou a ausência dessa biblioteca usam o executável CLI e registram essa alternativa no log.
+
+Os eventos `receptor.reused`, `ligand.preparation.started`, `vina.maps.started` e `vina.maps.reused` distinguem cada operação. `prepare.com` é a preparação de um candidato externo, que pode demorar devido a cargas AM1 ou minimização; não indica preparação do receptor. Candidatos com arquivos preparados são reutilizados. A semente configurada e os parâmetros de busca são preservados, com os compostos processados em ordem estável. A reutilização ocorre dentro do lote; os mapas em memória não são compartilhados entre workers.
+
+
+## Validação e exclusões no DOCK6
+
+O fluxo verifica instalação e parâmetros globais, receptor preparado, centro do sítio, esferas, caixa e arquivos de grid. Para cada ligante, verifica o MOL2 (contagens de átomos e ligações, identificadores, coordenadas e cargas finitas, topologia química e conectividade). Um ligante com fragmentos desconectados ou topologia inválida é excluído, sem reconstruir ligações por suposição. Isso é relevante na conversão de poses PDBQT do Vina, cujo formato não conserva toda a informação química de um MOL2. Uma pose Vina solicitada precisa corresponder ao composto e receptor selecionados; não é substituída silenciosamente por outra entrada.
+
+Superfície, esferas e grid são compartilhados pelos compostos do mesmo receptor/sítio. Minimização, docking e footprint usam processos independentes por composto. Falhas nativas (incluindo SIGSEGV, código -11), arquivos ausentes, saídas vazias ou scores inválidos excluem aquele composto das etapas seguintes e dos resultados finais; os demais continuam. Falhas ao gerar o gráfico do footprint também são registradas individualmente. Configurações e logs das ferramentas ficam preservados nos resultados para diagnóstico. Identificadores com pontos são conservados integralmente.
+
+A lista **Compostos não utilizados** inclui problemas de preparação e de execução, com etapa, identificador, SMILES, entrada e motivo. Ela mantém o arquivo `preparation_failures.csv` por compatibilidade com o relatório do Vina. Se todos forem excluídos, a etapa informa que nenhum resultado utilizável foi produzido. Erros globais — instalação ausente, parâmetros incompletos, receptor/sítio/grid indisponíveis ou falhas de disco — continuam interrompendo a etapa, pois não representam um problema de um composto específico.
+
+A revisão seguiu o [manual oficial do DOCK6](https://dock.compbio.ucsf.edu/DOCK_6/dock6_manual.htm), o [tutorial de docking rígido e flexível](https://dock.compbio.ucsf.edu/DOCK_6/tutorials/ligand_sampling_dock/ligand_sampling_dock.html) e o [tutorial de geração de grids](https://dock.docking.org/DOCK_6/tutorials/grid_generation/generating_grid.html). As verificações estruturais não garantem ausência de defeitos no executável nativo; o isolamento permite continuar o lote e identificar os compostos afetados.
+
+## Navegação e manutenção dos resultados
+
+As ações do workspace ficam na lateral. No projeto, **Navegação do projeto** e **Pipeline e execução** são recolhíveis, com ajuda para cada ação. Use o canvas ampliado, zoom e **Organizar blocos** para pipelines grandes. O [guia da interface](frontend.md#navegacao-canvas-e-execucoes-concluidas) detalha os controles, seleção de arquivos salvos, cartões de execução e remoção de resultados.
+
+Nos traçados 3D, **Mostrar nomes dos resíduos** permite uma exportação limpa sem remover as interações. Consulte o [visualizador](molecular_viewer.md#ocultar-os-nomes-dos-residuos).
+
+[Veja um footprint DOCK6](../imgs/examples/dock6-footprint.png) com o [PDF original](../imgs/examples/dock6-footprint.pdf): o exemplo do tutorial 1ABE compara contribuições de energia da referência e da pose gerada por Vina → DOCK6. Esses perfis de energia são distintos dos contatos geométricos 3D.

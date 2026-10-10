@@ -55,7 +55,7 @@ config = AppConfig(
     max_jobs=1,
     cpu_workers=2,
     max_queued_jobs=100,
-    job_timeout=86400,
+    job_timeout=None,
 )
 manager = JobManager(config)
 job = manager.submit('retrieve_compounds', {
@@ -140,7 +140,7 @@ com pesos entre 0 e 1; não exigem prefixos de métrica no nome. Tabelas com
 estruturas e encontrar o fragmento comum. Sem elas, apenas a topologia é apresentada.
 
 Métrica, fingerprint e limiar são definidos na operação `similarity`. A operação
-`graphs` não recalcula nem filtra os pesos. `mcs_timeout` tem padrão 30 segundos,
+`graphs` não recalcula nem filtra os pesos. `mcs_timeout` tem padrão 0 (sem limite de tempo),
 `mcs_ring_matches_ring_only` é true e `mcs_complete_rings_only` é false.
 Veja o [guia do workspace](frontend.md) para seleção, interação e downloads.
 
@@ -287,4 +287,35 @@ Referências de `base_selected_mols` em `docking_vina` e `docking_dock6` aceitam
 {"stage": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "selector": "compounds.csv", "compound_id": "CHEMBL1"}
 ```
 
-`requires_curation` dispensa uma nova confirmação de Vina/DOCK6 quando receptor e compostos estão configurados e todas as referências identificam arquivos (`asset` ou `selector` explícito). Referências `stage` com `selector=auto` continuam exigindo seleção. A configuração é revalidada antes de executar. Conexões incompatíveis são recusadas com a mesma mensagem padrão no canvas e em `validate_pipeline`.
+`requires_curation` dispensa uma nova confirmação de entradas quando os arquivos necessários estão configurados e todas as referências identificam arquivos (`asset` ou `selector` explícito). Referências `stage` com `selector=auto` continuam exigindo seleção. A configuração é revalidada antes de executar. Conexões incompatíveis são recusadas com a mesma mensagem padrão no canvas e em `validate_pipeline`.
+
+## Duração das execuções
+
+Os cálculos científicos e as etapas do pipeline não possuem limite automático de duração. Chimera, Open Babel, Vina, DOCK6 e os demais comandos aguardam conclusão ou erro. O cancelamento do usuário encerra o grupo de processos, incluindo comandos filhos. `job_timeout=None` é o padrão; um limite positivo só é aplicado se o chamador da API o definir explicitamente. `run_command` também aceita um timeout explícito para usos específicos, mas não usa mais `BIOMOL_COMMAND_TIMEOUT`. Na busca MCS, 0 permite concluir a busca; valores positivos são um orçamento opcional definido no bloco. Blocos salvos anteriormente podem conservar esse orçamento. Timeouts de comunicação HTTP continuam específicos por requisição, sem limitar a duração total da etapa.
+
+## Configuração ADMET e proveniência
+
+Os parâmetros de pesquisa são `admet_profile`, `admet_mode`, `prediction_backend`, `bbb_target`, `hia_target`, `rule_set`, `max_rule_violations`, `alert_catalogs`, `alert_policy` e `property_limits`. A ausência de perfil mantém `legacy`; declare o perfil para uma análise nova. Exemplo de parâmetros de seleção, a combinar com as entradas da operação:
+
+```json
+{
+  "admet_profile": "custom",
+  "admet_mode": "filter",
+  "prediction_backend": "rdkit",
+  "bbb_target": "BBB-",
+  "hia_target": "HIA+",
+  "rule_set": "oral",
+  "max_rule_violations": 1,
+  "alert_policy": "annotate",
+  "alert_catalogs": ["PAINS", "BRENK"],
+  "property_limits": {"ESOL_logS": [-4, null], "QED": [0.3, null]}
+}
+```
+
+Os limites são inclusivos e combinados com E; `null` deixa um lado aberto. Os cortes do exemplo são escolhas de pesquisa. Chaves `ML_` só são aceitas com backend `admet_ai` e devem corresponder às saídas disponíveis. Valores ausentes não satisfazem critérios exigidos. Configuração, versões, métodos e contagens ficam em `_admet_report.json`; tabelas avaliadas/selecionadas/rejeitadas preservam motivos. Veja [guia ADMET](admet_research.md) e [instalação do preditor](installation.md#preditor-admet-ai-opcional).
+
+## Docking em lotes e relatório de compostos não utilizados
+
+Receptores preparados são validados e reutilizados. A API Python Vina reutiliza mapas por receptor/caixa/configuração dentro do lote; templates não suportados ou API ausente usam CLI, registrado no log. DOCK6 compartilha superfície, esferas e grid por receptor/sítio, valida os MOL2 e executa minimização/docking/footprint por composto. Falhas individuais excluem somente o candidato; falhas globais interrompem a etapa. Veja [reutilização Vina](user_manual.md#reutilizacao-do-receptor-no-vina) e [validação DOCK6](user_manual.md#validacao-e-exclusoes-no-dock6).
+
+`preparation_failures.csv` é o nome preservado do relatório também para falhas posteriores do DOCK6. Colunas: `compound_identifier`, `submitted_smiles`, `input_file`, `input_row`, `preparation_step`, `preparation_context`, `reason`. Campos `preparation_step/context` identificam a operação concreta, mesmo para docking/footprint. Os detalhes da operação incluem `preparation_failures`, contagem e caminho do relatório quando disponíveis. Não inclua esses compostos no denominador de resultados utilizáveis sem registrar as exclusões.

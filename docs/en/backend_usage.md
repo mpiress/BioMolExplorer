@@ -55,7 +55,7 @@ config = AppConfig(
     max_jobs=1,
     cpu_workers=2,
     max_queued_jobs=100,
-    job_timeout=86400,
+    job_timeout=None,
 )
 manager = JobManager(config)
 job = manager.submit('retrieve_compounds', {
@@ -140,7 +140,7 @@ metric-based filename prefix. Compound tables with
 and common-fragment search. Without them, only graph topology is available.
 
 Metric, fingerprint and threshold belong to `similarity`. `graphs` does not
-recalculate or filter weights. `mcs_timeout` defaults to 30 seconds,
+recalculate or filter weights. `mcs_timeout` defaults to 0 (no time limit),
 `mcs_ring_matches_ring_only` to true and `mcs_complete_rings_only` to false.
 See the [workspace guide](frontend.md) for selection, interaction and downloads.
 
@@ -286,4 +286,35 @@ Input references under `base_selected_mols` in `docking_vina` and `docking_dock6
 {"stage": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "selector": "compounds.csv", "compound_id": "CHEMBL1"}
 ```
 
-`requires_curation` skips repeat confirmation for Vina/DOCK6 when receptor and compounds are configured and every reference identifies files (`asset` or an explicit `selector`). Stage references with `selector=auto` still require selection. Configuration is revalidated before execution. Incompatible connections use the same standard message in the canvas and `validate_pipeline`.
+`requires_curation` skips repeat input confirmation when the required files are configured and every reference identifies files (`asset` or an explicit `selector`). Stage references with `selector=auto` still require selection. Configuration is revalidated before execution. Incompatible connections use the same standard message in the canvas and `validate_pipeline`.
+
+## Execution duration
+
+Scientific calculations and pipeline stages have no automatic duration limit. Chimera, Open Babel, Vina, DOCK6 and other commands wait for completion or failure. User cancellation stops the process group, including child commands. `job_timeout=None` is the default; a positive limit only applies when explicitly supplied by an API caller. `run_command` also accepts an explicit timeout for specific use cases but no longer reads `BIOMOL_COMMAND_TIMEOUT`. For MCS, 0 allows the search to complete; positive values are an optional budget configured in the block. Previously saved blocks may retain this budget. HTTP communication timeouts remain per request and do not limit total stage duration.
+
+## ADMET configuration and provenance
+
+Research parameters are `admet_profile`, `admet_mode`, `prediction_backend`, `bbb_target`, `hia_target`, `rule_set`, `max_rule_violations`, `alert_catalogs`, `alert_policy` and `property_limits`. Omitting the profile retains `legacy`; declare it for a new analysis. Example selection parameters, combined with operation inputs:
+
+```json
+{
+  "admet_profile": "custom",
+  "admet_mode": "filter",
+  "prediction_backend": "rdkit",
+  "bbb_target": "BBB-",
+  "hia_target": "HIA+",
+  "rule_set": "oral",
+  "max_rule_violations": 1,
+  "alert_policy": "annotate",
+  "alert_catalogs": ["PAINS", "BRENK"],
+  "property_limits": {"ESOL_logS": [-4, null], "QED": [0.3, null]}
+}
+```
+
+Ranges are inclusive and combine with AND; `null` leaves one side open. These thresholds are research choices. `ML_` keys require backend `admet_ai` and must correspond to available outputs. Missing values fail required criteria. `_admet_report.json` records settings, versions, methods and counts; evaluated/selected/rejected tables preserve reasons. See the [ADMET guide](admet_research.md) and [predictor installation](installation.md#optional-admet-ai-predictor).
+
+## Batch docking and excluded-compound reports
+
+Prepared receptors are validated and reused. Vina's Python API reuses maps per receptor/box/configuration within a batch; unsupported templates or a missing API use the logged CLI fallback. DOCK6 shares surface, spheres and grids per receptor/site, validates MOL2 and runs minimization/docking/footprint per compound. Individual failures exclude the candidate; global failures stop the stage. See [Vina reuse](user_manual.md#reusing-receptors-in-vina) and [DOCK6 validation](user_manual.md#dock6-validation-and-exclusions).
+
+`preparation_failures.csv` remains the report filename for later DOCK6 failures too. Columns: `compound_identifier`, `submitted_smiles`, `input_file`, `input_row`, `preparation_step`, `preparation_context`, `reason`. Step/context fields identify the concrete operation, including docking/footprint. Operation details include `preparation_failures`, counts and the report path when available. Record exclusions when interpreting how many compounds produced usable results.

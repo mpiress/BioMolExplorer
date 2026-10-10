@@ -102,15 +102,13 @@ choices. **Avançado** (Advanced) allows JSON parameter/connection editing and f
 scientific templates. **Apply configuration** validates and commits the draft;
 **Cancel** keeps the previous block configuration.
 
-Except for redocking with previously configured pairs and Vina/DOCK6 docking with input files already selected, after a stage completes execution pauses before the next connected block and
-automatically opens a file selection popup. Check the compatible files to use for
+After a stage completes, execution pauses before a connected block only when a required input still needs file selection. Explicit selections already saved in that block are respected across operations. The file selection popup opens for unresolved automatic inputs. Check the compatible files to use for
 each input, then click **Continue with selected files**. Only outputs
 from this run are listed. Choose **Process individually** (the popup default)
 to keep each file and its results separate, or **Merge files** to
 combine selected inputs. Multiple input ports form file combinations in individual
 mode. DOCK6 retains only matching receptor/compound/pose combinations; consensus always merges selections before intersecting compound/receptor identities. Required structure metadata accompanies selected receptors in both modes.
-The choice is recorded for each stage. Stages that need processing require
-confirmation; reused stages complete without repeating file selection.
+The choice is recorded for each stage. Stages with unresolved automatic inputs require confirmation; reused stages complete without repeating file selection.
 Closing the popup keeps the run paused and preserves the selected files and mode.
 Reopen it from the progress window or the runs tab; **Configure stage** opens
 the full configuration with those choices already filled in. Confirmed selections
@@ -242,7 +240,7 @@ In MCC mode, the right panel shows the common molecular fragment, its image,
 SMILES depict the matched fragment of a reference molecule. SMARTS remains in
 the result model for matching. Older saved graphs receive this display and
 layout update when opened. Configure the time limit
-(default: 30 seconds) and ring-matching options in the block. The search requires
+(default: 0, no time limit) and ring-matching options in the block. The search requires
 a match in every MCC compound. When the limit is reached, the interface and
 exported figure label the best fragment found as partial; its maximum size is
 unconfirmed. This distinction follows the [RDKit FindMCS documentation](https://www.rdkit.org/docs/source/rdkit.Chem.rdFMCS.html).
@@ -342,7 +340,7 @@ Consensus accepts separate inputs from the two engines, including imports.
 
 ## Diagnostics and ChEMBL retrieval
 
-The login screen uses original project logos from `imgs`, bundled with the package,
+The interface uses the current `imgs/BioMolLogo.png` wordmark and `imgs/logo.png` symbol, bundled with the package,
 and adapts to smaller screens. Block configuration uses identification, input and
 parameter cards. Filters and engine options expand into spaced, responsive forms.
 
@@ -521,3 +519,28 @@ explains the limitation and retains distance contacts. The 3D analysis is
 geometric and differs from **Footprint** per-residue energies. See the
 [viewer guide](molecular_viewer.md) for layers, pose selection, controls,
 interpretation and updates.
+
+## Navigation, canvas and completed runs
+
+In **Your workspace**, **My projects**, **Import project** and **New project** are in the sidebar. Inside a project, two collapsible groups organize actions:
+
+| Group | Actions and purpose |
+| --- | --- |
+| Project navigation | **Workspace** returns to the list; **Project** opens project details; **Share** manages invitations/access; **History** reviews changes and restores versions. |
+| Pipeline and execution | **Save** commits the state; **Templates** inserts reference pipelines; **Run pipeline** runs enabled stages; **Run through selected stage** executes the selected block and its dependencies. |
+
+Collapse a group or the sidebar to free space. Each information icon explains the action and options; contextual help keeps longer explanations out of the canvas. Viewer permissions prevent editing actions.
+
+The logical canvas starts at a minimum of 4,000 × 2,800 and grows to accommodate blocks, with logical width limited to 12,000. The window displays part of that area. Use zoom, pan, **Arrange blocks** and **Reset view** for large pipelines. Collapsing the sidebar enlarges the visible area. Connections determine execution order; moving blocks does not change the scientific hypothesis.
+
+Execution honors explicit file selections and filenames saved in blocks. Input selection appears when a connected input still relies on automatic selection; review files and individual/merge processing then. To change a saved selection, reconfigure the block input before executing.
+
+**Runs** groups status, duration, stage progress, results and logs in cards. Expand the stage to inspect tables, charts, molecules, files and **Excluded compounds**, when available. Previous runs are grouped to limit the amount of content open at once.
+
+In **Results by stage**, **Remove all results** requires confirmation and removes stage artifacts, auxiliary files and references reused by other runs. Run records and logs remain. Affected cache references are invalidated; recover files through project history. Editing permission is required and active runs block removal. Export wanted results first.
+
+## ADMET: configure, explore and export
+
+In **Evaluate ADMET**, start with profile and output mode, then adjust BBB/HIA and criteria. The form uses columns when space permits and collapsible sections for alerts/ranges. **Annotate all compounds** preserves diversity; **Filter by hypothesis** combines all chosen criteria. ADMET-AI requires [installation on the worker](installation.md#optional-admet-ai-predictor).
+
+In results, select the ADMET table, filter classes and hover to identify points. Click to inspect the 2D structure; use compound lookup for coincident points. Zoom, recenter and fit-to-screen help navigate. Downloads export PNG and the selected file. Colors/shapes indicate local BBB rather than P-gp substrate status. See [ADMET methods and profiles](admet_research.md) for audit files and scientific limits.

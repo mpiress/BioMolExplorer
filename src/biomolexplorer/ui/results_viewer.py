@@ -10,6 +10,7 @@ from biomolexplorer.visualizations import PointIndex, molecule_image, separated_
 from .feedback import close_dialog
 from .zoom import zoomable_view
 from .localization import verbatim
+from biomolexplorer.egg_plot import bounds as egg_bounds,REGIONS,COLORS,tick_values
 
 BLUE = '#2552E8'
 INK = '#172B4D'
@@ -57,12 +58,14 @@ class ResultsViewer:
         self.tip_text = ft.Text('', color='#FFFFFF', size=12)
         self.tip = ft.Container(self.tip_text, visible=False, bgcolor=INK, padding=10, border_radius=8,
                                 ignore_interactions=True, left=0, top=0)
-        self.drawing = canvas.Canvas(width=self.WIDTH, height=self.HEIGHT)
+        egg=data['kind']=='egg'
+        self.drawing = canvas.Canvas(width=None if egg else self.WIDTH,height=None if egg else self.HEIGHT,
+            expand=egg,on_resize=self.resize_egg if egg else None,resize_interval=100)
         self.scene = ft.Stack([ft.GestureDetector(content=self.drawing, hover_interval=60,
-                             on_hover=self.hover, on_exit=self.leave, on_tap_up=self.click), self.tip],
-                             width=self.WIDTH, height=self.HEIGHT)
-        self.viewer = zoomable_view(content=self.scene, constrained=False,
-                                          alignment=ft.Alignment.TOP_LEFT, expand=True)
+                             on_hover=self.hover, on_exit=self.leave, on_tap_up=self.click,expand=egg), self.tip],
+                             width=None if egg else self.WIDTH,height=None if egg else self.HEIGHT,expand=egg)
+        self.viewer = zoomable_view(content=self.scene, constrained=egg,
+                                          alignment=ft.Alignment.CENTER if egg else ft.Alignment.TOP_LEFT, expand=True)
         self.search = ft.TextField(label='Código do composto', hint_text='CHEMBL… ou seu identificador',
                                    expand=True, on_submit=self.find)
         self.summary = ft.Text('', size=13, color='#64748B')
@@ -70,6 +73,12 @@ class ResultsViewer:
         self.fragment_panel=ft.Column(spacing=14,visible=False)
         self.populate_fragment()
         self.redraw()
+
+    def resize_egg(self,event):
+        if not self.active or event.width<120 or event.height<120:return
+        if abs(self.WIDTH-event.width)<1 and abs(self.HEIGHT-event.height)<1:return
+        self.WIDTH,self.HEIGHT=event.width,event.height
+        self.hovered=None;self.tip.visible=False;self.redraw();self.ui.page.update()
 
     def populate_fragment(self):
         if self.data['kind']!='graph':return
@@ -114,10 +123,7 @@ class ResultsViewer:
 
     def coordinates(self, nodes):
         if self.data['kind'] == 'egg':
-            xmin = min(0, min((node['x'] for node in nodes.values()), default=0))
-            xmax = max(200, max((node['x'] for node in nodes.values()), default=200))
-            ymin = min(-2, min((node['y'] for node in nodes.values()), default=-2))
-            ymax = max(7, max((node['y'] for node in nodes.values()), default=7))
+            xmin,xmax,ymin,ymax=egg_bounds(list(nodes.values()))
             # All points, including outliers, remain inside the plot area.
             dx, dy = max(1, xmax-xmin), max(1, ymax-ymin)
             self.project = lambda x, y: (65+(x-xmin)/dx*(self.WIDTH-105),
@@ -146,23 +152,23 @@ class ResultsViewer:
         return {key: self.project(node['x'], node['y']) for key, node in nodes.items()}
 
     def egg_background(self):
-        shapes = []
-        xmin, xmax, ymin, ymax = self.bounds
-        for cx, cy, rx, ry, color in [(75, 2, 75, 3, '#FFFFFF'), (42, 2.3, 47, 2.2, '#FFE066')]:
-            x1, y1 = self.project(cx-rx, cy+ry)
-            x2, y2 = self.project(cx+rx, cy-ry)
-            shapes.append(canvas.Oval(x1, y1, x2-x1, y2-y1, paint=ft.Paint(color=color)))
-        for value in range(0, int(xmax)+1, max(50, int((xmax-xmin)/5))):
-            x, y = self.project(value, ymin)
-            shapes.append(canvas.Text(x, y+12, str(value), style=ft.TextStyle(size=11, color=INK)))
-        for i in range(6):
-            value = ymin+(ymax-ymin)*i/5
-            x, y = self.project(xmin, value)
-            shapes.append(canvas.Text(12, y-6, f'{value:.1f}', style=ft.TextStyle(size=11, color=INK)))
-        shapes += [canvas.Line(65, 35, 65, self.HEIGHT-55, paint=ft.Paint(color='#64748B', stroke_width=1)),
-                   canvas.Line(65, self.HEIGHT-55, self.WIDTH-40, self.HEIGHT-55, paint=ft.Paint(color='#64748B', stroke_width=1)),
-                   canvas.Text(self.WIDTH/2-30, self.HEIGHT-20, 'TPSA (Å²)', style=ft.TextStyle(size=13, color=INK)),
-                   canvas.Text(10, 8, 'WLOGP', style=ft.TextStyle(size=13, color=INK))]
+        shapes=[];xmin,xmax,ymin,ymax=self.bounds
+        for value in tick_values(xmin,xmax):
+            x,y=self.project(value,ymin)
+            shapes.append(canvas.Line(x,35,x,self.HEIGHT-55,paint=ft.Paint(color='#DCE5EF',stroke_width=.6)))
+            shapes.append(verbatim(canvas.Text(x-12,y+12,f'{value:g}',style=ft.TextStyle(size=12,color=INK))))
+        for value in tick_values(ymin,ymax):
+            x,y=self.project(xmin,value)
+            shapes.append(canvas.Line(65,y,self.WIDTH-40,y,paint=ft.Paint(color='#DCE5EF',stroke_width=.6)))
+            shapes.append(verbatim(canvas.Text(14,y-7,f'{value:g}',style=ft.TextStyle(size=12,color=INK))))
+        for cx,cy,rx,ry,color in REGIONS:
+            x1,y1=self.project(cx-rx,cy+ry);x2,y2=self.project(cx+rx,cy-ry)
+            shapes.append(canvas.Oval(x1,y1,x2-x1,y2-y1,paint=ft.Paint(color=color)))
+            shapes.append(canvas.Oval(x1,y1,x2-x1,y2-y1,paint=ft.Paint(color='#94A3B8',stroke_width=1,style=ft.PaintingStyle.STROKE)))
+        shapes += [canvas.Line(65,35,65,self.HEIGHT-55,paint=ft.Paint(color='#64748B',stroke_width=1)),
+            canvas.Line(65,self.HEIGHT-55,self.WIDTH-40,self.HEIGHT-55,paint=ft.Paint(color='#64748B',stroke_width=1)),
+            verbatim(canvas.Text(self.WIDTH/2-35,self.HEIGHT-24,'TPSA (Å²)',style=ft.TextStyle(size=14,color=INK))),
+            verbatim(canvas.Text(12,8,'WLOGP',style=ft.TextStyle(size=14,color=INK)))]
         return shapes
 
     def redraw(self):
@@ -191,17 +197,21 @@ class ResultsViewer:
         self.radii={}
         for identifier, point in self.points.items():
             props = nodes[identifier]['properties']
-            color = ('#DC2626' if props.get('BBB') == 'BBB+' else BLUE) if self.data['kind'] == 'egg' else degree_color(values[identifier],maximum)
+            color = COLORS.get(props.get('BBB'),COLORS['unknown']) if self.data['kind'] == 'egg' else degree_color(values[identifier],maximum)
             radius=5 if self.data['kind']=='egg' else GRAPH_NODE_RADIUS
             self.radii[identifier]=radius
             if self.data['kind']=='graph' and self.mode=='full' and identifier in mcc:
                 shapes.append(canvas.Circle(*point,radius=radius+1.5,paint=ft.Paint(color=BLUE,stroke_width=1,style=ft.PaintingStyle.STROKE)))
-            shapes.append(canvas.Circle(*point, radius=radius, paint=ft.Paint(color=color)))
+            if self.data['kind']=='egg' and props.get('BBB')=='BBB-':
+                shapes.append(canvas.Rect(point[0]-radius,point[1]-radius,2*radius,2*radius,paint=ft.Paint(color=color)))
+            else:shapes.append(canvas.Circle(*point, radius=radius, paint=ft.Paint(color=color)))
+            if self.data['kind']=='egg':
+                shapes.append(canvas.Circle(*point,radius=radius+1,paint=ft.Paint(color='#FFFFFF',stroke_width=.8,style=ft.PaintingStyle.STROKE)))
             if self.data['kind']=='graph' and self.labels:
                 shapes.append(verbatim(canvas.Text(point[0]+radius+4,point[1]-8,identifier,style=ft.TextStyle(size=10,color=INK))))
         self.base_shapes = shapes
         self.highlight()
-        self.summary.value = (f'{len(nodes)} compostos · {len(edges)} relações · {len(self.components)} componentes · MCC: {len(mcc)} de {len(self.nodes)} compostos' if self.data['kind'] == 'graph' else f'{len(nodes)} compostos · vermelho: BBB+ · azul: BBB−')
+        self.summary.value = (f'{len(nodes)} compostos · {len(edges)} relações · {len(self.components)} componentes · MCC: {len(mcc)} de {len(self.nodes)} compostos' if self.data['kind'] == 'graph' else f'{len(nodes)} compostos · BBB+: {sum(n["properties"].get("BBB")=="BBB+" for n in nodes.values())} · BBB−: {sum(n["properties"].get("BBB")=="BBB-" for n in nodes.values())}')
         self.scale_label.value=('Grau: 0 → '+str(int(maximum))+' conexões' if self.color_mode=='degree' else f'Conectividade: 0 → {maximum:.3f} · grau / (n − 1)')
         self.fragment_panel.visible=self.mode=='mcc' and self.data['kind']=='graph'
         if not nodes:
@@ -234,6 +244,9 @@ class ResultsViewer:
         if identifier:
             overlapping = self.index.nearby(*self.points[identifier])
             self.tip_text.value = identifier + (f' (+{len(overlapping)-1})' if len(overlapping)>1 else '')
+            if self.data['kind']=='egg':
+                props=self.nodes[identifier]['properties']
+                self.tip_text.value+=f'\nTPSA: {self.nodes[identifier]["x"]:.2f} Å² · WLOGP: {self.nodes[identifier]["y"]:.2f}\n'+str(props.get('BBB','?'))+' · '+str(props.get('HIA','?'))
             self.tip.left = min(position.x+12, self.WIDTH-190)
             self.tip.top = max(0, position.y-42)
             self.status.value = 'Composto: '+identifier+' · clique para ver a estrutura e as propriedades.'
@@ -341,8 +354,12 @@ class ResultsViewer:
             await self.ui.guard(lambda: self.show_3d(identifier, version))
         controls.append(ft.TextButton('Visualizar estrutura 3D', on_click=open_3d, disabled=not bool(image)))
         for key, value in node['properties'].items():
-            label = str(key)
-            rendered = '—' if value is None else json.dumps(value, ensure_ascii=False) if isinstance(value, (dict, list)) else str(value)
+            from biomolexplorer.admet_config import DESCRIPTORS
+            label = DESCRIPTORS.get(key,str(key)) if self.data['kind']=='egg' else str(key)
+            if str(key).startswith('ML_'):
+                definition=(self.data.get('admet_report') or {}).get('provider',{}).get('endpoint_definitions',{}).get(str(key)[3:],{})
+                label=str(key)+' · '+definition.get('units','unidade do endpoint')
+            rendered = '—' if value is None else json.dumps(value, ensure_ascii=False) if isinstance(value, (dict, list)) else f'{value:.5g}' if isinstance(value,float) else str(value)
             controls.append(ft.Column([ft.Text(label, size=11, color='#64748B'),
                                        verbatim(ft.Text(rendered, size=13, selectable=True))], spacing=4))
         if self.data['kind'] == 'graph':
@@ -421,7 +438,7 @@ class ResultsViewer:
         async def reset(e): await self.viewer.reset()
         async def fit(e):
             await self.viewer.reset()
-            await self.viewer.zoom(min(720/self.WIDTH, self.VIEWPORT_HEIGHT/self.HEIGHT))
+            if self.data['kind']!='egg':await self.viewer.zoom(min(720/self.WIDTH, self.VIEWPORT_HEIGHT/self.HEIGHT))
         tools = [icon_button(icon=ft.Icons.ZOOM_IN, tooltip='Ampliar', on_click=zoom_in),
                  icon_button(icon=ft.Icons.ZOOM_OUT, tooltip='Reduzir', on_click=zoom_out),
                  ft.TextButton('Recentrar', on_click=reset), ft.TextButton('Ajustar à tela', on_click=fit)]
@@ -443,15 +460,22 @@ class ResultsViewer:
                 ft.Container(ft.Row([self.layout_choice]),col={'xs':12,'md':6})],spacing=20,run_spacing=16),
                 ft.Row([self.label_choice],wrap=True),
                 ft.Container(height=12,border_radius=6,gradient=ft.LinearGradient(colors=VIRIDIS,begin=ft.Alignment.CENTER_LEFT,end=ft.Alignment.CENTER_RIGHT)),self.scale_label]
-        else:style=[]
-        description = 'Os componentes ficam separados. Escolha um componente para explorar seus vértices. Clique em um composto para destacar seus vizinhos e navegar pelas relações. Arraste o fundo e use o zoom.' if self.data['kind'] == 'graph' else 'Regiões branca e amarela: HIA e BBB. Classificações heurísticas da plataforma.'
-        left = ft.Container(col={'xs':12, 'md':8}, content=ft.Column([
+        else:
+            style=[ft.Row([ft.Text('● BBB+ · laranja',color=COLORS['BBB+'],size=12),ft.Text('■ BBB− · azul',color=COLORS['BBB-'],size=12),
+                ft.Text('Branco: região HIA · amarelo: região BBB',size=12,color=INK)],wrap=True,spacing=18)]
+        description = 'Os componentes ficam separados. Escolha um componente para explorar seus vértices. Clique em um composto para destacar seus vizinhos e navegar pelas relações. Arraste o fundo e use o zoom.' if self.data['kind'] == 'graph' else 'EGG local: aproximação heurística de permeação passiva; não é uma predição SwissADME validada. A cor indica BBB, não P-gp. Pontos fora das regiões continuam visíveis. Clique para inspecionar propriedades e motivos da seleção.'
+        report=self.data.get('admet_report')
+        if report:
+            from biomolexplorer.admet_config import PROFILES
+            config=report.get('configuration',{});profile=PROFILES.get(config.get('admet_profile'),{})
+            style.insert(0,ft.Text(profile.get('label','ADMET')+' · '+str(report.get('selected',0))+' / '+str(report.get('evaluated',0))+' compostos atendem à hipótese na avaliação original.',size=12,color=INK))
+        left = ft.Container(col={'xs':12, 'xl':9} if self.data['kind']=='egg' else {'xs':12, 'md':8}, content=ft.Column([
             ft.Row(tools, wrap=True), self.summary,*style,
             ft.Semantics(label='Grafo molecular interativo' if self.data['kind']=='graph' else 'Gráfico EGG interativo',
-                content=ft.Container(self.viewer, height=self.VIEWPORT_HEIGHT, bgcolor='#EEF2F7' if self.data['kind']=='egg' else '#F8FAFD',
+                content=ft.Container(self.viewer, height=560 if self.data['kind']=='egg' else self.VIEWPORT_HEIGHT, bgcolor='#EEF2F7' if self.data['kind']=='egg' else '#F8FAFD',
                          border=ft.Border.all(1, '#DCE5F4'), border_radius=12, clip_behavior=ft.ClipBehavior.HARD_EDGE)),
             self.status, ft.Text(description, size=11, color='#64748B')], spacing=12))
-        right = ft.Container(col={'xs':12, 'md':4}, padding=18, height=None if self.popup else 570, bgcolor='#FFFFFF',
+        right = ft.Container(col={'xs':12, 'xl':3} if self.data['kind']=='egg' else {'xs':12, 'md':4}, padding=18, height=None if self.popup else 570, bgcolor='#FFFFFF',
                             border=ft.Border.all(1, '#DCE5F4'), border_radius=12,
                             content=ft.Column([ft.Row([self.search, icon_button(icon=ft.Icons.SEARCH, tooltip='Buscar composto', on_click=self.find)]),
                                                *([*self.actions,ft.Text('Passe o mouse para identificar um composto. Clique no ponto para abrir sua estrutura 2D.',size=13,color='#64748B'),self.fragment_panel] if self.popup else [self.fragment_panel,ft.Container(self.details, expand=True)])], spacing=18))

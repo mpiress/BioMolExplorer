@@ -61,11 +61,11 @@ python -m biomolexplorer.log_report --job JOB_ID --json
 | --- | --- |
 | `TOOL_NOT_FOUND` | Executable unavailable; check installation and worker PATH |
 | `TOOL_START_FAILED` | Could not start; check permissions and working directory |
-| `TOOL_TIMEOUT` | Command exceeded its limit; review output, input and `BIOMOL_COMMAND_TIMEOUT` |
+| `TOOL_TIMEOUT` | Command exceeded a limit explicitly supplied by its caller; there is no automatic limit |
 | `TOOL_EXIT_FAILED` | Tool returned a nonzero exit code; inspect stdout/stderr |
 | `TOOL_REPORTED_ERROR` | Chimera reported an error despite returning zero; inspect the retained script |
 | `PREPARED_OUTPUT_INVALID` | Preparation output missing, empty or without atoms; inspect the tool output and script |
-| `EXECUTION_TIMEOUT` | Job exceeded its supervisor limit; inspect the last command |
+| `EXECUTION_TIMEOUT` | Job exceeded an explicitly configured supervisor limit; the default has no limit |
 | `INPUT_NOT_FOUND` | Input file unavailable |
 | `ACCESS_DENIED` | Filesystem access denied |
 | `VALIDATION_FAILED` | Invalid input or configuration |
@@ -89,3 +89,9 @@ with log_context(job_id="example-job", operation="redocking", pair="4M0E|1YL|604
 JSONL uses `schema_version=1`, UTC timestamps with milliseconds, severity, component, event, process, thread and source location. IDs, duration, tool, configuration, exit code, cause and action are optional depending on the event. Diagnostic write failures must not invalidate scientific results.
 
 `tests/test_structured_diagnostics.py` covers context isolation, credential masking, duplicate prevention, chained causes, command codes, filters and shared process rotation. Worker and pipeline tests exercise the actual process boundary. See [pipeline validation](pipeline_validation.md).
+
+## Docking reuse and individual failures
+
+`receptor.reused` identifies prepared receptor reuse. `ligand.preparation.started` and `prepare.com` concern candidate preparation, not repeated receptor preparation. `vina.maps.started` and `vina.maps.reused` distinguish calculation/reuse within a batch. Unsupported API templates produce a logged CLI fallback.
+
+DOCK6 surface/sphere/box/grid configurations and per-candidate logs accompany results. Exit code -11 means a native SIGSEGV. An individual failure can add a row to `preparation_failures.csv` while other candidates continue; check **Excluded compounds** and step/context to locate it. Global errors still fail the stage. Long elapsed time alone does not cause automatic termination. See the [DOCK6 workflow](user_manual.md#dock6-validation-and-exclusions).

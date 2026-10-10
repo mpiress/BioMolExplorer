@@ -94,7 +94,9 @@ class InputEditor:
         source.on_select=change
         selector.on_select=lambda e:self.changed()
         source.expand=selector.expand=True
-        row=ft.Column([ft.Row([source]),ft.Row([selector])],spacing=20,horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
+        input_controls=[ft.ResponsiveRow([ft.Container(ft.Row([source]),col={'xs':12,'lg':6}),
+            ft.Container(ft.Row([selector]),col={'xs':12,'lg':6})],spacing=20,run_spacing=20)] if self.stage['operation']=='admet' else [ft.Row([source]),ft.Row([selector])]
+        row=ft.Column(input_controls,spacing=20,horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
         if self.stage['operation'] in ('docking_vina','docking_dock6') and self.is_ligand:
             compound=ft.Dropdown(label='Composto para docking (opcional)',value=ref.get('compound_id',''),
                 options=[],disabled=not self.writable,enable_filter=True,enable_search=True)

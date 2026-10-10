@@ -16,7 +16,7 @@ from .workspace import AccessDenied
 
 RESOURCE=Path(__file__).parent/'resources/viewer'
 PREFIX='/molecular-viewer'
-ASSETS={'3Dmol-min.js','pdb-viewer.js','pdb-viewer.css','docking-viewer.js'}
+ASSETS={'3Dmol-min.js','pdb-viewer.js','pdb-viewer.css','docking-viewer.js','logo.png'}
 PRIVATE_HEADERS={'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff',
     'Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data: blob:; worker-src 'self' blob:; base-uri 'none'; frame-ancestors 'none'"}
 TEXT={
@@ -45,7 +45,11 @@ TEXT['en'].update(receptor_style='Receptor style',ligand_style='Ligand style',hy
 @lru_cache(maxsize=32)
 def _asset_digest(name,mtime_ns,size):
     """Version cache URLs whenever a packaged asset changes, including in development."""
-    return hashlib.sha256((RESOURCE/name).read_bytes()).hexdigest()[:16]
+    return hashlib.sha256(_asset_path(name).read_bytes()).hexdigest()[:16]
+
+
+def _asset_path(name):
+    return RESOURCE.parent/'branding'/name if name=='logo.png' else RESOURCE/name
 
 
 def viewer_document(name,language='pt',prefix=PREFIX,generated=False,scene=False):
@@ -58,7 +62,7 @@ def viewer_document(name,language='pt',prefix=PREFIX,generated=False,scene=False
         'representation':'sticks' if ligand or file_format=='mol2' else 'cartoon'},ensure_ascii=False).replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')
     source=(RESOURCE/'pdb-viewer.html').read_text(encoding='utf-8')
     for asset in ASSETS:
-        stat=(RESOURCE/asset).stat()
+        stat=_asset_path(asset).stat()
         digest=_asset_digest(asset,stat.st_mtime_ns,stat.st_size)
         source=source.replace('/assets/'+asset+'"','/assets/'+asset+'?v='+digest+'"')
     for key,value in dict(labels,name=name,language=language,prefix=prefix,config=config).items():
@@ -136,8 +140,8 @@ class StructureViewers:
             if path.startswith(PREFIX+'/assets/'):
                 name=path.removeprefix(PREFIX+'/assets/')
                 if name not in ASSETS:return 404,'text/plain',b'Not found',PRIVATE_HEADERS
-                mime={'js':'text/javascript','css':'text/css'}[name.rsplit('.',1)[1]]
-                return 200,mime,(RESOURCE/name).read_bytes(),{'Cache-Control':'no-cache','X-Content-Type-Options':'nosniff'}
+                mime={'js':'text/javascript','css':'text/css','png':'image/png'}[name.rsplit('.',1)[1]]
+                return 200,mime,_asset_path(name).read_bytes(),{'Cache-Control':'no-cache','X-Content-Type-Options':'nosniff'}
             parts=path.removeprefix(PREFIX+'/').split('/')
             if not path.startswith(PREFIX+'/') or len(parts)>2 or (len(parts)==2 and parts[1] not in ('structure','scene')):
                 return 404,'text/plain',b'Not found',PRIVATE_HEADERS

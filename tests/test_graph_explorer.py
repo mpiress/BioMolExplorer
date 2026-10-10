@@ -136,7 +136,7 @@ class GraphExplorerTests(unittest.TestCase):
         with patch.dict('os.environ',{'BIOMOL_WORKSPACE':str(self.root)}):
             analyze_graphs(base_input_path='/datasets/input',base_output_path='/datasets/output')
         self.assertTrue(list((self.root/'datasets/output/plots').glob('*'+SUFFIX)))
-        for params in ({'mcs_timeout':0},{'mcs_ring_matches_ring_only':'True'},{'threshold':101},{'graph_inputs':[{}]}):
+        for params in ({'mcs_timeout':-1},{'mcs_ring_matches_ring_only':'True'},{'threshold':101},{'graph_inputs':[{}]}):
             with self.subTest(params=params),self.assertRaises(ValueError):validate_operation('graphs',params)
 
 
@@ -267,8 +267,7 @@ class GraphProvenanceTests(unittest.TestCase):
             next_stage=new_stage('admet');next_stage['bindings']['base_input_path']={'stage':stage['id'],'selector':'Molecules/'+Path(selected).name}
             self.store.save_pipeline(self.token,self.pid,[stage,next_stage],2)
             subsequent=wait(service.submit(self.token,self.pid))
-            self.assertEqual(subsequent['status'],'awaiting_input')
-            subsequent=wait(service.resume(self.token,subsequent['id'],next_stage))
+            self.assertFalse(subsequent['stages'][1]['requires_curation'])
             self.assertEqual(subsequent['status'],'succeeded',subsequent['error'])
             self.assertTrue(subsequent['stages'][0]['reused'])
             self.assertEqual(subsequent['stages'][0]['artifacts'],artifacts)

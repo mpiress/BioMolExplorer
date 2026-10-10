@@ -131,3 +131,9 @@ do bloco, expanda a etapa e selecione o arquivo; passe o mouse para identificar 
 para ver a estrutura 2D e suas propriedades. O gráfico não recalcula os descritores.
 
 O bloco de grafos recebe relações prontas dos blocos de similaridade ou arquivos externos pelo formulário; fingerprints não são uma entrada direta. Os SMILES vêm da linhagem ou de tabelas externas correspondentes. Individual mantém análises independentes; merge combina relações selecionadas em uma análise. Selecione um MCC específico para alimentar a etapa seguinte. Modelos interativos, imagens de fragmentos e apresentações de graus acompanham a exportação. O fragmento é apresentado como SMILES extraído da referência.
+
+## Seleções salvas e remoção de resultados
+
+Arquivos explicitamente escolhidos na configuração são reutilizados na execução sem repetir a pergunta. Entradas ainda automáticas podem pedir seleção após a etapa de origem. Reconfigure a entrada para trocar um arquivo salvo. Ao migrar, valide as referências e instale os motores e o preditor ADMET-AI opcional no destino.
+
+**Remover todos os resultados**, em uma etapa de execução, exige confirmação e permissão de edição. Remove artefatos e referências reaproveitadas, invalida o cache afetado e preserva registro/log. A ação fica bloqueada com execuções ativas. Use o histórico para restaurar arquivos. Isso difere de remover uma linha de tabela, que altera apenas o CSV escolhido, e de excluir o projeto inteiro. Veja [navegação e resultados](frontend.md#navegacao-canvas-e-execucoes-concluidas).

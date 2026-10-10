@@ -2,12 +2,13 @@
 <html lang="{{language}}">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{{name}} · BioMolExplorer</title>
+<link rel="icon" type="image/png" href="{{prefix}}/assets/logo.png">
 <link rel="stylesheet" href="{{prefix}}/assets/pdb-viewer.css">
 <script src="{{prefix}}/assets/3Dmol-min.js" defer></script>
 <script src="{{prefix}}/assets/docking-viewer.js" defer></script>
 <script src="{{prefix}}/assets/pdb-viewer.js" defer></script></head>
 <body>
-<header><div class="brand"><span class="mark">B</span><div><strong>BioMolExplorer</strong><small>{{viewer}}</small></div></div>
+<header><div class="brand"><img class="mark" src="{{prefix}}/assets/logo.png" alt="BioMolExplorer"><div><strong>BioMolExplorer</strong><small>{{viewer}}</small></div></div>
 <div class="identity"><h1>{{name}}</h1><span id="summary"></span></div>
 <div class="header-actions"><button id="snapshot">{{snapshot}}</button><button id="fullscreen">{{fullscreen}}</button></div></header>
 <main><div id="scene" aria-label="{{viewer}}"></div>
@@ -19,7 +20,7 @@
 <label for="chain">{{chain}}</label><select id="chain"><option value="">{{all}}</option></select>
 <label for="model">{{model}}</label><select id="model"></select>
 <div class="toggles"><label><input type="checkbox" id="ligands" checked>{{ligands}}</label><label><input type="checkbox" id="water">{{water}}</label><label title="{{hydrogen_hint}}"><input type="checkbox" id="hydrogens">{{hydrogens}}</label></div>
-<section id="docking-controls" hidden><div id="layers"></div><label id="cutoff-label" for="cutoff"></label><input id="cutoff" type="number" min="2" max="8" step="0.5" value="4"><p id="contact-note"></p><div id="interaction-controls" hidden><label><input id="show-interactions" type="checkbox" checked> <span id="interaction-toggle-label"></span></label><div id="interaction-types"></div><p id="interaction-status"></p><div id="interaction-list"></div></div><div id="contacts"></div></section>
+<section id="docking-controls" hidden><div id="layers"></div><label id="cutoff-label" for="cutoff"></label><input id="cutoff" type="number" min="2" max="8" step="0.5" value="4"><p id="contact-note"></p><div id="interaction-controls" hidden><label><input id="show-interactions" type="checkbox" checked> <span id="interaction-toggle-label"></span></label><label><input id="show-residue-labels" type="checkbox" checked> <span id="residue-label-toggle-label"></span></label><div id="interaction-types"></div><p id="interaction-status"></p><div id="interaction-list"></div></div><div id="contacts"></div></section>
 <button id="interaction-view" disabled hidden>{{interaction_view}}</button><p id="interaction-reason" hidden></p>
 <button id="center" class="primary">{{center}}</button><p id="conformer" hidden></p></aside>
 <div id="interaction-tooltip" role="status" aria-live="polite" hidden></div>

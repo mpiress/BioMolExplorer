@@ -188,6 +188,20 @@ class CompoundSelectionPipelineTests(unittest.TestCase):
                         self.assertEqual([r['molecule_chembl_id'] for r in read_compounds(table)],['B'])
                     else:self.assertEqual(calls,[])
 
+    def test_saved_admet_filename_executes_without_repeating_selection(self):
+        asset=self.upload('compounds.csv','name,smiles\nA,CCO\nB,CCN\n')
+        source=new_stage('import_results');source['parameters']['asset_ids']=[asset]
+        stage=new_stage('admet');stage['parameters']['input_file']='compounds.csv'
+        stage['bindings']['base_input_path']={'stage':source['id'],'selector':'auto'}
+        self.save([source,stage]);manager,calls=self.immediate_manager()
+        with patch('biomolexplorer.pipeline.JobManager',manager):
+            service=PipelineService(self.store)
+            try:run=self.wait(service.submit(self.token,self.project_id,reuse_results=False))
+            finally:service.close()
+        self.assertEqual(run['status'],'succeeded',run['error'])
+        self.assertFalse(run['stages'][1]['requires_curation'])
+        self.assertEqual([op for op,_ in calls],['admet'])
+
     def test_binding_validation_rejects_compound_selection_on_other_inputs(self):
         stage=new_stage('admet')
         stage['bindings']['base_input_path']={'asset':'f'*32,'compound_id':'A'}

@@ -9,6 +9,7 @@
     />
 
     <title>BioMolExplorer | Molecular Exploration & Flexible Pipelines</title>
+    <link rel="icon" type="image/png" href="imgs/logo.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -93,6 +94,19 @@
             background: #020617;
             border: 1px solid rgba(148, 163, 184, 0.15);
         }
+        .example-image{display:block;position:relative;background:#f1f5f9;padding:18px;overflow:hidden}
+        .example-image img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:contain}
+        .example-dark{background:#0b1220}
+        .example-footprint img{aspect-ratio:10/9}
+        .example-image span{position:absolute;right:18px;bottom:14px;background:#102b46;color:white;padding:6px 10px;border-radius:8px;font-size:12px}
+        .example-image:focus-visible{outline:3px solid #0ea5e9;outline-offset:-3px}
+        #example-dialog{border:1px solid #334155;border-radius:18px;padding:18px;background:#0b1220;color:#e2e8f0;width:min(1200px,94vw);max-height:94vh}
+        #example-dialog::backdrop{background:rgba(2,6,23,.85)}
+        #example-dialog img{display:block;max-width:100%;max-height:74vh;width:auto;height:auto;object-fit:contain;margin:12px auto}
+        #example-dialog button{background:#1e293b;border:1px solid #64748b;border-radius:8px;padding:8px 16px;cursor:pointer}
+        #example-dialog .preview-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px}
+        #example-dialog p{font-size:14px;color:#cbd5e1;line-height:1.5}
+        @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.card-hover{transition:none;transform:none!important}}
     </style>
 </head>
 
@@ -101,9 +115,8 @@
     <header class="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-slate-950/70 backdrop-blur-lg">
         <div class="max-w-7xl mx-auto px-6 py-4 flex flex-wrap gap-4 items-center justify-between">
             <div class="flex items-center gap-4">
-                <img src="imgs/logo.png" alt="BioMolExplorer Logo" class="w-11 h-11 object-contain">
                 <div>
-                    <h1 class="text-white text-lg font-bold tracking-wide">BioMolExplorer</h1>
+                    <h1 class="bg-white rounded-lg px-3 py-1 mb-1"><img src="imgs/BioMolLogo.png" alt="BioMolExplorer" width="662" height="209" class="w-56 max-w-[60vw] h-auto object-contain"></h1>
                     <p class="text-xs text-slate-400">Computational Molecular Intelligence</p>
                 </div>
             </div>
@@ -113,7 +126,7 @@
                 <a href="#capabilities" class="hover:text-white transition">Capabilities</a>
                 <a href="#workflow" class="hover:text-white transition">Workflow</a>
                 <a href="#installation" class="hover:text-white transition">Installation</a>
-                <a href="#molecular-viewer" class="hover:text-white transition">3D viewer</a>
+                <a href="#visual-results" class="hover:text-white transition">Visual results</a>
                 <a href="#documentation" class="hover:text-white transition">Documentation</a>
             </nav>
 
@@ -209,7 +222,7 @@
 
                             <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 hover:border-violet-500/30 transition duration-300">
                                 <div class="text-3xl font-black text-violet-400">ADMET</div>
-                                <p class="text-sm text-slate-400 mt-2">Early-stage absorption, distribution, and toxicity profiling</p>
+                                <p class="text-sm text-slate-400 mt-2">Research profiles, local descriptors and optional trained models</p>
                             </div>
 
                             <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5">
@@ -317,7 +330,7 @@
                             <div>
                                 <h3 class="text-md font-bold text-slate-900">ADMET Profiling</h3>
                                 <p class="text-slate-500 mt-1.5 text-xs leading-relaxed text-justify">
-                                    Early-stage evaluation of absorption, distribution, metabolism, excretion, and toxicity properties for strategic candidate screening.
+                                    Local molecular descriptors and screening hypotheses, with optional trained models for absorption, distribution, metabolism, excretion and toxicity endpoints.
                                 </p>
                             </div>
                         </div>
@@ -398,7 +411,7 @@
 
                     <h3 class="text-xl font-bold text-slate-900 mb-4">Automated Redocking</h3>
                     <p class="text-slate-600 text-sm leading-relaxed text-justify">
-                        AutoDock Vina-based validation strategies for assessing structural consistency and docking reproducibility.
+                        Validate receptor–ligand pairs with Vina, inspect RMSD and reference overlays, and reuse the prepared receptor in candidate docking.
                     </p>
                 </div>
 
@@ -432,7 +445,7 @@
 
                     <h3 class="text-xl font-bold text-slate-900 mb-4">ADMET Profiling</h3>
                     <p class="text-slate-600 text-sm leading-relaxed text-justify">
-                        Molecular properties, heuristic absorption and distribution classifications, toxicity filters and exported screening subsets.
+                        Editable oral, CNS, peripheral, fragment and natural-product hypotheses. Local RDKit descriptors, structural alerts, optional ADMET-AI predictions and auditable screening subsets.
                     </p>
                 </div>
 
@@ -444,11 +457,11 @@
         <div class="max-w-7xl mx-auto px-6">
             <span class="text-emerald-700 font-semibold uppercase tracking-widest text-sm">Flet Workspace</span>
             <h2 class="section-title text-4xl font-black text-slate-900 mt-3">Your project. Your pipeline. Your collaborators.</h2>
-            <p class="text-slate-600 mt-6 max-w-3xl leading-relaxed">Drag stages onto a visual canvas, connect their ports, and double-click each block to configure it. Guided forms handle filters and engine settings; advanced users can edit JSON and scientific templates. Start with a ready-made pipeline or bring your own data wherever the backend format allows.</p>
+            <p class="text-slate-600 mt-6 max-w-3xl leading-relaxed">Use collapsible navigation and execution groups in the sidebar, with contextual help for each action. Drag stages onto a spacious, zoomable canvas, organize their layout, connect their ports, and double-click each block to configure it. Guided forms handle filters and engine settings; advanced users can edit JSON and scientific templates. Start with a ready-made pipeline or bring your own data wherever the backend format allows.</p>
             <div class="grid md:grid-cols-3 gap-6 mt-10">
                 <article class="bg-white border border-slate-200 rounded-3xl p-7"><h3 class="text-xl font-bold mb-3">Projects that travel with you</h3><p class="text-slate-600">Choose a folder for each project. Export and import its configuration, inputs, results and versions to continue on another computer while reusing compatible completed experiments.</p></article>
                 <article class="bg-white border border-slate-200 rounded-3xl p-7"><h3 class="text-xl font-bold mb-3">Collaborate with a shared history</h3><p class="text-slate-600">Invite editors or viewers from the project's Share button. Autosaved edits appear for collaborators, while an attributed change history lets owners restore configuration, files and results to an earlier state.</p></article>
-                <article class="bg-white border border-slate-200 rounded-3xl p-7"><h3 class="text-xl font-bold mb-3">Select the inputs your study needs</h3><p class="text-slate-600">Combine selected output files and validated uploads in each block. Explore paginated compound tables directly in your results, or filter interactive ADMET EGG plots by BBB and HIA classification. Click a point to open its molecular 2D structure and download the selected dataset or chart.</p></article>
+                <article class="bg-white border border-slate-200 rounded-3xl p-7"><h3 class="text-xl font-bold mb-3">Select the inputs your study needs</h3><p class="text-slate-600">Combine selected output files and validated uploads in each block. Saved file selections are respected without repeating the selection dialog. Explore paginated compound tables directly in your results, or filter interactive ADMET EGG plots by BBB and HIA classification. Click a point to open its molecular 2D structure and download the selected dataset or chart.</p></article>
             </div>
             <div class="grid md:grid-cols-3 gap-4 mt-8 text-sm">
                 <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-5 font-medium">Compound retrieval → ADMET</div>
@@ -456,6 +469,11 @@
                 <div class="bg-violet-50 border border-violet-200 rounded-2xl p-5 font-medium">Your prepared receptors + compounds → Vina → DOCK6 → Consensus</div>
             </div>
             <p class="text-slate-600 mt-6">Prepared receptors must include the metadata and files expected by the docking protocol. See the <a href="docs/en/frontend.html#using-your-own-files" class="text-emerald-700 underline font-semibold">input format guide</a>.</p>
+            <div class="mt-8 border border-slate-200 bg-white rounded-2xl p-6">
+                <h3 class="font-bold text-slate-900">Keep large experiments moving</h3>
+                <p class="text-slate-600 mt-2 leading-relaxed">Prepared receptors are reused; Vina affinity maps are shared within compatible batches, and DOCK6 grids within each receptor/site. Scientific commands have no implicit duration limit. Compounds that fail preparation or individual DOCK6 calculations are listed separately while the remaining candidates continue.</p>
+                <p class="text-slate-600 mt-3 leading-relaxed">Completed runs bring stage summaries, tables, visual results and logs together. Remove obsolete stage results with confirmation and restore files through project history.</p>
+            </div>
             <a href="docs/en/frontend.html" class="inline-flex mt-6 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-semibold">Explore the workspace guide →</a>
             <a href="docs/en/projects.html" class="inline-flex mt-6 ml-3 border border-emerald-600 text-emerald-700 px-6 py-3 rounded-xl font-semibold">Projects, migration and versions →</a>
             <a href="docs/pt/projects.html" lang="pt-BR" class="inline-flex mt-6 ml-3 text-emerald-700 underline font-semibold">Projetos e versões em português</a>
@@ -585,7 +603,7 @@
                                 </div>
                                 <p class="text-sm text-slate-400 mt-3 leading-relaxed">
                                     Molecular property calculations, heuristic ADMET classifications,
-                                    toxicity filters and exported subsets for early screening.
+                                    structural alerts, optional trained-model outputs and exported screening subsets.
                                 </p>
                             </div>
 
@@ -678,7 +696,7 @@ biomolexplorer-ui --web --dock6-path /path/to/dock6-6.11</code></pre>
                                 </div>
                                 <h4 class="font-bold text-slate-900">Scaffold Exploration</h4>
                                 <p class="text-sm text-slate-600 mt-2">
-                                    Common molecular fragments with explicit search status and configurable time limits.
+                                    Common molecular fragments with explicit search status. No default search timeout; optional limits remain configurable.
                                 </p>
                             </div>
 
@@ -712,6 +730,29 @@ biomolexplorer-ui --web --dock6-path /path/to/dock6-6.11</code></pre>
         </div>
     </section>
 
+    <section id="visual-results" class="py-24 bg-slate-50 border-t border-slate-200">
+        <div class="max-w-7xl mx-auto px-6">
+            <span class="text-emerald-700 font-semibold uppercase tracking-widest text-sm">Visual results</span>
+            <h2 class="section-title text-4xl font-black text-slate-900 mt-3">From a screening overview to individual residues</h2>
+            <p class="text-slate-600 mt-6 max-w-3xl leading-relaxed">Complement molecular networks with ADMET maps, interactive 3D inspection and residue-level energy profiles. Open an example to inspect the full image; the guides explain how to produce and interpret each result.</p>
+            <div class="grid lg:grid-cols-2 gap-8 mt-10">
+                <figure class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-card">
+                    <a href="imgs/examples/admet-egg.png" class="example-image" data-example aria-label="Enlarge ADMET EGG example"><img src="imgs/examples/admet-egg.png" width="2400" height="1400" loading="lazy" decoding="async" alt="Local ADMET EGG export with orange circles for BBB+ and blue squares for BBB−, TPSA and WLOGP axes and heuristic regions."><span>View full image ↗</span></a>
+                    <figcaption class="p-7"><p class="text-sm font-semibold text-emerald-700 mb-2">01 · ADMET exploration</p><h3 class="text-xl font-bold text-slate-900">Explore the hypothesis before selecting compounds</h3><p class="text-slate-600 mt-3 leading-relaxed">Filter BBB/HIA classes, inspect a compound's 2D structure and export the selected table or plot. This export uses 11 illustrative compounds calculated with RDKit; the local regions are heuristic and do not reproduce validated SwissADME predictions.</p><a href="docs/en/admet_research.html" class="inline-block mt-5 text-emerald-700 font-semibold underline">Methods, profiles and interpretation →</a></figcaption>
+                </figure>
+                <figure class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-card">
+                    <a href="imgs/examples/interactions-3d.png" class="example-image example-dark" data-example aria-label="Enlarge 3D interaction example"><img src="imgs/examples/interactions-3d.png" width="1280" height="800" loading="lazy" decoding="async" alt="BioMolExplorer 3D viewer showing a cyan benzene ligand, an illustrative phenylalanine ring and pink, lilac and lime dashed interaction traces."><span>View full image ↗</span></a>
+                    <figcaption class="p-7"><p class="text-sm font-semibold text-cyan-700 mb-2">02 · Molecular inspection</p><h3 class="text-xl font-bold text-slate-900">Read each relation in its spatial context</h3><p class="text-slate-600 mt-3 leading-relaxed">Choose independent receptor and ligand styles, toggle hydrogens and residue names, and hover over colored traces. This actual viewer capture uses an illustrative benzene/PHE test scene to make overlapping geometric contacts easy to see.</p><a href="docs/en/molecular_viewer.html" class="inline-block mt-5 text-emerald-700 font-semibold underline">3D controls and interaction criteria →</a></figcaption>
+                </figure>
+                <figure class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-card lg:col-span-2 grid lg:grid-cols-2 items-center">
+                    <a href="imgs/examples/dock6-footprint.png" class="example-image example-footprint" data-example aria-label="Enlarge DOCK6 footprint example"><img src="imgs/examples/dock6-footprint.png" width="1800" height="1620" loading="lazy" decoding="async" alt="Two DOCK6 footprint plots comparing reference and calculated pose van der Waals and electrostatic energy contributions across 1ABE receptor residues."><span>View full image ↗</span></a>
+                    <figcaption class="p-7 lg:p-10"><p class="text-sm font-semibold text-violet-700 mb-2">03 · DOCK6 footprint</p><h3 class="text-2xl font-bold text-slate-900">Compare the energy profile residue by residue</h3><p class="text-slate-600 mt-4 leading-relaxed">Reference and calculated pose curves show van der Waals and electrostatic contributions separately. This output was generated by the real Vina → DOCK6 workflow using the DOCK6 tutorial's 1ABE receptor and reference ligand.</p><p class="text-sm text-slate-500 mt-4 leading-relaxed">Footprint energy contributions are distinct from the viewer's geometric interaction classification. The tutorial demonstrates execution and presentation, not experimental affinity.</p><div class="flex flex-wrap gap-5 mt-6"><a href="imgs/examples/dock6-footprint.pdf" class="text-emerald-700 font-semibold underline">Original PDF ↗</a><a href="docs/en/user_manual.html#dock6-validation-and-exclusions" class="text-emerald-700 font-semibold underline">DOCK6 workflow →</a></div></figcaption>
+                </figure>
+            </div>
+            <p class="text-sm text-slate-500 mt-6">Examples are illustrative. <a href="imgs/examples/README.md" class="underline">Sources and reproduction details</a> identify the input structures, test scene and native outputs.</p>
+        </div>
+    </section>
+
     <section id="molecular-viewer" class="py-24 bg-slate-950 text-white">
         <div class="max-w-7xl mx-auto px-6">
             <span class="text-emerald-400 font-semibold uppercase tracking-widest text-sm">Molecular inspection</span>
@@ -724,7 +765,7 @@ biomolexplorer-ui --web --dock6-path /path/to/dock6-6.11</code></pre>
                         <li>Set receptor and ligand styles independently: ribbons, sticks, spheres or lines as appropriate.</li>
                         <li>Show or hide ligand hydrogens retained in the file. Missing hydrogen atoms are not generated.</li>
                         <li>Toggle pose, receptor and reference layers; filter receptor chains and inspect atom details.</li>
-                        <li>Rotate, pan and zoom, then export the current scene as PNG.</li>
+                        <li>Show or hide interacting residue names independently of the dashed traces. Rotate, pan and zoom, then export the current scene as PNG.</li>
                     </ul>
                 </article>
                 <article class="bg-slate-900 border border-slate-800 rounded-3xl p-7">
@@ -757,6 +798,7 @@ biomolexplorer-ui --web --dock6-path /path/to/dock6-6.11</code></pre>
                 <article class="bg-white border border-slate-200 rounded-3xl p-7"><h3 class="text-xl font-bold mb-3">Backend &amp; scientific operations</h3><p class="text-slate-600 mb-6">Conda environment, command line, job services, available operations, inputs and outputs.</p><a href="docs/en/backend_usage.html" class="text-emerald-700 font-semibold underline" lang="en">Read in English</a><br><a href="docs/pt/backend_usage.html" class="text-emerald-700 font-semibold underline" lang="pt-BR">Ler em português</a></article>
                 <article class="bg-white border border-slate-200 rounded-3xl p-7"><h3 class="text-xl font-bold mb-3">Architecture &amp; extension</h3><p class="text-slate-600 mb-6">Code organization, process isolation, contracts, technical corrections, verification and current limits.</p><a href="docs/en/architecture.html" class="text-emerald-700 font-semibold underline" lang="en">Read in English</a><br><a href="docs/pt/architecture.html" class="text-emerald-700 font-semibold underline" lang="pt-BR">Ler em português</a></article>
             </div>
+            <p class="text-slate-600 mt-8">Research profiles, local methods, optional ADMET-AI setup and model limitations: <a href="docs/en/admet_research.html" class="text-emerald-700 font-semibold underline" lang="en">ADMET guide in English</a> · <a href="docs/pt/admet_research.html" class="text-emerald-700 font-semibold underline" lang="pt-BR">Guia ADMET em português</a>.</p>
             <div class="flex flex-wrap gap-6 mt-8"><a href="docs/index.html" class="text-emerald-700 font-semibold underline">English documentation portal →</a><a href="docs/pt/index.html" class="text-emerald-700 font-semibold underline" lang="pt-BR">Portal de documentação em português →</a><a href="docs/README.md" class="text-slate-600 underline">Markdown index</a></div>
         </div>
     </section>
@@ -859,9 +901,8 @@ biomolexplorer-ui --web --dock6-path /path/to/dock6-6.11</code></pre>
             <div class="flex flex-col lg:flex-row items-center justify-between gap-8">
 
                 <div class="flex items-center gap-4">
-                    <img src="imgs/logo.png" alt="BioMolExplorer" class="w-12 h-12 object-contain">
                     <div>
-                        <h3 class="text-white font-bold">BioMolExplorer</h3>
+                        <h3 class="bg-white rounded-lg px-3 py-1 mb-2 w-fit"><img src="imgs/BioMolLogo.png" alt="BioMolExplorer" width="662" height="209" class="w-60 max-w-[70vw] h-auto object-contain"></h3>
                         <p class="text-sm text-slate-400">
                             Flexible Information Retrieval Architecture for Drug Discovery
                         </p>
@@ -892,5 +933,31 @@ biomolexplorer-ui --web --dock6-path /path/to/dock6-6.11</code></pre>
         </div>
     </footer>
 
+<dialog id="example-dialog" aria-labelledby="example-title">
+    <div class="preview-toolbar"><h2 id="example-title">Visual example</h2><button type="button" aria-label="Close image preview">Close ✕</button></div>
+    <img id="example-full" alt=""><p id="example-caption"></p>
+</dialog>
+<script>
+(() => {
+    const dialog = document.getElementById('example-dialog');
+    if (!dialog || typeof dialog.showModal !== 'function') return;
+    document.querySelectorAll('[data-example]').forEach(link => link.addEventListener('click', event => {
+        if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        const source = link.querySelector('img');
+        const image = document.getElementById('example-full');
+        image.src = link.href; image.alt = source.alt;
+        const figure = link.closest('figure');
+        document.getElementById('example-title').textContent = figure.querySelector('h3').textContent;
+        document.getElementById('example-caption').textContent = figure.querySelector('figcaption p.text-slate-600').textContent;
+        dialog.showModal();
+    }));
+    dialog.querySelector('button').addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', event => { if (event.target === dialog) {
+        const box = dialog.getBoundingClientRect();
+        if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) dialog.close();
+    }});
+})();
+</script>
 </body>
 </html>

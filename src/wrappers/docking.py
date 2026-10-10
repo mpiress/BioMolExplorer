@@ -175,15 +175,29 @@ def generate_consensus(base_input_path:str, base_output_path:str, target:str, re
     return df
 
 
-def prepare_docking_receptor(base_input_path, target, output, pdb_code, ph, options, prepared):
+def prepare_docking_receptor(base_input_path, target, output, pdb_code, ph, options, prepared, engine='vina'):
     """Reuse prepared receptors; raw PDBs use the shared preparation workflow."""
     from biomolexplorer.redocking_config import validate_preparation_settings
     if options is not None:validate_preparation_settings(options)
-    if prepared:return base_input_path
+    from biomolexplorer.diagnostics import event
+    if prepared:
+        from biomolexplorer.docking_preparation import validate_receptor_outputs
+        source=resolve_path(base_input_path)/target.replace(' ','')
+        records=pdb_code
+        if records is None:
+            import pandas as pd
+            records=pd.read_csv(source/'pdb_codes.csv')[['PDB_CODE','LIGAND','RESNUM','CHAIN']].values.tolist()
+        else:
+            records=list(records)
+            if records and isinstance(records[0],str):records=[records]
+        validate_receptor_outputs(source/'Prepared',records,engine)
+        event(logger,'receptor.reused','Receptor preparado reutilizado; sem nova preparação.',engine=engine)
+        return base_input_path
     from wrappers.redocking import prepare_structures
     records=pdb_code
     if records and not isinstance(records[0],(list,tuple)):records=[records]
     destination=Path(output)/'Receptor'
+    event(logger,'receptor.preparation.started','Preparando receptor bruto uma vez para este lote.',engine=engine)
     prepare_structures(base_input_path,target,str(destination),pdb_codes=records,
                        pH=ph,preparation_options=options)
     return str(destination)
@@ -198,6 +212,7 @@ def perform_docking_vina(base_input_path:str, target:str, base_output_path:str, 
     try:
 
         output_root=Path(base_output_path)
+        output_root.mkdir(parents=True,exist_ok=True)
         base_input_path=prepare_docking_receptor(base_input_path,target,output_root,pdb_code,pH,preparation_options,receptor_prepared)
         dataset=Path(base_selected_mols)/(mol_filename+'.csv')
         base_prepared_complexes = f'{base_input_path}/{target.replace(' ','')}/Prepared/'
@@ -224,8 +239,12 @@ def perform_docking_vina(base_input_path:str, target:str, base_output_path:str, 
 
 
         from biomolexplorer.docking_data import prepare_ligands, write_results
-        prepare_ligands(dataset,base_input_mols,'pdbqt',ph=pH,
+        ligands=prepare_ligands(dataset,base_input_mols,'pdbqt',ph=pH,
                         **({'preparation_options':preparation_options} if preparation_options is not None else {}))
+        if not ligands:
+            from biomolexplorer.docking_data import write_csv
+            write_csv(output_root/'docking_results.csv',[],['molecule_chembl_id','canonical_smiles','receptor_id','engine','score','conformer_file'])
+            return dict(skipped_reason='Nenhum composto pôde ser preparado para docking. Consulte a lista de falhas na preparação.')
 
         vina.set_ligandpath(base_input_mols)
         vina.set_outputpath(f'{base_output_path}/Vina/')
@@ -250,8 +269,11 @@ def perform_docking_dock6(base_input_path:str, target:str, base_output_path:str,
                           plot_max_residues:Optional[int]=50, base_vina_path:Optional[str]=None,
                           pH:float=7.4, preparation_options=None, receptor_prepared:bool=True) -> None:
     from biomolexplorer.docking_data import prepare_ligands,read_compounds,read_results,write_csv,write_results,binding_center
+    from biomolexplorer.preparation_failures import CURRENT_REPORT,PreparationFailures
+    failures=CURRENT_REPORT.get() or PreparationFailures()
     output=Path(base_output_path)
-    base_input_path=prepare_docking_receptor(base_input_path,target,output,pdb_code,pH,preparation_options,receptor_prepared)
+    output.mkdir(parents=True,exist_ok=True)
+    base_input_path=prepare_docking_receptor(base_input_path,target,output,pdb_code,pH,preparation_options,receptor_prepared,engine='dock6')
     data=Path(base_input_path)/target.replace(' ','')
     dataset=Path(base_selected_mols)/(mol_filename+'.csv')
     if pdb_code is None:
@@ -264,36 +286,55 @@ def perform_docking_dock6(base_input_path:str, target:str, base_output_path:str,
         root=output/target.replace(' ','')/receptor
         prepared_dataset=dataset
         if base_vina_path:
-            poses=read_results(base_vina_path,'vina');rows=read_compounds(dataset)
-            for row in rows:
-                matches=[p for p in poses if p['molecule_chembl_id']==row['molecule_chembl_id'] and p['receptor_id'] in ('',receptor)]
-                # Legacy pose names include receptor and reference-ligand prefixes.
-                matches+= [p for p in poses if p['molecule_chembl_id']==f'{record[0]}_{record[1]}_{record[2]}{record[3]}_'+row['molecule_chembl_id']]
-                if matches:
-                    row['conformer_file']=min(matches,key=lambda p:p['score'])['conformer_file']
-                    for key in ('prepared_pdbqt','prepared_mol2','docking_engines','prepared_origin'):row.pop(key,None)
-                elif not row.get('conformer_file'):raise ValueError('As poses Vina não correspondem ao receptor e aos compostos selecionados.')
-            root.mkdir(parents=True,exist_ok=True);prepared_dataset=root/'input_compounds.csv';write_csv(prepared_dataset,rows)
+            poses=read_results(base_vina_path,'vina');rows=read_compounds(dataset);selected_rows=[]
+            for row_number,row in enumerate(rows,2):
+                with failures.compound(dataset,row_number,row,root,[],step='Seleção da pose Vina'):
+                    matches=[p for p in poses if p['molecule_chembl_id']==row['molecule_chembl_id'] and p['receptor_id'] in ('',receptor)]
+                    # Legacy pose names include receptor and reference-ligand prefixes.
+                    matches+= [p for p in poses if p['molecule_chembl_id']==f'{record[0]}_{record[1]}_{record[2]}{record[3]}_'+row['molecule_chembl_id']]
+                    if matches:
+                        row['conformer_file']=min(matches,key=lambda p:p['score'])['conformer_file']
+                        for key in ('prepared_pdbqt','prepared_mol2','docking_engines','prepared_origin'):row.pop(key,None)
+                    else:raise ValueError('As poses Vina não correspondem ao receptor e aos compostos selecionados.')
+                    selected_rows.append(row)
+            root.mkdir(parents=True,exist_ok=True);prepared_dataset=root/'input_compounds.csv'
+            fields=list(dict.fromkeys(k for row in rows for k in row)) or ['molecule_chembl_id','canonical_smiles']
+            write_csv(prepared_dataset,selected_rows,fields);failures.write(root)
         center=binding_center(data/'Prepared',record)
-        prepare_ligands(prepared_dataset,root/'Molecules','mol2',charge_type=charge_type,center=center,ph=pH,
-                        **({'preparation_options':preparation_options} if preparation_options is not None else {}))
+        token=CURRENT_REPORT.set(failures)
+        try:
+            ligands=prepare_ligands(prepared_dataset,root/'Molecules','mol2',charge_type=charge_type,center=center,ph=pH,
+                            **({'preparation_options':preparation_options} if preparation_options is not None else {}))
+        finally:CURRENT_REPORT.reset(token)
+        if not ligands:continue
         dock6=Dock6(dock6_path=dock6_app_path,ligand_input_path=str(root/'Molecules'),
                     receptor_input_path=str(data/'Prepared'),base_output_path=str(root/'Dock6'),
                     pdb_code=receptor,density=density,radius=radius,distance=distance,
                     max_residues=plot_max_residues,conformer_search_type=conformer_search_type,mol_filename=mol_filename,
                     binding_site_center=center)
-        dock6.prepare_surface();dock6.prepare_showbox();dock6.prepare_gridbox()
-        dock6.prepare_minimization();dock6.perform_dock6_evaluation();dock6.prepare_footprint(docked=True);dock6.plot_footprint_results()
-        dock6.export_results()
+        dock6.set_compound_report(prepared_dataset,failures)
+        try:
+            dock6.validate_setup()
+            if not dock6._ligand_files(dock6.ligandpath):continue
+            dock6.prepare_surface();dock6.prepare_showbox();dock6.prepare_gridbox()
+            dock6.prepare_minimization();dock6.perform_dock6_evaluation()
+            if dock6._ligand_files(dock6.ligandpath):
+                dock6.prepare_footprint(docked=True);dock6.plot_footprint_results()
+        finally:
+            failures.write(output)
+            dock6.export_results()
         write_results('dock6',(root/'Dock6'/conformer_search_type).glob('*_scored.mol2'),dataset,[record],root,prepared=data/'Prepared')
     # One table represents all receptors so automatic consumers keep every result.
     rows=[]
-    for table in sorted(output.rglob('docking_results.csv')):
+    for table in sorted((output/target.replace(' ','')).glob('*/docking_results.csv')):
         for row in read_compounds(table):
             for field in ('conformer_file','receptor_file','reference_file','footprint_file'):
                 if row.get(field):row[field]=(table.parent/row[field]).relative_to(output).as_posix()
             rows.append(row)
-    write_csv(output/'docking_results.csv',rows,list(dict.fromkeys(k for row in rows for k in row)))
+    fields=list(dict.fromkeys(k for row in rows for k in row)) or ['molecule_chembl_id','canonical_smiles','receptor_id','engine','score','conformer_file']
+    write_csv(output/'docking_results.csv',rows,fields)
+    failures.write(output)
+    if not rows:return dict(skipped_reason='Nenhum composto produziu resultado utilizável no DOCK6. Consulte a lista de compostos não utilizados.')
 
 
 def perform_consensus(base_input_path:str, target:str, base_output_path:str, base_selected_mols:str,  dock6_app_path:str,

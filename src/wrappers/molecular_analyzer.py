@@ -74,7 +74,7 @@ def analyze_graphs(base_input_path:Optional[str]=None, base_output_path:Optional
                    metric:Optional[similarityFunctions]=similarityFunctions.TanimotoSimilarity,
                    fingerprint:Optional[fingerprints]=fingerprints.Morgan,
                    similarity_path:Optional[str]=None, fingerprints_path:Optional[str]=None,
-                   threshold:int=70, mcs_timeout:int=30, mcs_ring_matches_ring_only:bool=True,
+                   threshold:int=70, mcs_timeout:int=0, mcs_ring_matches_ring_only:bool=True,
                    mcs_complete_rings_only:bool=False, graph_inputs:Optional[List]=None):
 
     try:

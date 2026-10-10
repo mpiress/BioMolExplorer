@@ -23,7 +23,7 @@ src/
     __main__.py       CLI using the same use cases
     paths.py          absolute paths and example compatibility
     storage.py        atomic writes and artifact I/O
-    processes.py      engine execution with argv and timeouts
+    processes.py      engine execution with argv, without automatic timeouts
     rate_limit.py     local PubChem request coordination
     workspace.py      accounts, permissions, projects and files
     pipeline.py       dependencies, snapshots and pipeline execution
@@ -91,7 +91,7 @@ and [multiprocessing](https://flet.dev/docs/cookbook/multiprocessing/).
 | CPU resources | Using all cores or `cpu_count()-2` could overuse resources or yield zero workers | Explicit `cpu_workers` and a fallback of at least one worker |
 | Errors | Wrappers and libraries logged errors but returned as if execution had succeeded | Operational exceptions reach the job layer, producing `failed` and a log |
 | Supervision | Initialization/scheduling failures and large histories could leave locks or pending jobs | Failed initialization releases locks, scheduling failures are recorded, and shutdown queries all active jobs |
-| Numeric validation | `radius` meant different things in fingerprints and DOCK6 | Integer fingerprint radius; positive decimal DOCK6 radius; positive finite timeout |
+| Numeric validation | `radius` meant different things in fingerprints and DOCK6 | Integer fingerprint radius; positive decimal DOCK6 radius; optional positive finite timeout |
 | Libraries | `exit(1)` terminated the host application | Exceptions in reusable code |
 | Logs | Imports created files/directories and warnings were globally hidden | Lazy file handlers, separate worker logs and removal of global warning suppression |
 | Persistence | CSVs could be partially written | Atomic replacements and chunked outputs |
@@ -100,12 +100,12 @@ and [multiprocessing](https://flet.dev/docs/cookbook/multiprocessing/).
 | Similarity | Score 1 was discarded and only the first identifier for a fingerprint was considered | Preserve relationships between distinct identifiers, including score 1; omit self-edges |
 | Similarity | All edges accumulated in memory | Incremental chunked output; the fingerprint index still uses memory |
 | Approximate methods | LSH candidate selection had no exhaustive-search option | `approximate=False` enables exhaustive comparison; approximate mode remains the default |
-| ADMET | Toxic compounds were counted as excluded but remained in output | Actual exclusion; empty CSVs retain their schema |
+| ADMET | Legacy structural alerts were counted as exclusions but remained in output | Legacy exclusions are applied; new profiles annotate alerts by default and preserve selection reasons |
 | Filters | Subclass initialization skipped the base class; fragment counting compared a tuple with an integer | Correct initialization, fragment counting and stable deduplication |
 | PubChem | Duplicates across sources and references | CID exclusion before property retrieval, structural deduplication and separate provenance relationships |
 | PubChem | Repeated/concurrent jobs duplicated queries or competed for temporary files | Persistent workspace-shared cache, atomic writes and coordinated request intervals |
 | HTTP | ChEMBL allowed day-long timeouts and high concurrency; ZINC retries were unused | Lower ChEMBL limits; ZINC uses its configured session and propagates HTTP failures |
-| External engines | Shell use, space-sensitive commands, artificial waits and unclosed descriptors | `argv`, timeouts, explicit showbox redirection and synchronization with descriptor closure |
+| External engines | Shell use, space-sensitive commands, artificial waits and unclosed descriptors | `argv`, no automatic timeouts, explicit showbox redirection and synchronization with descriptor closure |
 | Chaining | Some stages required inputs and results in the same directory | Explicit inputs and outputs for expansion, ZINC, fingerprints, graphs and Vina → DOCK6 conformations |
 | Redocking | The wrapper could delete files from its input directory | The application operation creates a working copy of structures |
 | Docking preparation | The last complex's chain was reused for other complexes; the first run required an existing center CSV | Each record uses its own chain; initial center CSV creation |
@@ -158,8 +158,8 @@ Each job has a UUID and its own files under
 
 History is stored in `.biomolexplorer/jobs.sqlite3`. Connections are short-lived
 and closed per call. An operating system lock guarantees one supervisor per
-workspace. `max_jobs`, `max_queued_jobs`, `cpu_workers` and `job_timeout` limit
-resource usage. `cancel` terminates the process group, including commands and
+workspace. `max_jobs`, `max_queued_jobs` and `cpu_workers` limit resource usage.
+`job_timeout=None` does not limit duration; positive values are explicit and optional. `cancel` terminates the process group, including commands and
 pools that remain in the same group. The manager must stay alive throughout
 the session and close when the application shuts down.
 
@@ -204,8 +204,7 @@ as a prefilter for metrics other than Tanimoto. Use `approximate=False` when pai
 completeness is required and the dataset fits the quadratic cost. No benchmarks
 with millions of compounds have been performed.
 
-Existing ADMET classifications are heuristic; this refactor does not validate
-predictive models or turn those classifications into experimental evidence.
+Local BBB/HIA classes are heuristic. Optional ADMET-AI adds trained models with recorded outputs/versions; this implementation does not validate applicability to new series or turn results into experimental evidence.
 Scores, protonation, receptor preparation, RMSD references and docking consensus
 criteria require scientific validation with study data. The alternative
 `caad/redocking.py` module remains available, but the active wrapper uses
@@ -387,3 +386,11 @@ Insufficient topology disables classification while retaining distance contacts.
 The [Molecular viewer guide](molecular_viewer.md) describes the workflow; the
 [validation report](../validation/viewer_controls_2026-10-10.md) (Portuguese)
 delimits geometric and WebGL coverage.
+
+## ADMET, batch execution and result maintenance
+
+`admet_config.py` validates profiles/ranges; `admet_predictors.py` resolves optional prediction and validates outputs; `admet_ai_runner.py` supports an isolated Python environment; `egg_plot.py` centralizes geometry/export. `ui/admet_settings.py` separates objectives, criteria and advanced options. See [methods and limits](admet_research.md).
+
+`vina_session.py` retains affinity maps per configuration in the worker; receptor/box changes invalidate sessions. `dock6_validation.py` checks MOL2 inputs/outputs. `preparation_failures.py` maintains per-compound exclusions shared with the pipeline. DOCK6 uses site-shared grids and independent candidate subprocesses. Global errors still propagate. `stage_cache.py` includes preparation, interoperability and validation implementations in its signature to prevent incompatible reuse after code changes.
+
+`ui/action_help.py` provides contextual help; `ui/run_presentation.py` presents run summaries. Artifact removal in `result_files.py` checks permissions/active runs, records history and invalidates references. See the [interface guide](frontend.md#navigation-canvas-and-completed-runs) and [execution evidence](pipeline_validation.md#vina-and-dock6-batch-validation).

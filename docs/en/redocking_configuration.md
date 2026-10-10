@@ -58,3 +58,9 @@ associated SMILES to recover topology; redocking results lacking it retain
 distance contacts and explain chemical classification unavailability. See the
 [viewer guide](molecular_viewer.md) for colors, requirements and classification
 limits.
+
+## Reuse and duration of subsequent batches
+
+Valid redocking preparation is reused for candidate docking rather than repeated per compound. Vina retains maps per configuration within a batch when its Python API supports the template. DOCK6 shares surface, spheres and grids per receptor/site. Candidate preparation remains necessary without a compatible prepared input.
+
+There is no implicit 300-second scientific timeout. Calculations continue until completion, error or cancellation; HTTP timeouts are separate. Individual candidate problems appear in **Excluded compounds**. See [Vina reuse](user_manual.md#reusing-receptors-in-vina), [DOCK6 validation](user_manual.md#dock6-validation-and-exclusions) and [backend duration](backend_usage.md#execution-duration).

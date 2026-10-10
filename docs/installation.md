@@ -95,3 +95,26 @@ Para redocking com preparação, o worker verifica `chimera`, `obabel` e `vina`;
 **Preparar para docking** usa Chimera e Open Babel para os candidatos mesmo quando reutiliza um receptor já preparado no redocking. A escolha Vina, DOCK6 ou ambos define os formatos exportados; os motores são executados nos blocos de docking conectados à saída.
 
 Consulte [Configuração do redocking](redocking_configuration.md) para seleção de pares, cofatores, entradas preparadas, diagnóstico e resultados.
+
+## Preditor ADMET-AI opcional
+
+O backend **RDKit local** funciona com o ambiente científico principal. Para escolher **ADMET-AI**, instale também o preditor no computador do worker. A instalação da interface, por si só, não disponibiliza esse modelo.
+
+Na raiz do repositório, usando Python 3.12 compatível:
+
+```bash
+python scripts/setup_admet_ai.py
+```
+
+O script cria `.admet-env`, instala PyTorch CPU e `admet-ai==2.0.1`, realiza uma inferência e grava `.ready` após sucesso. A instalação requer acesso às distribuições e modelos. O worker descobre esse ambiente local automaticamente. Para instalar em outra pasta:
+
+```bash
+python scripts/setup_admet_ai.py --directory /caminho/para/admet-env
+export BIOMOL_ADMET_PYTHON="/caminho/para/admet-env/bin/python"
+```
+
+Inicie a aplicação no terminal que contém esse export, para o worker herdar a configuração. A variável identifica o Python do preditor, independentemente de `--worker-python`. Na migração para outro computador, recrie o ambiente e atualize caminhos; exportar um projeto não instala bibliotecas científicas.
+
+Se aparecer **ADMET-AI is not installed in the worker environment**, confira o estado mostrado na configuração ADMET, o caminho, a instalação e o acesso do worker aos modelos. Reinicie a aplicação após configurar o ambiente. Como alternativa, selecione explicitamente **RDKit local**; isso fornece descritores, estimativas e regras locais, sem os endpoints `ML_`. Não há substituição silenciosa de modelos. Outra opção é `python -m pip install -e '.[admet-ml]'` em um worker dedicado, respeitando as dependências desse ambiente.
+
+Consulte [ADMET por hipótese](admet_research.md) para unidades, perfis, alertas, arquivos e limites dos modelos.

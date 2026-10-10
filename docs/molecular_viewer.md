@@ -120,3 +120,9 @@ projeto e abra o visualizador novamente.
 
 Os testes de geometria e os movimentos reais do mouse no Chrome estão descritos
 na [validação do visualizador](validation/viewer_controls_2026-10-10.md).
+
+## Ocultar os nomes dos resíduos
+
+**Mostrar nomes dos resíduos** fica imediatamente abaixo e alinhado com **Mostrar interações em 3D**. Desmarque para remover os rótulos da cena e obter uma imagem mais limpa; os traçados, cores, filtros e identificação ao passar o mouse continuam disponíveis. Marcar novamente restaura os nomes. O campo fica indisponível quando não há classificação de interações. **Salvar imagem** exporta o estado visível, inclusive essa escolha.
+
+[Veja um exemplo do visualizador](../imgs/examples/interactions-3d.png). A captura usa uma cena de teste benzene/PHE com contatos geométricos ilustrativos; não representa afinidade medida.

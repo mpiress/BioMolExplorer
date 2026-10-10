@@ -97,6 +97,26 @@ class ResultsDisplayTests(unittest.TestCase):
         self.assertIn('canonical_smiles',self.service.admet_csv(*args).decode())
         self.assertTrue(self.service.admet_png(*args).startswith(b'\x89PNG'))
 
+    def test_preparation_failure_list_is_registered_authorized_and_paginated(self):
+        from biomolexplorer.preparation_failures import REPORT_NAME,FIELDS
+        from biomolexplorer.ui.preparation_failures import show_preparation_failures
+        path=self.admet_csv.parent/REPORT_NAME
+        records=[dict.fromkeys(FIELDS,'') for _ in range(26)]
+        for index,row in enumerate(records):row.update(compound_identifier=f'BAD{index}',reason='Cannot prepare',preparation_step='Preparation')
+        with path.open('w',newline='') as stream:
+            writer=csv.DictWriter(stream,fieldnames=FIELDS);writer.writeheader();writer.writerows(records)
+        run=self.store.get_run(self.token,self.rid);run['stages'][1]['artifacts'].append(str(path))
+        with self.store.connect() as db:db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(run['stages']),self.rid))
+        loaded=self.service.preparation_failures(self.token,self.pid,self.rid,self.admet['id'],str(path))
+        self.assertEqual(len(loaded),26)
+        with self.assertRaises(AccessDenied):self.service.preparation_failures(self.token,self.pid,self.rid,self.retrieval['id'],str(path))
+        ui=self.ui();show_preparation_failures(ui,loaded);dialog=ui.dialogs[-1]
+        controls=dialog.content.content.controls;body=controls[1];navigation=controls[2]
+        self.assertEqual(len(body.controls),25)
+        navigation.controls[-1].on_click(SimpleNamespace())
+        self.assertEqual(len(body.controls),1)
+        self.assertEqual(body.controls[0].content.controls[0].value,'BAD25')
+
     def test_unclassified_uploaded_admet_uses_backend_classifier(self):
         self.admet_csv.write_text('molecule_chembl_id,canonical_smiles,TPSA,WLOGP,MW,HBD,RB\nA,CCO,20,1,,,\n')
         model=self.service.admet_model(self.token,self.pid,self.rid,self.admet['id'],str(self.admet_csv),'BBB+')
@@ -119,6 +139,54 @@ class ResultsDisplayTests(unittest.TestCase):
             with self.assertRaises(OSError):self.service.remove(self.token,self.pid,self.rid,self.admet['id'],str(self.admet_csv))
         self.assertTrue(self.admet_csv.exists())
         self.assertIn(str(self.admet_csv),self.store.get_run(self.token,self.rid)['stages'][1]['artifacts'])
+
+    def test_bulk_removal_includes_internal_files_and_history_restores_everything(self):
+        stage=self.store.get_run(self.token,self.rid)['stages'][1]
+        files=[Path(p) for p in stage['artifacts']];original={p:p.read_bytes() for p in files}
+        self.assertEqual(self.service.remove_all(self.token,self.pid,self.rid,self.admet['id']),2)
+        self.assertTrue(all(not p.exists() for p in files));self.assertTrue(self.compounds.exists())
+        stage=self.store.get_run(self.token,self.rid)['stages'][1]
+        self.assertEqual(stage['artifacts'],[]);self.assertTrue(stage['outputs_removed'])
+        event=self.store.history(self.token,self.pid)[0]
+        self.assertEqual(event['action'],'remove_stage_results')
+        self.store.rollback(self.token,self.pid,event['id'])
+        self.assertEqual({p:p.read_bytes() for p in files},original)
+
+    def test_bulk_removal_rolls_back_failures_and_enforces_permissions_and_active_runs(self):
+        args=(self.pid,self.rid,self.admet['id'])
+        with patch('biomolexplorer.project_state.record',side_effect=OSError('disk failure')):
+            with self.assertRaises(OSError):self.service.remove_all(self.token,*args)
+        self.assertTrue(self.admet_csv.exists());self.assertTrue((self.admet_csv.parent/'internal.json').exists())
+        self.store.invite(self.token,self.pid,'guest@example.org','viewer');self.store.accept_invitation(self.guest,self.pid)
+        with self.assertRaises(AccessDenied):self.service.remove_all(self.guest,*args)
+        with self.store.connect() as db:db.execute('UPDATE runs SET status=? WHERE id=?',('awaiting_input',self.rid))
+        with self.assertRaisesRegex(ValueError,'Aguarde'):self.service.remove_all(self.token,*args)
+
+    def test_bulk_removal_invalidates_shared_artifacts_and_clears_missing_entries(self):
+        run=self.store.get_run(self.token,self.rid)
+        run['stages'][0]['artifacts'].append(str(self.admet_csv))
+        run['stages'][1]['artifacts'].append(str(self.admet_csv.parent/'missing.csv'))
+        with self.store.connect() as db:db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(run['stages']),self.rid))
+        self.service.remove_all(self.token,self.pid,self.rid,self.admet['id'])
+        stages=self.store.get_run(self.token,self.rid)['stages']
+        self.assertEqual(stages[1]['artifacts'],[])
+        self.assertEqual(stages[0]['artifacts'],[str(self.compounds)])
+        self.assertTrue(stages[0]['outputs_removed']);self.assertTrue(self.compounds.exists())
+
+    @unittest.skipIf(StageResults is None,'Install ui extra')
+    def test_bulk_removal_confirmation_executes_and_refreshes_the_stage(self):
+        from biomolexplorer.ui.app import WorkspaceUI
+        fixture=self.ui();ui=object.__new__(WorkspaceUI)
+        for name in ('token','current','store','call','guard','page'):setattr(ui,name,getattr(fixture,name))
+        ui.draw_project=AsyncMock()
+        async def confirm():
+            await ui.remove_stage_results(self.pid,self.rid,self.admet['id'])
+            self.assertTrue(self.admet_csv.exists())
+            dialog=fixture.dialogs[-1]
+            await dialog.actions[-1].on_click(SimpleNamespace())
+            self.assertFalse(dialog.open)
+        asyncio.run(confirm())
+        self.assertFalse(self.admet_csv.exists());ui.draw_project.assert_awaited_once()
 
     def test_permissions_registered_files_and_active_run_are_enforced(self):
         self.store.invite(self.token,self.pid,'guest@example.org','viewer');self.store.accept_invitation(self.guest,self.pid)
@@ -161,11 +229,11 @@ class ResultsDisplayTests(unittest.TestCase):
     def test_admet_inline_filter_hover_popup_and_download_callbacks(self):
         ui=self.ui();stage=self.store.get_run(self.token,self.rid)['stages'][1]
         results=StageResults(ui,self.pid,self.rid,stage,True);asyncio.run(results.load())
-        self.assertEqual(len(results.subset.options),4)
+        self.assertEqual({o.key for o in results.subset.options},{'all','BBB+','BBB-','HIA+','HIA-','selected','rejected'})
         results.subset.value='BBB+';asyncio.run(results.change_admet(None))
         viewer=results.child;self.assertEqual(set(viewer.points),{'A'})
         x,y=viewer.points['A'];event=SimpleNamespace(local_position=SimpleNamespace(x=x,y=y))
-        viewer.hover(event);self.assertEqual(viewer.tip_text.value,'A')
+        viewer.hover(event);self.assertEqual(viewer.tip_text.value.splitlines()[0],'A');self.assertIn('TPSA:',viewer.tip_text.value)
         asyncio.run(viewer.click(event));self.assertIn('molécula 2D',ui.dialogs[-1].title.value)
         self.assertTrue(any(isinstance(c,ft.Image) for c in ui.dialogs[-1].content.content.controls))
         asyncio.run(viewer.actions[1].on_click(None))

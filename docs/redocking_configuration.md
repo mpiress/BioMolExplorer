@@ -58,3 +58,9 @@ exige SMILES associado para recuperar topologia; resultados de redocking sem ess
 informação continuam oferecendo contatos por distância, com a indisponibilidade
 química indicada. Consulte o [guia do visualizador](molecular_viewer.md) para a
 legenda, requisitos e limites da classificação.
+
+## Reutilização e duração dos lotes posteriores
+
+A preparação válida do redocking é reutilizada no docking dos candidatos; não é repetida por composto. O Vina mantém mapas por configuração dentro do lote quando a API Python suporta o template. O DOCK6 compartilha superfície, esferas e grid por receptor/sítio. A preparação de cada candidato continua sendo necessária quando não existe entrada preparada compatível.
+
+Não há timeout científico implícito de 300 segundos. Cálculos continuam até conclusão, erro ou cancelamento; timeouts HTTP são separados. Candidatos com problemas individuais são registrados em **Compostos não utilizados**. Consulte [reutilização Vina](user_manual.md#reutilizacao-do-receptor-no-vina), [validação DOCK6](user_manual.md#validacao-e-exclusoes-no-dock6) e [duração no backend](backend_usage.md#duracao-das-execucoes).

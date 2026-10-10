@@ -102,8 +102,7 @@ gerados a partir dessas escolhas. O modo **Avançado** permite editar parâmetro
 conexões em JSON e os templates científicos completos. **Aplicar configuração**
 valida e confirma a edição; **Cancelar** preserva o bloco anterior.
 
-Exceto pelo redocking com pares previamente configurados e pelo docking Vina/DOCK6 com arquivos de entrada já selecionados, ao concluir uma etapa o pipeline pausa antes do próximo bloco conectado e abre
-automaticamente **Selecionar arquivos**. Marque os arquivos desejados em cada
+Ao concluir uma etapa, o pipeline pausa antes de um bloco conectado apenas quando alguma entrada ainda exige seleção de arquivos. Seleções explícitas já salvas no bloco são respeitadas em todas as operações. Para entradas automáticas não resolvidas, abre **Selecionar arquivos**. Marque os arquivos desejados em cada
 entrada e clique em **Continuar com os arquivos selecionados**. O popup lista
 somente resultados compatíveis das origens conectadas nesta execução. Em **Como
 processar os arquivos selecionados?**, escolha **Processar individualmente**
@@ -268,7 +267,7 @@ da busca. O SMILES e a imagem representam o fragmento encontrado em uma molécul
 de referência; o SMARTS preserva as condições da correspondência no arquivo de
 resultado. Os resultados salvos em versões anteriores recebem o novo layout e
 exibem o SMILES ao serem abertos, preservando os arquivos originais.
-O tempo máximo (30 segundos
+O tempo máximo (0 = sem limite
 por padrão) e as opções de comparação de anéis são
 configuráveis no bloco. A busca exige correspondência em todos os compostos do
 MCC. Se atingir o limite, a interface e a figura identificam o melhor fragmento
@@ -372,7 +371,7 @@ separadas dos dois motores, inclusive vindas de importações.
 
 ## Diagnóstico e recuperação ChEMBL
 
-A tela inicial usa os logos originais de `imgs`, empacotados com a aplicação, e
+A interface usa a marca atual de `imgs/BioMolLogo.png` (com nome) e `imgs/logo.png` (símbolo), empacotada com a aplicação, e
 adapta a apresentação a telas menores. A configuração de cada bloco é organizada
 em cartões de identificação, entradas e parâmetros. Filtros e opções dos motores
 abrem em seções com espaçamento próprio e campos responsivos.
@@ -555,3 +554,28 @@ limitação e mantém os contatos por distância. A análise 3D é geométrica e
 das energias por resíduo de **Footprint**. Consulte o
 [guia do visualizador](molecular_viewer.md) para camadas, seleção de poses,
 controles, interpretação e atualização.
+
+## Navegação, canvas e execuções concluídas
+
+Na tela **Seu workspace**, **Meus projetos**, **Importar projeto** e **Novo projeto** ficam na lateral. Dentro do projeto, dois grupos recolhíveis organizam as ações:
+
+| Grupo | Ações e finalidade |
+| --- | --- |
+| Navegação do projeto | **Workspace** retorna à lista; **Projeto** abre dados do projeto; **Compartilhar** gerencia convites e acesso; **Histórico** consulta alterações e restaura versões. |
+| Pipeline e execução | **Salvar** confirma o estado; **Modelos prontos** insere pipelines de referência; **Executar pipeline** inicia as etapas habilitadas; **Executar até seleção** executa o bloco selecionado e suas dependências. |
+
+Recolha um grupo ou a lateral para liberar espaço. O ícone de informação de cada ação explica sua função e opções; a ajuda contextual mantém informações extensas fora da área de desenho. Permissões de leitor impedem ações de edição.
+
+O canvas começa com uma área lógica de pelo menos 4.000 × 2.800, expandindo para acomodar os blocos; a largura lógica é limitada a 12.000. A janela mostra uma parte dessa área. Use zoom, deslocamento, **Organizar blocos** e **Redefinir visão** para navegar por pipelines grandes. Recolher a lateral aumenta a área visível. As conexões determinam a ordem de execução; mover blocos não altera a hipótese científica.
+
+Ao executar, seleções explícitas de arquivos e nomes já gravados no bloco são respeitados. A escolha de entradas aparece quando uma entrada conectada ainda depende de seleção automática; nesse caso, confira arquivos e processamento individual/merge. Para trocar uma seleção salva, reconfigure a entrada do bloco antes de executar.
+
+**Execuções** reúne cartões com estado, duração, progresso por etapa e acesso a resultados e logs. Expanda a etapa desejada para consultar tabelas, gráficos, moléculas, arquivos e a lista **Compostos não utilizados**, quando disponível. Execuções anteriores ficam agrupadas, reduzindo a quantidade de conteúdo aberta simultaneamente.
+
+Em **Resultados por etapa**, **Remover todos os resultados** pede confirmação e remove os artefatos da etapa, incluindo arquivos auxiliares e referências reaproveitadas em outras execuções. O registro da execução e os logs permanecem. As referências de cache afetadas são invalidadas; para recuperar arquivos, use o histórico do projeto. A ação exige permissão de edição e fica bloqueada durante execuções ativas. Exporte os resultados desejados antes de removê-los.
+
+## ADMET: configurar, explorar e exportar
+
+No bloco **Avaliar ADMET**, comece pelo perfil e modo de saída; depois ajuste BBB/HIA e critérios. A configuração usa colunas conforme a largura disponível e seções recolhíveis para alertas e intervalos. **Anotar todos os compostos** mantém diversidade; **Filtrar pela hipótese** aplica todos os critérios escolhidos em conjunto. Selecionar ADMET-AI requer sua [instalação no worker](installation.md#preditor-admet-ai-opcional).
+
+No resultado, selecione a tabela ADMET, filtre as classes e use hover para identificar pontos. Clique para abrir a estrutura 2D; quando pontos coincidem, procure pelo código do composto. Zoom, recentrar e ajustar à tela ajudam a explorar o painel. Downloads exportam gráfico PNG e arquivo selecionado. Cores/formas indicam BBB local, não substrato de P-gp. Veja [métodos e perfis ADMET](admet_research.md) para interpretar os arquivos de auditoria e os limites científicos.

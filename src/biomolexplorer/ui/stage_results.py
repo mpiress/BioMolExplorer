@@ -157,6 +157,12 @@ class StageResults:
             async def csv(e):await download('csv')
             buttons=[ft.Button('Baixar gráfico EGG',icon=ft.Icons.DOWNLOAD,on_click=png),
                      ft.Button('Baixar arquivo selecionado',icon=ft.Icons.DOWNLOAD,on_click=csv)]
+            if model.get('admet_report'):
+                async def report(e):
+                    import json
+                    data=json.dumps(model['admet_report'],ensure_ascii=False,indent=2).encode()
+                    await self.ui.guard(lambda:self.ui.picker.save_file(file_name=Path(filename).stem+'_admet_report.json',src_bytes=data))
+                buttons.append(ft.Button('Baixar critérios e métodos ADMET',icon=ft.Icons.DOWNLOAD,on_click=report))
             self.child=ResultsViewer(self.ui,self.project_id,model,popup=True,actions=buttons)
             self.graph.controls=[self.child.build()];self.ui.page.update()
         if e is None:await action()

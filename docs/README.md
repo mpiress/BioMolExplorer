@@ -15,6 +15,7 @@
 | [Configuração do redocking](redocking_configuration.md) | Pares, cadeia, cofatores, preparação, RMSD, downloads e visualização 3D | [HTML](pt/redocking_configuration.html) |
 | [Recuperação flexível da informação](retrieval.md) | Critérios PDB, modos ChEMBL, filtros e rastreabilidade | [HTML](pt/retrieval.html) |
 | [Visualizador molecular e interações 3D](molecular_viewer.md) | Poses Vina/DOCK6, receptor e referência, estilos, hidrogênios, cores e identificação pelo mouse | [HTML](pt/molecular_viewer.html) |
+| [ADMET por hipótese de pesquisa](admet_research.md) | Perfis, descritores, alertas, preditor opcional, EGG e limites científicos | [HTML](pt/admet_research.html) |
 | [Logs e diagnóstico](logging.md) | Contexto, causas, códigos de erro, resumos e filtros | [HTML](pt/logging.html) |
 | [Validação do pipeline](pipeline_validation.md) | Matriz de conexões, regressões e limites da verificação | [HTML](pt/pipeline_validation.html) |
 
@@ -35,6 +36,7 @@
 | [Redocking configuration](en/redocking_configuration.md) | Pairs, chain, cofactors, preparation, RMSD, downloads and 3D viewing | [HTML](en/redocking_configuration.html) |
 | [Flexible information retrieval](en/retrieval.md) | PDB criteria, ChEMBL modes, filters and traceability | [HTML](en/retrieval.html) |
 | [Molecular viewer and 3D interactions](en/molecular_viewer.md) | Vina/DOCK6 poses, receptor and reference, styles, hydrogens, colors and hover identification | [HTML](en/molecular_viewer.html) |
+| [Hypothesis-driven ADMET](en/admet_research.md) | Profiles, descriptors, alerts, optional predictor, EGG and scientific limits | [HTML](en/admet_research.html) |
 | [Logs and diagnostics](en/logging.md) | Context, causes, error codes, summaries and filters | [HTML](en/logging.html) |
 | [Pipeline validation](en/pipeline_validation.md) | Connection matrix, regressions and verification limits | [HTML](en/pipeline_validation.html) |
 

@@ -95,3 +95,26 @@ For redocking with preparation, the worker checks `chimera`, `obabel` and `vina`
 **Prepare for docking** uses Chimera and Open Babel for candidates even when reusing a prepared redocking receptor. Selecting Vina, DOCK6 or both defines exported formats; engines run in docking blocks connected to the output.
 
 See [Redocking configuration](redocking_configuration.md) for pair selection, cofactors, prepared inputs, diagnosis and results.
+
+## Optional ADMET-AI predictor
+
+The **Local RDKit** backend uses the main scientific environment. Selecting **ADMET-AI** also requires its predictor on the worker computer. Installing the interface alone does not install that model.
+
+From the repository root, with compatible Python 3.12:
+
+```bash
+python scripts/setup_admet_ai.py
+```
+
+The script creates `.admet-env`, installs CPU PyTorch and `admet-ai==2.0.1`, runs an inference and writes `.ready` only after success. Installation needs access to package distributions and models. Workers discover the repository-local environment automatically. To use another directory:
+
+```bash
+python scripts/setup_admet_ai.py --directory /path/to/admet-env
+export BIOMOL_ADMET_PYTHON="/path/to/admet-env/bin/python"
+```
+
+Start the application from that terminal so workers inherit the setting. This variable selects the predictor Python independently of `--worker-python`. When moving computers, recreate the environment and update paths; exporting a project does not install scientific libraries.
+
+For **ADMET-AI is not installed in the worker environment**, check the availability shown in ADMET settings, the interpreter path, installation and worker access to models. Restart after configuring the environment. Alternatively select **Local RDKit** explicitly: it provides local descriptors, estimates and rules without `ML_` endpoints. There is no silent model substitution. You can also install `python -m pip install -e '.[admet-ml]'` in a dedicated worker, respecting that environment's dependencies.
+
+See [hypothesis-driven ADMET](admet_research.md) for units, profiles, alerts, outputs and model limits.

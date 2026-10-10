@@ -61,11 +61,11 @@ python -m biomolexplorer.log_report --job JOB_ID --json
 | --- | --- |
 | `TOOL_NOT_FOUND` | Executável não localizado; confira instalação e PATH do worker |
 | `TOOL_START_FAILED` | Não foi possível iniciar; confira permissões e diretório |
-| `TOOL_TIMEOUT` | Comando excedeu seu limite; confira a saída, entrada e `BIOMOL_COMMAND_TIMEOUT` |
+| `TOOL_TIMEOUT` | Comando excedeu um limite definido explicitamente pelo chamador; não há limite automático |
 | `TOOL_EXIT_FAILED` | Ferramenta terminou com código diferente de zero; consulte stdout/stderr |
 | `TOOL_REPORTED_ERROR` | Chimera relatou erro mesmo retornando zero; confira o script preservado |
 | `PREPARED_OUTPUT_INVALID` | Preparação produziu arquivo ausente, vazio ou sem átomos; confira a ferramenta e o script |
-| `EXECUTION_TIMEOUT` | Job excedeu o limite do supervisor; confira o último comando |
+| `EXECUTION_TIMEOUT` | Job excedeu um limite do supervisor definido explicitamente; o padrão não tem limite |
 | `INPUT_NOT_FOUND` | Arquivo de entrada não localizado |
 | `ACCESS_DENIED` | Acesso negado pelo sistema de arquivos |
 | `VALIDATION_FAILED` | Entrada ou configuração inválida |
@@ -89,3 +89,9 @@ with log_context(job_id="example-job", operation="redocking", pair="4M0E|1YL|604
 O JSONL usa `schema_version=1`, horário UTC com milissegundos, nível, componente, evento, processo, thread e código de origem. IDs, duração, ferramenta, configuração, código de saída, causa e ação são opcionais conforme o evento. Falhas na escrita de diagnóstico não devem invalidar resultados científicos.
 
 `tests/test_structured_diagnostics.py` verifica isolamento do contexto, máscara de credenciais, ausência de duplicação, causas encadeadas, códigos de comandos, filtros e rotação compartilhada por processos. Os testes de workers e pipelines verificam o fluxo real entre processos. Veja também [validação do pipeline](pipeline_validation.md).
+
+## Reutilização e falhas individuais de docking
+
+`receptor.reused` indica receptor preparado reutilizado. `ligand.preparation.started` e `prepare.com` identificam preparação de um candidato; não demonstram preparação repetida do receptor. `vina.maps.started` e `vina.maps.reused` distinguem cálculo/reutilização dentro do lote. Quando a API não suporta o template, a alternativa CLI fica registrada.
+
+No DOCK6, configurações e logs de superfície/esferas/caixa/grid e de cada candidato acompanham os resultados. Código -11 indica SIGSEGV do processo nativo. Uma falha individual pode produzir uma linha em `preparation_failures.csv` sem interromper os demais candidatos; confira **Compostos não utilizados** e o campo de etapa/contexto para localizar o problema. Erros globais continuam falhando a etapa. Um tempo decorrido longo, sozinho, não provoca encerramento automático. Veja [fluxo DOCK6](user_manual.md#validacao-e-exclusoes-no-dock6).

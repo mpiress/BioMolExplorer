@@ -34,7 +34,7 @@ def convert_structure(source, destination, *, ph=None, charges=None, index=1):
                '-O', str(destination), '-f', str(index), '-l', str(index)]
     if ph is not None: command.extend(['-p', str(ph)])
     if charges: command.extend(['--partialcharge', charges])
-    result = subprocess.run(command, capture_output=True, text=True, timeout=120)
+    result = subprocess.run(command, capture_output=True, text=True)
     if result.returncode or not destination.is_file() or not destination.stat().st_size:
         raise ValueError('Não foi possível converter a conformação molecular: '+result.stderr[-1000:])
     return destination
@@ -42,7 +42,7 @@ def convert_structure(source, destination, *, ph=None, charges=None, index=1):
 
 def structure_smiles(path):
     result = subprocess.run(['obabel', '-i'+Path(path).suffix[1:], str(path), '-ocan', '-f', '1', '-l', '1'],
-                            capture_output=True, text=True, timeout=120)
+                            capture_output=True, text=True)
     if result.returncode or not result.stdout.strip():
         raise ValueError('Não foi possível obter o SMILES da conformação molecular.')
     return result.stdout.split()[0]
@@ -78,44 +78,57 @@ def prepare_ligands(dataset, destination, format, ph=7.4, charge_type='gas', cen
     from .visualizations import molecule_sdf
     dataset, destination = Path(dataset), Path(destination)
     destination.mkdir(parents=True, exist_ok=True)
+    from .preparation_failures import CURRENT_REPORT,PreparationFailures
+    report=CURRENT_REPORT.get() or PreparationFailures()
     if preparation_options is not None:
         from .docking_preparation import prepare_candidates
-        dataset=prepare_candidates(dataset,destination/'Prepared',preparation_options,ph,
-                                   'vina' if format=='pdbqt' else 'dock6')
+        token=CURRENT_REPORT.set(report)
+        try:
+            dataset=prepare_candidates(dataset,destination/'Prepared',preparation_options,ph,
+                                       'vina' if format=='pdbqt' else 'dock6')
+        finally:CURRENT_REPORT.reset(token)
     outputs=[]
-    for row in read_compounds(dataset):
-        code=row['molecule_chembl_id']
-        if not re.fullmatch(r'[A-Za-z0-9_.+-]{1,100}', code) or '..' in code:
-            raise ValueError('Código molecular inválido para o docking.')
-        prepared=row.get('prepared_'+format)
-        if row.get('docking_engines') and not prepared:
-            raise ValueError('A saída de preparação não inclui o formato solicitado pelo docking.')
-        if prepared:
-            source=Path(prepared)
-            if not source.is_absolute():source=dataset.parent/source
-            output=destination/(code+'.lig.'+format)
-            shutil.copy2(source,output)
-            if format=='mol2' and center is not None and row.get('prepared_origin') in ('smiles','library'):center_mol2(output,center)
+    for row_number,row in enumerate(read_compounds(dataset),2):
+        owned=[]
+        with report.compound(dataset,row_number,row,destination,owned):
+
+            code=row['molecule_chembl_id']
+            if not re.fullmatch(r'[A-Za-z0-9_.+-]{1,100}', code) or '..' in code:
+                raise ValueError('Código molecular inválido para o docking.')
+            owned.append(destination/(code+'.lig.'+format))
+            prepared=row.get('prepared_'+format)
+            if row.get('docking_engines') and not prepared:
+                raise ValueError('A saída de preparação não inclui o formato solicitado pelo docking.')
+            if prepared:
+                source=Path(prepared)
+                if not source.is_absolute():source=dataset.parent/source
+                if not source.is_file() or not source.stat().st_size:raise ValueError('Arquivo preparado ausente ou vazio: '+source.name)
+                output=destination/(code+'.lig.'+format);owned.append(output)
+                shutil.copy2(source,output)
+                if format=='mol2' and center is not None and row.get('prepared_origin') in ('smiles','library'):center_mol2(output,center)
+                outputs.append(output)
+                continue
+            pose=row.get('conformer_file') or row.get('pose_file')
+            if pose:
+                source=Path(pose)
+                if not source.is_absolute():source=dataset.parent/source
+                if not source.is_file():raise ValueError('A conformação selecionada não está disponível: '+code)
+            else:
+                source=destination/(code+'.sdf');owned.append(source)
+                source.write_text(molecule_sdf(row['canonical_smiles']),encoding='utf-8')
+            output=destination/(code+'.lig.'+format);owned.append(output)
+            convert_structure(source,output,ph=ph,charges='gasteiger' if format=='mol2' and charge_type=='gas' else None,
+                              index=int(row.get('conformer_index') or 1))
+            if (not pose or row.get('conformer_origin')=='library') and format=='mol2' and center is not None:center_mol2(output,center)
+            if format=='mol2' and charge_type=='am1':
+                script=destination/(code+'.charges.com')
+                script.write_text(f'open {output.name}\naddcharge all spec #0 chargeModel 14sb method am1\nwrite format mol2 #0 {output.name}\nclose all\n',encoding='utf-8')
+                result=subprocess.run(['chimera','--nogui','--silent',script.name],cwd=destination,capture_output=True,text=True)
+                details='\n'.join((getattr(result,'stdout','') or '',getattr(result,'stderr','') or ''))
+                if result.returncode or re.search(r'Error while sourcing|Traceback \(most recent call last\)|^Error(?:\s|:)',details,re.M):
+                    raise ValueError('Não foi possível atribuir cargas AM1: '+details[-2000:])
             outputs.append(output)
-            continue
-        pose=row.get('conformer_file') or row.get('pose_file')
-        if pose:
-            source=Path(pose)
-            if not source.is_absolute():source=dataset.parent/source
-            if not source.is_file():raise ValueError('A conformação selecionada não está disponível: '+code)
-        else:
-            source=destination/(code+'.sdf')
-            source.write_text(molecule_sdf(row['canonical_smiles']),encoding='utf-8')
-        output=destination/(code+'.lig.'+format)
-        convert_structure(source,output,ph=ph,charges='gasteiger' if format=='mol2' and charge_type=='gas' else None,
-                          index=int(row.get('conformer_index') or 1))
-        if (not pose or row.get('conformer_origin')=='library') and format=='mol2' and center is not None:center_mol2(output,center)
-        if format=='mol2' and charge_type=='am1':
-            script=destination/(code+'.charges.com')
-            script.write_text(f'open {output.name}\naddcharge all spec #0 chargeModel 14sb method am1\nwrite format mol2 #0 {output.name}\nclose all\n',encoding='utf-8')
-            result=subprocess.run(['chimera','--nogui','--silent',script.name],cwd=destination,capture_output=True,text=True,timeout=300)
-            if result.returncode:raise ValueError('Não foi possível atribuir cargas AM1: '+result.stderr[-1000:])
-        outputs.append(output)
+    report.write(destination)
     return outputs
 
 
@@ -149,7 +162,7 @@ def input_records(selected, available):
         if path.suffix=='.csv':result.extend(table_rows(path));continue
         if path.resolve() in metadata:
             result.append(dict(metadata[path.resolve()]));continue
-        output=subprocess.run(['obabel','-i'+path.suffix[1:],str(path),'-ocan'],capture_output=True,text=True,timeout=120)
+        output=subprocess.run(['obabel','-i'+path.suffix[1:],str(path),'-ocan'],capture_output=True,text=True)
         if output.returncode or not output.stdout.strip():raise ValueError('Estrutura molecular inválida: '+path.name)
         lines=output.stdout.strip().splitlines()
         for index,line in enumerate(lines,1):

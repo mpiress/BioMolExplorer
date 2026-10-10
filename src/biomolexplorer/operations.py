@@ -21,7 +21,7 @@ OPERATIONS = {
     'retrieve_zinc': OperationSpec('wrappers.crawlers', 'load_zinc', ('base_input_path',), ('filename','verbose','download_workers')),
     'prepare_structures': OperationSpec('wrappers.redocking', 'prepare_structures', ('base_input_path', 'target'),
         ('pdb_codes', 'pH', 'charge_type', 'preparation_options', 'base_selected_mols', 'mol_filename', 'receptor_prepared', 'docking_engines')),
-    'admet': OperationSpec('wrappers.admet', 'ADMETWrapper', ('base_input_path',), ('input_file', 'verbose')),
+    'admet': OperationSpec('wrappers.admet', 'ADMETWrapper', ('base_input_path',), ('input_file', 'verbose','admet_profile','admet_mode','prediction_backend','bbb_target','hia_target','rule_set','max_rule_violations','alert_policy','alert_catalogs','property_limits')),
     'fingerprints': OperationSpec('wrappers.molecular_analyzer', 'generate_fingerprints',
         ('base_input_path',), ('morgan_n_bits', 'radius', 'files', 'morgan', 'maccs', 'pharmacophore', 'chunk_size')),
     'similarity': OperationSpec('wrappers.molecular_analyzer', 'compute_similarity',
@@ -56,6 +56,9 @@ def validate_operation(operation, parameters, *, defer_redocking_selection=False
     for name in spec.required:
         if parameters[name] is None or parameters[name] == '':
             raise ValueError(f'{name} cannot be empty')
+    if operation=='admet':
+        from .admet_config import resolve_config
+        resolve_config(parameters)
     if operation=='retrieve_zinc':
         from .zinc_retrieval import validate_download_workers
         validate_download_workers(parameters.get('download_workers',4))
@@ -130,7 +133,9 @@ def validate_operation(operation, parameters, *, defer_redocking_selection=False
             raise ValueError('chembl_filters must contain only known ChEMBL stages')
         if not all(isinstance(value, dict) for value in filters.values()):
             raise ValueError('Each ChEMBL stage filter must be a dictionary')
-    for name in ('max_targets', 'max_records', 'pubchem_max_records', 'morgan_n_bits', 'num_modes', 'exhaustiveness', 'chunk_size','mcs_timeout'):
+    if 'mcs_timeout' in parameters and (type(parameters['mcs_timeout']) is not int or parameters['mcs_timeout'] < 0):
+        raise ValueError('mcs_timeout must be a non-negative integer')
+    for name in ('max_targets', 'max_records', 'pubchem_max_records', 'morgan_n_bits', 'num_modes', 'exhaustiveness', 'chunk_size'):
         if name in parameters and (type(parameters[name]) is not int or parameters[name] < 1):
             raise ValueError(f'{name} must be a positive integer')
     if 'pH' in parameters:
@@ -165,21 +170,32 @@ def validate_operation(operation, parameters, *, defer_redocking_selection=False
 
 def execute_operation(operation, parameters, output_path):
     from .molecule_quality import CURRENT_REPORT, QualityReport, prepare_inputs, sanitize_csv, table_kind
+    from .preparation_failures import CURRENT_REPORT as PREPARATION_REPORT,PreparationFailures
     validate_operation(operation,parameters)
     output = Path(output_path).resolve();output.mkdir(parents=True,exist_ok=True)
     report = QualityReport(operation);token = CURRENT_REPORT.set(report)
+    preparation=PreparationFailures();preparation_token=PREPARATION_REPORT.set(preparation)
     try:
         clean = prepare_inputs(operation,parameters,output,report)
         result = _execute_operation(operation,clean,output)
         for artifact in result.artifacts if operation!='graphs' else []:
             if Path(artifact).suffix=='.csv' and table_kind(artifact):sanitize_csv(artifact,artifact,report=report)
         path = report.write(output)
+        preparation_path=preparation.write(output)
         details = dict(result.details,excluded_records=len(report.records))
+        if preparation_path:
+            details['preparation_failures']=len(preparation.records)
+            details['preparation_report']=str(preparation_path)
         if path:details['exclusion_report']=str(path)
-        return OperationResult(operation,result.artifacts+([str(path)] if path and str(path) not in result.artifacts else []),details)
+        artifacts=list(result.artifacts)
+        for extra in (path,preparation_path):
+            if extra and str(extra) not in artifacts:artifacts.append(str(extra))
+        return OperationResult(operation,artifacts,details)
     finally:
         # Also retain exclusions when a separate provider/engine error occurs.
         if report.records:report.write(output)
+        preparation.write(output)
+        PREPARATION_REPORT.reset(preparation_token)
         CURRENT_REPORT.reset(token)
 
 

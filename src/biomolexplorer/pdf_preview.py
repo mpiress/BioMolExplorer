@@ -18,7 +18,7 @@ def pdf_preview(data):
         output=Path(temp)/'preview'
         try:
             subprocess.run([executable,'-f','1','-l','1','-singlefile','-scale-to','2400',
-                '-png',str(source),str(output)],check=True,capture_output=True,timeout=30)
+                '-png',str(source),str(output)],check=True,capture_output=True)
             # PDF page margins otherwise consume a substantial part of the
             # popup. Crop only blank space, retaining a small border around
             # every axis, label and legend; the downloaded PDF is untouched.

@@ -37,8 +37,8 @@ KINDS = {'compounds':'Compostos (CSV)', 'structures':'Complexos PDB', 'prepared_
          'zinc_urls':'Lista de downloads ZINC (TXT/URI/SH)', 'other':'Outros arquivos'}
 
 
-def text(value, size=14, color=INK, weight=None):
-    return ft.Text(value,size=size,color=color,weight=weight)
+def text(value, size=14, color=INK, weight=None, **kwargs):
+    return ft.Text(value,size=size,color=color,weight=weight,**kwargs)
 
 
 def user_text(value, *args, **kwargs):
@@ -284,33 +284,43 @@ class WorkspaceUI(ProjectTools):
         self.page.on_resize=resize_login
         self.render(ft.Column([top_bar,login_view],expand=True,spacing=0))
 
-    def shell(self,title,subtitle,body,actions=None):
+    def shell(self,title,subtitle,body,actions=None,groups=None,sidebar_content=None):
+        from .action_help import action_row,resize_help
         user = self.store.user(self.token)
-        sidebar = ft.Container(width=220,bgcolor=BRAND_NAVY,padding=22,content=ft.Column([
-            text('Workspace',18,'#FFFFFF',ft.FontWeight.W_600),
-            ft.Container(height=12),button('Meus projetos',self.event(self.show_workspace),icon=ft.Icons.GRID_VIEW),
-            ft.Container(expand=True),user_text(user['name'],16,'#FFFFFF'),user_text(user['email'],12,'#94A3B8'),
-            ft.TextButton('Sair',on_click=self.logout)],spacing=12))
         project=getattr(self,'current',None)
-        heading=user_text(title,30,weight=ft.FontWeight.W_700) if project and title==project['name'] else text(title,30,weight=ft.FontWeight.W_700)
-        summary=user_text(subtitle,color=MUTED) if project and subtitle==project['description'] else text(subtitle,color=MUTED)
-        header = ft.Column([ft.Column([heading,summary]),ft.Row(actions or [],wrap=True)],spacing=16)
-        main = ft.Container(expand=True,padding=30,content=ft.Column([header,ft.Container(height=8),body],expand=True,spacing=16))
+        navigation=groups if groups is not None else [action_row(self,'projects',
+            button('Meus projetos',self.event(self.show_workspace),icon=ft.Icons.GRID_VIEW)),*(actions or [])]
+        sidebar = ft.Container(width=280,bgcolor='#EEF3FB',padding=16,
+            border=ft.Border.only(right=ft.BorderSide(1,LINE)),content=ft.Column([
+                ft.Column([text('Projeto' if project else 'Workspace',16,INK,ft.FontWeight.W_600),
+                    *navigation,*([ft.Divider(color=LINE),sidebar_content] if sidebar_content else [])],
+                    expand=True,spacing=10,scroll=ft.ScrollMode.AUTO),
+                ft.Divider(color=LINE),ft.Row([ft.Icon(ft.Icons.ACCOUNT_CIRCLE_OUTLINED,color=MUTED),
+                    ft.Column([user_text(user['name'],13,weight=ft.FontWeight.W_600),
+                        user_text(user['email'],11,MUTED,max_lines=1,overflow=ft.TextOverflow.ELLIPSIS)],expand=True,spacing=2),
+                    ft.TextButton('Sair',on_click=self.logout)],spacing=8)],expand=True,spacing=10))
+        heading=user_text(title,24,weight=ft.FontWeight.W_700) if project and title==project['name'] else text(title,28,weight=ft.FontWeight.W_700)
+        heading.max_lines=1;heading.overflow=ft.TextOverflow.ELLIPSIS
+        summary=user_text(subtitle,size=12,color=MUTED) if project and subtitle==project['description'] else text(subtitle,12,MUTED)
+        summary.max_lines=1;summary.overflow=ft.TextOverflow.ELLIPSIS
         top_bar,_,resize_bar=self.top_bar()
-        mobile_nav=ft.Container(padding=ft.Padding.symmetric(horizontal=16),bgcolor='#FFFFFF',
-            content=ft.Row([ft.TextButton('Meus projetos',icon=ft.Icons.GRID_VIEW,on_click=self.event(self.show_workspace)),
-                ft.Container(expand=True),ft.TextButton('Sair',on_click=self.logout)]))
         def resize():
             compact=(getattr(self.page,'width',None) or 1440)<900
             resize_bar()
-            sidebar.visible=not compact
-            mobile_nav.visible=compact
-            main.padding=16 if compact else 30
+            sidebar.visible=getattr(self,'sidebar_visible',None) if getattr(self,'sidebar_visible',None) is not None else not compact
+            sidebar.width=min(280,max(180,(getattr(self.page,'width',None) or 1440)-120))
+            main.padding=12 if project else 16 if compact else 26
+            menu.tooltip='Ocultar menu lateral' if sidebar.visible else 'Mostrar menu lateral'
+            resize_help(self.page,getattr(self,'help_dialog',None))
+        def toggle_menu(e):
+            self.sidebar_visible=not sidebar.visible;resize();self.page.update()
+        menu=ft.IconButton(icon=ft.Icons.MENU,tooltip='Mostrar menu lateral',on_click=toggle_menu)
+        header=ft.Row([menu,ft.Column([heading,summary],expand=True,spacing=3)],spacing=8)
+        main=ft.Container(expand=True,padding=12,content=ft.Column([header,body],expand=True,spacing=12))
         async def on_resize(e):
             resize();self.page.update()
-        resize()
-        self.page.on_resize=on_resize
-        return ft.Column([top_bar,mobile_nav,ft.Row([sidebar,main],expand=True,spacing=0,
+        resize();self.page.on_resize=on_resize
+        return ft.Column([top_bar,ft.Row([sidebar,main],expand=True,spacing=0,
             vertical_alignment=ft.CrossAxisAlignment.STRETCH)],expand=True,spacing=0)
 
     def event(self,coroutine,*args):
@@ -371,9 +381,10 @@ class WorkspaceUI(ProjectTools):
             ft.ResponsiveRow(cards,spacing=18,run_spacing=18) if cards else panel(ft.Column([
                 ft.Icon(ft.Icons.FOLDER_OPEN,size=48,color=TEAL),text('Um espaço para sua próxima descoberta.',22),
                 text('Crie um projeto ou aceite um convite para começar.',color=MUTED)]))],expand=True,scroll=ft.ScrollMode.AUTO,spacing=20)
+        from .action_help import action_row
         self.render(self.shell('Seu workspace','Explore, organize e compartilhe suas pesquisas.',body,
-            [button('Importar projeto',self.event(self.import_project_dialog),icon=ft.Icons.UPLOAD_FILE),
-             button('Novo projeto',self.event(self.project_dialog),True,ft.Icons.ADD)]))
+            [action_row(self,'import',button('Importar projeto',self.event(self.import_project_dialog),icon=ft.Icons.UPLOAD_FILE)),
+             action_row(self,'new',button('Novo projeto',self.event(self.project_dialog),True,ft.Icons.ADD))]))
 
     async def accept_invite(self,project_id,accepted,expected_role=None):
         try:
@@ -511,7 +522,7 @@ class WorkspaceUI(ProjectTools):
             tab = self.tab
         writable = project['role'] != 'viewer'
         nav = ft.Row([button(label,self.event(self.change_tab,label),primary=self.tab==label)
-                      for label in ('Pipeline','Arquivos','Execuções','Compartilhar') if label!='Compartilhar' or project['role']=='owner'],wrap=True)
+                      for label in ('Pipeline','Arquivos','Execuções')],wrap=True)
         if self.tab=='Pipeline':
             content = await self.pipeline_view(writable)
         elif self.tab=='Arquivos':
@@ -522,16 +533,26 @@ class WorkspaceUI(ProjectTools):
             content = await self.sharing_view()
         if self.token != token or self.current is not project or self.tab != tab:
             return
-        actions = [button('Workspace',self.event(self.show_workspace),icon=ft.Icons.ARROW_BACK)]
+        from .action_help import action_row,action_group
+        project_actions=[action_row(self,'workspace',button('Workspace',self.event(self.show_workspace),icon=ft.Icons.ARROW_BACK))]
         if writable:
-            actions.append(button('Projeto',self.event(self.project_dialog,project),icon=ft.Icons.TUNE))
+            project_actions.append(action_row(self,'project',button('Projeto',self.event(self.project_dialog,project),icon=ft.Icons.TUNE)))
         if project['role']=='owner':
-            actions.append(button('Compartilhar',self.event(self.change_tab,'Compartilhar'),icon=ft.Icons.PERSON_ADD_ALT_1))
-        actions.append(button('Histórico',self.event(self.history_dialog,project['id']),icon=ft.Icons.HISTORY))
+            project_actions.append(action_row(self,'share',button('Compartilhar',self.event(self.change_tab,'Compartilhar'),icon=ft.Icons.PERSON_ADD_ALT_1)))
+        project_actions.append(action_row(self,'history',button('Histórico',self.event(self.history_dialog,project['id']),icon=ft.Icons.HISTORY)))
+        execution_actions=[action_row(self,key,button(label,self.event(handler,*args),icon=icon,disabled=not writable))
+            for key,label,handler,args,icon in [
+                ('save','Salvar',self.save_draft,(),ft.Icons.SAVE_OUTLINED),
+                ('templates','Modelos prontos',self.preset_dialog,(),ft.Icons.DASHBOARD_OUTLINED),
+                ('run','Executar pipeline',self.run_pipeline,(),ft.Icons.PLAY_ARROW),
+                ('selected','Executar até seleção',self.run_pipeline,(True,),ft.Icons.PLAY_CIRCLE_OUTLINE)]]
+        groups=[action_group(self,'project','Navegação do projeto',ft.Icons.FOLDER_OPEN,project_actions),
+            action_group(self,'execution','Pipeline e execução',ft.Icons.PLAY_CIRCLE_OUTLINE,execution_actions)]
         progress = getattr(self,'run_progress',None)
         extras = [progress.badge] if progress and progress.valid() else []
         self.render(self.shell(project['name'],project['description'] or 'Construa o pipeline que sua pesquisa precisa.',
-            ft.Column([nav,*extras,content],expand=True,spacing=18),actions))
+            ft.Column([nav,*extras,content],expand=True,spacing=10),groups=groups,
+            sidebar_content=self.flow_editor.library if self.tab=='Pipeline' else None))
         if self.tab=='Execuções':
             for result in list(self.stage_results.values()):
                 if result.expanded and not result.loaded and result.valid():await result.load()
@@ -559,7 +580,7 @@ class WorkspaceUI(ProjectTools):
                     self.automatic_labels[item['id']]='compounds.csv' if any(p.endswith('/compounds.csv') or p=='compounds.csv' for p in options) else next(iter(sorted(options)),item['name']).rsplit('/',1)[-1]
         self.flow_editor = FlowCanvas(self,writable)
         self.page.on_keyboard_event=self.flow_editor.keyboard
-        return self.flow_editor.build()
+        return self.flow_editor.build(include_library=False)
 
     async def open_stage_dialog(self,stage_id,waiting_run_id=None,configuration=None):
         from .guided import GuidedForm
@@ -1001,9 +1022,31 @@ class WorkspaceUI(ProjectTools):
                     for index,path in enumerate(reports)]
                 stage_label='Reaproveitado' if stage.get('reused') else 'Resultados fornecidos' if stage.get('provided') else STATUS[stage['status']]
                 if stage.get('excluded_records'):stage_label+=f' · {stage["excluded_records"]} registros excluídos'
-                stage_rows.append(ft.ExpansionTile(title=stage_control(user_text(stage['name'],16),stage),subtitle=text(stage_label,12,TEAL if stage['status']=='succeeded' else MUTED),
-                    expanded=result.expanded,on_change=result.expand,
-                    controls=[text(readable_error(stage.get('error','')),color='#DC2626'),ft.Row(report_buttons,wrap=True),result.root,ft.TextButton('Ver log',on_click=log)]))
+                from .run_presentation import STATES,state_icon
+                stage_details=[]
+                from biomolexplorer.preparation_failures import REPORT_NAME as PREPARATION_REPORT
+                failures=[p for p in stage.get('artifacts',[]) if Path(p).name==PREPARATION_REPORT]
+                if failures:
+                    path=min(failures,key=lambda p:len(Path(p).parts))
+                    stage_details.append(ft.Row([
+                        ft.TextButton('Compostos não utilizados',icon=ft.Icons.WARNING_AMBER_OUTLINED,
+                            on_click=self.event(self.open_preparation_failures,project_id,run['id'],stage['id'],path)),
+                        ft.TextButton('Baixar lista de compostos não utilizados',icon=ft.Icons.DOWNLOAD,
+                            on_click=self.event(self.download_stage_report,project_id,path))],wrap=True))
+                if writable and stage.get('artifacts'):
+                    stage_details.append(ft.TextButton('Remover todos os resultados',icon=ft.Icons.DELETE_SWEEP_OUTLINED,
+                        disabled=bool(active),on_click=self.event(self.remove_stage_results,project_id,run['id'],stage['id'])))
+                if stage.get('error'):stage_details.append(text(readable_error(stage['error']),color='#B91C1C'))
+                if report_buttons:stage_details.append(ft.Row(report_buttons,wrap=True))
+                stage_details.append(result.root)
+                if stage.get('log_path'):stage_details.append(ft.TextButton('Ver log',icon=ft.Icons.ARTICLE_OUTLINED,on_click=log))
+                stage_rows.append(ft.ExpansionTile(title=stage_control(user_text(stage['name'],15,weight=ft.FontWeight.W_600),stage),
+                    leading=state_icon(stage['status']),subtitle=text(stage_label,12,STATES[stage['status']][0]),
+                    expanded=result.expanded,on_change=result.expand,maintain_state=True,
+                    tile_padding=ft.Padding.symmetric(horizontal=8,vertical=4),
+                    shape=ft.RoundedRectangleBorder(radius=12,side=ft.BorderSide(1,LINE)),
+                    collapsed_shape=ft.RoundedRectangleBorder(radius=12,side=ft.BorderSide(1,LINE)),
+                    controls=[ft.Container(content=ft.Column(stage_details,spacing=16),padding=16,bgcolor='#F8FAFC',border_radius=12)]))
             actions=[]
             if run['status'] in ('queued','running','awaiting_input') and writable:
                 actions=[button('Cancelar execução',self.event(self.cancel_run,run['id']),icon=ft.Icons.STOP)]
@@ -1012,8 +1055,17 @@ class WorkspaceUI(ProjectTools):
                     actions.insert(0,button('Configurar '+pending['name'],self.event(self.configure_pending,run['id']),True,ft.Icons.EDIT))
             timestamp=datetime.fromtimestamp(run['created'],timezone.utc).strftime('%d/%m/%Y %H:%M UTC')
             label='Execução atual' if run['status'] in ('queued','running','awaiting_input') else 'Última execução' if run['id']==focus_id else 'Execução anterior'
-            card=panel(ft.Column([text(label+' · '+timestamp,12,MUTED),ft.Row([text(STATUS[run['status']],20,weight=ft.FontWeight.W_600),
-                text(run['id'][:8],12,MUTED),*actions],wrap=True),text(readable_error(run.get('error')),color=TEAL if run['status']=='awaiting_input' else '#DC2626'),*stage_rows],spacing=10))
+            if run['status']=='succeeded':
+                first=next((s for s in run['stages'] if s['status']=='succeeded' and s.get('artifacts')),None)
+                if first:
+                    async def explore(e,key=(run['id'],first['id'])):
+                        self.results_focus=key;await self.guard(self.draw_project)
+                    actions.append(button('Explorar resultados',explore,True,ft.Icons.INSIGHTS))
+            from .run_presentation import outcome_overview
+            details=[ft.Row([text(label,12,MUTED),text('·',12,MUTED),user_text(timestamp,12,MUTED)],spacing=4,wrap=True),outcome_overview(run,actions)]
+            if run.get('error'):details.append(text(readable_error(run['error']),color='#B45309' if run['status']=='awaiting_input' else '#B91C1C'))
+            details.extend([text('Resultados por etapa',14,INK,ft.FontWeight.W_600),*stage_rows])
+            card=panel(ft.Column(details,spacing=16),padding=18)
             if run['id']==focus_id:
                 content.append(card)
             else:
@@ -1025,6 +1077,27 @@ class WorkspaceUI(ProjectTools):
         if not content:
             content=[panel(ft.Column([text('Pronto para explorar?',24),text('Configure suas etapas e execute o pipeline. Os resultados e logs aparecerão aqui.',color=MUTED)]))]
         return ft.Column([button('Atualizar resultados',self.event(self.draw_project),icon=ft.Icons.REFRESH),*content],expand=True,scroll=ft.ScrollMode.AUTO,spacing=16)
+
+    async def remove_stage_results(self,project_id,run_id,stage_id):
+        from biomolexplorer.result_files import ResultFiles
+        token=self.token
+        async def remove(e):
+            if self.token!=token:return
+            await self.call(ResultFiles(self.store).remove_all,token,project_id,run_id,stage_id)
+            close_dialog(self.page,dialog)
+            if self.current and self.current['id']==project_id:await self.draw_project()
+        dialog=ft.AlertDialog(modal=True,title=text('Remover todos os resultados?',24),
+            content=ft.Container(width=520,content=text('Os arquivos desta etapa serão removidos, incluindo referências reaproveitadas em outras execuções. O registro da execução e o log serão preservados. Você poderá restaurar os arquivos pelo histórico.')),
+            actions=[ft.TextButton('Cancelar',on_click=lambda e:close_dialog(self.page,dialog)),
+                button('Remover resultados',self.event_action(remove),icon=ft.Icons.DELETE_OUTLINE)])
+        self.page.show_dialog(dialog)
+
+    async def open_preparation_failures(self,project_id,run_id,stage_id,path):
+        from biomolexplorer.result_files import ResultFiles
+        token=self.token
+        rows=await self.call(ResultFiles(self.store).preparation_failures,token,project_id,run_id,stage_id,path)
+        from .preparation_failures import show_preparation_failures
+        if self.token==token and self.current and self.current['id']==project_id:show_preparation_failures(self,rows)
 
     async def open_stage_log(self,project_id,path):
         if not path:

@@ -12,13 +12,13 @@ import unicodedata
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / 'docs'
-GUIDES = ('installation', 'user_manual', 'frontend', 'backend_usage', 'architecture', 'projects', 'pipeline_validation', 'chimera_migration', 'dms_migration', 'retrieval', 'redocking_configuration', 'logging', 'molecular_viewer')
+GUIDES = ('installation', 'user_manual', 'frontend', 'backend_usage', 'architecture', 'projects', 'pipeline_validation', 'chimera_migration', 'dms_migration', 'retrieval', 'redocking_configuration', 'logging', 'molecular_viewer', 'admet_research')
 LABELS = {
     'en': {'language':'English','other':'Português','home':'Platform overview','docs':'Documentation',
            'source':'Markdown source','contents':'On this page','diagram':'Application architecture',
            'diagram_source':'Mermaid source','intro':'Choose your path into BioMolExplorer.',
            'description':'Guides for using the workspace, running scientific operations and extending the platform.',
-           'titles':['Installation and configuration','User manual','Flet workspace','Backend usage','Architecture and technical review','Projects and versions','Pipeline validation','Chimera replacement assessment','Native DMS port and validation','Flexible information retrieval','Redocking configuration','Logs and diagnostics','Molecular viewer and 3D interactions'],
+           'titles':['Installation and configuration','User manual','Flet workspace','Backend usage','Architecture and technical review','Projects and versions','Pipeline validation','Chimera replacement assessment','Native DMS port and validation','Flexible information retrieval','Redocking configuration','Logs and diagnostics','Molecular viewer and 3D interactions','Hypothesis-driven ADMET'],
            'summaries':['Download from GitHub, install Chimera 1.17 and DOCK6 6.11, and check your environment before starting.',
                         'Detailed walkthrough from language selection and your first study to results and migration.',
                         'Accounts, private projects, sharing, flexible pipelines and your own files.',
@@ -31,14 +31,15 @@ LABELS = {
                         'PDB search criteria, direct ChEMBL searches, optional filters and query reports.',
                         'Explicit pairs, shared chain, cofactors, preparation, RMSD tables, downloads and 3D inspection.',
                         'Correlated events, failure codes, per-job summaries and filtered log reports.',
-                        'Pose/receptor overlays, independent styles, ligand hydrogens, colored interaction traces and hover identification.'],
+                        'Pose/receptor overlays, independent styles, ligand hydrogens, colored interaction traces, residue labels and hover identification.',
+                        'Research profiles, RDKit methods, optional ADMET-AI setup, EGG interpretation and scientific limits.'],
            'read':'Read guide','start':'First installation? Download the project and configure the required tools before starting.',
            'footer':'Documentation generated from the project Markdown sources. MIT license.'},
     'pt': {'language':'Português','other':'English','home':'Apresentação da plataforma','docs':'Documentação',
            'source':'Fonte Markdown','contents':'Nesta página','diagram':'Arquitetura da aplicação',
            'diagram_source':'Fonte Mermaid','intro':'Escolha seu caminho no BioMolExplorer.',
            'description':'Guias para usar o workspace, executar operações científicas e estender a plataforma.',
-           'titles':['Instalação e configuração','Manual do usuário','Workspace Flet','Uso do backend','Arquitetura e revisão técnica','Projetos e versões','Validação do pipeline','Avaliação da substituição do Chimera','Porte nativo DMS e validação','Recuperação flexível da informação','Configuração do redocking','Logs e diagnóstico','Visualizador molecular e interações 3D'],
+           'titles':['Instalação e configuração','Manual do usuário','Workspace Flet','Uso do backend','Arquitetura e revisão técnica','Projetos e versões','Validação do pipeline','Avaliação da substituição do Chimera','Porte nativo DMS e validação','Recuperação flexível da informação','Configuração do redocking','Logs e diagnóstico','Visualizador molecular e interações 3D','ADMET por hipótese de pesquisa'],
            'summaries':['Download pelo GitHub, instalação de Chimera 1.17 e DOCK6 6.11 e verificação antes de iniciar.',
                         'Passo a passo do idioma e primeiro estudo aos resultados e à migração.',
                         'Contas, projetos privados, compartilhamento, pipelines flexíveis e arquivos próprios.',
@@ -51,7 +52,8 @@ LABELS = {
                         'Critérios PDB, busca direta ChEMBL, filtros opcionais e relatórios das consultas.',
                         'Pares explícitos, cadeia comum, cofatores, preparação, tabela de RMSD, downloads e visualização 3D.',
                         'Eventos correlacionados, códigos de falha, resumos por job e consultas filtradas.',
-                        'Comparação pose/receptor, estilos independentes, hidrogênios do ligante, traçados coloridos e identificação pelo mouse.'],
+                        'Comparação pose/receptor, estilos independentes, hidrogênios do ligante, traçados coloridos, nomes dos resíduos e identificação pelo mouse.',
+                        'Perfis de pesquisa, métodos RDKit, instalação opcional ADMET-AI, interpretação do EGG e limites científicos.'],
            'read':'Ler guia','start':'Primeira instalação? Baixe o projeto e configure as ferramentas obrigatórias antes de iniciar.',
            'footer':'Documentação gerada a partir dos arquivos Markdown do projeto. Licença MIT.'},
 }
@@ -61,7 +63,7 @@ CSS = '''
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,sans-serif}
 a{color:var(--teal);text-underline-offset:3px}a:hover{color:#065b53}a:focus-visible,summary:focus-visible{outline:3px solid #0ea5e9;outline-offset:4px}
 .top{background:#102b46;color:white;padding:20px max(24px,calc((100vw - 1240px)/2));display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
-.top a{color:#99f6e4}.brand{font-weight:750;text-decoration:none}.top nav{display:flex;gap:24px;flex-wrap:wrap}
+.top a{color:#99f6e4}.brand{display:flex;align-items:center;text-decoration:none;background:white;padding:4px 12px;border-radius:10px;flex-shrink:0}.brand img{display:block;width:224px;max-width:60vw;height:auto}.top{align-items:center}.top nav{display:flex;gap:24px;flex-wrap:wrap}
 .layout{max-width:1240px;margin:36px auto;display:grid;grid-template-columns:250px minmax(0,1fr);gap:32px;padding:0 24px}
 aside{align-self:start;position:sticky;top:24px}aside a{display:block;margin:8px 0;text-decoration:none;padding:6px 12px;border-radius:8px}
 aside a[aria-current=page]{background:#d9f2ed;font-weight:650}aside h2{font-size:13px;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-top:28px}
@@ -197,10 +199,11 @@ def render_markdown(source, output, language):
 
 def page(title, language, content, home, portal, other):
     labels = LABELS[language]
+    images = home.removesuffix('index.html') + 'imgs/'
     return f'''<!DOCTYPE html>
 <!-- Generated by scripts/build_docs.py. Edit the Markdown sources instead. -->
-<html lang="{'pt-BR' if language=='pt' else 'en'}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="{html.escape(title)} — BioMolExplorer documentation"><title>{html.escape(title)} | BioMolExplorer</title><link rel="stylesheet" href="{'../' if home=='../../index.html' else ''}assets/docs.css"></head>
-<body><header class="top"><a class="brand" href="{home}">BioMolExplorer</a><nav aria-label="{'Navegação' if language=='pt' else 'Navigation'}"><a href="{home}">{labels['home']}</a><a href="{portal}">{labels['docs']}</a><a href="{other}" hreflang="{'en' if language=='pt' else 'pt-BR'}" lang="{'en' if language=='pt' else 'pt-BR'}">{labels['other']}</a></nav></header>{content}<footer class="footer">{labels['footer']}</footer></body></html>'''
+<html lang="{'pt-BR' if language=='pt' else 'en'}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="{html.escape(title)} — BioMolExplorer documentation"><title>{html.escape(title)} | BioMolExplorer</title><link rel="icon" type="image/png" href="{images}logo.png"><link rel="stylesheet" href="{'../' if home=='../../index.html' else ''}assets/docs.css"></head>
+<body><header class="top"><a class="brand" href="{home}"><img src="{images}BioMolLogo.png" alt="BioMolExplorer" width="662" height="209"></a><nav aria-label="{'Navegação' if language=='pt' else 'Navigation'}"><a href="{home}">{labels['home']}</a><a href="{portal}">{labels['docs']}</a><a href="{other}" hreflang="{'en' if language=='pt' else 'pt-BR'}" lang="{'en' if language=='pt' else 'pt-BR'}">{labels['other']}</a></nav></header>{content}<footer class="footer">{labels['footer']}</footer></body></html>'''
 
 
 def build():

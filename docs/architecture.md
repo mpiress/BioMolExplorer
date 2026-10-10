@@ -23,7 +23,7 @@ src/
     __main__.py       CLI que usa os mesmos casos de uso
     paths.py          caminhos absolutos e compatibilidade dos exemplos
     storage.py        gravação atômica e leitura/escrita de artefatos
-    processes.py      execução dos motores com argv e timeout
+    processes.py      execução dos motores com argv, sem timeout automático
     rate_limit.py     coordenação local de requisições PubChem
     workspace.py      contas, permissões, projetos e arquivos
     pipeline.py       dependências, snapshots e execução de pipelines
@@ -93,7 +93,7 @@ e [multiprocessing no Flet](https://flet.dev/docs/cookbook/multiprocessing/).
 | Recursos de CPU | Uso de todos os cores e `cpu_count()-2` podia exceder recursos ou resultar em zero workers | `cpu_workers` explícito e fallback de pelo menos um worker |
 | Erros | Wrappers e bibliotecas registravam erros e retornavam como se a execução tivesse concluído | Exceções operacionais propagam até a camada de tarefas, com estado `failed` e log |
 | Supervisão | Falhas de inicialização/agendamento e histórico extenso podiam deixar locks ou tarefas pendentes | Lock liberado na inicialização malsucedida, agendamento malsucedido registrado como falha e encerramento consulta todas as tarefas ativas |
-| Validação numérica | `radius` tinha significados diferentes em fingerprints e DOCK6 | Raio de fingerprint inteiro; raio DOCK6 decimal positivo; timeout positivo e finito |
+| Validação numérica | `radius` tinha significados diferentes em fingerprints e DOCK6 | Raio de fingerprint inteiro; raio DOCK6 decimal positivo; timeout opcional positivo e finito |
 | Bibliotecas | `exit(1)` encerrava a aplicação hospedeira | Exceções em código reutilizável |
 | Logs | Imports criavam arquivos/diretórios e avisos eram ocultados globalmente | Handlers abrem arquivos sob demanda; logs de workers ficam separados; supressão global de avisos removida |
 | Persistência | CSVs podiam ficar parcialmente escritos | Escrita atômica para substituições e saídas produzidas em blocos |
@@ -102,12 +102,12 @@ e [multiprocessing no Flet](https://flet.dev/docs/cookbook/multiprocessing/).
 | Similaridade | Score 1 era descartado e somente o primeiro identificador com um fingerprint era considerado | Relações entre identificadores distintos são preservadas, incluindo score 1; sem autoarestas |
 | Similaridade | Acúmulo de todas as arestas na memória | Saída incremental em blocos; o índice de fingerprints ainda ocupa memória |
 | Métodos aproximados | Pré-seleção LSH era usada sem opção de busca exaustiva | `approximate=False` permite comparação exaustiva; modo aproximado continua padrão |
-| ADMET | Moléculas marcadas como tóxicas eram contadas como excluídas, mas permaneciam na saída | Exclusão efetiva; CSV vazio mantém o esquema |
+| ADMET | Alertas estruturais legados eram contados como exclusões, mas permaneciam na saída | Exclusão legada efetiva; perfis novos anotam alertas por padrão e preservam motivos de seleção |
 | Filtros | Inicialização das subclasses pulava a classe base; contagem de fragmentos comparava uma tupla com um inteiro | Inicialização correta, contagem de fragmentos e deduplicação estável |
 | PubChem | Duplicatas entre bases e entre referências | Exclusão por CID antes de propriedades; deduplicação estrutural; relações de origem separadas |
 | PubChem | Reexecuções e tarefas concorrentes repetiam consultas ou disputavam arquivos temporários | Cache persistente compartilhado no workspace, escrita atômica e coordenação do intervalo de requisições |
 | HTTP | Política ChEMBL permitia timeout de um dia e alta concorrência; retentativas ZINC não eram usadas | Limites menores na ChEMBL; ZINC usa a sessão configurada e propaga falhas HTTP |
-| Motores externos | Shell, comandos sensíveis a espaços, esperas artificiais e descritores não fechados | `argv`, timeout, redirecionamento explícito de showbox e sincronização com fechamento de descritores |
+| Motores externos | Shell, comandos sensíveis a espaços, esperas artificiais e descritores não fechados | `argv`, sem timeout automático, redirecionamento explícito de showbox e sincronização com fechamento de descritores |
 | Encadeamento | Algumas etapas exigiam dados e resultados no mesmo diretório | Entradas e saídas explícitas para expansão, ZINC, fingerprints, grafos e conformações Vina → DOCK6 |
 | Redocking | O wrapper podia remover arquivos do diretório de entrada | A operação da camada de aplicação cria uma cópia de trabalho das estruturas |
 | Preparação de docking | A cadeia do último complexo era reaproveitada em outros complexos; a primeira execução dependia de um CSV de centros já existente | Uso da cadeia de cada registro e criação inicial do CSV de centros |
@@ -160,8 +160,8 @@ Cada tarefa possui um UUID e arquivos próprios em
 
 O histórico fica em `.biomolexplorer/jobs.sqlite3`. Conexões são curtas e fechadas
 por chamada. Há um supervisor por workspace, garantido por lock do sistema
-operacional. `max_jobs`, `max_queued_jobs`, `cpu_workers` e `job_timeout` limitam
-os recursos. `cancel` termina o grupo do processo, incluindo comandos e pools
+operacional. `max_jobs`, `max_queued_jobs` e `cpu_workers` limitam os recursos.
+`job_timeout=None` não limita a duração; valores positivos são opcionais e explícitos. `cancel` termina o grupo do processo, incluindo comandos e pools
 que permaneçam no mesmo grupo. O gerenciador deve permanecer vivo durante a
 sessão e ser fechado ao encerrar a aplicação.
 
@@ -209,8 +209,7 @@ quando usado como pré-filtro para métricas diferentes de Tanimoto. Use
 couber no custo quadrático. Não foram realizados benchmarks com milhões de
 compostos.
 
-As classificações ADMET existentes são heurísticas; esta refatoração não valida
-modelos preditivos nem transforma essas classificações em evidência experimental.
+As classes BBB/HIA locais são heurísticas. O backend ADMET-AI opcional acrescenta modelos treinados, com saídas e versões registradas; esta implementação não valida sua aplicabilidade a novas séries nem transforma os resultados em evidência experimental.
 Score, protonação, preparação de receptores, referências de RMSD e critérios de
 consenso de docking exigem validação científica com os dados do estudo. O módulo
 alternativo `caad/redocking.py` continua disponível, mas o wrapper ativo usa
@@ -397,3 +396,11 @@ Topologia insuficiente desabilita classificação, preservando contatos. O guia
 [Visualizador molecular](molecular_viewer.md) descreve o fluxo; o
 [relatório de validação](validation/viewer_controls_2026-10-10.md) delimita a
 cobertura geométrica e WebGL.
+
+## ADMET, execução em lotes e manutenção de resultados
+
+`admet_config.py` valida perfis e intervalos; `admet_predictors.py` resolve o preditor opcional e valida suas saídas; `admet_ai_runner.py` permite inferência em um ambiente Python isolado; `egg_plot.py` centraliza geometria e exportação. A interface `ui/admet_settings.py` separa objetivo, critérios e opções avançadas. Consulte [métodos e limitações](admet_research.md).
+
+`vina_session.py` mantém mapas de afinidade por configuração no worker; alterações de receptor/caixa invalidam a sessão. `dock6_validation.py` verifica entradas e saídas MOL2. `preparation_failures.py` mantém a lista por composto, compartilhada com o pipeline. O fluxo DOCK6 usa grid comum por sítio e subprocessos independentes para candidatos. Erros globais continuam propagados. `stage_cache.py` inclui implementações de preparação, interoperabilidade e validação na assinatura, evitando reaproveitar resultados incompatíveis após mudanças de código.
+
+`ui/action_help.py` organiza ajuda contextual; `ui/run_presentation.py` apresenta resumos de execução. A remoção de artefatos em `result_files.py` verifica permissão e execuções ativas, registra histórico e invalida referências. Veja [guia da interface](frontend.md#navegacao-canvas-e-execucoes-concluidas) e [evidências de execução](pipeline_validation.md#validacao-de-lotes-vina-e-dock6).

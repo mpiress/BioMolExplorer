@@ -127,6 +127,9 @@ class DockingHandoffTests(unittest.TestCase):
 
     def test_dock6_uses_selected_compounds_and_a_string_receptor_identifier(self):
         root=self.store.project_dir(self.project_id);poses=root/'poses';poses.mkdir()
+        self.prepared(new_stage('redocking'))
+        import shutil
+        shutil.copytree(root/'1ABC_A'/'MeuAlvo',root/'MeuAlvo')
         (root/'compounds.csv').write_text('molecule_chembl_id,canonical_smiles\nM1,CCO\n')
         for name in ('1ABC_LIG_1A_M1','1ABC_LIG_1A_M2','1ABC_LIG_1B_M1'):
             (poses/(name+'.lig.pdbqt')).write_text(ATOM+'REMARK VINA RESULT: -7 0 0\n')

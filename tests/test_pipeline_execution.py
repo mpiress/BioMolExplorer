@@ -342,11 +342,11 @@ class PipelineExecutionTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'Dados incompatíveis'):
             validate_pipeline([structures,analysis])
 
-    def test_legacy_automatic_pipeline_requires_confirmation_and_merges_only_selected_files(self):
+    def test_legacy_automatic_pipeline_without_selection_requires_confirmation_and_merges_selected_files(self):
         source=new_stage('retrieve_compounds')
         source['process_all']=True
         analysis=new_stage('admet')
-        analysis['bindings']['base_input_path']={'stage':source['id'],'selector':'compounds.csv'}
+        analysis['bindings']['base_input_path']={'stage':source['id'],'selector':'auto'}
         self.save([source,analysis])
         manager,calls=self.immediate_manager()
         class MultipleFiles(manager):

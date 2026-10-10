@@ -81,13 +81,15 @@ window.BioMolDockingScene = async function (config) {
       button.addEventListener('click',() => {state.selected=row;draw();viewer.zoomTo({model:receptor.model.getID(),...residueSelection(row)});viewer.render();});container.append(button);
     });
     const shortNames={pi_parallel:'π–π',pi_t:'π–π (T)',hydrogen_bond:t('lig. H','H-bond'),hydrophobic:t('hidrofóbico','hydrophobic'),van_der_waals:'vdW'};
-    labels.forEach(({position,rows}) => viewer.addLabel(`${rows[0].resn} ${rows[0].resi}${rows[0].icode || ''} · ${rows[0].chain || '—'} · ${rows.map(row => shortNames[row.kind]).join(' / ')}`,
+    if (el('show-residue-labels').checked) labels.forEach(({position,rows}) => viewer.addLabel(`${rows[0].resn} ${rows[0].resi}${rows[0].icode || ''} · ${rows[0].chain || '—'} · ${rows.map(row => shortNames[row.kind]).join(' / ')}`,
       {position,backgroundColor:'#111b2b',fontColor:'#e5edf9',fontSize:10,showBackground:true}));
   }
   function setupInteractions(capability) {
     el('interaction-controls').hidden=false;
     el('interaction-toggle-label').textContent=t('Mostrar interações em 3D','Show 3D interactions');
+    el('residue-label-toggle-label').textContent=t('Mostrar nomes dos resíduos','Show residue names');
     el('show-interactions').disabled=!capability?.available;
+    el('show-residue-labels').disabled=!capability?.available;
     el('interaction-status').textContent=!capability?.available ?
       t('Classificação indisponível: faltam topologia química ou identificação dos resíduos. Os contatos por distância continuam disponíveis.','Classification unavailable: chemical topology or residue identities are missing. Distance contacts remain available.') :
       `${capability.interactions.length} ${t('interações geométricas. Ligações de hidrogênio exigem H explícitos; ausência não comprova inexistência. van der Waals indica proximidade pelos raios atômicos, sem cálculo de energia.','geometric interactions. Hydrogen bonds require explicit H; absence does not prove no bonds exist. van der Waals indicates proximity by atomic radii, without energy calculation.')}`;
@@ -138,7 +140,7 @@ window.BioMolDockingScene = async function (config) {
         viewer.removeAllLabels();
         const label = `${atom.resn} ${atom.resi}${atom.icode || ''} · ${atom.chain || '—'} · ${atom.atom} (${atom.elem})`;
         el('atom').textContent = label;
-        viewer.addLabel(label,{position:atom,backgroundColor:'#111b2b',fontColor:'#e5edf9',fontSize:12});
+        if (el('show-residue-labels').checked) viewer.addLabel(label,{position:atom,backgroundColor:'#111b2b',fontColor:'#e5edf9',fontSize:12});
         viewer.render();
       });
     });
@@ -147,7 +149,7 @@ window.BioMolDockingScene = async function (config) {
       const rep=el('representation').value;
       receptor.model.setStyle(selection,rep==='spheres' ? {sphere:{color:'#fb7185',scale:.6}} : rep==='lines' ? {line:{color:'#fb7185'}} : {stick:{color:'#fb7185',radius:.24}});
       const atom = receptor.model.selectedAtoms(selection).find(a => a.atom === 'CA') || receptor.model.selectedAtoms(selection)[0];
-      if (atom) viewer.addLabel(`${row.resn} ${row.resi}${row.icode || ''} · ${row.chain || '—'}`,{position:atom,backgroundColor:'#111b2b',fontColor:'#ffffff',fontSize:12});
+      if (atom && el('show-residue-labels').checked) viewer.addLabel(`${row.resn} ${row.resi}${row.icode || ''} · ${row.chain || '—'}`,{position:atom,backgroundColor:'#111b2b',fontColor:'#ffffff',fontSize:12});
     }
     drawInteractions();
     viewer.render();
@@ -199,7 +201,7 @@ window.BioMolDockingScene = async function (config) {
     el('summary').textContent=data.name;
     el('representation').value=receptor.format==='mol2' ? 'sticks' : 'cartoon';
     setupInteractions(data.interactions);contactTable();draw();viewer.zoomTo({model:state.layers.find(layer => layer.role==='pose').model.getID()});viewer.render();
-    for (const id of ['representation','ligand-representation','hydrogens','show-interactions','color','ligands','water','chain']) el(id).addEventListener('change',draw);
+    for (const id of ['representation','ligand-representation','hydrogens','show-interactions','show-residue-labels','color','ligands','water','chain']) el(id).addEventListener('change',draw);
     el('cutoff').addEventListener('change',() => {const value=Number(el('cutoff').value);if (!Number.isFinite(value) || value<2 || value>8) {el('cutoff').value=state.cutoff;return;}state.cutoff=value;contactTable();draw();});
     el('center').addEventListener('click',() => {viewer.zoomTo();viewer.render();});
     el('snapshot').addEventListener('click',() => {const link=document.createElement('a');link.href=viewer.pngURI();link.download='docking.png';link.click();});

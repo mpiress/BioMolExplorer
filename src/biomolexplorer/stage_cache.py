@@ -32,11 +32,14 @@ def manifest_matches(manifest):
 
 def implementation_digest():
     digest = hashlib.sha256()
+    digest.update((SOURCE_ROOT/'biomolexplorer/preparation_failures.py').read_bytes())
+    for name in ('docking_preparation.py','docking_data.py','dock6_validation.py'):
+        digest.update((SOURCE_ROOT/'biomolexplorer'/name).read_bytes())
     for folder in ('caad', 'crawlers', 'kernel', 'wrappers'):
         for path in sorted((SOURCE_ROOT / folder).rglob('*.py')):
             digest.update(str(path.relative_to(SOURCE_ROOT)).encode())
             digest.update(path.read_bytes())
-    for name in ('operations.py','pipeline.py','input_validation.py','molecule_quality.py','fingerprint_selection.py','graph_inputs.py','docking_inputs.py','visualizations.py'):
+    for name in ('operations.py','pipeline.py','input_validation.py','molecule_quality.py','fingerprint_selection.py','graph_inputs.py','docking_inputs.py','visualizations.py','admet_config.py','admet_predictors.py','admet_ai_runner.py','egg_plot.py','vina_session.py'):
         digest.update((SOURCE_ROOT / 'biomolexplorer' / name).read_bytes())
     return digest.hexdigest()
 

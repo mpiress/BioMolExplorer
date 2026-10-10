@@ -14,13 +14,11 @@ __doc__ = HeaderBuilder.build(
 
 #----------------------------------------------------------------------------------------------
 from pathlib import Path
-import matplotlib.pyplot as plt
-from matplotlib.patches import Ellipse
 #----------------------------------------------------------------------------------------------
 
 #----------------------------------------------------------------------------------------------
 from rdkit import Chem
-from rdkit.Chem import Descriptors
+from rdkit.Chem import Descriptors, QED, rdMolDescriptors
 from rdkit.Chem.FilterCatalog import FilterCatalog, FilterCatalogParams
 #----------------------------------------------------------------------------------------------
 
@@ -40,6 +38,10 @@ class MoleculeEvaluator:
         params = FilterCatalogParams()
         params.AddCatalog(FilterCatalogParams.FilterCatalogs.PAINS)
         self.pains_catalog = FilterCatalog(params)
+        self.alert_catalogs = {'PAINS':self.pains_catalog}
+        for name in ('BRENK','NIH'):
+            params=FilterCatalogParams();params.AddCatalog(getattr(FilterCatalogParams.FilterCatalogs,name))
+            self.alert_catalogs[name]=FilterCatalog(params)
 
         # Compila os padrões SMARTS
         self.mutagenic_patterns = [Chem.MolFromSmarts(x) for x in self.MUTAGENIC_SMARTS]
@@ -61,13 +63,42 @@ class MoleculeEvaluator:
                 'MW': Descriptors.MolWt(mol),
                 'HBD': Descriptors.NumHDonors(mol),
                 'HBA': Descriptors.NumHAcceptors(mol),
-                'RB': Descriptors.NumRotatableBonds(mol)
+                'RB': Descriptors.NumRotatableBonds(mol),
+                'QED': QED.qed(mol),
+                'FractionCSP3': rdMolDescriptors.CalcFractionCSP3(mol),
+                'HeavyAtoms': mol.GetNumHeavyAtoms(),
+                'Rings': rdMolDescriptors.CalcNumRings(mol),
+                'AromaticRings': rdMolDescriptors.CalcNumAromaticRings(mol),
+                'FormalCharge': Chem.GetFormalCharge(mol),
+                'Fragments': len(Chem.GetMolFrags(mol)),
+                'AromaticProportion': sum(a.GetIsAromatic() for a in mol.GetAtoms())/max(1,mol.GetNumHeavyAtoms())
             }
 
         except Exception as e:
             self.logger.error(f'Error during to perform the calculate_properties function', exc_info=True)
             raise
 
+
+    def screening_properties(self, props, catalogs):
+        """Descriptors and interpretable rules; alerts are not toxicity labels."""
+        mol=props['Mol'];mw,logp,tpsa=props['MW'],props['WLOGP'],props['TPSA']
+        hbd,hba,rb=props['HBD'],props['HBA'],props['RB']
+        # ESOL-style RDKit refit documented by Pat Walters (see docs/admet_research.md).
+        values=dict(
+            ESOL_logS=0.26121066137801696-0.0066138847738667125*mw-0.7416739523408995*logp+
+                0.003451545565957996*rb-0.42624840441316975*props['AromaticProportion'],
+            logKp=-6.3+0.71*logp-0.0061*mw,  # Potts–Guy-style, RDKit logP substitution (cm/s).
+            Lipinski_violations=sum((mw>500,logp>5,hbd>5,hba>10)),
+            Veber_violations=sum((rb>10,tpsa>140)),
+            Fragment_violations=sum((mw>300,logp>3,hbd>3,hba>3,rb>3,tpsa>60)))
+        alerts=[name+': '+entry.GetDescription() for name in catalogs for entry in self.alert_catalogs[name].GetMatches(mol)]
+        values.update(StructuralAlert_count=len(alerts),StructuralAlerts='; '.join(alerts))
+        warnings=[]
+        if props['Fragments']>1:warnings.append('Disconnected structure: salt/mixture; descriptors describe the submitted structure')
+        if any(atom.GetFormalCharge() for atom in mol.GetAtoms()):warnings.append('Charged structure: pH-dependent permeability is not modeled')
+        if mw>700 or tpsa>200:warnings.append('Large/polar structure: passive-permeability heuristics require particular caution')
+        values['ADMET_warnings']='; '.join(warnings)
+        return values
 
     def is_toxic(self, mol):
 
@@ -104,48 +135,8 @@ class MoleculeEvaluator:
 
 
 class BoiledEggPlotter:
-
     @staticmethod
     def plot(df, output_path, output_image_file):
-        logger = LoggerManager.get_logger(__class__.__name__, log_file='logs/admet.log')
-
-        try:
-            path = directory(output_path) + output_image_file
-
-            fig, ax = plt.subplots(figsize=(11, 8))
-            ax.set_facecolor('#d9d9d9')
-
-            # Região HIA (Clara de ovo)
-            white = Ellipse(xy=(75, 2.0), width=150, height=6.0, angle=0,
-                            facecolor='white', edgecolor='black', linewidth=1.5)
-            ax.add_patch(white)
-
-            # Região BBB (Gema)
-            yolk = Ellipse(xy=(42, 2.3), width=94, height=4.4, angle=0,
-                        facecolor='#ffe066', edgecolor='orange', linewidth=1.5)
-            ax.add_patch(yolk)
-
-            # Plotar os pontos BBB+ e BBB-
-            bbb_plus = df[df['BBB'] == 'BBB+']
-            bbb_minus = df[df['BBB'] == 'BBB-']
-
-            ax.scatter(bbb_plus['TPSA'], bbb_plus['WLOGP'], color='red', s=55,
-                    edgecolors='black', linewidths=0.4, alpha=0.85, label='BBB+')
-            ax.scatter(bbb_minus['TPSA'], bbb_minus['WLOGP'], color='blue', s=55,
-                    edgecolors='black', linewidths=0.4, alpha=0.75, label='BBB-')
-
-            # Configurações do gráfico
-            plt.xlim(0, 200)
-            plt.ylim(-2, 7)
-            plt.xlabel('TPSA ($Å^2$)', fontsize=13)
-            plt.ylabel('WLOGP', fontsize=13)
-            plt.title('BOILED-Egg Plot', fontsize=15)
-            plt.legend(loc='upper right')
-            plt.tight_layout()
-
-            plt.savefig(path, dpi=300)
-            plt.close() # Libera memória do pyplot
-
-        except Exception as e:
-            logger.error(f'Error during to perform the plot function', exc_info=True)
-            raise
+        from biomolexplorer.egg_plot import egg_png
+        from biomolexplorer.visualizations import egg_view
+        Path(directory(output_path),output_image_file).write_bytes(egg_png(egg_view(df,'EGG · BioMolExplorer')))

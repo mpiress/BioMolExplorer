@@ -7,9 +7,12 @@ from .pipeline import validate_pipeline
 from .bindings import sources, dependencies, pack
 
 NODE_WIDTH = 290
-CANVAS_WIDTH = 2200
+CANVAS_WIDTH = 12000
 CANVAS_HEIGHT = 40000
-ROW_SPACING = 320
+ROW_SPACING = 360
+COLUMN_SPACING = 390
+LAYOUT_COLUMNS = 30
+PLACEMENT_COLUMNS = 8
 PORT_LABELS = {'base_input_path':'Dados de entrada','base_selected_mols':'Compostos',
                'similarity_path':'Similaridades',
                'base_vina_path':'Resultados Vina','base_dock6_path':'Resultados DOCK6'}
@@ -128,7 +131,7 @@ def position(stage,index=0):
     value=stage.get('position')
     if isinstance(value,dict) and all(type(value.get(k)) in (int,float) and math.isfinite(value[k]) for k in ('x','y')):
         return bounded_position(value['x'],value['y'],stage)
-    return bounded_position(60+(index%5)*350,64+(index//5)*ROW_SPACING,stage)
+    return bounded_position(60+(index%PLACEMENT_COLUMNS)*COLUMN_SPACING,64+(index//PLACEMENT_COLUMNS)*ROW_SPACING,stage)
 
 
 def bounded_position(x,y,stage):
@@ -136,16 +139,26 @@ def bounded_position(x,y,stage):
             'y':max(24,min(CANVAS_HEIGHT-node_height(stage)-24,float(y)))}
 
 
-def available_position(stages,stage):
-    """Find a free cell after deletion or movement instead of stacking new nodes."""
-    for index in range(500):
-        candidate=bounded_position(60+(index%5)*350,64+(index//5)*ROW_SPACING,stage)
-        def overlaps(other,i):
+def available_position(stages,stage,x=None,y=None):
+    """Place a new/copy/drop node in a free region, preserving existing positions."""
+    def free(candidate):
+        for i,other in enumerate(stages):
             p=position(other,i)
-            return abs(candidate['x']-p['x'])<NODE_WIDTH+20 and abs(candidate['y']-p['y'])<max(node_height(stage),node_height(other))+20
-        if not any(overlaps(other,i) for i,other in enumerate(stages)):
-            return candidate
-    return bounded_position(60+(len(stages)%5)*350,64+(len(stages)//5)*ROW_SPACING,stage)
+            if (candidate['x']<p['x']+NODE_WIDTH+24 and candidate['x']+NODE_WIDTH+24>p['x'] and
+                candidate['y']<p['y']+node_height(other)+24 and candidate['y']+node_height(stage)+24>p['y']):
+                return False
+        return True
+    if x is not None and y is not None:
+        preferred=bounded_position(x,y,stage)
+        if free(preferred):return preferred
+        for radius in range(1,12):
+            for dx,dy in ((radius,0),(0,radius),(-radius,0),(0,-radius),(radius,radius)):
+                candidate=bounded_position(x+dx*COLUMN_SPACING,y+dy*ROW_SPACING,stage)
+                if free(candidate):return candidate
+    for index in range(1000):
+        candidate=bounded_position(60+(index%PLACEMENT_COLUMNS)*COLUMN_SPACING,64+(index//PLACEMENT_COLUMNS)*ROW_SPACING,stage)
+        if free(candidate):return candidate
+    raise ValueError('Não há espaço livre para adicionar o bloco. Organize o pipeline.')
 
 
 def arrange(stages):
@@ -160,13 +173,13 @@ def arrange(stages):
         row=rows.get(level,0)
         rows[level]=row+1
     band_y=64
-    for band in range(max(levels.values(),default=0)//5+1):
+    for band in range(max(levels.values(),default=0)//LAYOUT_COLUMNS+1):
         counters={}
         for stage in stages:
             level=levels[stage['id']]
-            if level//5!=band: continue
+            if level//LAYOUT_COLUMNS!=band: continue
             row=counters.get(level,0); counters[level]=row+1
-            stage['position']=bounded_position(60+(level%5)*350,band_y+row*ROW_SPACING,stage)
+            stage['position']=bounded_position(60+(level%LAYOUT_COLUMNS)*COLUMN_SPACING,band_y+row*ROW_SPACING,stage)
         band_y+=max(counters.values(),default=1)*ROW_SPACING+80
 
 

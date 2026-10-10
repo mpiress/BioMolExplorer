@@ -151,6 +151,21 @@ with tempfile.TemporaryDirectory(prefix='biomol-webgl-') as tmp:
     if evaluate('biomolDockingScene.interactions.length'):
      assert evaluate('biomolDockingScene.shapes.length===biomolDockingScene.interactions.length'), '3D interaction lines missing'
      assert evaluate('biomolDockingScene.shapes.every(s=>s.hoverable && s.intersectionShape.cylinder.length>1)'), 'Dashed interactive geometry missing'
+     evaluate('document.querySelector(".interaction-row").click();true')
+     assert evaluate('biomolViewer.labels.length>0'), 'Residue labels missing by default'
+     labeled_image=evaluate('biomolViewer.pngURI()')
+     lines=evaluate('biomolDockingScene.shapes.length')
+     evaluate('document.getElementById("show-residue-labels").click();true')
+     assert evaluate('biomolViewer.labels.length===0'), 'Residue labels survived visibility toggle'
+     assert evaluate('biomolDockingScene.shapes.length')==lines, 'Label toggle removed interaction lines'
+     assert evaluate('biomolViewer.pngURI()')!=labeled_image, 'Exported image did not reflect hidden labels'
+     evaluate('document.querySelector(".interaction-row").click();true')
+     assert evaluate('biomolViewer.labels.length===0'), 'Selecting a residue restored hidden labels'
+     evaluate('document.getElementById("representation").dispatchEvent(new Event("change"));true')
+     assert evaluate('biomolViewer.labels.length===0'), 'Redraw restored hidden labels'
+     evaluate('document.getElementById("show-residue-labels").click();true')
+     assert evaluate('biomolViewer.labels.length>0'), 'Residue labels did not return'
+     evaluate('document.getElementById("center").click();true')
      kinds=evaluate('[...new Set(biomolDockingScene.interactions.map(r=>r.kind))]')
      for kind in kinds:
       # Use real projected dash centres: callbacks alone cannot verify picking.

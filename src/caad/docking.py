@@ -454,10 +454,15 @@ class Docking():
             args = [(file,) for file in receptors]
             self.process_in_parallel(method_name='prepare_on_chimera', args_list=args)
 
+            converted_receptors = set()
             for pdb in pdb_codes:
                 chain = pdb[3]
+                receptor_key = (pdb[0], chain)
+                if receptor_key in converted_receptors:
+                    continue
                 options = dict(DEFAULTS, **(preparation_pairs or {}).get(pair_key(pdb), {}).get('receptor', {}))
                 self.prepare_on_obabel(f'{pdb[0]}_{chain}.dockprep.mol2', f'{pdb[0]}_{chain}.dockprep.pdbqt', ([('p',str(pH))] if options['add_hydrogens'] else []) + [('xr','')], input_format='mol2', output_format='pdbqt')
+                converted_receptors.add(receptor_key)
 
             args = [(file,) for file in ligands]
             self.process_in_parallel(method_name='prepare_on_chimera', args_list=args)
@@ -735,6 +740,8 @@ class DockVina(Docking):
 
         try:
 
+            from biomolexplorer.vina_session import VinaSessions
+            sessions = VinaSessions()
             molecules = [f.rsplit('.lig.pdbqt')[0] for f in os.listdir(directory(self.ligandpath)) if f.endswith('.lig.pdbqt')]
 
             self.__pdb_codes   = [(pdb[0], pdb[1], pdb[2], pdb[3]) for pdb in self.__pdb_codes]
@@ -765,7 +772,11 @@ class DockVina(Docking):
                      sync_directory(directory(self.outputpath))
 
                      command = ['vina', '--config', f'{reference}_{mol}.vina']
-                     validate = self.perform_subprocess(command, self.outputpath)
+                     configuration = Path(self.outputpath) / f'{reference}_{mol}.vina'
+                     # The configuration also preserves customized templates.
+                     validate = sessions.run(configuration, self.outputpath) if configuration.is_file() else False
+                     if not validate:
+                         validate = self.perform_subprocess(command, self.outputpath)
 
                      if not validate:
                          f1 = fileHandling(input_path=base_selected_mols, output_path=base_selected_mols)
@@ -828,6 +839,84 @@ class Dock6(Docking):
         shutil.copytree(self.__base_output_path,self.export_path,dirs_exist_ok=True)
         shutil.rmtree(self.runtime_path)
 
+    def set_compound_report(self, dataset, report):
+        from biomolexplorer.docking_data import read_compounds
+        self.compound_dataset=Path(dataset)
+        self.compound_rows={row['molecule_chembl_id']:(index,row) for index,row in enumerate(read_compounds(dataset),2)}
+        self.failure_report=report
+        self.excluded_compounds=set()
+
+    def _ensure_compounds(self):
+        if not hasattr(self,'failure_report'):
+            from biomolexplorer.preparation_failures import CURRENT_REPORT,PreparationFailures
+            self.failure_report=CURRENT_REPORT.get() or PreparationFailures()
+            self.compound_dataset=Path(self.ligandpath)/'compounds.csv'
+            self.compound_rows={}
+            self.excluded_compounds=set()
+
+    def _compound_guard(self, code, step):
+        self._ensure_compounds()
+        index,row=self.compound_rows.get(code,(None,{'molecule_chembl_id':code}))
+        names={code+'.lig.min_scored.mol2',code+'_scored.mol2',code+'_footprint_scored.txt',code+'.pdf'}
+        cleanup=[p for p in Path(self.__base_output_path).rglob('*') if p.is_file() and p.name in names]
+        return self.failure_report.compound(self.compound_dataset,index,row,self.export_path,cleanup,step=step)
+
+    def _run_compound_jobs(self, method, jobs, step):
+        """Collect failures in the parent thread; never lose child-process reports."""
+        from concurrent.futures import as_completed
+        from biomolexplorer.dock6_validation import validate_mol2
+        from biomolexplorer.footprints import footprint_rows
+        from biomolexplorer.progress import report_progress
+        self._ensure_compounds()
+        with ThreadPoolExecutor(max_workers=self.nprocess) as executor:
+            futures={executor.submit(getattr(self,method),*args):(code,output) for code,args,output in jobs}
+            for completed,future in enumerate(as_completed(futures),1):
+                code,output=futures[future];success=False
+                with self._compound_guard(code,step):
+                    future.result()
+                    if output.suffix=='.mol2':validate_mol2(output,scored=True)
+                    else:footprint_rows(output)
+                    success=True
+                if not success:self.excluded_compounds.add(code)
+                report_progress(step+': '+code,completed,len(jobs))
+        self.failure_report.write(self.export_path)
+
+    def validate_setup(self):
+        from biomolexplorer.processes import ScientificToolError
+        root=Path(self.__dock6_path)
+        for name in ('dock6','sphgen','sphere_selector','showbox','grid'):
+            file=root/'bin'/name
+            if not file.is_file() or not os.access(file,os.X_OK):
+                raise ScientificToolError('Executável DOCK6 ausente ou não executável: '+str(file),'TOOL_NOT_FOUND','Revise o diretório de instalação do DOCK6.')
+        for name in ('vdw_AMBER_parm99.defn','flex.defn','flex_drive.tbl'):
+            file=root/'parameters'/name
+            if not file.is_file() or not file.stat().st_size:raise ValueError('Parâmetro global DOCK6 ausente ou vazio: '+str(file))
+        self._ensure_compounds()
+        from biomolexplorer.dock6_validation import compound_code,validate_mol2
+        for file in sorted(Path(self.ligandpath).glob('*.mol2')):
+            code=compound_code(file);success=False
+            with self._compound_guard(code,'Validação do ligante MOL2 para DOCK6'):
+                validate_mol2(file)
+                success=True
+            if not success:self.excluded_compounds.add(code)
+        self.failure_report.write(self.export_path)
+
+    def perform_subprocess(self, command, local_path=None, shell=False, check=True):
+        import shlex
+        arguments=shlex.split(command) if isinstance(command,str) else list(command)
+        if arguments[0] in ('dock6','sphgen','sphere_selector','showbox','grid'):
+            arguments[0]=str(Path(self.__dock6_path)/'bin'/arguments[0])
+        return super().perform_subprocess(arguments,local_path,shell,check)
+
+    def _grid_prefix(self, code):
+        name='binding_site' if getattr(self,'binding_site_center',None) is not None else code
+        return str(Path(self.__base_output_path)/'gridbox'/name)
+
+    def _ligand_files(self, folder):
+        from biomolexplorer.dock6_validation import compound_code
+        self._ensure_compounds()
+        return [p.name for p in sorted(Path(folder).glob('*.mol2')) if compound_code(p) not in self.excluded_compounds]
+
 
 
     def prepare_surface(self) -> None:
@@ -873,11 +962,23 @@ class Dock6(Docking):
                     f'@<TRIPOS>ATOM\n1 C {x} {y} {z} C.3 1 SITE 0.0\n'
                     '@<TRIPOS>BOND\n@<TRIPOS>SUBSTRUCTURE\n1 SITE 1\n')
 
-            files = [f for f in os.listdir(directory(self.ligandpath)) if f.endswith('.mol2')]
+            files = self._ligand_files(self.ligandpath)
+            if site:files=files[:1]
             for ligand in files:
                 command = ['sphere_selector', selector, str(site) if site else directory(self.ligandpath) + ligand, str(self.__distance)]
                 self.perform_subprocess(command, self.outputpath)
-                os.rename(directory(self.outputpath) + 'selected_spheres.sph', directory(self.outputpath) + ligand.rsplit('.')[0] + '.sph')
+                from biomolexplorer.dock6_validation import compound_code
+                selected=Path(self.outputpath)/'selected_spheres.sph'
+                if not selected.is_file() or not selected.stat().st_size:raise ValueError('A seleção do sítio DOCK6 não produziu esferas.')
+                if site:
+                    spheres=[]
+                    for line in selected.read_text().splitlines():
+                        fields=line.split()
+                        try:
+                            if len(fields)>=5 and int(fields[0])>0 and all(math.isfinite(float(v)) for v in fields[1:5]) and float(fields[4])>0:spheres.append(fields)
+                        except ValueError:pass
+                    if not spheres:raise ValueError('Nenhuma esfera válida foi selecionada para o sítio DOCK6. Revise centro e distância.')
+                os.rename(selected,Path(self.outputpath)/('binding_site.sph' if site else compound_code(ligand)+'.sph'))
 
         except Exception as e:
             self.logger.error(f'during to perform into prepare_surface function', exc_info=True)
@@ -891,8 +992,6 @@ class Dock6(Docking):
             os.remove(output + "temp1.ms") if os.path.exists(output + "temp1.ms") else None
             os.remove(output + "temp2.sph") if os.path.exists(output + "temp2.sph") else None
             os.remove(output + "temp3.atc") if os.path.exists(output + "temp3.atc") else None
-            os.remove(output + "OUTSPH") if os.path.exists(output + "OUTSPH") else None
-            os.remove(output + 'INSPH') if os.path.exists(output + 'INSPH') else None
 
             sync_directory(output)
 
@@ -915,14 +1014,16 @@ class Dock6(Docking):
             for ligand in files:
 
                 self.generate_docking_script(input_template='src/scripts/dock6/showbox.template',
-                                             output_script=directory(self.outputpath) + f'{ligand.split(".")[0]}.in',
+                                             output_script=directory(self.outputpath) + f'{Path(ligand).stem}.in',
                                              in_surface='../surface/Molecules/' + ligand,
-                                             out_surface=ligand.rsplit('.')[0]+'.box.pdb')
+                                             out_surface=Path(ligand).stem+'.box.pdb')
 
 
             for ligand in files:
-                command = f'showbox < {ligand.split(".")[0]}.in'
+                command = ['showbox','<',Path(ligand).stem+'.in']
                 self.perform_subprocess(command, self.outputpath)
+                box=Path(self.outputpath)/(Path(ligand).stem+'.box.pdb')
+                if not box.is_file() or not box.stat().st_size:raise ValueError('A etapa showbox não produziu a caixa do sítio: '+box.name)
 
 
         except Exception as e:
@@ -932,8 +1033,6 @@ class Dock6(Docking):
 
         finally:
 
-            files = [f for f in os.listdir(directory(self.outputpath)) if f.endswith('.in')]
-            [os.remove(directory(self.outputpath) + ligand) for ligand in files if os.path.exists(directory(self.outputpath) + ligand)]
 
             sync_directory(directory(self.outputpath))
 
@@ -957,7 +1056,7 @@ class Dock6(Docking):
             Exception: If any error occurs during the docking analysis, a log file will be created and posted in the log folder.
         """
 
-        output = directory(self.outputpath) + showbox.rsplit('.')[0]
+        output = directory(self.outputpath) + showbox.removesuffix('.box.pdb')
         command = ['grid', '-i', directory(self.outputpath) + f'{tid}_grid.in', '-o', f'{output}.out', '-t']
         self.perform_subprocess(command, self.outputpath)
 
@@ -985,10 +1084,16 @@ class Dock6(Docking):
                                             receptor_file=directory(self.receptorpath) + self.__pdb_code + '.dockprep.mol2',
                                             box_file=f'{directory(self.__base_output_path)}/showbox/' + showbox,
                                             dock6_path=self.__dock6_path,
-                                            score_grid_prefix=directory(self.outputpath) + showbox.rsplit('.')[0])
+                                            score_grid_prefix=directory(self.outputpath) + showbox.removesuffix('.box.pdb'))
 
 
-            self.process_in_parallel(method_name='perform_parallel_gridbox', args_list=args) if args else None
+            self.process_in_parallel(method_name='perform_parallel_gridbox', args_list=args,process_by_threads=True) if args else None
+            if not files:raise ValueError('Nenhuma caixa de busca DOCK6 foi produzida.')
+            for showbox in files:
+                prefix=Path(self.outputpath)/showbox.removesuffix('.box.pdb')
+                for suffix in ('.nrg','.bmp'):
+                    file=prefix.with_name(prefix.name+suffix)
+                    if not file.is_file() or not file.stat().st_size:raise ValueError('Grid DOCK6 ausente ou vazio: '+file.name)
 
 
         except Exception as e:
@@ -998,8 +1103,6 @@ class Dock6(Docking):
 
         finally:
 
-            [os.remove(directory(self.outputpath) + f) for f in os.listdir(directory(self.outputpath)) if f.endswith('_grid.in')]
-            [os.remove(directory(self.outputpath) + f) for f in os.listdir(directory(self.outputpath)) if f.endswith('.out')]
             sync_directory(directory(self.outputpath))
 
 
@@ -1021,57 +1124,26 @@ class Dock6(Docking):
         """
 
 
-        output = directory(self.outputpath) + str(tid) + ligand.rsplit('.')[0]
+        output = directory(self.outputpath) + str(tid) + Path(ligand).stem
         command = ['dock6', '-i', directory(self.outputpath) + f'{tid}_min.in', '-o', f'{output}.out']
         self.perform_subprocess(command, self.outputpath)
 
         sync_directory(directory(self.outputpath))
 
     def prepare_minimization(self):
-        """
-        This function outlines the steps to prepare a parallel execution of perform_parallel_minimization method for the DOCK 6 software.
-        The analysis is conducted taking into account the number of CPU's specified in the computational architecture.
-
-        Raises:
-            Exception: If any error occurs during the docking analysis, a log file will be created and posted in the log folder.
-        """
-
-        try:
-            self.set_outputpath(f'{self.__base_output_path}/energy_min/')
-
-            files = [f for f in os.listdir(f'{directory(self.ligandpath)}') if f.endswith('.mol2')]
-            args = [(ligand[1], ligand[0]) for ligand in enumerate(files)]
-
-            for tid, ligand in enumerate(files):
-                self.generate_docking_script(input_template='src/scripts/dock6/min.template',
-                                        output_script=directory(self.outputpath) + str(tid) +"_min.in",
-                                        ligand_atom_file=f'{directory(self.ligandpath)}' + ligand,
-                                        rmsd_reference_filename=f'{directory(self.ligandpath)}' + ligand,
-                                        grid_score_grid_prefix=f'{directory(self.__base_output_path)}/gridbox/' + ligand.rsplit('.')[0],
-                                        dock6_path=self.__dock6_path,
-                                        ligand_outfile_prefix=directory(self.outputpath) + ligand.rsplit('.')[0]+'.lig.min')
-
-
-
-            self.process_in_parallel(method_name='perform_parallel_minimization', args_list=args) if args else None
-
-
-        except Exception as e:
-            self.logger.error(f'during to perform into prepare_minimization function', exc_info=True)
-            self.logger.error(f'STDERR: {e}', exc_info=True)
-            raise
-
-        finally:
-            time.sleep(5)
-            sync_directory(directory(self.outputpath))
-            if os.path.isdir(directory(self.outputpath)):
-                [os.remove(directory(self.outputpath) + f) for f in os.listdir(directory(self.outputpath)) if f.endswith('_min.in')]
-                [os.remove(directory(self.outputpath) + f) for f in os.listdir(directory(self.outputpath)) if f.endswith('.out')]
-                sync_directory(directory(self.outputpath))
-
-
-
-
+        from biomolexplorer.dock6_validation import compound_code
+        self.set_outputpath(f'{self.__base_output_path}/energy_min/')
+        jobs=[]
+        for tid,ligand in enumerate(self._ligand_files(self.ligandpath)):
+            code=compound_code(ligand)
+            self.generate_docking_script(input_template='src/scripts/dock6/min.template',
+                output_script=str(Path(self.outputpath)/f'{tid}_min.in'),
+                ligand_atom_file=str(Path(self.ligandpath)/ligand),
+                rmsd_reference_filename=str(Path(self.ligandpath)/ligand),
+                grid_score_grid_prefix=self._grid_prefix(code),dock6_path=self.__dock6_path,
+                ligand_outfile_prefix=str(Path(self.outputpath)/(code+'.lig.min')))
+            jobs.append((code,(ligand,tid),Path(self.outputpath)/(code+'.lig.min_scored.mol2')))
+        self._run_compound_jobs('perform_parallel_minimization',jobs,'Minimização DOCK6')
 
 
     def __identify_residues(self, filename, max_res):
@@ -1270,56 +1342,22 @@ class Dock6(Docking):
         sync_directory(directory(self.outputpath))
 
     def prepare_footprint(self, docked=False):
-        """
-        This function outlines the steps to prepare a parallel execution of perform_parallel_footprint method for the DOCK 6 software.
-        The analysis is conducted taking into account the number of CPU's specified in the computational architecture.
-
-        Raises:
-            Exception: If any error occurs during the docking analysis, a log file will be created and posted in the log folder.
-        """
-
-        try:
-            self.set_outputpath(f'{self.__base_output_path}/footprint/')
-
-            from biomolexplorer.footprints import footprint_receptor
-            receptor=footprint_receptor(Path(self.receptorpath)/(self.__pdb_code+'.dockprep.mol2'),
-                Path(self.outputpath)/'footprint_receptor.mol2')
-
-            files = [f.split('.')[0] for f in os.listdir(f'{directory(self.ligandpath)}') if f.endswith('.mol2')]
-
-            args = [(self.__pdb_code, ligand[1], ligand[0]) for ligand in enumerate(files)]
-
-            for tid, ligand in enumerate(files):
-                self.generate_docking_script(input_template='src/scripts/dock6/footprint.template',
-                                        output_script=directory(self.outputpath) + str(tid) +"_footprint.in",
-                                        ligand_atom_file=(f'{directory(self.__base_output_path)}/{self.__conformer_search_type}/' + ligand + '_scored.mol2' if docked else
-                                            f'{directory(self.__base_output_path)}/energy_min/' + ligand + '.lig.min_scored.mol2'),
-                                        fps_score_footprint_reference_mol2_filename=f'{directory(self.ligandpath)}' + ligand + '.lig.mol2',
-                                        fps_score_receptor_filename=str(receptor),
-                                        dock6_path=self.__dock6_path,
-                                        ligand_outfile_prefix=directory(self.outputpath) + ligand)
-
-
-            self.process_in_parallel(method_name='perform_parallel_footprint', args_list=args) if args else None
-
-            from biomolexplorer.footprints import footprint_rows
-            for ligand in files:
-                footprint_rows(Path(self.outputpath)/(ligand+'_footprint_scored.txt'))
-
-
-        except Exception as e:
-            self.logger.error(f'during to perform into prepare_footprint function', exc_info=True)
-            self.logger.error(f'STDERR: {e}', exc_info=True)
-            raise
-
-
-        finally:
-
-            sync_directory(directory(self.outputpath))
-            [os.remove(directory(self.outputpath) + f) for f in os.listdir(f'{directory(self.outputpath)}') if f.endswith('.in')]
-            [os.remove(directory(self.outputpath) + f) for f in os.listdir(f'{directory(self.outputpath)}') if f.endswith('.out')]
-
-
+        from biomolexplorer.dock6_validation import compound_code
+        from biomolexplorer.footprints import footprint_receptor
+        self.set_outputpath(f'{self.__base_output_path}/footprint/')
+        receptor=footprint_receptor(Path(self.receptorpath)/(self.__pdb_code+'.dockprep.mol2'),
+                                   Path(self.outputpath)/'footprint_receptor.mol2')
+        jobs=[]
+        for tid,filename in enumerate(self._ligand_files(self.ligandpath)):
+            code=compound_code(filename)
+            pose=Path(self.__base_output_path)/(self.__conformer_search_type if docked else 'energy_min')/(code+'_scored.mol2' if docked else code+'.lig.min_scored.mol2')
+            self.generate_docking_script(input_template='src/scripts/dock6/footprint.template',
+                output_script=str(Path(self.outputpath)/f'{tid}_footprint.in'),ligand_atom_file=str(pose),
+                fps_score_footprint_reference_mol2_filename=str(Path(self.ligandpath)/filename),
+                fps_score_receptor_filename=str(receptor),dock6_path=self.__dock6_path,
+                ligand_outfile_prefix=str(Path(self.outputpath)/code))
+            jobs.append((code,(self.__pdb_code,code,tid),Path(self.outputpath)/(code+'_footprint_scored.txt')))
+        self._run_compound_jobs('perform_parallel_footprint',jobs,'Footprint DOCK6')
 
 
     def plot_footprint_results(self):
@@ -1336,14 +1374,18 @@ class Dock6(Docking):
 
             self.set_outputpath(f'{self.__base_output_path}/footprint/')
             sync_directory(directory(self.outputpath))
-            time.sleep(5)
 
             files = [f for f in os.listdir(directory(self.outputpath)) if f.endswith('_footprint_scored.txt')]
             for filename in files:
                 from biomolexplorer.footprints import footprint_rows
-                footprint_rows(Path(self.outputpath)/filename)
-                resindex_selected, resindex_remainder = self.__identify_residues(filename, self.__max_residues)
-                self.__plot_footprints(filename.replace('_footprint_scored.txt', ''), resindex_selected, resindex_remainder)
+                code=filename.removesuffix('_footprint_scored.txt');success=False
+                with self._compound_guard(code,'Gráfico do footprint DOCK6'):
+                    footprint_rows(Path(self.outputpath)/filename)
+                    resindex_selected, resindex_remainder = self.__identify_residues(filename, self.__max_residues)
+                    self.__plot_footprints(code, resindex_selected, resindex_remainder)
+                    success=True
+                if not success:self.excluded_compounds.add(code)
+            self.failure_report.write(self.export_path)
 
         except Exception as e:
             self.logger.error(f'during to perform the plot_footprint_results function', exc_info=True)
@@ -1369,40 +1411,27 @@ class Dock6(Docking):
             Exception: If any error occurs during the docking analysis, a log file will be created and posted in the log folder.
         """
 
-        command = ['dock6', '-i', directory(self.outputpath) + f'{tid}_docking.in']
+        command = ['dock6', '-i', directory(self.outputpath) + f'{tid}_docking.in',
+                   '-o', directory(self.outputpath) + f'{tid}_docking.out']
         self.perform_subprocess(command, self.outputpath)
 
         sync_directory(directory(self.outputpath))
 
     def perform_dock6_evaluation(self):
-
-        try:
-            self.set_outputpath(f'{self.__base_output_path}/{self.__conformer_search_type}/')
-
-            files = [f for f in os.listdir(f'{directory(self.__base_output_path)}/energy_min/') if f.endswith('.mol2')]
-            args = [(ligand[0],) for ligand in enumerate(files)]
-
-            for tid, ligand in enumerate(files):
-                self.generate_docking_script(input_template='src/scripts/dock6/docking.template',
-                                        output_script=directory(self.outputpath) + str(tid) + '_docking.in',
-                                        conformer_search_type=self.__conformer_search_type,
-                                        ligand_atom_file=f'{directory(self.__base_output_path)}/energy_min/' + ligand,
-                                        rmsd_reference_filename=f'{directory(self.__base_output_path)}/energy_min/' + ligand,
-                                        receptor_site_file=f'{directory(self.__base_output_path)}/surface/Molecules/{ligand.split('.')[0]}.sph',
-                                        ligand_sphere_file=f'{directory(self.__base_output_path)}/surface/Molecules/{ligand.split('.')[0]}.sph',
-                                        grid_score_grid_prefix=f'{directory(self.__base_output_path)}/gridbox/' + ligand.split('.')[0],
-                                        dock6_path=self.__dock6_path,
-                                        ligand_outfile_prefix=directory(self.outputpath) + ligand.split('.')[0])
-
-
-            self.process_in_parallel(method_name='perform_parallel_docking', args_list=args) if args else None
-
-        except Exception as e:
-            self.logger.error(f'during to perform the perform_dock6_evaluation function', exc_info=True)
-            self.logger.error(f'STDERR: {e}', exc_info=True)
-            raise
-
-        finally:
-
-            [os.remove(directory(self.outputpath) + f) for f in os.listdir(directory(self.outputpath)) if f.endswith('.in')]
-            sync_directory(directory(self.outputpath))
+        from biomolexplorer.dock6_validation import compound_code
+        self.set_outputpath(f'{self.__base_output_path}/{self.__conformer_search_type}/')
+        jobs=[]
+        for tid,ligand in enumerate(self._ligand_files(Path(self.__base_output_path)/'energy_min')):
+            code=compound_code(ligand)
+            spheres='binding_site' if getattr(self,'binding_site_center',None) is not None else code
+            self.generate_docking_script(input_template='src/scripts/dock6/docking.template',
+                output_script=str(Path(self.outputpath)/f'{tid}_docking.in'),
+                conformer_search_type=self.__conformer_search_type,
+                ligand_atom_file=str(Path(self.__base_output_path)/'energy_min'/ligand),
+                rmsd_reference_filename=str(Path(self.__base_output_path)/'energy_min'/ligand),
+                receptor_site_file=str(Path(self.__base_output_path)/'surface/Molecules'/(spheres+'.sph')),
+                ligand_sphere_file=str(Path(self.__base_output_path)/'surface/Molecules'/(spheres+'.sph')),
+                grid_score_grid_prefix=self._grid_prefix(code),dock6_path=self.__dock6_path,
+                ligand_outfile_prefix=str(Path(self.outputpath)/code))
+            jobs.append((code,(tid,),Path(self.outputpath)/(code+'_scored.mol2')))
+        self._run_compound_jobs('perform_parallel_docking',jobs,'Docking DOCK6')

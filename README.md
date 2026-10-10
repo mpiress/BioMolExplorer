@@ -59,7 +59,7 @@ styles are independent; ligand hydrogens can be shown or hidden when present in
 the file. Colored dashed traces identify hydrogen bonds, parallel/T-shaped π–π,
 hydrophobic contacts and geometric van der Waals contacts. Hover over a trace for
 type, residue, chain and distance; use the matching legend and filters to inspect
-individual types.
+individual types. **Show residue names** toggles labels independently of the interaction traces for cleaner PNG exports.
 
 Classification requires valid chemistry and residue identities; hydrogen bonds
 require explicit H. Unavailable classification is explained while distance
@@ -68,6 +68,16 @@ comparison with the final pose. Consensus exposes each engine’s 3D pose and an
 available footprint; structural attachments are optional for score computation.
 See the [viewer guide](docs/en/molecular_viewer.md)
 ([Português](docs/molecular_viewer.md)) for controls and interpretation.
+
+## Research profiles and batch docking
+
+ADMET now separates local descriptors, estimates, structural alerts and optional trained-model outputs. Choose broad exploration, oral, CNS, peripheral, fragment, natural-product or custom hypotheses; annotate all compounds or filter them with explicit criteria and rejection reasons. The EGG is a local heuristic visualization, not a validated SwissADME reproduction. [ADMET guide](docs/en/admet_research.md) · [Português](docs/admet_research.md).
+
+To enable optional ADMET-AI in an isolated CPU environment, run `python scripts/setup_admet_ai.py` from the repository root with compatible Python 3.12. See [installation and troubleshooting](docs/en/installation.md#optional-admet-ai-predictor). Choosing local RDKit does not require that extra environment.
+
+Prepared receptors are reused across candidates; compatible Vina batches reuse affinity maps, and DOCK6 shares grids per receptor/site. Individual preparation and DOCK6 calculation failures are excluded and reported separately. Scientific commands have no implicit timeout. See the [user manual](docs/en/user_manual.md#dock6-validation-and-exclusions).
+
+The workspace organizes actions in collapsible sidebar groups with contextual help, a larger pipeline canvas and completed-run cards. Saved file selections avoid repeated prompts. Stage results can be removed with confirmation and restored through history. See the [workspace guide](docs/en/frontend.md#navigation-canvas-and-completed-runs). [Visual examples and provenance](imgs/examples/README.md) accompany the [platform presentation](index.html#visual-results).
 
 ## 🌐 Project Website
 
@@ -714,7 +724,7 @@ analyze_graphs(
     base_input_path='/datasets/ChEMBL/DrugBank',
     similarity_path='/datasets/ChEMBL/DrugBank/Similarity',
     base_output_path='/datasets/ChEMBL/DrugBank/Graphs',
-    mcs_timeout=30
+    mcs_timeout=0
 )
 ```
 
@@ -880,7 +890,7 @@ blocos antigos continuam compatíveis com scripts e pipelines existentes.
 A aplicação dispõe de serviços independentes da interface, CLI e supervisão de
 tarefas em processos separados. O histórico, os estados, erros e caminhos dos
 resultados são persistidos em SQLite. Cada tarefa possui seu próprio diretório,
-com limites de concorrência, timeout e cancelamento.
+com limites de concorrência e cancelamento. A duração científica não tem limite implícito; timeout positivo só é aplicado quando configurado explicitamente pela API.
 
 - [Visualizador molecular e interações 3D](docs/molecular_viewer.md) · [English viewer guide](docs/en/molecular_viewer.md)
 - [Manual do usuário: passo a passo completo](docs/user_manual.md) · [English user manual](docs/en/user_manual.md)

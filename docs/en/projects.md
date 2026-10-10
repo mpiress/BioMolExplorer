@@ -125,3 +125,9 @@ Completed ADMET creates an interactive EGG using supplied descriptors. Expand th
 and properties. The viewer does not recalculate descriptors.
 
 The graph block receives ready relationships from similarity blocks or external files through the form; fingerprints are not a direct input. SMILES come from lineage or corresponding external tables. Individual retains independent analyses; merge combines selected relationships into one analysis. Select a specific MCC to feed the next stage. Interactive models, fragment images and degree presentations accompany project export. The fragment is displayed as SMILES extracted from the reference.
+
+## Saved selections and result removal
+
+Files explicitly chosen in configuration are reused without repeating the input question. Automatic inputs may request selection after their source finishes. Reconfigure the input to change a saved file. After migration, validate references and install engines and the optional ADMET-AI predictor on the destination computer.
+
+**Remove all results** within a run stage requires confirmation and editing permission. It removes artifacts/reused references, invalidates affected caches and preserves run records/logs. Active runs block removal. History can restore files. This differs from removing one table row, which changes only its CSV, and deleting the entire project. See [navigation and results](frontend.md#navigation-canvas-and-completed-runs).

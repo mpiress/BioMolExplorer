@@ -188,5 +188,18 @@
   "Linha {0}: tabela SMI ZINC incompleta.": "Line {0}: incomplete ZINC SMI table.",
   "SMILES ZINC inválido: {0}": "Invalid ZINC SMILES: {0}",
   "Estruturas ZINC conflitantes para {0}": "Conflicting ZINC structures for {0}",
-  "A tranche ZINC não contém moléculas: {0}": "The ZINC tranche contains no molecules: {0}"
+  "A tranche ZINC não contém moléculas: {0}": "The ZINC tranche contains no molecules: {0}",
+  "Informações · {0}": "Information · {0}",
+  "Opção ADMET inválida: {0}": "Invalid ADMET option: {0}",
+  "Propriedade ADMET desconhecida: {0}": "Unknown ADMET property: {0}",
+  "{0} compostos · BBB+: {1} · BBB−: {2}": "{0} compounds · BBB+: {1} · BBB−: {2}",
+  "{0} · {1} / {2} compostos atendem à hipótese na avaliação original.": "{0} · {1} / {2} compounds meet the hypothesis in the original evaluation.",
+  "Critérios ativos: {0}": "Active criteria: {0}",
+  "{0} falhas na preparação · Página {1}": "{0} preparation failures · Page {1}",
+  "{0} compostos não utilizados · Página {1}": "{0} excluded compounds · Page {1}",
+  "Nome de arquivo MOL2 não reconhecido: {0}": "Unrecognized MOL2 filename: {0}",
+  "Executável DOCK6 ausente ou não executável: {0}": "DOCK6 executable missing or not executable: {0}",
+  "Parâmetro global DOCK6 ausente ou vazio: {0}": "Global DOCK6 parameter missing or empty: {0}",
+  "A etapa showbox não produziu a caixa do sítio: {0}": "The showbox stage did not produce the site box: {0}",
+  "Grid DOCK6 ausente ou vazio: {0}": "DOCK6 grid missing or empty: {0}"
 }

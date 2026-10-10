@@ -2,7 +2,7 @@
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,sans-serif}
 a{color:var(--teal);text-underline-offset:3px}a:hover{color:#065b53}a:focus-visible,summary:focus-visible{outline:3px solid #0ea5e9;outline-offset:4px}
 .top{background:#102b46;color:white;padding:20px max(24px,calc((100vw - 1240px)/2));display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
-.top a{color:#99f6e4}.brand{font-weight:750;text-decoration:none}.top nav{display:flex;gap:24px;flex-wrap:wrap}
+.top a{color:#99f6e4}.brand{display:flex;align-items:center;text-decoration:none;background:white;padding:4px 12px;border-radius:10px;flex-shrink:0}.brand img{display:block;width:224px;max-width:60vw;height:auto}.top{align-items:center}.top nav{display:flex;gap:24px;flex-wrap:wrap}
 .layout{max-width:1240px;margin:36px auto;display:grid;grid-template-columns:250px minmax(0,1fr);gap:32px;padding:0 24px}
 aside{align-self:start;position:sticky;top:24px}aside a{display:block;margin:8px 0;text-decoration:none;padding:6px 12px;border-radius:8px}
 aside a[aria-current=page]{background:#d9f2ed;font-weight:650}aside h2{font-size:13px;text-transform:uppercase;color:var(--muted);letter-spacing:.06em;margin-top:28px}

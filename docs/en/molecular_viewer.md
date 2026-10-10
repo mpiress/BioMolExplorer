@@ -118,3 +118,9 @@ content. If opening fails, return to the project and open the viewer again.
 
 Geometry tests and actual Chrome mouse movements are described in the
 [viewer validation report](../validation/viewer_controls_2026-10-10.md) (Portuguese).
+
+## Hide residue names
+
+**Show residue names** sits directly below and aligned with **Show 3D interactions**. Uncheck it to remove scene labels for a cleaner image; traces, colors, filters and hover identification remain available. Checking it again restores names. The control is unavailable when interaction classification is unavailable. **Save image** exports the visible state, including this choice.
+
+[View a viewer example](../../imgs/examples/interactions-3d.png). The capture uses an illustrative benzene/PHE test scene; its geometric contacts do not represent measured affinity.

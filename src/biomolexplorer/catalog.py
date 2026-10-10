@@ -34,7 +34,7 @@ LABELS = {
  'base_selected_mols': 'Compostos selecionados', 'base_vina_path': 'Resultados Vina',
  'base_dock6_path': 'Resultados DOCK6',
  'similarity_path': 'Relações de similaridade', 'dock6_app_path': 'Instalação DOCK6',
- 'mcs_timeout': 'Tempo máximo da busca do fragmento (s)',
+ 'mcs_timeout': 'Limite da busca do fragmento (s; 0 = sem limite)',
  'mcs_ring_matches_ring_only': 'Comparar átomos de anéis somente com anéis',
  'mcs_complete_rings_only': 'Exigir anéis completos no fragmento',
  'search_mode': 'Buscar na ChEMBL por', 'max_targets': 'Máximo de alvos ChEMBL',
@@ -155,4 +155,5 @@ def new_stage(operation):
     if operation in ('retrieve_compounds', 'retrieve_structures', 'retrieve_zinc'):
         stage['process_all'] = False
     if operation=='retrieve_compounds':stage['parameters']['include_pubchem']=False
+    if operation=='admet':stage['parameters'].update(admet_profile='exploratory',admet_mode='annotate')
     return stage

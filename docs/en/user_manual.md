@@ -144,7 +144,7 @@ Compound and structure retrieval can begin independent branches. **Import my fil
 
 1. Execute the full pipeline or the selected stage with its dependencies.
 2. If completed results are saved, answer the reuse question described in the next section.
-3. Follow the execution window. When a stage needs inputs from its sources, execution pauses and opens **Select files**.
+3. Follow the execution window. When a connected input still needs automatic file selection, execution pauses and opens **Select files**. Explicit selections saved in the block skip this question.
 4. Check only the files you want for each input. The list shows compatible files from connected sources, without automatically selecting all newly produced outputs.
 5. Choose **Process individually** or **Merge files**.
 6. To adjust parameters, click **Configure stage**. Choices already made are included in the form, avoiding another selection of the same dataset.
@@ -261,7 +261,9 @@ interpretation and updates.
 
 ### ADMET
 
-**Evaluate ADMET** calculates properties and applies the available molecular filters. Inspect tables, exclusions and the BOILED-Egg plot. BBB/HIA and other indicators are computational estimates and rules; they do not replace experimental validation. Consult the backend guide for the calculations actually implemented.
+**Evaluate ADMET** starts with broad exploration. Choose oral, CNS, peripheral, fragment, natural-product or custom hypotheses; annotate all compounds or filter them. BBB/HIA classes, rule violation tolerances, alerts and inclusive descriptor/model ranges are editable. RDKit provides local descriptors and estimates; optional ADMET-AI adds distinct `ML_` outputs after installation in the worker environment.
+
+Inspect the responsive EGG, click points for molecular structures, and review `_evaluated.csv`, selection/rejection reasons and `_admet_report.json`. Local BBB/HIA and the displayed ellipses are not a validated reproduction of published BOILED-Egg. See the [ADMET guide](admet_research.md) for methods, setup, units, profiles, exports and limits.
 
 ### Vina, DOCK6 and consensus
 
@@ -362,3 +364,36 @@ Before calculations, the system checks residues, chain and cofactors in the PDB 
 Tool failures report the executable, exit code and process message. Failed Chimera scripts remain available for diagnosis. Correct the reported input or installation and retry. There is no verbose control: Vina verbosity stays at zero.
 
 See [Redocking configuration](redocking_configuration.md) for the complete workflow.
+
+### Compounds excluded during preparation
+
+Candidate preparation for Vina and DOCK6 handles compounds independently. If conformation generation, conversion, charge assignment or minimization fails, that compound is excluded from docking inputs while the others continue. Partial compound outputs are removed. If no candidate can be prepared, the engine is not started and the stage explains why.
+
+In **Runs → Results by stage**, use **Excluded compounds** to inspect the paginated list and **Download excluded compound list** to download `preparation_failures.csv`. The report records identifiers, submitted SMILES, input file/row, preparation context and failure reasons. These failures also appear in the general exclusion report. Original inputs are preserved. Infrastructure failures, such as a missing engine or full disk, remain stage errors.
+
+## Reusing receptors in Vina
+
+Connecting prepared redocking outputs to docking reuses the receptor and binding center across batches. The engine's required files and center coordinates are checked before docking. Missing prepared files cause an input error rather than silently triggering preparation. Raw structure preparation converts each PDB/chain receptor once, even when several reference ligands share it.
+
+The standard workflow uses Vina's Python API to retain the receptor and affinity maps in memory during a batch. Maps are computed before loading any ligand to cover every atom type, following the [official Vina documentation](https://autodock-vina.readthedocs.io/en/latest/docking_python.html). Receptor, center, box dimensions or initialization parameter changes create a new session. Template settings remain respected; unsupported special options or a missing Python API use the CLI executable and log this fallback.
+
+Events `receptor.reused`, `ligand.preparation.started`, `vina.maps.started` and `vina.maps.reused` distinguish the operations. `prepare.com` prepares an external candidate, which can be slow with AM1 charges or minimization; it does not prepare the receptor. Already prepared candidates are reused. The configured seed and search parameters are preserved, with compounds processed in stable order. Reuse applies within each batch; in-memory maps are not shared between workers.
+
+
+## DOCK6 validation and exclusions
+
+The workflow checks the installation, global parameters, prepared receptor, site center, spheres, box and grid files. Each ligand MOL2 is checked for atom/bond counts, identifiers, finite coordinates and charges, chemical topology and connectivity. Disconnected or chemically invalid ligands are excluded without guessing replacement bonds. This matters when converting Vina PDBQT poses, which lack the full chemical information of MOL2. A requested Vina pose must match the selected compound and receptor; another input is not silently substituted.
+
+The surface, spheres and grid are shared by compounds using the same receptor/site. Minimization, docking and footprint use independent processes per compound. Native failures (including SIGSEGV, exit code -11), missing/empty outputs and invalid scores exclude that compound from subsequent stages and final results while others continue. Footprint plot failures are also recorded individually. Generated configurations and tool logs are preserved for diagnosis. Identifiers containing dots remain intact.
+
+The **Excluded compounds** list now covers preparation and execution failures, including step, identifier, SMILES, input and reason. It retains the `preparation_failures.csv` filename for compatibility with the Vina report. If every compound is excluded, the stage reports that no usable result was produced. Global errors — missing installation, incomplete parameters, unavailable receptor/site/grids or filesystem failures — still stop the stage.
+
+The review follows the [official DOCK6 manual](https://dock.compbio.ucsf.edu/DOCK_6/dock6_manual.htm), [rigid/flexible docking tutorial](https://dock.compbio.ucsf.edu/DOCK_6/tutorials/ligand_sampling_dock/ligand_sampling_dock.html) and [grid generation tutorial](https://dock.docking.org/DOCK_6/tutorials/grid_generation/generating_grid.html). Structural checks cannot guarantee the native engine is free of defects; compound isolation allows the batch to continue and identifies affected inputs.
+
+## Navigation and result maintenance
+
+Workspace actions are in the sidebar. Inside a project, **Project navigation** and **Pipeline and execution** are collapsible, with contextual help. Use the expanded canvas, zoom and **Arrange blocks** for large pipelines. The [interface guide](frontend.md#navigation-canvas-and-completed-runs) explains controls, saved selections, completed-run cards and result removal.
+
+In 3D views, **Show residue names** allows cleaner exports while preserving interactions. See the [viewer guide](molecular_viewer.md#hide-residue-names).
+
+[View a DOCK6 footprint](../../imgs/examples/dock6-footprint.png) and its [original PDF](../../imgs/examples/dock6-footprint.pdf): the 1ABE tutorial example compares reference/pose energy contributions after Vina → DOCK6. These energy profiles are distinct from geometric 3D contacts.

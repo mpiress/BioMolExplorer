@@ -70,6 +70,7 @@ class ReceptorOutputTests(unittest.TestCase):
                     output=prepare_candidates(dataset,root/engine,settings,engines=engine)
                     row=read_compounds(output)[0]
                     runner.assert_called_once()
+                    self.assertIsNone(runner.call_args.kwargs.get('timeout'))
                     self.assertEqual(row['docking_engines'],engine)
                     self.assertEqual({f for f in ('pdbqt','mol2') if row.get('prepared_'+f)},formats)
                     for format in formats:self.assertTrue(Path(row['prepared_'+format]).is_file())
