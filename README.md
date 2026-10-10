@@ -1,4 +1,4 @@
-<img src="imgs/banner.png" alt="Banner" style="width:100%;"/>
+<p align="center"><img src="imgs/new_BioMolLogo.png" alt="BioMolExplorer" width="480" style="max-width:100%;height:auto;"/></p>
 
 <p> </p>
 <p> </p>

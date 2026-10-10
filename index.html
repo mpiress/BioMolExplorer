@@ -9,7 +9,7 @@
     />
 
     <title>BioMolExplorer | Molecular Exploration & Flexible Pipelines</title>
-    <link rel="icon" type="image/png" href="imgs/logo.png">
+    <link rel="icon" type="image/png" href="imgs/new_logo.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -68,8 +68,11 @@
         .grid-pattern {
             background-image:
                 linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-            background-size: 40px 40px;
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px),
+                radial-gradient(ellipse at top right,rgba(14,165,233,.14),transparent 55%),
+                radial-gradient(ellipse at bottom left,rgba(0,195,137,.09),transparent 50%),
+                linear-gradient(135deg,#040f23,#07111f 45%,#0f172a);
+            background-size:40px 40px,40px 40px,auto,auto,auto;
         }
 
         .section-title::after {
@@ -107,31 +110,39 @@
         #example-dialog .preview-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px}
         #example-dialog p{font-size:14px;color:#cbd5e1;line-height:1.5}
         @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.card-hover{transition:none;transform:none!important}}
+        .site-header{background:#040f23;isolation:isolate;border-bottom:1px solid rgba(34,211,238,.18);box-shadow:0 8px 32px rgba(2,6,23,.3)}
+        .site-footer{isolation:isolate;background:linear-gradient(110deg,#040f23,#07172d);border-top:1px solid rgba(34,211,238,.18)}
+        .site-wordmark,.footer-wordmark{mix-blend-mode:lighten;display:block;width:264px;max-width:65vw;height:auto;object-fit:contain}
+        .footer-wordmark{width:300px;max-width:80vw}
+        .site-cta{background:linear-gradient(110deg,#22d3ee,#38bdf8);box-shadow:0 4px 20px rgba(34,211,238,.15)}
+        .site-cta:hover{background:linear-gradient(110deg,#67e8f9,#7dd3fc)}
+        .site-header a:focus-visible,.site-footer a:focus-visible{outline:2px solid #22d3ee;outline-offset:5px;border-radius:6px}
+        @media(max-width:480px){.site-wordmark{width:64px;height:64px}.site-header h1+p{display:none}}
     </style>
 </head>
 
 <body class="text-slate-800 antialiased">
 
-    <header class="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-slate-950/70 backdrop-blur-lg">
+    <header class="site-header fixed top-0 left-0 right-0 z-50 backdrop-blur-lg">
         <div class="max-w-7xl mx-auto px-6 py-4 flex flex-wrap gap-4 items-center justify-between">
             <div class="flex items-center gap-4">
                 <div>
-                    <h1 class="bg-white rounded-lg px-3 py-1 mb-1"><img src="imgs/BioMolLogo.png" alt="BioMolExplorer" width="662" height="209" class="w-56 max-w-[60vw] h-auto object-contain"></h1>
+                    <h1 class="mb-1"><picture><source media="(max-width: 480px)" srcset="imgs/new_logo.png"><img src="imgs/new_BioMolLogo.png" alt="BioMolExplorer" width="2172" height="724" class="site-wordmark"></picture></h1>
                     <p class="text-xs text-slate-400">Computational Molecular Intelligence</p>
                 </div>
             </div>
 
             <nav aria-label="Main navigation" class="hidden lg:flex items-center gap-5 text-sm text-slate-300">
-                <a href="#overview" class="hover:text-white transition">Overview</a>
-                <a href="#capabilities" class="hover:text-white transition">Capabilities</a>
-                <a href="#workflow" class="hover:text-white transition">Workflow</a>
-                <a href="#installation" class="hover:text-white transition">Installation</a>
-                <a href="#visual-results" class="hover:text-white transition">Visual results</a>
-                <a href="#documentation" class="hover:text-white transition">Documentation</a>
+                <a href="#overview" class="hover:text-cyan-300 transition">Overview</a>
+                <a href="#capabilities" class="hover:text-cyan-300 transition">Capabilities</a>
+                <a href="#workflow" class="hover:text-cyan-300 transition">Workflow</a>
+                <a href="#installation" class="hover:text-cyan-300 transition">Installation</a>
+                <a href="#visual-results" class="hover:text-cyan-300 transition">Visual results</a>
+                <a href="#documentation" class="hover:text-cyan-300 transition">Documentation</a>
             </nav>
 
             <a href="docs/index.html"
-               class="inline-flex items-center gap-2 bg-brand-primary hover:bg-emerald-400 transition text-slate-950 px-5 py-2.5 rounded-xl font-semibold shadow-glow">
+               class="inline-flex items-center gap-2 site-cta transition text-slate-950 px-5 py-2.5 rounded-xl font-semibold shadow-lg">
                 <i class="fa-solid fa-terminal"></i>
                 Documentation
             </a>
@@ -150,7 +161,7 @@
                         Computer-Aided Drug Design Platform
                     </div>
 
-                    <h1 class="text-5xl md:text-6xl xl:text-7xl font-black text-black leading-tight">
+                    <h1 class="text-5xl md:text-6xl xl:text-7xl font-black text-white leading-tight">
                         Molecular Data Exploration for
                         <span class="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
                             Intelligent Drug Discovery
@@ -163,22 +174,22 @@
 
                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
     
-                    <div class="w-full bg-slate-100 rounded-lg px-4 py-3 text-sm font-mono text-slate-900 border border-slate-200 flex items-center justify-start hover:bg-slate-200 transition duration-300 shadow-sm">
+                    <div class="w-full bg-slate-900/60 rounded-lg px-4 py-3 text-sm font-mono text-slate-200 border border-slate-700/60 flex items-center justify-start hover:bg-slate-800 transition duration-300 shadow-sm">
                         <i class="fab fa-python text-brand-primary mr-3 text-base shrink-0"></i>
                         <span>Python Ecosystem</span>
                     </div>
 
-                    <div class="w-full bg-slate-100 rounded-lg px-4 py-3 text-sm font-mono text-slate-900 border border-slate-200 flex items-center justify-start hover:bg-slate-200 transition duration-300 shadow-sm">
+                    <div class="w-full bg-slate-900/60 rounded-lg px-4 py-3 text-sm font-mono text-slate-200 border border-slate-700/60 flex items-center justify-start hover:bg-slate-800 transition duration-300 shadow-sm">
                         <i class="fa-solid fa-network-wired text-brand-primary mr-3 text-base shrink-0"></i>
                         <span>Graph-Based Analysis</span>
                     </div>
 
-                    <div class="w-full bg-slate-100 rounded-lg px-4 py-3 text-sm font-mono text-slate-900 border border-slate-200 flex items-center justify-start hover:bg-slate-200 transition duration-300 shadow-sm">
+                    <div class="w-full bg-slate-900/60 rounded-lg px-4 py-3 text-sm font-mono text-slate-200 border border-slate-700/60 flex items-center justify-start hover:bg-slate-800 transition duration-300 shadow-sm">
                         <i class="fa-solid fa-flask-vial text-brand-primary mr-3 text-base shrink-0"></i>
                         <span>Virtual Screening</span>
                     </div>
 
-                    <div class="w-full bg-slate-100 rounded-lg px-4 py-3 text-sm font-mono text-slate-900 border border-slate-200 flex items-center justify-start hover:bg-slate-200 transition duration-300 shadow-sm">
+                    <div class="w-full bg-slate-900/60 rounded-lg px-4 py-3 text-sm font-mono text-slate-200 border border-slate-700/60 flex items-center justify-start hover:bg-slate-800 transition duration-300 shadow-sm">
                         <i class="fa-solid fa-shield-halved text-brand-primary mr-3 text-base shrink-0"></i>
 <span>Flet Workspace</span>
                     </div>
@@ -896,39 +907,39 @@ biomolexplorer-ui --web --dock6-path /path/to/dock6-6.11</code></pre>
         </div>
     </section>
 
-    <footer class="bg-slate-950 border-t border-slate-800 py-12">
+    <footer class="site-footer py-12">
         <div class="max-w-7xl mx-auto px-6">
             <div class="flex flex-col lg:flex-row items-center justify-between gap-8">
 
                 <div class="flex items-center gap-4">
                     <div>
-                        <h3 class="bg-white rounded-lg px-3 py-1 mb-2 w-fit"><img src="imgs/BioMolLogo.png" alt="BioMolExplorer" width="662" height="209" class="w-60 max-w-[70vw] h-auto object-contain"></h3>
-                        <p class="text-sm text-slate-400">
+                        <h3 class="mb-2 w-fit"><img src="imgs/new_BioMolLogo.png" alt="BioMolExplorer" width="2172" height="724" class="footer-wordmark"></h3>
+                        <p class="text-sm text-slate-300">
                             Flexible Information Retrieval Architecture for Drug Discovery
                         </p>
                     </div>
                 </div>
 
-                <div class="flex flex-wrap justify-center gap-4 text-sm text-slate-400">
-                    <a href="docs/index.html" class="bg-slate-900 border border-slate-800 rounded-full px-4 py-2 hover:text-white">Documentation (EN)</a>
-                    <a href="docs/pt/index.html" class="bg-slate-900 border border-slate-800 rounded-full px-4 py-2 hover:text-white" lang="pt-BR">Documentação (PT)</a>
-                    <span class="bg-slate-900 border border-slate-800 rounded-full px-4 py-2">
+                <div class="flex flex-wrap justify-center gap-4 text-sm text-slate-300">
+                    <a href="docs/index.html" class="bg-slate-900/60 border border-slate-700 rounded-full px-4 py-2 hover:text-cyan-300">Documentation (EN)</a>
+                    <a href="docs/pt/index.html" class="bg-slate-900/60 border border-slate-700 rounded-full px-4 py-2 hover:text-cyan-300" lang="pt-BR">Documentação (PT)</a>
+                    <span class="bg-slate-900/60 border border-slate-700 rounded-full px-4 py-2">
                         Python Ecosystem
                     </span>
-                    <span class="bg-slate-900 border border-slate-800 rounded-full px-4 py-2">
+                    <span class="bg-slate-900/60 border border-slate-700 rounded-full px-4 py-2">
                         Docking by Consensus
                     </span>
-                    <span class="bg-slate-900 border border-slate-800 rounded-full px-4 py-2">
+                    <span class="bg-slate-900/60 border border-slate-700 rounded-full px-4 py-2">
                        ADMET profiling
                     </span>
-                    <span class="bg-slate-900 border border-slate-800 rounded-full px-4 py-2">
+                    <span class="bg-slate-900/60 border border-slate-700 rounded-full px-4 py-2">
                         Graph Analytics
                     </span>
                 </div>
             </div>
 
-            <div class="border-t border-slate-800 mt-10 pt-8 text-center text-sm text-slate-500">
-                © 2026 BioMolExplorer. Distributed under <a href="LICENSE" class="underline hover:text-white">MIT License</a>.
+            <div class="border-t border-slate-800 mt-10 pt-8 text-center text-sm text-slate-400">
+                © 2026 BioMolExplorer. Distributed under <a href="LICENSE" class="underline hover:text-cyan-300">MIT License</a>.
             </div>
         </div>
     </footer>

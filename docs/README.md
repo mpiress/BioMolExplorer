@@ -46,6 +46,10 @@
 
 ## Manutenção / Maintenance
 
+O site e as páginas HTML usam `imgs/new_BioMolLogo.png` para a marca completa e `imgs/new_logo.png` para o símbolo/favicon, dimensionados por CSS. Os arquivos originais são preservados; cabeçalhos escuros harmonizam com o fundo embutido nas imagens.
+
+The website and HTML guides use `imgs/new_BioMolLogo.png` for the wordmark and `imgs/new_logo.png` for the symbol/favicon, sized with CSS. Original assets are preserved; dark headers match their embedded background.
+
 Os documentos Markdown são a fonte. Após editar uma versão, atualize sua tradução
 e gere novamente as páginas HTML na raiz do projeto:
 
