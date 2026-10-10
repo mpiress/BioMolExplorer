@@ -171,6 +171,9 @@ class JobManager:
                 environment = dict(os.environ)
                 environment['PYTHONPATH'] = str(SOURCE_ROOT) + os.pathsep + environment.get('PYTHONPATH', '')
                 environment['PATH'] = str(Path(self.config.worker_python or sys.executable).parent) + os.pathsep + environment.get('PATH','')
+                if job['operation']=='docking_dock6':
+                    dock_bin=Path(job['parameters']['dock6_app_path'])/'bin'
+                    environment['PATH']=str(dock_bin)+os.pathsep+environment['PATH']
                 environment['BIOMOL_WORKSPACE'] = str(self.config.workspace)
                 environment['BIOMOL_CPU_WORKERS'] = str(self.config.cpu_workers)
                 environment['BIOMOL_LOG_DIR'] = str(log_directory() / 'jobs' / job_id)

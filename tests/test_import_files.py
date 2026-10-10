@@ -44,6 +44,30 @@ class ImportFilesTests(unittest.TestCase):
         self.assertEqual(list(reopened.entries),[csv])
         self.assertTrue(self.store.asset_path(self.token,self.project_id,pdb).exists())
 
+    def test_remove_table_action_updates_saved_selection_without_deleting_files(self):
+        first=self.upload('first.csv');second=self.upload('second.csv')
+        stage=new_stage('import_results');stage['parameters']['asset_ids']=[first,second]
+        form=self.form(stage);panel=form.import_files
+        button=panel.table.rows[0].cells[2].content.content
+        self.assertEqual(button.content,'Remover')
+        button.on_click(None)
+        saved=form.read()
+        self.assertEqual(saved['parameters']['asset_ids'],[second])
+        self.assertEqual(saved['parameters']['asset_types'],{second:'compounds'})
+        self.assertTrue(self.store.asset_path(self.token,self.project_id,first).exists())
+        reopened=self.form(saved).import_files
+        self.assertEqual(len(reopened.table.rows),1)
+        reopened.table.rows[0].cells[2].content.content.on_click(None)
+        self.assertTrue(reopened.empty.visible)
+        self.assertFalse(reopened.table_view.visible)
+
+    def test_empty_import_configuration_explains_how_to_add_files(self):
+        form=self.form(new_stage('import_results'));panel=form.import_files
+        self.assertTrue(panel.empty.visible)
+        self.assertFalse(panel.table_view.visible)
+        self.assertIn('Adicione arquivos',panel.empty.value)
+        form.layout()
+
     def test_type_change_rejects_wrong_contents_and_restores_selection(self):
         csv=self.upload();stage=new_stage('import_results');stage['parameters']['asset_ids']=[csv]
         panel=self.form(stage).import_files;control=panel.type_controls[csv];control.value='structures'
@@ -86,6 +110,7 @@ class ImportFilesTests(unittest.TestCase):
         panel.remove(asset)
         self.assertIn(asset,panel.entries)
         self.assertTrue(panel.type_controls[asset].disabled)
+        self.assertTrue(panel.table.rows[0].cells[2].content.content.disabled)
 
     def test_raw_and_prepared_receptor_choices_in_mixed_import_keep_settings_in_sync(self):
         origin=new_stage('import_results');origin['parameters'].update(kind='other',asset_ids=['a'*32,'b'*32],

@@ -336,7 +336,7 @@ formato esperado. O bloco de importação continua disponível como alternativa:
 1. Adicione **Importar meus arquivos** ao pipeline e abra sua configuração.
 2. Escolha **Tipo dos arquivos a adicionar** e clique em **Selecionar arquivos no disco**. Selecione todos os arquivos necessários; cada arquivo é validado antes de entrar no projeto.
 3. Para aproveitar arquivos existentes, use **Arquivo já enviado ao projeto** ou **Adicionar todos os arquivos do projeto**.
-4. Confira a tabela **Tipo / Arquivo / Ações**. Você pode alterar o tipo por linha (com nova validação) ou usar **Remover da lista**. A remoção dessa lista preserva o arquivo na biblioteca do projeto.
+4. Confira a tabela **Tipo / Arquivo / Ações**. Você pode alterar o tipo por linha (com nova validação) ou usar o botão **Remover** na coluna **Ações**. A remoção dessa lista preserva o arquivo na biblioteca do projeto.
 5. Para receptores preparados, inclua também os metadados e formatos complementares. Configure a pasta do alvo para estruturas e aplique a configuração. Um bloco pode publicar vários tipos, conectados às entradas correspondentes dos consumidores.
 
 Cada arquivo pode ter até 200 MB. No navegador, o upload usa uma URL assinada e
@@ -507,3 +507,31 @@ Use um bloco separado para cada modo de receptor: não combine PDBs brutos com r
 O ícone **ⓘ** aparece na biblioteca e em cada bloco do canvas, inclusive para leitores. O popup explica a função do bloco, suas entradas e suas saídas. Similaridade recebe fingerprints; conectar diretamente ChEMBL ou PubChem apresenta um aviso padrão de incompatibilidade, sem traceback. A recusa não altera conexões nem o histórico de desfazer.
 
 Na configuração do docking e no popup de arquivos, cada tabela de compostos oferece **Composto para docking (opcional)**. O seletor permite busca por identificador e usa todos quando vazio. A escolha é conservada ao reabrir a configuração; trocar o arquivo limpa o identificador. Com receptor e arquivos de compostos explícitos, Vina e DOCK6 não repetem o popup durante a execução. Origens ainda automáticas solicitam a escolha quando seus dados estiverem disponíveis.
+
+## Atualizações pela branch master
+
+O botão **Atualizações**, no cabeçalho, consulta a branch `master` de
+[mpiress/BioMolExplorer](https://github.com/mpiress/BioMolExplorer) ao abrir a
+interface e a cada hora. Quando há uma revisão nova, passa a mostrar
+**Atualização disponível**. Clique para consultar o commit e escolher
+**Baixar atualização** ou **Lembrar em 24 horas**. O adiamento é salvo por conta
+no workspace; o botão continua permitindo uma consulta manual.
+
+O download é um ZIP do commit mostrado no aviso e vai para o computador do
+usuário, inclusive quando a interface está em um servidor web. A instalação
+continua sendo uma etapa manual: encerre as análises, extraia o código e siga o
+[guia de instalação](installation.md), depois reinicie o aplicativo. O download
+não altera o código em execução, as contas ou os projetos. Falhas de conexão não
+impedem o uso da interface; a consulta manual permite tentar novamente.
+
+Checkouts Git usam o commit instalado como referência; pacotes wheel construídos
+pelo projeto incluem essa referência. ZIPs baixados pelo botão preservam o commit
+no nome da pasta `BioMolExplorer-<commit>`: mantenha esse nome. ZIPs sem referência
+(como `BioMolExplorer-master`) registram o primeiro commit consultado e avisam
+sobre mudanças posteriores. As preferências ficam em `updates.json` no diretório
+de dados da aplicação.
+
+Seleções de resultados guardam o lote e o caminho lógico do arquivo, sem o
+identificador temporário do worker. Assim, uma nova execução do PDB ou do docking
+mantém a seleção do mesmo resultado. Configurações anteriores também são aceitas;
+resultados ausentes ou ambíguos continuam exigindo uma nova seleção.

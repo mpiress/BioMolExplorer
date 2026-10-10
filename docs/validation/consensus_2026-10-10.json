@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-10",
+  "project": "PDB Example",
+  "status": "succeeded",
+  "source": "Previously executed real Vina and DOCK6 results for 4M0E_A and CHEMBL211596.",
+  "normalization": "Mean min-max normalization of Vina and the existing repulsion-adjusted DOCK6 consensus score. Singleton or constant scores yield zero.",
+  "result_table": "/tmp/biomol-dock6-user-pipeline-20261009/consensus-20261010/consensus.csv",
+  "rows": [
+    {
+      "molecule_chembl_id": "CHEMBL211596",
+      "receptor_id": "4M0E_A",
+      "vina": "-7.836",
+      "dock6": "-28.758",
+      "normalized_score": "0.0"
+    }
+  ]
+}

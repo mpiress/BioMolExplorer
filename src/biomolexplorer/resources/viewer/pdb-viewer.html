@@ -4,6 +4,7 @@
 <title>{{name}} · BioMolExplorer</title>
 <link rel="stylesheet" href="{{prefix}}/assets/pdb-viewer.css">
 <script src="{{prefix}}/assets/3Dmol-min.js" defer></script>
+<script src="{{prefix}}/assets/docking-viewer.js" defer></script>
 <script src="{{prefix}}/assets/pdb-viewer.js" defer></script></head>
 <body>
 <header><div class="brand"><span class="mark">B</span><div><strong>BioMolExplorer</strong><small>{{viewer}}</small></div></div>
@@ -12,12 +13,17 @@
 <main><div id="scene" aria-label="{{viewer}}"></div>
 <aside class="panel"><label for="representation">{{representation}}</label>
 <select id="representation"><option value="cartoon">{{cartoon}}</option><option value="sticks">{{sticks}}</option><option value="spheres">{{spheres}}</option><option value="lines">{{lines}}</option></select>
+<label for="ligand-representation">{{ligand_style}}</label>
+<select id="ligand-representation"><option value="sticks">{{sticks}}</option><option value="spheres">{{spheres}}</option><option value="lines">{{lines}}</option></select>
 <label for="color">{{color}}</label><select id="color"><option value="chain">{{chain}}</option><option value="element">{{element}}</option><option value="spectrum">{{spectrum}}</option></select>
 <label for="chain">{{chain}}</label><select id="chain"><option value="">{{all}}</option></select>
 <label for="model">{{model}}</label><select id="model"></select>
-<div class="toggles"><label><input type="checkbox" id="ligands" checked>{{ligands}}</label><label><input type="checkbox" id="water">{{water}}</label></div>
+<div class="toggles"><label><input type="checkbox" id="ligands" checked>{{ligands}}</label><label><input type="checkbox" id="water">{{water}}</label><label title="{{hydrogen_hint}}"><input type="checkbox" id="hydrogens">{{hydrogens}}</label></div>
+<section id="docking-controls" hidden><div id="layers"></div><label id="cutoff-label" for="cutoff"></label><input id="cutoff" type="number" min="2" max="8" step="0.5" value="4"><p id="contact-note"></p><div id="contacts"></div></section>
+<button id="interaction-view" disabled hidden>{{interaction_view}}</button><p id="interaction-reason" hidden></p>
 <button id="center" class="primary">{{center}}</button><p id="conformer" hidden></p></aside>
 <div id="status" role="status">{{loading}}</div><div id="atom" class="atom-card">{{picked}}</div>
+<section id="interaction-panel" hidden role="dialog" aria-modal="true" aria-labelledby="interaction-title"><div class="interaction-header"><h2 id="interaction-title">{{interaction_view}}</h2><button id="interaction-close">{{close}}</button></div><div id="interaction-legend"></div><p id="interaction-note"></p><div id="interaction-diagram"></div><p id="interaction-detail" aria-live="polite"></p></section>
 </main><footer><span class="mouse-dot"></span>{{hint}}<span class="engine">3Dmol.js · WebGL</span></footer>
 <script id="configuration" type="application/json">{{config}}</script>
 </body></html>

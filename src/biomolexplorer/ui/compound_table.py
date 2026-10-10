@@ -37,13 +37,15 @@ class CompoundTableViewer:
         self.limit=int(self.page_size.value);self.offset=0
         await self.ui.guard(self.load)
 
+    def page_options(self):return {}
+
     async def load(self):
         self.sequence+=1;sequence=self.sequence
         self.loading.visible=True
         self.ui.page.update()
         try:
             result=await self.ui.call(self.service.page,self.token,self.project_id,self.run_id,self.stage_id,
-                self.selector.value,self.offset,self.limit,self.search.value or '')
+                self.selector.value,self.offset,self.limit,self.search.value or '',**self.page_options())
         except Exception:
             if self.valid() and sequence==self.sequence:
                 self.loading.visible=False

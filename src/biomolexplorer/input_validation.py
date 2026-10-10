@@ -67,7 +67,7 @@ def validate_file(path,kind,operation=None,validate_rows=True):
                 with Image.open(path) as image:image.verify()
             return
         if kind in ('vina','dock6') and path.suffix=='.csv':
-            if not {'molecule_chembl_id','canonical_smiles','engine','score','conformer_file'}<=columns(path):
+            if not {'molecule_chembl_id','score'}<=columns(path):
                 raise ValueError('Tabela de docking incompleta.')
             validate_file(path,'scores',operation,validate_rows)
             return

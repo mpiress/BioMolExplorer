@@ -1163,13 +1163,13 @@ class Dock6(Docking):
         for line in lines:
             linesplit = line.split()
             if (len(linesplit) == 3):
-                if (linesplit[1] == 'vdw_fp:'):
+                if (linesplit[1] in ('vdw_fp:', 'FPS_vdw_fps:')):
                     vdw_score = 'd = '+linesplit[2]
-                if (linesplit[1] ==  'es_fp:'):
+                if (linesplit[1] in ('es_fp:', 'FPS_es_fps:')):
                     es_score = 'd = '+linesplit[2]
-                if (linesplit[1] == 'vdw:'):
+                if (linesplit[1] in ('vdw:', 'FPS_vdw_energy:')):
                     vdw_energy = 'vdw = '+linesplit[2]+' kcal/mol'
-                if (linesplit[1] == 'es:'):
+                if (linesplit[1] in ('es:', 'FPS_es_energy:')):
                     es_energy = 'es = '+linesplit[2]+' kcal/mol'
             if (len(linesplit) == 8):
                 if (linesplit[0] != 'resname'):
@@ -1184,7 +1184,7 @@ class Dock6(Docking):
         resname_selected = []
         vdw_ref_selected = []; es_ref_selected = []; vdw_pose_selected = []; es_pose_selected = []
         for i in (resindex_selected):
-            resname_selected.append(resname[i]+resid[i])
+            resname_selected.append(resname[i] if resname[i][-1:].isdigit() else resname[i]+resid[i])
             vdw_ref_selected.append(vdw_ref[i])
             es_ref_selected.append(es_ref[i])
             vdw_pose_selected.append(vdw_pose[i])
@@ -1214,8 +1214,7 @@ class Dock6(Docking):
         ax1.set_title(filename.strip())
         plt.plot(residue, vdw_ref_selected, 'b', linewidth=3)
         plt.plot(residue, vdw_pose_selected, 'r', linewidth=3)
-        ax1.set_ylabel('VDW Energy')
-        ax1.set_ylim(-10, 5)
+        ax1.set_ylabel('VDW Energy (kcal/mol)')
         ax1.set_xlim(0, len(resname_selected))
         ax1.xaxis.set_major_locator(MultipleLocator(1))
         ax1.xaxis.set_major_formatter(FormatStrFormatter('%s'))
@@ -1223,14 +1222,13 @@ class Dock6(Docking):
         ax1.xaxis.grid(which='major', color='black', linestyle='solid')
         ax1.set_xticklabels(resname_selected, rotation=90)
         ax1.legend(['Reference', 'Pose'])
-        ax1.annotate(vdw_score, xy=(37,-8), backgroundcolor='white', bbox={'facecolor':'white', 'alpha':1.0, 'pad':10})
-        ax1.annotate(vdw_energy, xy=(37,-9), backgroundcolor='white', bbox={'facecolor':'white', 'alpha':1.0, 'pad':10})
+        ax1.annotate(vdw_score, xy=(0.72,0.12), xycoords='axes fraction', backgroundcolor='white', bbox={'facecolor':'white', 'alpha':1.0, 'pad':10})
+        ax1.annotate(vdw_energy, xy=(0.72,0.05), xycoords='axes fraction', backgroundcolor='white', bbox={'facecolor':'white', 'alpha':1.0, 'pad':10})
 
         ax2 = fig.add_subplot(2,1,2)
         plt.plot(residue, es_ref_selected, 'b', linewidth=3)
         plt.plot(residue, es_pose_selected, 'r', linewidth=3)
-        ax2.set_ylabel('ES Energy')
-        ax2.set_ylim(-10, 5)
+        ax2.set_ylabel('ES Energy (kcal/mol)')
         ax2.set_xlim(0, len(resname_selected))
         ax2.xaxis.set_major_locator(MultipleLocator(1))
         ax2.xaxis.set_major_formatter(FormatStrFormatter('%s'))
@@ -1238,8 +1236,8 @@ class Dock6(Docking):
         ax2.xaxis.grid(which='major', color='black', linestyle='solid')
         ax2.set_xticklabels(resname_selected, rotation=90)
         ax2.legend(['Reference', 'Pose'])
-        ax2.annotate(es_score, xy=(37,-8), backgroundcolor='white', bbox={'facecolor':'white', 'alpha':1.0, 'pad':10})
-        ax2.annotate(es_energy, xy=(37,-9), backgroundcolor='white', bbox={'facecolor':'white', 'alpha':1.0, 'pad':10})
+        ax2.annotate(es_score, xy=(0.72,0.12), xycoords='axes fraction', backgroundcolor='white', bbox={'facecolor':'white', 'alpha':1.0, 'pad':10})
+        ax2.annotate(es_energy, xy=(0.72,0.05), xycoords='axes fraction', backgroundcolor='white', bbox={'facecolor':'white', 'alpha':1.0, 'pad':10})
 
         if not os.path.exists(directory(self.outputpath) + 'plots/'):
             os.makedirs(directory(self.outputpath) + 'plots/', exist_ok=True)
@@ -1271,7 +1269,7 @@ class Dock6(Docking):
 
         sync_directory(directory(self.outputpath))
 
-    def prepare_footprint(self):
+    def prepare_footprint(self, docked=False):
         """
         This function outlines the steps to prepare a parallel execution of perform_parallel_footprint method for the DOCK 6 software.
         The analysis is conducted taking into account the number of CPU's specified in the computational architecture.
@@ -1283,6 +1281,10 @@ class Dock6(Docking):
         try:
             self.set_outputpath(f'{self.__base_output_path}/footprint/')
 
+            from biomolexplorer.footprints import footprint_receptor
+            receptor=footprint_receptor(Path(self.receptorpath)/(self.__pdb_code+'.dockprep.mol2'),
+                Path(self.outputpath)/'footprint_receptor.mol2')
+
             files = [f.split('.')[0] for f in os.listdir(f'{directory(self.ligandpath)}') if f.endswith('.mol2')]
 
             args = [(self.__pdb_code, ligand[1], ligand[0]) for ligand in enumerate(files)]
@@ -1290,14 +1292,19 @@ class Dock6(Docking):
             for tid, ligand in enumerate(files):
                 self.generate_docking_script(input_template='src/scripts/dock6/footprint.template',
                                         output_script=directory(self.outputpath) + str(tid) +"_footprint.in",
-                                        ligand_atom_file=f'{directory(self.__base_output_path)}/energy_min/' + ligand + '.lig.min_scored.mol2',
+                                        ligand_atom_file=(f'{directory(self.__base_output_path)}/{self.__conformer_search_type}/' + ligand + '_scored.mol2' if docked else
+                                            f'{directory(self.__base_output_path)}/energy_min/' + ligand + '.lig.min_scored.mol2'),
                                         fps_score_footprint_reference_mol2_filename=f'{directory(self.ligandpath)}' + ligand + '.lig.mol2',
-                                        fps_score_receptor_filename=directory(self.receptorpath) + self.__pdb_code + '.dockprep.mol2',
+                                        fps_score_receptor_filename=str(receptor),
                                         dock6_path=self.__dock6_path,
                                         ligand_outfile_prefix=directory(self.outputpath) + ligand)
 
 
             self.process_in_parallel(method_name='perform_parallel_footprint', args_list=args) if args else None
+
+            from biomolexplorer.footprints import footprint_rows
+            for ligand in files:
+                footprint_rows(Path(self.outputpath)/(ligand+'_footprint_scored.txt'))
 
 
         except Exception as e:
@@ -1333,6 +1340,8 @@ class Dock6(Docking):
 
             files = [f for f in os.listdir(directory(self.outputpath)) if f.endswith('_footprint_scored.txt')]
             for filename in files:
+                from biomolexplorer.footprints import footprint_rows
+                footprint_rows(Path(self.outputpath)/filename)
                 resindex_selected, resindex_remainder = self.__identify_residues(filename, self.__max_residues)
                 self.__plot_footprints(filename.replace('_footprint_scored.txt', ''), resindex_selected, resindex_remainder)
 

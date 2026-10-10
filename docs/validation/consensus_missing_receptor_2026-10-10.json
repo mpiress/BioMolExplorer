@@ -1,0 +1,20 @@
+{
+  "date": "2026-10-10",
+  "status": "succeeded",
+  "original_failed_run": "df2c204ba19e4a04bdea1497920daf71",
+  "original_stage": "cf4caddcafff48698b25d0411ca77613",
+  "test": "Real consensus worker operation using the exact saved request and inputs of the failed run, with output isolated in /tmp.",
+  "receptor_files_required": false,
+  "pose_files_required": false,
+  "scores_preserved": true,
+  "result_table": "/tmp/biomol-consensus-recheck-20261010/MeuAlvo.csv",
+  "rows": [
+    {
+      "molecule_chembl_id": "CHEMBL211596",
+      "receptor_id": "4M0E_A",
+      "vina": "-7.836",
+      "dock6": "-46.32",
+      "normalized_score": "0.0"
+    }
+  ]
+}

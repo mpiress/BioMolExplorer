@@ -306,7 +306,7 @@ The import block remains available:
 1. Add **Import my files** to the pipeline and open its configuration.
 2. Choose **Type of files to add** and click **Select files from disk**. Select all required files; each file is validated before entering the project.
 3. Reuse existing uploads through **File already uploaded to the project** or **Add all project files**.
-4. Review the **Type / File / Actions** table. You can change each row's type (with fresh validation) or use **Remove from list**. Removing a row preserves the file in the project library.
+4. Review the **Type / File / Actions** table. You can change each row's type (with fresh validation) or use **Remove** in the **Actions** column. Removing a row preserves the file in the project library.
 5. Include metadata and companion formats for prepared receptors. Set the target folder for structures and apply the configuration. One block can publish several types, connected to the corresponding consumer inputs.
 
 Each file can be up to 200 MB. In the browser, uploads use a signed, temporary URL;
@@ -475,3 +475,29 @@ Use a separate block for each receptor mode: do not combine raw PDBs and prepare
 The **ⓘ** icon appears in the library and on every canvas block, including for viewers. The popup explains the block, its inputs and its outputs. Similarity accepts fingerprints; connecting ChEMBL or PubChem directly shows a standard incompatibility notice without a traceback. Rejection preserves connections and undo history.
 
 In docking configuration and the file popup, each compound table offers **Compound for docking (optional)**. Search by identifier; an empty selection uses all compounds. The choice survives reopening settings; changing the file clears the identifier. With an explicit receptor and compound files, Vina and DOCK6 do not repeat the popup at execution. Automatic origins request selection once their data becomes available.
+
+## Updates from the master branch
+
+The **Updates** button in the header checks
+[mpiress/BioMolExplorer](https://github.com/mpiress/BioMolExplorer)'s `master`
+branch on startup and hourly. It shows **Update available** when a new revision
+is found. Click to inspect the commit, **Download update**, or **Remind me in 24
+hours**. Reminders persist per workspace account; manual checks remain available.
+
+The download is a ZIP pinned to the displayed commit, downloaded on the user's
+computer, including web clients. Installation remains manual: finish running
+analyses, extract the code, follow the [installation guide](installation.md), and
+restart. Downloading does not change the running application, accounts, or
+projects. Connection failures leave the interface usable; retry through the
+button.
+
+Git checkouts use the installed commit; wheels built by this project include it.
+ZIP downloads from the button retain the revision in the folder name
+`BioMolExplorer-<commit>`; keep that name. Unversioned ZIPs such as
+`BioMolExplorer-master` record the first observed commit and notify about later
+changes. Preferences live in `updates.json` in the application data directory.
+
+Output selections retain the batch and logical file path while excluding the
+worker's temporary job ID. Repeating PDB retrieval or docking therefore preserves
+selection of the same result. Older selections are also supported. Missing or
+ambiguous results still require a new selection.

@@ -1,10 +1,12 @@
 """Packaged WebGL viewer with project-authorized, bounded browser access."""
 import html
+import hashlib
 import json
 import secrets
 import threading
 import time
 from collections import OrderedDict
+from functools import lru_cache
 from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlsplit,urlunsplit
@@ -14,7 +16,7 @@ from .workspace import AccessDenied
 
 RESOURCE=Path(__file__).parent/'resources/viewer'
 PREFIX='/molecular-viewer'
-ASSETS={'3Dmol-min.js','pdb-viewer.js','pdb-viewer.css'}
+ASSETS={'3Dmol-min.js','pdb-viewer.js','pdb-viewer.css','docking-viewer.js'}
 PRIVATE_HEADERS={'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff',
     'Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data: blob:; worker-src 'self' blob:; base-uri 'none'; frame-ancestors 'none'"}
 TEXT={
@@ -35,16 +37,30 @@ TEXT={
        'atoms':'atoms','chains':'chains','picked':'Select an atom to see its details.',
        'conformer':'Conformer generated locally from SMILES; this is not a docking pose.'}}
 
+TEXT['pt'].update(receptor_style='Estilo do receptor',ligand_style='Estilo do ligante',hydrogens='Hidrogênios',
+    hydrogen_hint='Exibe apenas os hidrogênios presentes no arquivo.',interaction_view='Interações 2D',close='Voltar ao 3D')
+TEXT['en'].update(receptor_style='Receptor style',ligand_style='Ligand style',hydrogens='Hydrogens',
+    hydrogen_hint='Shows only hydrogen atoms present in the file.',interaction_view='2D interactions',close='Back to 3D')
 
-def viewer_document(name,language='pt',prefix=PREFIX,generated=False):
+@lru_cache(maxsize=32)
+def _asset_digest(name,mtime_ns,size):
+    """Version cache URLs whenever a packaged asset changes, including in development."""
+    return hashlib.sha256((RESOURCE/name).read_bytes()).hexdigest()[:16]
+
+
+def viewer_document(name,language='pt',prefix=PREFIX,generated=False,scene=False):
     language=language if language in TEXT else 'pt'
     labels=TEXT[language]
     file_format=Path(name).suffix.lower().lstrip('.')
     ligand='.lig.' in name.lower() or file_format=='sdf'
     config=json.dumps({'name':name,'labels':labels,'format':file_format if file_format in ('pdb','pdbqt','mol2','sdf') else 'pdb',
-        'ligand':ligand,'generated':generated,
+        'ligand':ligand,'generated':generated,'scene':scene,'language':language,
         'representation':'sticks' if ligand or file_format=='mol2' else 'cartoon'},ensure_ascii=False).replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')
     source=(RESOURCE/'pdb-viewer.html').read_text(encoding='utf-8')
+    for asset in ASSETS:
+        stat=(RESOURCE/asset).stat()
+        digest=_asset_digest(asset,stat.st_mtime_ns,stat.st_size)
+        source=source.replace('/assets/'+asset+'"','/assets/'+asset+'?v='+digest+'"')
     for key,value in dict(labels,name=name,language=language,prefix=prefix,config=config).items():
         source=source.replace('{{'+key+'}}',value if key=='config' else html.escape(value,quote=True))
     return source
@@ -76,6 +92,25 @@ class StructureViewers:
         return self._issue({'token':token,'pid':pid,'name':str(name)+'.sdf',
                             'data':data,'language':language,'generated':True})
 
+    def issue_result(self,token,pid,rid,sid,kind,selection,language='pt'):
+        record=dict(token=token,pid=pid,rid=rid,sid=sid,kind=kind,selection=selection,language=language)
+        self._result_spec(record)
+        return self._issue(record)
+
+    def _result_spec(self,record):
+        if record['kind']=='redocking':
+            from .redocking_results import RedockingResults
+            return RedockingResults(self.store).scene(record['token'],record['pid'],record['rid'],record['sid'],record['selection'])
+        if record['kind']=='docking':
+            from .docking_results import DockingResults
+            return DockingResults(self.store).scene(record['token'],record['pid'],record['rid'],record['sid'],**record['selection'])
+        raise AccessDenied('Conformação não autorizada.')
+
+    def issue_document(self,token,pid,rid,sid,selection,language='pt'):
+        from .docking_results import DockingResults
+        DockingResults(self.store).footprint(token,pid,rid,sid,**selection)
+        return self._issue(dict(token=token,pid=pid,rid=rid,sid=sid,selection=selection,language=language,document=True))
+
     def _issue(self,record):
         with self.lock:
             now=self.clock()
@@ -102,14 +137,30 @@ class StructureViewers:
                 name=path.removeprefix(PREFIX+'/assets/')
                 if name not in ASSETS:return 404,'text/plain',b'Not found',PRIVATE_HEADERS
                 mime={'js':'text/javascript','css':'text/css'}[name.rsplit('.',1)[1]]
-                return 200,mime,(RESOURCE/name).read_bytes(),{'Cache-Control':'public, max-age=86400','X-Content-Type-Options':'nosniff'}
+                return 200,mime,(RESOURCE/name).read_bytes(),{'Cache-Control':'no-cache','X-Content-Type-Options':'nosniff'}
             parts=path.removeprefix(PREFIX+'/').split('/')
-            if not path.startswith(PREFIX+'/') or len(parts)>2 or (len(parts)==2 and parts[1]!='structure'):
+            if not path.startswith(PREFIX+'/') or len(parts)>2 or (len(parts)==2 and parts[1] not in ('structure','scene')):
                 return 404,'text/plain',b'Not found',PRIVATE_HEADERS
             with self.lock:
                 language = self.tickets.get(parts[0], {}).get('language', 'en')
             record=self.ticket(parts[0])
+            if record.get('document'):
+                from .docking_results import DockingResults
+                filename=DockingResults(self.store).footprint(record['token'],record['pid'],record['rid'],record['sid'],**record['selection'])
+                data=self.store.read_file(record['token'],record['pid'],filename,MAX_VIEW_BYTES+1)
+                if len(data)>MAX_VIEW_BYTES or not data.startswith(b'%PDF-'):raise ValueError('PDF indisponível.')
+                return 200,'application/pdf',data,dict(PRIVATE_HEADERS,**{'Content-Disposition':'inline'})
+            if 'kind' in record:
+                spec=self._result_spec(record)
+                if len(parts)==2:
+                    if parts[1]!='scene':raise AccessDenied('Conformação não autorizada.')
+                    from .docking_scene import scene_payload
+                    data=scene_payload(self.store,record['token'],record['pid'],spec,cutoff=8.,include_interactions=True)
+                    return 200,'application/json',json.dumps(data,ensure_ascii=False).encode(),PRIVATE_HEADERS
+                document=viewer_document(spec['name'],record['language'],prefix,scene=True)
+                return 200,'text/html; charset=utf-8',document.encode(),PRIVATE_HEADERS
             if len(parts)==2:
+                if parts[1]!='structure':raise AccessDenied('Conformação não autorizada.')
                 data=record['data'] if 'data' in record else self.store.read_file(record['token'],record['pid'],record['path'],MAX_VIEW_BYTES+1)
                 if len(data)>MAX_VIEW_BYTES:raise ValueError('PDB exceeds preview limit.')
                 return 200,'text/plain; charset=utf-8',data,PRIVATE_HEADERS

@@ -12,6 +12,7 @@ from itertools import product
 from pathlib import Path
 from uuid import uuid4
 
+from .artifact_choices import matches_selector, selector_for
 from .catalog import PATH_FIELDS, ENUMS, LABELS
 from .config import AppConfig
 from .jobs import JobManager, TERMINAL
@@ -41,6 +42,7 @@ def execution_stage(stage, mode):
 
 
 def requires_curation(stage):
+    if stage['operation']=='consensus':return False
     if not stage_dependencies(stage):return False
     if stage['operation']=='redocking' and stage['parameters'].get('pdb_codes'):return False
     if stage['operation'] in ('docking_vina','docking_dock6'):
@@ -157,7 +159,7 @@ def _csv_columns(path):
 def select_input(artifacts, field, selector='auto'):
     files = [Path(p) for p in artifacts]
     if selector != 'auto':
-        candidates = [p for p in files if p.name == selector or p.as_posix().endswith('/' + selector)]
+        candidates = [p for p in files if matches_selector(p,selector)]
         if not candidates:
             raise ValueError('O arquivo escolhido não está nos resultados da etapa.')
         if len(candidates)>1:
@@ -206,7 +208,8 @@ class PipelineService:
         self.worker_python = config.worker_python
         self.cpu_workers = config.cpu_workers
         self.job_timeout = config.job_timeout
-        self.dock6_path = Path(dock6_path).resolve() if dock6_path else None
+        from .docking_tools import dock6_root
+        self.dock6_path = dock6_root(dock6_path,self.worker_python)
         self._executor = ThreadPoolExecutor(max_workers=max_runs, thread_name_prefix='biomol-pipeline')
         self._lock = threading.RLock()
         self._active = {}
@@ -325,10 +328,21 @@ class PipelineService:
                 raise
         return self.store.get_run(token,run_id)
 
+    def _runtime_parameters(self, stage):
+        params=dict(stage['parameters'])
+        if stage['operation']=='docking_dock6':
+            if self.dock6_path is not None:
+                params['dock6_app_path']=str(self.dock6_path)
+            elif not params.get('dock6_app_path'):
+                raise ValueError('Instalação DOCK6 não encontrada. Configure --dock6-path ou BIOMOL_DOCK6_ROOT com a pasta que contém bin/ e parameters/.')
+            ligand=(params.get('preparation_options') or {}).get('ligand',{})
+            params['charge_type']=ligand.get('charge_type',params.get('charge_type') or 'gas')
+        return params
+
     def _validate_parameters(self, project_id, stage, partial=False, cache_only=False):
         if stage.get('provided_results'):
             return
-        params = stage['parameters']
+        params = self._runtime_parameters(stage)
         operation = stage['operation']
         for field,value in params.items():
             if field in PATH_FIELDS | {'dock6_app_path'} and value is not None and not isinstance(value,str):
@@ -426,11 +440,11 @@ class PipelineService:
             files=[self.store.scoped_path(project_id,p) for p in results.get(ref['stage'],[])]
             available.extend(files);selector=ref.get('selector','auto')
             if selector!='auto':
-                matches=[p for p in files if p.name==selector or p.as_posix().endswith('/'+selector)]
+                matches=[p for p in files if matches_selector(p,selector)]
                 if len(matches)!=1:raise ValueError('Selecione um caminho de arquivo específico para esta entrada.')
             else:
-                matches=[p for p in files if p.suffix=='.csv' and {'molecule_chembl_id','canonical_smiles'}<=columns(p)]
-                if engine:matches=[p for p in matches if {'engine','score','conformer_file'}<=columns(p)]
+                matches=[p for p in files if p.suffix=='.csv' and
+                         ({'molecule_chembl_id','score'} if engine else {'molecule_chembl_id','canonical_smiles'})<=columns(p)]
                 if matches:
                     matches.sort(key=lambda p:(p.name not in ('docking_results.csv','compounds.csv','molecules.csv'),len(p.parts),p.name))
                     summaries=[p for p in matches if p.name=='docking_results.csv']
@@ -441,6 +455,19 @@ class PipelineService:
                         else p.suffix in ('.sdf','.mol2','.pdbqt') and not '.dockprep.' in p.name)]
             selected.extend(matches)
         if not selected:raise ValueError('Selecione ao menos um arquivo molecular compatível com esta entrada.')
+        # Older native runs omitted footprint PDFs from their artifact manifest.
+        # Recover only the attachment declared by an authorized source table,
+        # inside that table's own output directory.
+        if engine=='dock6':
+            from .docking_data import read_compounds
+            for table in selected:
+                if table.suffix.lower()!='.csv':continue
+                for row in read_compounds(table):
+                    value=row.get('footprint_file')
+                    if not value:continue
+                    candidate=(Path(value) if Path(value).is_absolute() else table.parent/value).resolve()
+                    if candidate.is_relative_to(table.parent.resolve()) and candidate.suffix.lower()=='.pdf' and candidate.is_file():
+                        available.append(self.store.scoped_path(project_id,candidate))
         return list(dict.fromkeys(selected)),list(dict.fromkeys(available))
 
     def _docking_destination(self, project_id, stage, field, available, directory):
@@ -474,14 +501,10 @@ class PipelineService:
         return destination,path.stem,selected
 
     def _materialize_scores(self, project_id, stage, field, refs, results, directory):
-        from .docking_data import input_records,copy_input_records,score
+        from .docking_data import score_input_records,copy_input_records
         engine='dock6' if field=='base_dock6_path' else 'vina'
         selected,available=self._docking_sources(project_id,refs,results,engine)
-        rows=input_records(selected,available)
-        for row in rows:
-            if row.get('engine') and row['engine']!=engine:raise ValueError('Resultado de docking incompatível com o motor selecionado.')
-            row.setdefault('receptor_id','');row['engine']=engine
-            if row.get('score') is None:row['score']=score(row['conformer_file'],engine)
+        rows=score_input_records(selected,available,engine)
         destination=self._docking_destination(project_id,stage,field,available,directory)
         path=copy_input_records(rows,destination);path.rename(destination/'docking_results.csv')
         return destination,None,selected
@@ -500,7 +523,7 @@ class PipelineService:
         kind=('similarity' if field=='similarity_path' else 'fingerprints' if operation=='similarity' else
               'vina' if field=='base_vina_path' or operation=='consensus' and field=='base_input_path' else 'dock6' if field=='base_dock6_path' else
               'compounds' if field=='base_selected_mols' or operation in ('admet','fingerprints','graphs','retrieve_pubchem','expand_similar_compounds') else
-              'other' if operation=='retrieve_zinc' else 'prepared_structures' if operation in ('docking_vina','docking_dock6') or operation=='prepare_structures' and stage['parameters'].get('receptor_prepared',False)
+              'other' if operation=='retrieve_zinc' else 'prepared_structures' if operation in ('docking_vina','docking_dock6') and stage['parameters'].get('receptor_prepared',True) or operation=='prepare_structures' and stage['parameters'].get('receptor_prepared',False)
               or operation=='redocking' and not stage['parameters'].get('prepare_complex',True) else 'structures')
         required={'compounds':{'canonical_smiles'},'fingerprints':{'fingerprint','molecule_chembl_id'},'similarity':{'source','target','value'}}
         selected=[]
@@ -640,8 +663,8 @@ class PipelineService:
         return destination,filename,selected
 
     def _resolve(self, project_id, user_id, stage, results, input_directory=None, item=None, cache_only=False, pipeline=None):
-        params = dict(stage['parameters'])
-        if stage['operation']=='prepare_structures':
+        params = self._runtime_parameters(stage)
+        if stage['operation'] in ('prepare_structures','docking_vina','docking_dock6'):
             from .docking_inputs import prepared_receptor
             modes=[]
             for ref in input_sources(stage.get('bindings',{}).get('base_input_path',{})):
@@ -886,10 +909,7 @@ class PipelineService:
                 files=[Path(p) for p in results.get(ref['stage'],[])]
                 for path in files:
                     if path.name not in identities:continue
-                    selector=path.name
-                    for length in range(1,len(path.parts)):
-                        selector='/'.join(path.parts[-length:])
-                        if sum(p.as_posix().endswith('/'+selector) for p in files)==1:break
+                    selector=selector_for(path,files)
                     refs.append(dict(ref,selector=selector))
             if not refs:raise ValueError('Selecione arquivos de estruturas correspondentes aos pares de redocking configurados.')
             stage['bindings']['base_input_path']=pack(refs)

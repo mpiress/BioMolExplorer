@@ -28,7 +28,7 @@ def preparation_values(stage, config, role):
 class PreparationSettings:
     def __init__(self,form,config=None):
         self.form=form;config=copy.deepcopy(config or {})
-        self.settings={}
+        self.settings={};self.groups={}
         self.receptor_inactive=False
         self.has_cofactors=ft.Switch(label='Considerar cofatores como parte do receptor',value=bool(config.get('cofactors')),disabled=not form.writable)
         self.cofactors=ft.TextField(label='Cofatores do receptor (códigos separados por vírgula)',value=', '.join(config.get('cofactors',[])))
@@ -44,7 +44,7 @@ class PreparationSettings:
             options['charge_type']=ft.Dropdown(label='Método de cargas do receptor' if role=='receptor' else 'Método de cargas do ligante',
                 value=values['charge_type'],options=[ft.DropdownOption(key=v,text=v) for v in ('gas','am1')],disabled=not form.writable)
             self.settings[role]=options
-            if role=='ligand' and form.stage['operation']=='prepare_structures':
+            if role=='ligand' and form.stage['operation'] in ('prepare_structures','docking_vina','docking_dock6'):
                 notice='Prepare os compostos selecionados de ChEMBL, PubChem, ZINC ou arquivos próprios. Todas as fontes usam estas opções.'
             controls=[ft.Text(notice,size=12)]
             if role=='receptor':controls += [self.has_cofactors,self.cofactors]
@@ -52,12 +52,14 @@ class PreparationSettings:
             controls.append(ft.Container(options['charge_type'],padding=ft.Padding.only(top=32,bottom=20)))
             groups.append(ft.ExpansionTile(title=ft.Text(title),controls=controls,expanded=True,
                 expanded_cross_axis_alignment=ft.CrossAxisAlignment.STRETCH,controls_padding=24,tile_padding=16))
+            self.groups[role]=groups[-1]
         self.control=ft.Column(groups,spacing=20,data='input')
         self.sync()
 
     def sync(self,inactive=False):
         inactive=inactive or not self.form.writable
         receptor_inactive=inactive or self.receptor_inactive
+        self.groups['receptor'].visible=not self.receptor_inactive
         self.has_cofactors.disabled=receptor_inactive
         self.cofactors.disabled=receptor_inactive or not self.has_cofactors.value
         for role,options in self.settings.items():

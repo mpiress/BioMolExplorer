@@ -170,3 +170,25 @@ PYTHONPATH=src:tests python -m unittest test_pipeline_guidance test_connection_m
 ```
 
 The full suite for this review ran 495 tests with no failures or errors; two local server checks were skipped due to sandbox restrictions. All eight new tests passed. The 27 HTML pages were checked for local files, IDs and anchors.
+
+## PDB project review on October 9, 2026
+
+The PDB project failed before redocking started because its selected `4M0E.pdb`
+path included a previous worker's temporary job ID. Retrieval or cache reuse
+changed that directory. Logical selectors now retain batch and output paths,
+excluding the transient job directory. The resolver also accepts older saved
+selectors across PDB, receptor, compound and Vina/DOCK6 result inputs. Missing and
+ambiguous files still fail validation.
+
+A temporary copy of the selected **4M0E / NO3 / 608 / B** pair completed redocking
+with the project's preparation choices, including minimization. Reduced search
+(`exhaustiveness=1`, `num_modes=2`) produced **2.888 Å RMSD** and a **−2.887 Vina
+score**. Without minimization, RMSD was **3.245 Å**. This verifies preparation,
+execution, poses and RMSD calculation; it does not reproduce the user's full
+search settings (`20`, `10`) or establish scientific acceptance. See the
+[PDB/redocking report](../validation/pdb_redocking_2026-10-09.json).
+
+Real Vina and DOCK6 validation also completed using REF and ETHANOL with the
+1ABE_A receptor from the DOCK6 example: preparation for both engines, independent
+runs, pose exchange in both directions, consensus and empty-intersection handling.
+See the [docking report](../validation/docking_2026-10-09.json).

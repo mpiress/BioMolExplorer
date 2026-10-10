@@ -1,0 +1,89 @@
+{
+  "date": "2026-10-09",
+  "project": "PDB",
+  "failure": {
+    "message": "O arquivo escolhido não está nos resultados da etapa.",
+    "cause": "O seletor guardava o identificador temporário de um job anterior; a nova execução ou o cache forneciam o mesmo PDB em outro job.",
+    "phase": "Resolução das entradas / chave de cache, antes da preparação e do Vina.",
+    "fix": "Seletores lógicos preservam lote e caminho de saída, removendo .biomolexplorer/jobs/<id>/artifacts/. O resolvedor aceita seletores antigos sem trocar arquivos ausentes ou ambíguos."
+  },
+  "redocking": {
+    "input": "4M0E.pdb",
+    "pair": [
+      "4M0E",
+      "NO3",
+      608,
+      "B"
+    ],
+    "tools": [
+      "Chimera",
+      "Open Babel",
+      "AutoDock Vina",
+      "PyMOL"
+    ],
+    "input_copy": "temporary, user project unchanged",
+    "vina": {
+      "exhaustiveness": 1,
+      "num_modes": 2,
+      "sizeof_box": [
+        24,
+        24,
+        24
+      ]
+    },
+    "preparation": {
+      "receptor": {
+        "minimize": true,
+        "charge_type": "gas"
+      },
+      "ligand": {
+        "minimize": true,
+        "charge_type": "am1"
+      }
+    },
+    "status": "completed",
+    "rmsd_angstrom": 2.8881781101226807,
+    "vina_score": -2.887,
+    "without_minimization": {
+      "status": "completed",
+      "rmsd_angstrom": 3.245377779006958,
+      "vina_score": -2.8
+    },
+    "limits": "Verifica execução e arquivos com busca reduzida; não reproduz a configuração completa de busca do projeto (exhaustiveness=20, num_modes=10) nem estabelece aceitação científica do par."
+  },
+  "docking_report": "docking_2026-10-09.json",
+  "updates": {
+    "repository": "https://github.com/mpiress/BioMolExplorer",
+    "branch": "master",
+    "interval_seconds": 3600,
+    "postpone_seconds": 86400,
+    "online_api_check": "passed; installed HEAD matched master",
+    "distribution": "wheel build includes resources/revision.txt; download ZIP pinned to commit",
+    "installation": "manual after downloading and finishing active analyses"
+  },
+  "tests": {
+    "full_suite": {
+      "ran": 508,
+      "skipped": 2,
+      "result": "OK",
+      "seconds": 253.535
+    },
+    "additional_final_runs": {
+      "stable_selectors": {
+        "ran": 4,
+        "result": "OK"
+      },
+      "update_notifications": {
+        "ran": 8,
+        "result": "OK"
+      },
+      "localization": {
+        "ran": 10,
+        "result": "OK"
+      }
+    },
+    "documentation": "27 HTML pages, links and anchors validated",
+    "wheel": "built successfully; embedded revision verified",
+    "git_diff_check": "passed"
+  }
+}

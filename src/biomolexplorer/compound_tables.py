@@ -3,6 +3,7 @@ import csv
 import hashlib
 import io
 import json
+import math
 import os
 import re
 import shutil
@@ -72,32 +73,55 @@ class CompoundTables:
         stream.seek(0)
         return digest.hexdigest()
 
-    def page(self,token,project_id,run_id,stage_id,filename,offset=0,limit=25,query=''):
+    def page(self,token,project_id,run_id,stage_id,filename,offset=0,limit=25,query='',sort_by=None,ascending=True):
         if type(offset) is not int or offset<0 or type(limit) is not int or not 1<=limit<=100:
             raise ValueError('Página de tabela inválida.')
         if not isinstance(query,str) or len(query)>200:
             raise ValueError('Use até 200 caracteres na busca.')
+        if sort_by is not None and (not isinstance(sort_by,str) or type(ascending) is not bool):
+            raise ValueError('Ordenação de tabela inválida.')
         path=self._path(token,project_id,run_id,stage_id,filename)
-        rows=[];matched=total=0
+        rows=[];matched=total=0;selected=[]
         with path.open('rb') as source:
             version=self._digest(source)
             reader=csv.DictReader(io.TextIOWrapper(source,encoding='utf-8-sig',newline=''))
             if not {'molecule_chembl_id','canonical_smiles'}.issubset(reader.fieldnames or []):
                 raise ValueError('Esta tabela não contém código do composto e SMILES.')
+            fields=reader.fieldnames or []
+            if 'vina' in fields and 'dock6' in fields and 'min-max' in fields and 'normalized_score' not in fields:
+                fields=fields+['normalized_score']
+            if sort_by is not None and sort_by not in fields:
+                raise ValueError('Coluna de ordenação inválida.')
             for index,row in enumerate(reader):
+                if 'normalized_score' in fields and 'normalized_score' not in row:row['normalized_score']=row.get('min-max','')
                 total+=1
                 identifier=row['molecule_chembl_id'] or ''
                 smiles=row['canonical_smiles'] or ''
                 if query.lower() not in (identifier+' '+smiles).lower():
                     continue
-                if offset<=matched<offset+limit:
-                    rows.append({'index':index,'id':identifier,'smiles':smiles,'links':compound_links(row),'properties':row})
+                record={'index':index,'id':identifier,'smiles':smiles,'links':compound_links(row),'properties':row}
+                if sort_by is not None:selected.append(record)
+                elif offset<=matched<offset+limit:rows.append(record)
                 matched+=1
+        if sort_by is not None:
+            numeric=sort_by in ('score','vina','dock6','normalized_score','z-score','min-max')
+            def key(record):
+                value=record['properties'].get(sort_by,'')
+                if numeric:
+                    try:
+                        value=float(value)
+                        return value if math.isfinite(value) else None
+                    except (ValueError,TypeError):return None
+                return str(value).casefold() if value else None
+            present=[record for record in selected if key(record) is not None]
+            missing=[record for record in selected if key(record) is None]
+            present.sort(key=key,reverse=not ascending)
+            rows=(present+missing)[offset:offset+limit]
         project=self.store.project(token,project_id)
         with self.store.connect() as db:
             active=db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running','awaiting_input')",(project_id,)).fetchone()
         return {'rows':rows,'total':total,'matched':matched,'version':version,'offset':offset,'limit':limit,'name':path.name,
-                'can_edit':project['role']!='viewer' and active is None}
+                'can_edit':project['role']!='viewer' and active is None,'columns':fields}
 
     def remove(self,token,project_id,run_id,stage_id,filename,index,expected_version):
         self.store.project(token,project_id,'editor')

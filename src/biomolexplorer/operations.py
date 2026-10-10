@@ -34,10 +34,10 @@ OPERATIONS = {
         ('pdb_codes', 'pH', 'sizeof_box', 'exhaustiveness', 'num_modes', 'prepare_complex', 'charge_type', 'preparation_pairs')),
     'docking_vina': OperationSpec('wrappers.docking', 'perform_docking_vina',
         ('base_input_path', 'target', 'base_selected_mols', 'mol_filename'),
-        ('pdb_code', 'pH', 'sizeof_box', 'exhaustiveness', 'num_modes')),
+        ('pdb_code', 'pH', 'sizeof_box', 'exhaustiveness', 'num_modes', 'preparation_options', 'receptor_prepared')),
     'docking_dock6': OperationSpec('wrappers.docking', 'perform_docking_dock6',
         ('base_input_path', 'target', 'base_selected_mols', 'dock6_app_path', 'charge_type', 'mol_filename'),
-        ('pdb_code', 'base_vina_path','density', 'radius', 'distance', 'conformer_search_type', 'plot_max_residues')),
+        ('pdb_code', 'base_vina_path','density', 'radius', 'distance', 'conformer_search_type', 'plot_max_residues', 'pH', 'preparation_options', 'receptor_prepared')),
     'consensus': OperationSpec('wrappers.docking', 'generate_consensus', ('base_input_path', 'target'),
         ('repulsion_weight', 'base_vina_path', 'base_dock6_path')),
 }
@@ -121,7 +121,7 @@ def validate_operation(operation, parameters, *, defer_redocking_selection=False
         validate_pairs(parameters.get('pdb_codes'), parameters.get('preparation_pairs') or {})
     if operation=='prepare_structures' and parameters.get('docking_engines','both') not in ('vina','dock6','both'):
         raise ValueError('Selecione Vina, DOCK6 ou ambos para a saída de preparação.')
-    if operation=='prepare_structures' and 'preparation_options' in parameters:
+    if operation in ('prepare_structures','docking_vina','docking_dock6') and 'preparation_options' in parameters:
         from .redocking_config import validate_preparation_settings
         validate_preparation_settings(parameters['preparation_options'])
     if 'chembl_filters' in parameters:
@@ -218,6 +218,7 @@ def _execute_operation(operation, parameters, output_path):
             result = result.run_pipeline()
     artifacts = [str(p) for p in sorted(output.rglob('*')) if p.is_file()
                  and 'cache' not in p.parts and '.quality-inputs' not in p.parts
-                 and p.suffix in ('.csv', '.png', '.json', '.pdb', '.pdbqt', '.mol2', '.sdf')]
+                 and (p.suffix in ('.csv', '.png', '.json', '.pdb', '.pdbqt', '.mol2', '.sdf', '.pdf')
+                      or p.name.endswith('_footprint_scored.txt'))]
     details = {'rows': len(result)} if hasattr(result, 'columns') else result if isinstance(result,dict) else {}
     return OperationResult(operation, artifacts, details)

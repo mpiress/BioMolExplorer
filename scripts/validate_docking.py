@@ -71,7 +71,13 @@ def main():
         else:perform_docking_dock6(**common,dock6_app_path=str(dock),charge_type='gas',conformer_search_type='rigid',distance=6.)
         rows=read_results(output,engine)
         assert {r['molecule_chembl_id'] for r in rows}=={'REF','ETHANOL'},rows
-        assert all(Path(r['conformer_file']).is_file() for r in rows)
+        assert all(Path(r['conformer_file']).is_file() and Path(r['receptor_file']).is_file() for r in rows)
+        if engine=='dock6':
+            from biomolexplorer.footprints import footprint_rows
+            for row in rows:
+                pdf=Path(row['footprint_file'])
+                assert pdf.read_bytes().startswith(b'%PDF-') and row['footprint_origin']=='docked_pose'
+                assert footprint_rows(pdf.parent.parent/(row['molecule_chembl_id']+'_footprint_scored.txt'))
         report[label]=[{k:r[k] for k in ('molecule_chembl_id','receptor_id','score')} for r in rows]
         return output
 

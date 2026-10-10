@@ -30,8 +30,8 @@ INPUTS = {
     'graphs': {'similarity_path':{'similarity'}},
     'prepare_structures': {'base_input_path':{'structures','prepared_structures'},'base_selected_mols':{'compounds'}},
     'redocking': {'base_input_path':{'structures','prepared_structures'}},
-    'docking_vina': {'base_input_path':{'prepared_structures'},'base_selected_mols':{'compounds','vina','dock6'}},
-    'docking_dock6': {'base_input_path':{'prepared_structures'},'base_selected_mols':{'compounds','vina','dock6'},'base_vina_path':{'vina'}},
+    'docking_vina': {'base_input_path':{'structures','prepared_structures'},'base_selected_mols':{'compounds','vina','dock6'}},
+    'docking_dock6': {'base_input_path':{'structures','prepared_structures'},'base_selected_mols':{'compounds','vina','dock6'}},
     'consensus': {'base_vina_path':{'vina'},'base_dock6_path':{'dock6'}},
 }
 # These inputs are configured with uploaded files, never with canvas connections.
@@ -87,7 +87,7 @@ def connect(stages, source_id, target_id, field):
     proposed=next(s for s in candidate if s['id']==target_id)
     old=proposed.setdefault('bindings',{}).get(field)
     proposed['bindings'][field]=pack((sources(old) if old else [])+[{'stage':source_id,'selector':'auto'}])
-    if target['operation']=='prepare_structures' and field=='base_input_path':
+    if target['operation'] in ('prepare_structures','docking_vina','docking_dock6') and field=='base_input_path':
         proposed['parameters']['receptor_prepared']='prepared_structures' in output_types(source)
     if target['operation']=='consensus' and field=='base_vina_path':
         proposed['bindings']['base_input_path']=copy.deepcopy(proposed['bindings']['base_vina_path'])

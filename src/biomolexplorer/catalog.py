@@ -94,6 +94,7 @@ def operation_fields(operation):
     fields = []
     for key in spec.required + spec.optional:
         if key=='verbose':continue
+        if operation=='docking_dock6' and key=='base_vina_path':continue
         if operation=='retrieve_compounds' and key in ('include_pubchem','pubchem_threshold','pubchem_max_records'):continue
         default = ENUM_DEFAULTS.get(key)
         if key in defaults:

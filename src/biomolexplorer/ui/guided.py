@@ -3,6 +3,7 @@ import copy
 import json
 import re
 import flet as ft
+from biomolexplorer.artifact_choices import matches_selector
 from biomolexplorer.catalog import operation_fields, template_names, TITLES, CHOICE_LABELS
 from biomolexplorer.retrieval import MODES
 from biomolexplorer.templates import RESOURCE_ROOT, validate_templates
@@ -20,6 +21,14 @@ NUMERIC={'max_resolution','pH','threshold','pubchem_threshold','pubchem_max_reco
 
 class GuidedForm:
     def __init__(self,ui,stage,assets,writable):
+        stage=copy.deepcopy(stage)
+        if stage['operation']=='docking_dock6':
+            from biomolexplorer.bindings import sources,pack
+            legacy=stage.get('bindings',{}).pop('base_vina_path',None)
+            if legacy:
+                stage['bindings']['base_selected_mols']=pack(sources(legacy))
+            legacy_path=stage['parameters'].pop('base_vina_path',None)
+            if legacy_path:stage['parameters']['base_selected_mols']=legacy_path
         self.ui,self.stage,self.assets,self.writable=ui,stage,assets,writable
         self.readers={}; self.binding_readers={}; self.direct_path_readers={}; self.template_readers={}
         self.input_editors={};self.field_controls={};self.conditional_cells={};self.filter_tiles={};self.filter_cells={};self.template_controls={}
@@ -32,7 +41,7 @@ class GuidedForm:
         self.title=ft.TextField(label='Nome do bloco',value=TITLES['prepare_structures'][0] if stage['operation']=='prepare_structures' and stage['name'] in ('Preparar meus complexos','Prepare my complexes') else stage['name'],disabled=not writable,data='wide')
         self.enabled=ft.Switch(label='Incluir este bloco na execução',value=stage.get('enabled',True),disabled=not writable)
         self.controls=[self.title,self.enabled]
-        if stage['operation']!='import_results':
+        if stage['operation'] not in ('import_results','consensus'):
             self.processing=ft.Dropdown(label='Como processar os arquivos selecionados?',
                 value=stage.get('input_processing','individual'),disabled=not writable,options=[
                     ft.DropdownOption(key='individual',text='Processar individualmente'),
@@ -58,8 +67,9 @@ class GuidedForm:
             self.readers['asset_types']=self.import_files.asset_types
             return
         from .input_editor import ProvidedResults
-        self.provided=ProvidedResults(ui,stage,assets,writable)
-        self.controls.append(self.provided.control)
+        if stage['operation']!='consensus' or stage.get('provided_results'):
+            self.provided=ProvidedResults(ui,stage,assets,writable)
+            self.controls.append(self.provided.control)
         if stage['operation']=='graphs':
             self.controls.append(ft.Text('Conecte um ou mais blocos Calcular similaridade. Use processamento individual para gerar um grafo por arquivo ou merge para reunir similaridades compatíveis. Opcionalmente, envie seus próprios CSVs de similaridade (source,target,value). Para entradas externas, uma tabela de códigos e SMILES permite visualizar moléculas, preservar nós isolados e calcular o fragmento comum.',size=13,color='#64748B',data='input'))
         if stage['operation']=='fingerprints':
@@ -71,9 +81,11 @@ class GuidedForm:
             for k in KINDS:self.readers[k]=lambda k=k:self.fingerprint_choice.value==k
         for field in operation_fields(stage['operation']):
             key=field['name']; value=stage['parameters'].get(key,field['default'])
+            if stage['operation']=='consensus' and key in ('target','repulsion_weight'):continue
             if stage['operation']=='retrieve_zinc' and key=='filename':continue
             if key=='graph_inputs':continue
-            if stage['operation']=='prepare_structures' and key in ('charge_type','preparation_options','receptor_prepared','mol_filename'):continue
+            if stage['operation'] in ('prepare_structures','docking_vina','docking_dock6') and key in ('charge_type','preparation_options','receptor_prepared'):continue
+            if stage['operation']=='prepare_structures' and key=='mol_filename':continue
             if stage['operation']=='redocking' and key in ('pdb_codes','preparation_pairs','charge_type'):continue
             if stage['operation']=='fingerprints' and key in ('morgan','maccs','pharmacophore'):continue
             if key=='base_input_path' and self.derived_consensus_input:
@@ -103,9 +115,16 @@ class GuidedForm:
                 self.list_field(key,field['label'],value,LISTS.get(key,[]))
             elif stage['operation']=='prepare_structures' and key=='pH':self.add(key,'pH de protonação do receptor e ligante',value)
             else: self.add(key,'Nome da coleção PubChem' if stage['operation']=='retrieve_pubchem' and key=='target' else 'Nome da coleção PDB (opcional)' if stage['operation']=='retrieve_structures' and key=='target' else field['label'],value,field['choices'])
-        if stage['operation']=='prepare_structures':
+        if stage['operation'] in ('prepare_structures','docking_vina','docking_dock6'):
             from .preparation_settings import PreparationSettings
             self.preparation_settings=PreparationSettings(self,stage['parameters'].get('preparation_options'))
+            if stage['operation'] in ('docking_vina','docking_dock6'):
+                complex_control=self.field_controls['pdb_code']
+                self.controls.remove(complex_control)
+                self.preparation_settings.groups['receptor'].controls.insert(1,complex_control)
+                ph_control=self.field_controls['pH']
+                self.controls.remove(ph_control)
+                self.preparation_settings.groups['ligand'].controls.append(ph_control)
             self.controls.append(ft.Text('Selecione o receptor e uma ou mais fontes de compostos. Receptores do redocking serão reutilizados sem novo preparo.',size=12,data='input'))
             self.controls.append(self.preparation_settings.control)
             self.readers['preparation_options']=self.preparation_settings.read
@@ -116,6 +135,9 @@ class GuidedForm:
                 self.preparation_settings.receptor_inactive=prepared
                 self.preparation_settings.sync()
                 stage['parameters']['receptor_prepared']=prepared
+                editor.is_target=prepared
+                if stage['operation'] in ('docking_vina','docking_dock6'):
+                    self.field_controls['pdb_code'].visible=not prepared
             editor.on_change=sync_preparation
             self.readers['receptor_prepared']=lambda:bool(self.preparation_settings.receptor_inactive)
             sync_preparation()
@@ -154,7 +176,7 @@ class GuidedForm:
             self.controls.append(self.graph_notice)
             self.sync_graph_mode()
         for name in template_names(stage['operation']):
-            if stage['operation'] in ('prepare_structures','redocking') and name.startswith('chimera/'):continue
+            if stage['operation'] in ('prepare_structures','redocking','docking_vina','docking_dock6') and name.startswith('chimera/'):continue
             self.template(name)
         if stage['operation']=='retrieve_compounds':
             self.field_controls['search_mode'].on_change=self.sync_retrieval
@@ -260,7 +282,7 @@ class GuidedForm:
         editor=self.input_editors['base_input_path']
         for source,selector,_ in editor.rows:
             for filename,records in catalog.get(source.value,{}).items():
-                if selector.value in (None,'auto') or filename.endswith('/'+selector.value) or filename==selector.value:
+                if selector.value in (None,'auto') or matches_selector(filename,selector.value):
                     available.update(records)
         choice.options=[verbatim(ft.DropdownOption(key=k,text=k+' · '+v),'text') for k,v in sorted(available.items())]
         if value and value not in available:choice.options.append(verbatim(ft.DropdownOption(key=value,text=value),'text'))
@@ -314,9 +336,10 @@ class GuidedForm:
         append_button=ft.TextButton('Adicionar complexo',on_click=append,disabled=not self.writable)
         bind_dependencies({'automatic':automatic,'records':box,'append':append_button},
             {k:lambda:not automatic.value for k in ('records','append')},self.writable,self.ui.page)
-        self.controls.append(ft.ExpansionTile(title=ft.Text(label),controls=[automatic,box,append_button]))
+        tile=ft.ExpansionTile(title=ft.Text(label),controls=[automatic,box,append_button])
+        self.controls.append(tile);self.field_controls[key]=tile;self.filter_tiles[key]=tile
         def read():
-            if automatic.value: return None
+            if automatic.value or not tile.visible: return None
             parsed=[[f[0].value.strip(),f[1].value.strip(),int(f[2].value),f[3].value.strip()]+([float(f[4].value)] if f[4].value else []) for f in rows]
             return parsed if multi else parsed[0] if parsed else None
         self.readers[key]=read
@@ -485,6 +508,7 @@ class GuidedForm:
         result=copy.deepcopy(self.stage); result['name']=self.title.value or TITLES[result['operation']][0]; result['enabled']=bool(self.enabled.value)
         if 'process_all' in result:result['process_all']=False
         if hasattr(self,'processing'):result['input_processing']=self.processing.value
+        if result['operation']=='consensus':result['input_processing']='merge'
         for key,getter in self.readers.items():
             if result['operation']=='fingerprints' and key in ('radius','morgan_n_bits') and self.fingerprint_choice.value!='morgan':
                 result['parameters'].pop(key,None);continue
@@ -529,7 +553,12 @@ class GuidedForm:
             result['parameters']['pdb_codes']=records
             result['parameters']['preparation_pairs']=settings
             result['parameters'].pop('charge_type',None)
-        if hasattr(self,'preparation_settings'):result['parameters'].pop('charge_type',None)
+        if hasattr(self,'preparation_settings'):
+            if result['operation']=='docking_dock6':
+                result['parameters']['charge_type']=result['parameters']['preparation_options']['ligand']['charge_type']
+            else:result['parameters'].pop('charge_type',None)
+            if result['operation'] in ('docking_vina','docking_dock6') and result['parameters']['receptor_prepared']:
+                result['parameters'].pop('pdb_code',None)
         validate_templates(result.get('templates',{}))
         if result['operation']=='similarity':
             from biomolexplorer.fingerprint_selection import generated_kind

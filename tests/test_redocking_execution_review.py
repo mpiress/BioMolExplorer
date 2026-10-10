@@ -41,6 +41,28 @@ class RedockingExecutionReviewTests(unittest.TestCase):
         self.assertFalse(run['stages'][1]['requires_curation'])
         self.assertEqual(len(run['stages'][1]['batches']),1)
 
+    def test_old_job_path_resolves_selected_pdb_in_a_new_execution(self):
+        source,stage=new_stage('retrieve_structures'),new_stage('redocking')
+        folder=self.store.project_dir(self.project_id)/'runs/new'/source['id']/'individual/001_PDB/.biomolexplorer/jobs/new/artifacts/PDB/MeuAlvo'
+        folder.mkdir(parents=True)
+        pdb=folder/'1ABC.pdb';pdb.write_text(PDB)
+        metadata=folder/'pdb_codes.csv'
+        metadata.write_text('PDB_CODE,LIGAND,RESNUM,CHAIN\n1ABC,LIG,1,A\n')
+        stage['parameters']['pdb_codes']=[['1ABC','LIG',1,'A']]
+        stage['bindings']['base_input_path']={'stage':source['id'],
+            'selector':'individual/001_PDB/.biomolexplorer/jobs/old/artifacts/PDB/MeuAlvo/1ABC.pdb'}
+        service=PipelineService(self.store)
+        try:
+            results={source['id']:[str(pdb),str(metadata)]}
+            variant,_=next(service._variants(self.project_id,stage,results))
+            user=self.store.user(self.token)['id']
+            params=service._resolve(self.project_id,user,variant,results,cache_only=True)
+            copied=Path(params['base_input_path'])/'MeuAlvo'
+            self.assertEqual((copied/'1ABC.pdb').read_text(),PDB)
+            self.assertTrue((copied/'pdb_codes.csv').is_file())
+            self.assertEqual(params['pdb_codes'],[['1ABC','LIG',1,'A']])
+        finally:service.close()
+
     def test_unconfigured_pairs_still_require_explicit_selection(self):
         source,stage=self.configuration(False);self.save([source,stage])
         manager,calls=self.immediate_manager()

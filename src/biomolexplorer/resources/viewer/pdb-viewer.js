@@ -2,6 +2,7 @@
 (async function () {
   "use strict";
   const config = JSON.parse(document.getElementById("configuration").textContent);
+  if (config.scene) {await window.BioMolDockingScene(config); return;}
   const labels = config.labels;
   const control = id => document.getElementById(id);
   const status = control("status");

@@ -44,8 +44,8 @@ def table_kind(path):
     fields = columns(path)
     if {'source','target','value'} <= fields:return 'similarity'
     if {'molecule_chembl_id','fingerprint'} <= fields:return 'fingerprints'
-    if 'canonical_smiles' in fields:return 'compounds'
     if fields & {'molecule_chembl_id','molecule','id','Unnamed: 0'} and fields & {'vina','dock6','score'}:return 'scores'
+    if 'canonical_smiles' in fields:return 'compounds'
     return None
 
 
@@ -56,7 +56,7 @@ def _validated_row(row, kind):
     row = {ALIASES.get(k,k):v for k,v in row.items()}
     code = row.get('molecule_chembl_id')
     signature = None
-    if 'canonical_smiles' in row:
+    if 'canonical_smiles' in row and (kind!='scores' or str(row['canonical_smiles']).strip()):
         smiles = row['canonical_smiles']
         mol = Chem.MolFromSmiles(smiles) if isinstance(smiles,str) and smiles.strip() else None
         if mol is None or not mol.GetNumAtoms():raise ValueError('SMILES ausente ou inválido')
@@ -76,7 +76,7 @@ def _validated_row(row, kind):
     if kind=='scores':
         code = row.get('molecule_chembl_id') or row.get('molecule') or row.get('id') or row.get('Unnamed: 0')
         if not _code(code):raise ValueError('código do composto ausente ou inválido')
-    numeric = ('TPSA','WLOGP') if kind=='compounds' else ('vina','dock6','score','z-score','min-max') if kind=='scores' else ()
+    numeric = ('TPSA','WLOGP') if kind=='compounds' else ('vina','dock6','score','z-score','min-max','normalized_score') if kind=='scores' else ()
     for field in numeric:
         if field in row and (kind=='scores' or row[field] not in ('',None)) and not math.isfinite(float(row[field])):
             raise ValueError(field+' inválido')

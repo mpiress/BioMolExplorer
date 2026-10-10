@@ -74,7 +74,7 @@ class GuidedInputPreservationTests(unittest.TestCase):
                     form=GuidedForm(self.ui(origins+[stage]),stage,[],True)
                     result=form.read()
                     self.assertEqual(result['bindings'],expected)
-                    self.assertEqual(result['input_processing'],mode)
+                    self.assertEqual(result['input_processing'],'merge' if operation=='consensus' else mode)
 
     def test_new_connection_replaces_configured_folder(self):
         source, stage = new_stage('retrieve_compounds'), new_stage('admet')

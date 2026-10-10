@@ -17,7 +17,7 @@ class RedockingResultsTable:
         self.offset = 0
         self.limit = 25
         self.table = ft.DataTable(columns=[ft.DataColumn(ft.Text(title), numeric=title == 'RMSD (Å)')
-            for title in ('PDB', 'Ligante', 'Resíduo', 'Cadeia', 'RMSD (Å)', 'Ações')], rows=[],
+            for title in ('PDB', 'Ligante', 'Resíduo', 'Cadeia', 'RMSD (Å)', '3D', 'Resíduos', 'Ações')], rows=[],
             column_spacing=28, heading_row_color='#F1F5F9')
         self.count = ft.Text(size=13, color='#64748B')
         self.previous = ft.TextButton('Página anterior', on_click=lambda e: self.move(-1))
@@ -38,9 +38,15 @@ class RedockingResultsTable:
             async def view(e, key=simulation['id']):
                 if self.valid():
                     await self.ui.guard(lambda: self.open(key))
+            async def overlay(e,key=simulation['id']):
+                if self.valid():await self.ui.guard(lambda:self.overlay(key))
+            async def contacts(e,key=simulation['id']):
+                if self.valid():await self.ui.guard(lambda:self.contacts(key))
             values = [simulation[k] for k in ('pdb', 'ligand', 'residue', 'chain')]
             rows.append(ft.DataRow(cells=[ft.DataCell(verbatim(ft.Text(value))) for value in values] + [
                 ft.DataCell(ft.Text(f"{simulation['rmsd']:.3f}")),
+                ft.DataCell(ft.TextButton('3D',icon=ft.Icons.VIEW_IN_AR,on_click=overlay)),
+                ft.DataCell(ft.TextButton('Resíduos',icon=ft.Icons.SCIENCE_OUTLINED,on_click=contacts)),
                 ft.DataCell(ft.TextButton('Ver simulação', icon=ft.Icons.VISIBILITY, on_click=view))]))
         self.table.rows = rows
         self.count.value = f'{len(self.simulations)} simulações · Página {self.offset//self.limit+1}'
@@ -57,6 +63,18 @@ class RedockingResultsTable:
     def build(self):
         return ft.Column([self.count, ft.Row([self.table], scroll=ft.ScrollMode.AUTO),
             ft.Row([self.previous, self.next], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)], spacing=16)
+
+    async def overlay(self,key):
+        if self.valid():
+            await self.ui.preview_docking(self.results.project_id,self.results.run_id,self.results.stage['id'],
+                'redocking',key,self.results.token)
+
+    async def contacts(self,key):
+        from .docking_scene import residue_dialog
+        r=self.results
+        await residue_dialog(self.ui,r.project_id,
+            lambda:self.service.scene(r.token,r.project_id,r.run_id,r.stage['id'],key),
+            self.valid,lambda:self.overlay(key))
 
     async def open(self, key):
         results = self.results

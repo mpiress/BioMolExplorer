@@ -71,7 +71,7 @@ class GuidedDependenciesTests(unittest.TestCase):
 
     def test_automatic_complex_detection_blocks_manual_entry(self):
         form=self.form('docking_vina')
-        tile=next(c for c in form.controls if isinstance(c,ft.ExpansionTile) and any(isinstance(x,ft.Checkbox) for x in c.controls))
+        tile=form.field_controls['pdb_code']
         automatic,records,append=tile.controls
         self.assertTrue(records.disabled);self.assertTrue(append.disabled)
         self.toggle(automatic,False)

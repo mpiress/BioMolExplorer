@@ -77,7 +77,7 @@ O pipeline define as dependências. A posição de um bloco na tela ajuda a orga
 1. Adicione **Importar meus arquivos** ao pipeline e abra sua configuração.
 2. Escolha **Tipo dos arquivos a adicionar** e clique em **Selecionar arquivos no disco**. Selecione todos os arquivos necessários; cada arquivo é validado antes de entrar no projeto.
 3. Para aproveitar arquivos existentes, use **Arquivo já enviado ao projeto** ou **Adicionar todos os arquivos do projeto**.
-4. Confira a tabela **Tipo / Arquivo / Ações**. Você pode alterar o tipo por linha (com nova validação) ou usar **Remover da lista**. A remoção dessa lista preserva o arquivo na biblioteca do projeto.
+4. Confira a tabela **Tipo / Arquivo / Ações**. Você pode alterar o tipo por linha (com nova validação) ou usar o botão **Remover** na coluna **Ações**. A remoção dessa lista preserva o arquivo na biblioteca do projeto.
 5. Para receptores preparados, inclua também os metadados e formatos complementares. Configure a pasta do alvo para estruturas e aplique a configuração. Um bloco pode publicar vários tipos, conectados às entradas correspondentes dos consumidores.
 
 Um CSV mínimo de compostos é:
@@ -226,6 +226,11 @@ Use o botão de download de cada linha para baixar um arquivo, ou **Baixar todos
 
 O botão **Visualizar estrutura 3D** abre o visualizador no navegador, como na consulta dos PDBs. Ele aceita PDB, PDBQT e MOL2 para examinar receptor, ligante e poses antes do download. Para saídas com várias poses, use **Modelo** no visualizador. As legendas e ações acompanham o idioma selecionado. Leitores também podem consultar e baixar os resultados.
 
+
+O botão **3D** de cada resultado abre uma comparação com a melhor pose do Vina em ciano, o ligante cristalográfico em dourado e o receptor utilizado. O complexo cristalográfico completo pode ser ativado no painel de camadas. As coordenadas são mantidas, sem realinhamento que pudesse ocultar deslocamentos. Quando o PDB original não estiver disponível, uma referência preparada, se existente, aparece identificada dessa forma.
+
+**Resíduos** apresenta as menores distâncias entre átomos pesados do receptor e do ligante, para a pose e a referência. O limite inicial é 4 Å, ajustável entre 2 e 8 Å. É possível baixar a tabela em CSV e selecionar um resíduo no visualizador para destacá-lo. Esses contatos indicam proximidade geométrica; não classificam ligações de hidrogênio ou outros tipos de interação.
+
 ### Fingerprints, similaridade e grafos
 
 **Gerar fingerprints** escolhe um tipo por bloco: Morgan, MACCS ou farmacóforo. Raio e bits aplicam-se ao Morgan. Para comparar tipos, duplique o bloco e mantenha os resultados identificados.
@@ -244,11 +249,13 @@ O botão **Visualizar estrutura 3D** abre o visualizador no navegador, como na c
 
 Para reutilizar conformações, conecte **Vina → DOCK6** ou **DOCK6 → Vina** na entrada de compostos, escolhendo `docking_results.csv` ou a pose desejada. A identidade e o SMILES são preservados; a conversão utiliza a conformação selecionada, sem gerar outra a partir do SMILES. Sem uma pose de entrada, a preparação gera um conformero 3D. DOCK6 usa o centro do sítio do receptor para selecionar esferas e posicionar ligantes recém-gerados; a entrada opcional de poses Vina continua disponível para refinamento de candidatos correspondentes.
 
-Confira a caixa, pH e esforço do Vina e as cargas, superfície, distância, raio, busca flexível/rígida e footprint do DOCK6. Ambos exigem receptores preparados, metadados e centros; DOCK6 também exige MOL2 do receptor e PDB sem hidrogênios. Seus resultados apresentam código molecular, receptor, score, SMILES, **3D** da pose calculada e **Remover**. O botão abre a estrutura obtida no docking.
+Confira a caixa, pH e esforço do Vina e as cargas, superfície, distância, raio, busca flexível/rígida e footprint do DOCK6. Ambos exigem receptores preparados, metadados e centros; DOCK6 também exige MOL2 do receptor e PDB sem hidrogênios. Seus resultados apresentam código molecular, receptor, score, SMILES, **3D** da pose calculada e **Remover**. O botão **3D** sobrepõe a melhor pose ao receptor utilizado; uma referência preparada, quando disponível, aparece em dourado. **Resíduos** oferece a mesma tabela de contatos do redocking. As novas execuções guardam cópias do receptor e da referência junto aos resultados para preservar essa associação.
+
+O botão **Footprint** do DOCK6 abre um popup integrado com o gráfico das energias de Van der Waals e eletrostáticas por resíduo, comparando a referência com a pose final calculada. Use o zoom e arraste para explorar o gráfico; **Recentrar** restaura a visualização inicial e **Baixar PDF** salva o documento original. O mesmo popup está disponível no consenso quando há um footprint associado. A geração valida o conteúdo das energias e interrompe a etapa se o motor produzir um arquivo vazio. Resultados antigos podem ter usado o ligante minimizado antes do docking; a interface avisa sobre essa origem. Reexecute esses experimentos para obter o gráfico da pose final.
 
 **Consenso de docking** reúne os resultados selecionados de cada motor, incluindo vários lotes e ramificações. Calcula somente a interseção por código molecular e receptor, usando o menor score quando há poses repetidas. Resultados do mesmo código com estruturas diferentes são recusados. Não havendo interseção, o bloco é marcado como não executado e explica que os motores não avaliaram compostos em comum para o mesmo receptor.
 
-A tabela de consenso apresenta os scores Vina e DOCK6, SMILES, receptor e normalizações z-score/min-max, com botões **3D Vina**, **3D DOCK6** e **Remover** em cada linha. O score DOCK6 usado no consenso é `min(0, Grid_Score + repulsion_weight × Internal_energy_repulsive)`; a repulsão ausente vale zero. Para um composto ou scores constantes, as normalizações são zero. A remoção exige permissão de edição, fica registrada e afeta próximas entradas; não recalcula análises já concluídas. As tabelas principais de cada lote são usadas sem reintroduzir linhas removidas a partir das tabelas auxiliares.
+Após conectar os resultados Vina e DOCK6, o consenso segue automaticamente na execução do pipeline, sem confirmação de arquivos ou parâmetros adicionais. A tabela apresenta código do composto, score Vina, score DOCK6 e score normalizado (0 a 1). Clique no cabeçalho de uma coluna para alternar a ordenação crescente e decrescente; a ordenação considera toda a tabela antes da paginação. O score normalizado é a média das normalizações min-max dos dois motores, e valores maiores indicam posições melhores no ranking. O CSV também preserva z-score e min-max. Há botões **3D Vina**, **3D DOCK6** e **Remover** em cada linha. O consenso usa os scores originais dos dois motores, sem exigir receptor, ligante de referência ou pose. Arquivos estruturais disponíveis são anexos opcionais para visualização e sua ausência não bloqueia o cálculo. Para um composto ou scores constantes, as normalizações são zero. A remoção exige permissão de edição, fica registrada e afeta próximas entradas; não recalcula análises já concluídas. As tabelas principais de cada lote são usadas sem reintroduzir linhas removidas a partir das tabelas auxiliares.
 
 ## 12. Explorar resultados e navegar pelos grafos
 

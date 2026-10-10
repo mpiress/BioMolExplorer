@@ -1,0 +1,12 @@
+{
+  "status": "succeeded",
+  "compound": "CHEMBL211596",
+  "source_pdf": "/home/michel/Downloads/PDB Example/runs/2f721af0e7124b7f8ffb6c954f4f3c4c/e333cd607a99492399d54cf52b65d72d/individual/001_4M0E_1YL_604A_CHEMBL211596.lig_+_4M0E_A.dockprep/.biomolexplorer/jobs/215d273cc0ff4c41ac2db2498e8dabd1/artifacts/Estruturas/4M0E_A/Dock6/footprint/plots/CHEMBL211596.pdf",
+  "pdf_bytes": 23439,
+  "residue_rows": 532,
+  "nonzero_pose_energies": true,
+  "consensus_preserves_pdf": true,
+  "footprint_button_available": true,
+  "document_http_status": 200,
+  "test": "Existing DOCK6 results copied into an isolated workspace; legacy manifest without PDF; actual consensus execution and authenticated PDF viewer."
+}

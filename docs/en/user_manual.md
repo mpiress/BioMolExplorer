@@ -77,7 +77,7 @@ The pipeline defines dependencies. Block positions help visual organization; the
 1. Add **Import my files** to the pipeline and open its configuration.
 2. Choose **Type of files to add** and click **Select files from disk**. Select all required files; each file is validated before entering the project.
 3. Reuse existing uploads through **File already uploaded to the project** or **Add all project files**.
-4. Review the **Type / File / Actions** table. You can change each row's type (with fresh validation) or use **Remove from list**. Removing a row preserves the file in the project library.
+4. Review the **Type / File / Actions** table. You can change each row's type (with fresh validation) or use **Remove** in the **Actions** column. Removing a row preserves the file in the project library.
 5. Include metadata and companion formats for prepared receptors. Set the target folder for structures and apply the configuration. One block can publish several types, connected to the corresponding consumer inputs.
 
 A minimal compound CSV is:
@@ -226,6 +226,11 @@ Use each row's download button for an individual file, or **Download all (ZIP)**
 
 **View 3D structure** opens the browser viewer, following the same flow as PDB inspection. It accepts PDB, PDBQT and MOL2 for inspecting receptors, ligands and poses before downloading. Use **Model** in the viewer for files containing multiple poses. Labels and actions follow the selected language. Readers can also inspect and download results.
 
+
+The **3D** button on each result opens an overlay of the best Vina pose in cyan, the crystallographic ligand in gold and the docking receptor. Enable the full crystallographic complex in the layers panel. Coordinates are preserved without realignment that could conceal displacement. If the original PDB is unavailable, an existing prepared reference is explicitly labeled as such.
+
+**Residues** lists minimum heavy-atom distances between receptor and ligand for the pose and reference. The default cutoff is 4 Å, adjustable between 2 and 8 Å. Download the table as CSV or select a residue in the viewer to highlight it. Contacts represent geometric proximity; they do not classify hydrogen bonds or other interaction types.
+
 ### Fingerprints, similarity and graphs
 
 **Generate fingerprints** chooses one type per block: Morgan, MACCS or pharmacophore. Radius and bits apply to Morgan. Duplicate the block to compare types and keep results identifiable.
@@ -244,11 +249,13 @@ Use each row's download button for an individual file, or **Download all (ZIP)**
 
 Reuse conformations by connecting **Vina → DOCK6** or **DOCK6 → Vina** at the compound input and selecting `docking_results.csv` or a specific pose. Identity and SMILES are retained; conversion uses the selected conformation instead of generating one from SMILES. Without an input pose, preparation generates a 3D conformer. DOCK6 uses the receptor site center to select spheres and position newly generated ligands; its optional Vina pose input remains available for refining corresponding candidates.
 
-Review Vina box, pH and search effort and DOCK6 charges, surface, distance, radius, flexible/rigid search and footprint. Both require prepared receptors, metadata and centers; DOCK6 also needs receptor MOL2 and hydrogen-free PDB. Results show compound ID, receptor, score, SMILES, **3D** of the calculated pose and **Remove**. This viewer opens the structure produced by docking.
+Review Vina box, pH and search effort and DOCK6 charges, surface, distance, radius, flexible/rigid search and footprint. Both require prepared receptors, metadata and centers; DOCK6 also needs receptor MOL2 and hydrogen-free PDB. Results show compound ID, receptor, score, SMILES, **3D** of the calculated pose and **Remove**. **3D** overlays the best pose with its docking receptor; an available prepared reference appears in gold. **Residues** provides the same contact table as redocking. New runs store receptor and reference copies alongside results to preserve this association.
+
+The DOCK6 **Footprint** button opens an integrated popup showing per-residue Van der Waals and electrostatic energies comparing the reference with the final docked pose. Zoom and drag to explore the chart; **Recenter** restores the initial view and **Download PDF** saves the original document. The same popup is available in consensus results when a footprint is attached. Generation validates energy data and stops the stage if the engine produces an empty file. Older results may have evaluated the minimized ligand before docking; the interface flags that origin. Rerun those experiments to obtain a final-pose graph.
 
 **Docking consensus** gathers selected results from both engines, including multiple batches and branches. It computes only the intersection by compound ID and receptor, choosing the lowest score for repeated poses. Matching identifiers with different structures are rejected. With no intersection, the block is skipped and explains that the engines did not evaluate common compounds against the same receptor.
 
-The consensus table shows Vina and DOCK6 scores, SMILES, receptor and z-score/min-max normalizations, with **3D Vina**, **3D DOCK6** and **Remove** buttons per row. The DOCK6 consensus score is `min(0, Grid_Score + repulsion_weight × Internal_energy_repulsive)`; missing repulsion is zero. Singleton or constant scores normalize to zero. Removal requires editing permission, is audited and affects subsequent inputs; completed analyses are not recalculated. Each batch summary is authoritative, preventing deleted rows from returning from auxiliary tables.
+After connecting Vina and DOCK6 results, consensus runs automatically in the pipeline without file confirmation or additional parameters. The table shows compound code, Vina score, DOCK6 score and normalized score (0 to 1). Click a column header to toggle ascending and descending order across the complete table before pagination. The normalized score averages the two engines’ min-max normalizations; higher values rank better. The CSV also retains z-score and min-max. Each row has **3D Vina**, **3D DOCK6** and **Remove** buttons per row. Consensus uses the original scores from both engines without requiring receptor, reference ligand or pose files. Available structural files are optional visualization attachments; missing files do not block computation. Singleton or constant scores normalize to zero. Removal requires editing permission, is audited and affects subsequent inputs; completed analyses are not recalculated. Each batch summary is authoritative, preventing deleted rows from returning from auxiliary tables.
 
 ## 12. Explore results and navigate graphs
 

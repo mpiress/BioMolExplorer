@@ -41,6 +41,14 @@ def prepare_candidates(dataset, destination, config=None, ph=7.4, engines='both'
     rows=[]
     for original in read_compounds(dataset):
         row=dict(original);code=row['molecule_chembl_id']
+        formats=('pdbqt','mol2') if engines=='both' else ('pdbqt',) if engines=='vina' else ('mol2',)
+        if all(row.get('prepared_'+format) for format in formats):
+            for format in formats:
+                source=Path(row['prepared_'+format])
+                if not source.is_absolute():source=Path(dataset).parent/source
+                row['prepared_'+format]=str(source.resolve())
+            rows.append(row)
+            continue
         if not re.fullmatch(r'[A-Za-z0-9_.+-]{1,100}',code) or '..' in code:
             raise ValueError('Código molecular inválido para o docking.')
         pose=row.get('conformer_file') or row.get('pose_file')

@@ -130,3 +130,24 @@ class RedockingResultsTests(unittest.TestCase):
             self.store.logout(self.token)
             self.assertEqual(viewers.response(PREFIX+'/'+key+'/structure')[0],403)
         finally:viewers.close()
+
+    def test_row_overlay_and_residue_actions_use_the_selected_simulation(self):
+        from test_docking_scene import atom
+        stage=self.stage()
+        raw=next(Path(p) for p in stage['artifacts'] if '/first/' in p and Path(p).name=='1ABC.pdb')
+        raw.write_text(atom(1,'CA','ALA','A',10,3)+atom(2,'C1','LIG','A',1,0,record='HETATM'))
+        ui=self.ui();ui.preview_docking=AsyncMock()
+        result=StageResults(ui,self.pid,self.rid,stage,False);asyncio.run(result.load())
+        table=result.child
+        asyncio.run(table.table.rows[0].cells[-3].content.on_click(None))
+        self.assertEqual(ui.preview_docking.await_args.args[3],'redocking')
+        self.assertEqual(ui.preview_docking.await_args.args[4],table.simulations[0]['id'])
+        asyncio.run(table.table.rows[0].cells[-2].content.on_click(None))
+        dialog=ui.dialogs[-1];self.assertEqual(dialog.title.value,'Resíduos próximos ao ligante')
+        asyncio.run(dialog.actions[1].on_click(None))
+        self.assertEqual(ui.saved[-1]['file_name'],'residue_contacts.csv')
+        self.assertIn(b'ALA',ui.saved[-1]['src_bytes'])
+        result.close()
+        calls=ui.preview_docking.await_count
+        asyncio.run(dialog.actions[0].on_click(None))
+        self.assertEqual(ui.preview_docking.await_count,calls)

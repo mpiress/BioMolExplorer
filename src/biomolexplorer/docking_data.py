@@ -73,11 +73,15 @@ def center_mol2(path, center):
     Path(path).write_text(''.join(lines))
 
 
-def prepare_ligands(dataset, destination, format, ph=7.4, charge_type='gas', center=None):
+def prepare_ligands(dataset, destination, format, ph=7.4, charge_type='gas', center=None, preparation_options=None):
     """Convert an existing pose, or generate 3D only when the input is SMILES."""
     from .visualizations import molecule_sdf
     dataset, destination = Path(dataset), Path(destination)
     destination.mkdir(parents=True, exist_ok=True)
+    if preparation_options is not None:
+        from .docking_preparation import prepare_candidates
+        dataset=prepare_candidates(dataset,destination/'Prepared',preparation_options,ph,
+                                   'vina' if format=='pdbqt' else 'dock6')
     outputs=[]
     for row in read_compounds(dataset):
         code=row['molecule_chembl_id']
@@ -156,6 +160,37 @@ def input_records(selected, available):
     return result
 
 
+def score_input_records(selected, available, engine):
+    """Scores define consensus inputs; visualization files are optional metadata."""
+    allowed={Path(p).resolve() for p in available}
+    rows=[]
+    for path in map(Path,selected):
+        if path.suffix.lower()=='.csv':
+            records=read_compounds(path)
+        else:
+            code=path.name.removesuffix('_scored.mol2').removesuffix('.pdbqt').removesuffix('.lig')
+            records=[dict(molecule_chembl_id=code,canonical_smiles=structure_smiles(path),
+                          score=score(path,engine),conformer_file=str(path.resolve()))]
+        for record in records:
+            row=dict(record)
+            if row.get('engine') and row['engine']!=engine:
+                raise ValueError('Resultado de docking incompatível com o motor selecionado.')
+            if not row.get('molecule_chembl_id'):raise ValueError('Código do composto ausente no resultado.')
+            try:value=float(row['score'])
+            except (KeyError,ValueError,TypeError):raise ValueError('Score ausente ou inválido no resultado: '+engine) from None
+            if not math.isfinite(value):raise ValueError('Score não finito no resultado: '+engine)
+            row.update(engine=engine,score=value)
+            row.setdefault('canonical_smiles','');row.setdefault('receptor_id','')
+            for field in ('conformer_file','pose_file','prepared_pdbqt','prepared_mol2','receptor_file','reference_file','footprint_file'):
+                value=row.get(field)
+                if not value:continue
+                file=(Path(value) if Path(value).is_absolute() else path.parent/value).resolve()
+                if file in allowed and file.is_file():row[field]=str(file)
+                else:row.pop(field,None)
+            rows.append(row)
+    return rows
+
+
 def copy_input_records(rows, destination):
     destination=Path(destination);destination.mkdir(parents=True,exist_ok=True)
     result=[]
@@ -183,7 +218,7 @@ def score(path, engine):
     return value
 
 
-def write_results(engine, poses, dataset, records, output):
+def write_results(engine, poses, dataset, records, output, prepared=None):
     """Retain input SMILES/IDs and link to the actual docked pose, not a new conformer."""
     output=Path(output);output.mkdir(parents=True,exist_ok=True)
     compounds=read_compounds(dataset);rows=[]
@@ -198,8 +233,28 @@ def write_results(engine, poses, dataset, records, output):
         rows.append(dict(molecule_chembl_id=row['molecule_chembl_id'],canonical_smiles=row['canonical_smiles'],
                          receptor_id=f'{record[0]}_{record[3]}',engine=engine,score=score(pose,engine),
                          conformer_file=pose.resolve().relative_to(output.resolve()).as_posix()))
+    if prepared is not None:
+        import shutil
+        prepared=Path(prepared)
+        context=output/'receptors';context.mkdir(exist_ok=True)
+        for row in rows:
+            rid=row['receptor_id']
+            source=next((prepared/(rid+suffix) for suffix in ('.noH.pdb','.dockprep.pdbqt','.dockprep.mol2') if (prepared/(rid+suffix)).is_file()),None)
+            if source:
+                target=context/source.name;shutil.copy2(source,target)
+                row['receptor_file']=target.relative_to(output).as_posix()
+            record=next(r for r in records if f'{r[0]}_{r[3]}'==rid)
+            reference=prepared/f'{record[0]}_{record[1]}_{record[2]}{record[3]}.lig.pdb'
+            if reference.is_file():
+                target=context/reference.name;shutil.copy2(reference,target)
+                row['reference_file']=target.relative_to(output).as_posix()
+            if engine=='dock6':
+                pdf=output/'Dock6/footprint/plots'/(row['molecule_chembl_id']+'.pdf')
+                if pdf.is_file():
+                    row['footprint_file']=pdf.relative_to(output).as_posix()
+                    row['footprint_origin']='docked_pose'
     if not rows:raise ValueError('O docking não produziu conformações com scores válidos.')
-    write_csv(output/RESULT_FILE,rows)
+    write_csv(output/RESULT_FILE,rows,list(dict.fromkeys(k for row in rows for k in row)))
     return rows
 
 
@@ -214,9 +269,15 @@ def read_results(directory, engine):
     tables=result_tables(directory.rglob(RESULT_FILE))
     for path in tables:
         for row in read_compounds(path):
-            if row.get('engine')!=engine:continue
-            pose=Path(row['conformer_file'])
-            row['conformer_file']=str(pose if pose.is_absolute() else path.parent/pose)
+            if row.get('engine') and row['engine']!=engine:continue
+            row['engine']=engine
+            if row.get('conformer_file'):
+                pose=Path(row['conformer_file'])
+                row['conformer_file']=str(pose if pose.is_absolute() else path.parent/pose)
+            row.setdefault('canonical_smiles','');row.setdefault('receptor_id','')
+            for field in ('receptor_file','reference_file','footprint_file'):
+                if row.get(field):
+                    target=Path(row[field]);row[field]=str(target if target.is_absolute() else path.parent/target)
             value=float(row['score'])
             if not math.isfinite(value):raise ValueError('Score não finito no resultado: '+engine)
             row['score']=value;rows.append(row)
@@ -244,10 +305,13 @@ def consensus_rows(vina, dock6, weight=1.):
             from rdkit import Chem
             if Chem.MolToSmiles(Chem.MolFromSmiles(a['canonical_smiles']))!=Chem.MolToSmiles(Chem.MolFromSmiles(b['canonical_smiles'])):
                 raise ValueError('O mesmo código molecular identifica estruturas diferentes: '+key[1])
-        penalty=re.search(r'Internal_energy_repulsive:\s*(\S+)',Path(b['conformer_file']).read_text())
-        repulsion=float(penalty.group(1)) if penalty else 0.
-        if not math.isfinite(repulsion):raise ValueError('Score não finito no resultado: Internal_energy_repulsive')
         rows.append(dict(molecule_chembl_id=key[1],molecule=key[1],canonical_smiles=a['canonical_smiles'] or b['canonical_smiles'],
-                         receptor_id=key[0],vina=a['score'],dock6=min(0.,b['score']+weight*repulsion),
-                         vina_pose=a['conformer_file'],dock6_pose=b['conformer_file']))
+                         receptor_id=key[0],vina=a['score'],dock6=b['score']))
+        for field,source in (('vina_pose',a),('dock6_pose',b)):
+            if source.get('conformer_file'):rows[-1][field]=source['conformer_file']
+        for engine,source in (('vina',a),('dock6',b)):
+            for field in ('receptor_file','reference_file'):
+                if source.get(field):rows[-1][engine+'_'+field]=source[field]
+        for field in ('footprint_file','footprint_origin'):
+            if b.get(field):rows[-1][field]=b[field]
     return rows

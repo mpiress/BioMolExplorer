@@ -170,3 +170,28 @@ PYTHONPATH=src:tests python -m unittest test_pipeline_guidance test_connection_m
 ```
 
 A suíte geral desta revisão executou 495 testes sem falhas ou erros; duas verificações de servidor local foram ignoradas pelas restrições do sandbox. Os oito testes novos passaram. As 27 páginas HTML foram verificadas quanto a arquivos locais, IDs e âncoras.
+
+## Revisão do projeto PDB em 9 de outubro de 2026
+
+Os logs do projeto PDB registraram **O arquivo escolhido não está nos resultados
+da etapa** antes de qualquer cálculo de redocking. O seletor de `4M0E.pdb`
+continha o identificador de um worker anterior; nova recuperação ou cache mudavam
+essa pasta. Os seletores agora preservam lote e caminho lógico, removendo somente
+a pasta temporária do job. Seletores antigos são resolvidos pelo mesmo contrato,
+inclusive nas entradas de compostos, receptores e resultados de Vina/DOCK6.
+Arquivos ausentes e seleções ambíguas continuam sendo recusados.
+
+Em cópias temporárias, o par selecionado **4M0E / NO3 / 608 / B** concluiu o
+redocking com as escolhas de preparação do projeto, incluindo minimização. Com
+busca reduzida (`exhaustiveness=1`, `num_modes=2`), produziu RMSD de **2,888 Å** e
+score Vina de **−2,887**. Sem minimização, produziu RMSD de **3,245 Å**. Esses testes
+verificam execução, preparação, pose e cálculo de RMSD; não reproduzem a busca
+completa configurada pelo usuário (`20` e `10`) nem estabelecem aceitação
+científica do resultado. O [relatório de PDB/redocking](validation/pdb_redocking_2026-10-09.json)
+registra causa, correção e limites.
+
+Vina e DOCK6 também concluíram a validação real com os compostos REF e ETHANOL e
+receptor 1ABE_A do exemplo de DOCK6: preparação para ambos os motores, execuções
+independentes, reutilização de poses Vina → DOCK6 e DOCK6 → Vina, consenso e
+tratamento da interseção vazia. Consulte o
+[relatório de docking](validation/docking_2026-10-09.json).

@@ -193,15 +193,18 @@ class WorkspaceUI(ProjectTools):
                 tooltip=label,on_click=change) for code,label in
                 [('pt','Português (Brasil)'),('en','English (United States)')]])
         brand=wordmark(190)
+        update_notice=getattr(self,'update_notice',None)
         bar=ft.Container(height=76,padding=ft.Padding.symmetric(horizontal=32),bgcolor='#FFFFFF',
             border=ft.Border.only(bottom=ft.BorderSide(1,LINE)),
             content=ft.Row([brand,ft.Container(expand=True),
+                *([update_notice.button()] if update_notice else []),
                 ft.Semantics(container=True,label='Selecionar idioma',button=True,content=language_choice)],spacing=8))
         def resize():
             compact=(getattr(self.page,'width',None) or 1440)<650
             bar.padding=ft.Padding.symmetric(horizontal=16 if compact else 32)
             brand.width=160 if compact else 190
             brand.height=brand.width*209/662
+            if update_notice:update_notice.refresh()
         resize()
         return bar,language_choice,resize
 
@@ -739,7 +742,7 @@ class WorkspaceUI(ProjectTools):
             'prepare_structures': {'base_input_path':['import_results','retrieve_structures']},
             'redocking': {'base_input_path':['retrieve_structures','import_results']},
             'docking_vina': {'base_input_path':['prepare_structures','redocking','import_results'], 'base_selected_mols':['admet','graphs','retrieve_compounds','retrieve_pubchem']},
-            'docking_dock6': {'base_input_path':['prepare_structures','redocking','import_results'], 'base_selected_mols':['admet','graphs','retrieve_compounds','retrieve_pubchem'], 'base_vina_path':['docking_vina']},
+            'docking_dock6': {'base_input_path':['prepare_structures','redocking','import_results'], 'base_selected_mols':['docking_vina','docking_dock6','admet','graphs','retrieve_compounds','retrieve_pubchem','import_results']},
             'consensus': {'base_input_path':['docking_vina'], 'base_vina_path':['docking_vina','import_results'], 'base_dock6_path':['docking_dock6','import_results']},
         }.get(operation,{})
         for field,candidates in wanted.items():
@@ -751,7 +754,7 @@ class WorkspaceUI(ProjectTools):
                 from biomolexplorer.flow import output_types
                 kinds=output_types(s)
                 if field=='base_selected_mols' or operation in ('retrieve_pubchem','admet','fingerprints','graphs'):
-                    return 'compounds' in kinds
+                    return bool(kinds & {'compounds','vina','dock6'}) if field=='base_selected_mols' and operation in ('docking_vina','docking_dock6') else 'compounds' in kinds
                 if field=='base_vina_path':
                     return 'vina' in kinds
                 if field=='base_dock6_path':
@@ -1079,6 +1082,19 @@ class WorkspaceUI(ProjectTools):
         key=self.structure_viewer.issue_compound(token,project_id,smiles,name,getattr(self,'language','pt'))
         return self.structure_viewer.url(key,web=self.page.web,page_url=self.page.url if self.page.web else None)
 
+    async def preview_docking(self,project_id,run_id,stage_id,kind,selection,token=None,document=False):
+        token=token or self.token
+        if token!=self.token:return
+        from biomolexplorer.pdb_view import StructureViewers
+        if not getattr(self,'structure_viewer',None):self.structure_viewer=StructureViewers(self.store)
+        if document:
+            key=await self.call(self.structure_viewer.issue_document,token,project_id,run_id,stage_id,selection,getattr(self,'language','pt'))
+        else:
+            key=await self.call(self.structure_viewer.issue_result,token,project_id,run_id,stage_id,kind,selection,getattr(self,'language','pt'))
+        if token!=self.token or not self.current or self.current['id']!=project_id:return
+        url=self.structure_viewer.url(key,web=self.page.web,page_url=self.page.url if self.page.web else None)
+        await ft.UrlLauncher().launch_url(url,mode=ft.LaunchMode.EXTERNAL_APPLICATION,web_only_window_name='_blank')
+
     async def preview_artifact(self,project_id,path):
         token = self.token
         if Path(path).suffix.lower() in ('.pdb','.pdbqt','.mol2','.sdf'):
@@ -1328,6 +1344,8 @@ def main():
     os.environ.setdefault('FLET_SECRET_KEY',secrets.token_urlsafe(48))
     os.environ.setdefault('FLET_MAX_UPLOAD_SIZE',str(store.max_upload_bytes))
     service=PipelineService(store,worker_python=args.worker_python,dock6_path=args.dock6_path)
+    from biomolexplorer.updates import UpdateChecker
+    updates=UpdateChecker(store.root)
     from biomolexplorer.pdb_view import StructureViewers
     viewers=StructureViewers(store)
     async def session(page):
@@ -1338,7 +1356,17 @@ def main():
             loop.default_exception_handler(context)
         loop.set_exception_handler(async_error)
         ui=WorkspaceUI(page,store,service,language=args.language,structure_viewer=viewers)
+        from .updates import UpdateNotice
+        ui.update_notice=UpdateNotice(ui,updates)
         ui.show_login()
+        ui.update_notice.task=page.run_task(ui.update_notice.poll)
+        async def disconnected(event):
+            ui.update_notice.task.cancel()
+        async def connected(event):
+            if ui.update_notice.task.done():
+                ui.update_notice.task=page.run_task(ui.update_notice.poll)
+        page.on_disconnect=disconnected
+        page.on_connect=connected
     try:
         if args.web or args.no_browser:
             from .web_host import run_web

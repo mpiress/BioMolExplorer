@@ -1,5 +1,6 @@
 """Resolve separate graph experiments and their project-scoped compound provenance."""
 import copy
+from .artifact_choices import matches_selector
 from pathlib import Path
 
 from .bindings import sources
@@ -31,7 +32,7 @@ class GraphInputs:
         selector=reference.get('selector','auto')
         candidates=[p for p in files if p.is_file() and p.suffix.lower()=='.csv' and REQUIRED[kind]<=columns(p)]
         if selector!='auto':
-            candidates=[p for p in candidates if p.as_posix().endswith('/'+selector)]
+            candidates=[p for p in candidates if matches_selector(p,selector)]
             if len(candidates)!=1:raise ValueError('Escolha um arquivo de '+kind+' disponível na origem: '+selector)
         elif kind=='compounds':
             candidates.sort(key=lambda p:(p.name!='compounds.csv',p.name!='molecules.csv',len(p.parts),p.name))
@@ -65,7 +66,7 @@ class GraphInputs:
             selector=reference.get('selector','auto')
             algorithm=filename_kind(filename) or filename_kind(filename.split('_',1)[-1]) or filename_kind(selector)
             if algorithm:structure_files=[p for p in structure_files if filename_kind(p.name) in (None,algorithm)]
-            selected=[p for p in structure_files if p.as_posix().endswith('/'+selector)] if selector!='auto' else structure_files
+            selected=[p for p in structure_files if matches_selector(p,selector)] if selector!='auto' else structure_files
             if selected:return selected
         if producer['operation'] not in ('fingerprints','similarity') or producer.get('provided_results'):
             return structure_files

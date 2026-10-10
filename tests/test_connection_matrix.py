@@ -17,8 +17,8 @@ INPUTS={'expand_similar_compounds':{'base_input_path':{'chembl'}},'retrieve_zinc
     'prepare_structures':{'base_input_path':{'structures','prepared_structures'},'base_selected_mols':{'compounds'}},'admet':{'base_input_path':{'compounds'}},
     'fingerprints':{'base_input_path':{'compounds'}},'similarity':{'base_input_path':{'fingerprints'}},
     'graphs':{'similarity_path':{'similarity'}},'redocking':{'base_input_path':{'structures'}},
-    'docking_vina':{'base_input_path':{'prepared_structures'},'base_selected_mols':{'compounds','vina','dock6'}},
-    'docking_dock6':{'base_input_path':{'prepared_structures'},'base_selected_mols':{'compounds','vina','dock6'},'base_vina_path':{'vina'}},
+    'docking_vina':{'base_input_path':{'structures','prepared_structures'},'base_selected_mols':{'compounds','vina','dock6'}},
+    'docking_dock6':{'base_input_path':{'structures','prepared_structures'},'base_selected_mols':{'compounds','vina','dock6'}},
     'consensus':{'base_vina_path':{'vina'},'base_dock6_path':{'dock6'}}}
 KINDS=('compounds','structures','prepared_structures','fingerprints','similarity','vina','dock6','scores','other','zinc_urls')
 

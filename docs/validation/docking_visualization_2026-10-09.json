@@ -1,0 +1,230 @@
+{
+  "date": "2026-10-09",
+  "features": [
+    "redocking crystal/best Vina pose overlay",
+    "Vina and DOCK6 receptor/pose overlays",
+    "geometric heavy-atom contacts, cutoff 2–8 Å, CSV export",
+    "DOCK6 final-pose footprint PDF"
+  ],
+  "browser": {
+    "redocking": {
+      "websocket_url_converted": true,
+      "rendered": true,
+      "atoms": 4,
+      "mouse_rotation": true,
+      "wheel_zoom": true,
+      "representations": 4,
+      "png_export": true,
+      "external_requests": 0,
+      "javascript_errors": 0,
+      "screenshot": "/tmp/biomol-redocking-overlay.png"
+    },
+    "vina": {
+      "websocket_url_converted": true,
+      "rendered": true,
+      "atoms": 4,
+      "mouse_rotation": true,
+      "wheel_zoom": true,
+      "representations": 4,
+      "png_export": true,
+      "external_requests": 0,
+      "javascript_errors": 0,
+      "screenshot": "/tmp/biomol-vina-overlay.png",
+      "layers": [
+        {
+          "role": "receptor",
+          "atoms": 2317
+        },
+        {
+          "role": "pose",
+          "atoms": 4
+        }
+      ],
+      "residue_contacts": 5
+    },
+    "dock6": {
+      "websocket_url_converted": true,
+      "rendered": true,
+      "atoms": 9,
+      "mouse_rotation": true,
+      "wheel_zoom": true,
+      "representations": 4,
+      "png_export": true,
+      "external_requests": 0,
+      "javascript_errors": 0,
+      "screenshot": "/tmp/biomol-dock6-overlay.png",
+      "layers": [
+        {
+          "role": "receptor",
+          "atoms": 2317
+        },
+        {
+          "role": "pose",
+          "atoms": 9
+        }
+      ],
+      "residue_contacts": 6
+    }
+  },
+  "footprint": {
+    "dock6_independent/Validation/1ABE_A/Dock6/footprint/ETHANOL_footprint_scored.txt": {
+      "residues": 305,
+      "nonzero_vdw_pose": 305,
+      "pdf": "/tmp/biomol-docking-footprint-20261009/dock6_independent/Validation/1ABE_A/Dock6/footprint/plots/ETHANOL.pdf",
+      "origin": "docked_pose"
+    },
+    "dock6_independent/Validation/1ABE_A/Dock6/footprint/REF_footprint_scored.txt": {
+      "residues": 305,
+      "nonzero_vdw_pose": 305,
+      "pdf": "/tmp/biomol-docking-footprint-20261009/dock6_independent/Validation/1ABE_A/Dock6/footprint/plots/REF.pdf",
+      "origin": "docked_pose"
+    },
+    "vina_to_dock6/Validation/1ABE_A/Dock6/footprint/ETHANOL_footprint_scored.txt": {
+      "residues": 305,
+      "nonzero_vdw_pose": 305,
+      "pdf": "/tmp/biomol-docking-footprint-20261009/vina_to_dock6/Validation/1ABE_A/Dock6/footprint/plots/ETHANOL.pdf",
+      "origin": "docked_pose"
+    },
+    "vina_to_dock6/Validation/1ABE_A/Dock6/footprint/REF_footprint_scored.txt": {
+      "residues": 305,
+      "nonzero_vdw_pose": 305,
+      "pdf": "/tmp/biomol-docking-footprint-20261009/vina_to_dock6/Validation/1ABE_A/Dock6/footprint/plots/REF.pdf",
+      "origin": "docked_pose"
+    }
+  },
+  "documentation": "27 HTML pages validated",
+  "footprint_browser": {
+    "mime": "application/pdf",
+    "native_chrome_preview": true,
+    "screenshot": "/tmp/biomol-footprint-preview.png",
+    "curves_visually_verified": true
+  },
+  "real_engines": {
+    "root": "/tmp/biomol-docking-footprint-20261009",
+    "log": "/tmp/biomol-docking-footprint-real.log",
+    "independent_and_both_handoffs": "passed",
+    "consensus_and_empty_intersection": "passed",
+    "results": {
+      "preparation": {
+        "engines": "both",
+        "compounds": [
+          "REF",
+          "ETHANOL"
+        ],
+        "receptor_reused": true
+      },
+      "vina_independent": [
+        {
+          "molecule_chembl_id": "ETHANOL",
+          "receptor_id": "1ABE_A",
+          "score": -2.672
+        },
+        {
+          "molecule_chembl_id": "REF",
+          "receptor_id": "1ABE_A",
+          "score": -6.396
+        }
+      ],
+      "dock6_independent": [
+        {
+          "molecule_chembl_id": "ETHANOL",
+          "receptor_id": "1ABE_A",
+          "score": -15.501638
+        },
+        {
+          "molecule_chembl_id": "REF",
+          "receptor_id": "1ABE_A",
+          "score": -5.613547
+        }
+      ],
+      "vina_to_dock6": [
+        {
+          "molecule_chembl_id": "ETHANOL",
+          "receptor_id": "1ABE_A",
+          "score": -11.242906
+        },
+        {
+          "molecule_chembl_id": "REF",
+          "receptor_id": "1ABE_A",
+          "score": -24.087336
+        }
+      ],
+      "dock6_to_vina": [
+        {
+          "molecule_chembl_id": "ETHANOL",
+          "receptor_id": "1ABE_A",
+          "score": -2.682
+        },
+        {
+          "molecule_chembl_id": "REF",
+          "receptor_id": "1ABE_A",
+          "score": -6.376
+        }
+      ],
+      "consensus_independent": [
+        {
+          "molecule_chembl_id": "ETHANOL",
+          "vina": -2.672,
+          "dock6": -15.502,
+          "z-score": 0.0,
+          "min-max": 0.5
+        },
+        {
+          "molecule_chembl_id": "REF",
+          "vina": -6.396,
+          "dock6": -4.938,
+          "z-score": 0.0,
+          "min-max": 0.5
+        }
+      ],
+      "consensus_vina_to_dock6": [
+        {
+          "molecule_chembl_id": "REF",
+          "vina": -6.396,
+          "dock6": -23.814,
+          "z-score": 0.707,
+          "min-max": 1.0
+        },
+        {
+          "molecule_chembl_id": "ETHANOL",
+          "vina": -2.672,
+          "dock6": -11.243,
+          "z-score": -0.707,
+          "min-max": 0.0
+        }
+      ],
+      "consensus_dock6_to_vina": [
+        {
+          "molecule_chembl_id": "ETHANOL",
+          "vina": -2.682,
+          "dock6": -15.502,
+          "z-score": 0.0,
+          "min-max": 0.5
+        },
+        {
+          "molecule_chembl_id": "REF",
+          "vina": -6.376,
+          "dock6": -4.938,
+          "z-score": 0.0,
+          "min-max": 0.5
+        }
+      ],
+      "no_intersection": {
+        "skipped_reason": "O consenso não foi executado: Vina e DOCK6 não avaliaram compostos em comum para o mesmo receptor. Selecione resultados com códigos de molécula e receptores correspondentes.",
+        "rows": 0
+      }
+    }
+  },
+  "tests_targeted": {
+    "tests": 31,
+    "status": "passed",
+    "log": "/tmp/biomol-overlay-final-targeted.log"
+  },
+  "regression_suite": {
+    "tests": 520,
+    "skipped": 2,
+    "failures": 0,
+    "seconds": 264.287,
+    "log": "/tmp/biomol-overlay-final-tests.log"
+  }
+}

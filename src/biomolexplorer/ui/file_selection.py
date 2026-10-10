@@ -4,6 +4,7 @@ from pathlib import Path
 
 import flet as ft
 
+from biomolexplorer.artifact_choices import matches_selector, selector_for
 from biomolexplorer.bindings import sources, pack
 from biomolexplorer.catalog import field_label
 from biomolexplorer.docking_inputs import target_input, prepared_receptor, ligand_input_file
@@ -37,11 +38,7 @@ def compatible_file(path, kinds):
 
 def file_selector(path, files):
     """Use the shortest suffix that identifies exactly one output."""
-    for length in range(1, len(path.parts)):
-        suffix = '/'.join(path.parts[-length:])
-        if sum(p.as_posix().endswith('/' + suffix) for p in files) == 1:
-            return suffix
-    raise ValueError('Os resultados contêm caminhos de arquivo duplicados.')
+    return selector_for(path,files)
 
 
 class FileSelection:
@@ -93,7 +90,7 @@ class FileSelection:
                 files = list(dict.fromkeys(Path(p) for p in item['artifacts']))
                 controls.append(stage_control(ft.Text(item['name'], size=13),item))
                 matching = [p for p in files if compatible_file(p, kinds)]
-                if self.stage['operation']=='prepare_structures' and field=='base_input_path' and any(prepared_receptor(p) for p in files):
+                if self.stage['operation'] in ('prepare_structures','docking_vina','docking_dock6') and field=='base_input_path' and any(prepared_receptor(p) for p in files):
                     matching=[p for p in matching if prepared_receptor(p)]
                 if self.stage['operation'] in ('docking_vina','docking_dock6') and field=='base_selected_mols':
                     matching=[p for p in files if ligand_input_file(p) and
@@ -113,12 +110,12 @@ class FileSelection:
                     # An automatic connection still starts with no files checked.
                     selectors = [r['selector'] for r in configured if r.get('stage')==ref['stage']
                         and r.get('selector','auto')!='auto']
-                    chosen = any(path.as_posix().endswith('/'+choice)
-                        and sum(p.as_posix().endswith('/'+choice) for p in files)==1 for choice in selectors)
+                    chosen = any(matches_selector(path,choice)
+                        and sum(matches_selector(p,choice) for p in files)==1 for choice in selectors)
                     check = verbatim(ft.Checkbox(label=selector, value=chosen),'label')
                     reference={'stage':item['id'],'selector':selector}
                     previous=next((r for r in configured if r.get('stage')==item['id'] and
-                        path.as_posix().endswith('/'+r.get('selector','auto'))),{})
+                        matches_selector(path,r.get('selector','auto'))),{})
                     if previous.get('compound_id'):reference['compound_id']=previous['compound_id']
                     rows.append((check,reference))
                     if self.stage['operation']=='retrieve_pubchem':

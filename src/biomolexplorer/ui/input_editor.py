@@ -1,5 +1,6 @@
 """Multiple typed sources and completed-result uploads in guided block forms."""
 import flet as ft
+from biomolexplorer.artifact_choices import logical_path, matches_selector
 from biomolexplorer.bindings import sources, pack
 from biomolexplorer.flow import INPUTS, EXTERNAL_INPUTS, compatible, input_types
 from biomolexplorer.input_validation import contract, output_kind
@@ -25,8 +26,8 @@ class InputEditor:
             self.box,ft.Row([ft.TextButton('Adicionar entrada',icon=ft.Icons.ADD,on_click=self.append,disabled=not writable),
                 ft.TextButton('Enviar meus arquivos',icon=ft.Icons.UPLOAD_FILE,on_click=self.upload,disabled=not writable)],wrap=True),
             ft.Text('Use a opção de processamento do bloco para manter os arquivos separados ou mesclar as entradas.',size=12,color='#64748B'),
-            ft.Text('Selecione o receptor preparado sem o ligante. Escolha os compostos a testar em “Compostos selecionados”.'
-                if self.is_target else '\n'.join(contract(k,'graphs' if stage['operation']=='graphs' else None)
+            ft.Text('Selecione um complexo PDB ou reutilize um receptor preparado. Escolha os compostos ou resultados de docking em “Compostos selecionados”.'
+                if stage['operation'] in ('docking_vina','docking_dock6') else '\n'.join(contract(k,'graphs' if stage['operation']=='graphs' else None)
                 for k in sorted(self.expected) if k!='chembl'),size=12,color='#64748B')],spacing=18,data='input')
 
     def source_options(self):
@@ -34,19 +35,21 @@ class InputEditor:
         options += [stage_control(ft.DropdownOption(key='stage:'+s['id'],text=s['name']),s,'text') for s in self.ui.current['pipeline'] if compatible(s,self.stage,self.field['name'])]
         options += [verbatim(ft.DropdownOption(key='asset:'+a['id'],text=a['name'])) for a in self.assets
             if (a['kind'] in self.expected or (a['kind']=='other' and self.stage['operation']!='graphs'))
-            and (self.stage['operation']=='prepare_structures' or not self.is_target or prepared_receptor(a['name']))
-            and (not self.is_ligand or ligand_input_file(a['name']))]
+            and (self.stage['operation'] in ('prepare_structures','docking_vina','docking_dock6') or not self.is_target or prepared_receptor(a['name']))
+            and (not self.is_ligand or ligand_input_file(a['name']))
+            and (self.stage['operation'] not in ('docking_vina','docking_dock6') or self.field['name']!='base_input_path'
+                 or prepared_receptor(a['name']) or a['name'].endswith('.pdb') and a['name'].count('.')==1)]
         if self.value:options.append(ft.DropdownOption(key='configured-path',text='Pasta configurada'))
         return options
 
     def mixed_receptor_source(self,value):
-        if self.stage['operation']!='prepare_structures' or self.field['name']!='base_input_path' or not value or not value.startswith('stage:'):return False
+        if self.stage['operation'] not in ('prepare_structures','docking_vina','docking_dock6') or self.field['name']!='base_input_path' or not value or not value.startswith('stage:'):return False
         from biomolexplorer.flow import output_types
         origin=next((s for s in self.ui.current['pipeline'] if s['id']==value.split(':',1)[1]),None)
         return bool(origin and origin['operation']=='import_results' and {'structures','prepared_structures'}<=output_types(origin))
 
     def prepared_source(self,value,selector=None):
-        if self.stage['operation']!='prepare_structures' or self.field['name']!='base_input_path':return self.is_target
+        if self.stage['operation'] not in ('prepare_structures','docking_vina','docking_dock6') or self.field['name']!='base_input_path':return self.is_target
         if self.mixed_receptor_source(value) and selector and selector!='auto':return prepared_receptor(selector)
         if value and value.startswith('stage:'):
             from biomolexplorer.flow import output_types
@@ -62,6 +65,7 @@ class InputEditor:
         if is_target and value and value.startswith('stage:') and value.split(':',1)[1] not in getattr(self.ui,'artifact_choices',{}):
             names={ref.get('selector','auto') for ref in sources(self.stage.get('bindings',{}).get(self.field['name'],{}))
                 if ref.get('stage')==value.split(':',1)[1]}
+        names={logical_path(n) for n in names}
         if self.stage['operation']=='retrieve_zinc':
             from pathlib import Path
             from biomolexplorer.zinc_retrieval import LIST_SUFFIXES
@@ -71,7 +75,7 @@ class InputEditor:
         if self.mixed_receptor_source(value):
             names={n for n in names if prepared_receptor(n) or n.endswith('.pdb') and n.rsplit('/',1)[-1].count('.')==1}
         elif is_target:names={n for n in names if prepared_receptor(n)}
-        if self.stage['operation']=='prepare_structures' and self.field['name']=='base_input_path' and not is_target:
+        if self.stage['operation'] in ('prepare_structures','docking_vina','docking_dock6') and self.field['name']=='base_input_path' and not is_target:
             names={n for n in names if n.endswith('.pdb') and n.rsplit('/',1)[-1].count('.')==1}
         return [ft.DropdownOption(key='auto',text='Identificar automaticamente')]+[verbatim(ft.DropdownOption(key=n,text=n)) for n in sorted(names)]
 
@@ -79,7 +83,7 @@ class InputEditor:
         ref=reference or {}
         value='stage:'+ref['stage'] if 'stage' in ref else 'asset:'+ref['asset'] if 'asset' in ref else ''
         source=ft.Dropdown(label=self.field['label'],value=value,options=self.source_options(),disabled=not self.writable)
-        selector=ft.Dropdown(label='Receptor que deseja utilizar' if self.stage['operation']=='prepare_structures' and self.field['name']=='base_input_path' else 'Resultado usado nesta entrada',value=ref.get('selector','auto'),options=self.selectors(value),disabled=not self.writable)
+        selector=ft.Dropdown(label='Receptor que deseja utilizar' if self.stage['operation'] in ('prepare_structures','docking_vina','docking_dock6') and self.field['name']=='base_input_path' else 'Resultado usado nesta entrada',value=logical_path(ref.get('selector','auto')),options=self.selectors(value),disabled=not self.writable)
         if selector.value not in {o.key for o in selector.options}:
             if self.is_target:selector.value='auto'
             else:selector.options.append(ft.DropdownOption(key=selector.value,text=selector.value))
@@ -101,7 +105,7 @@ class InputEditor:
                 records={}
                 for path,values in mapping.items():
                     if (selector.value=='auto' or source.value and source.value.startswith('asset:')
-                            or path.rsplit('/',1)[-1]==selector.value or path.endswith('/'+selector.value)):
+                            or matches_selector(path,selector.value)):
                         records.update(values)
                 compound.options=[ft.DropdownOption(key='',text='Todos os compostos')]+[
                     verbatim(ft.DropdownOption(key=code,text=code)) for code in sorted(records)]
@@ -133,7 +137,7 @@ class InputEditor:
     async def upload(self,e):
         async def action():
             token,project_id=self.ui.token,self.ui.current['id']
-            kind='zinc_urls' if self.stage['operation']=='retrieve_zinc' else next(iter(sorted(self.expected-{'chembl'})), 'other')
+            kind='other' if self.stage['operation'] in ('docking_vina','docking_dock6') and self.field['name']=='base_input_path' else 'zinc_urls' if self.stage['operation']=='retrieve_zinc' else next(iter(sorted(self.expected-{'chembl'})), 'other')
             ids=await self.ui.pick_uploads(kind,project_id)
             if self.ui.token!=token or not self.ui.current or self.ui.current['id']!=project_id:return
             fresh=await self.ui.call(self.ui.store.assets,token,project_id)
@@ -154,7 +158,7 @@ class InputEditor:
         await self.ui.guard(action)
 
     def read(self):
-        if self.stage['operation']=='prepare_structures' and self.field['name']=='base_input_path':
+        if self.stage['operation'] in ('prepare_structures','docking_vina','docking_dock6') and self.field['name']=='base_input_path':
             modes=[self.prepared_source(source.value,selector.value) for source,selector,_ in self.rows if source.value]
             if any(modes) and not all(modes):
                 raise ValueError('Use receptores brutos ou preparados em um mesmo bloco de preparação.')

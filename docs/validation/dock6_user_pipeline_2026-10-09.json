@@ -1,0 +1,78 @@
+{
+  "date": "2026-10-09",
+  "project": "PDB Example",
+  "original_stage_id": "e333cd607a99492399d54cf52b65d72d",
+  "source_run_id": "4f6fca02b8724de7a5b54411a802084f",
+  "status": "succeeded",
+  "execution": "Real DOCK6 worker using a snapshot of the saved PDB Example pipeline and its completed redocking/Vina outputs.",
+  "configuration": {
+    "id": "e333cd607a99492399d54cf52b65d72d",
+    "operation": "docking_dock6",
+    "name": "Docking with DOCK6",
+    "enabled": true,
+    "parameters": {
+      "density": 0.5,
+      "radius": 1.4,
+      "distance": 10.0,
+      "conformer_search_type": "flex",
+      "plot_max_residues": 50,
+      "target": "Estruturas",
+      "mol_filename": "molecules",
+      "charge_type": "am1",
+      "receptor_prepared": true,
+      "pH": 7.4,
+      "preparation_options": {
+        "receptor": {
+          "remove_solvent": true,
+          "remove_hydrogens": true,
+          "add_hydrogens": true,
+          "minimize": true,
+          "charge_type": "gas"
+        },
+        "ligand": {
+          "remove_solvent": true,
+          "remove_hydrogens": true,
+          "add_hydrogens": true,
+          "minimize": true,
+          "charge_type": "am1"
+        },
+        "cofactors": []
+      }
+    },
+    "bindings": {
+      "base_selected_mols": {
+        "stage": "912ca4c5a262480f83974ad0f88bd675",
+        "selector": "auto"
+      },
+      "base_input_path": {
+        "stage": "98ec108ce4bb46c283b65abfacee76c9",
+        "selector": "auto"
+      }
+    },
+    "depends_on": [],
+    "templates": {
+      "dock6/docking.template": "conformer_search_type                                        {conformer_search_type}\nwrite_fragment_libraries no\nuser_specified_anchor no\nlimit_max_anchors no\nmin_anchor_size 5\npruning_use_clustering yes\npruning_max_orients 1000\npruning_clustering_cutoff 100\npruning_conformer_score_cutoff 100.0\npruning_conformer_score_scaling_factor 1.0\npruning_orient_score_cutoff 1000.0\nuse_clash_overlap no\nwrite_growth_tree no\nuse_internal_energy yes\ninternal_energy_rep_exp 12\ninternal_energy_cutoff 100.0\nligand_atom_file                                             {ligand_atom_file}\nlimit_max_ligands no\nskip_molecule no\nread_mol_solvation no\ncalculate_rmsd yes\nuse_rmsd_reference_mol yes\nrmsd_reference_filename                                      {rmsd_reference_filename}\nuse_database_filter no\norient_ligand yes\nautomated_matching yes\nreceptor_site_file                                           {receptor_site_file}\nmax_orientations 1000\ncritical_points no\nchemical_matching no\nuse_ligand_spheres no\nligand_sphere_file                                           {ligand_sphere_file}   \nbump_filter no\nscore_molecules yes\ncontact_score_primary no\ngrid_score_primary yes\ngrid_score_rep_rad_scale 1\ngrid_score_vdw_scale 1\ngrid_score_es_scale 1\ngrid_score_grid_prefix                                       {grid_score_grid_prefix}\ngrid_lig_efficiency no\nminimize_ligand yes\nminimize_anchor yes\nminimize_flexible_growth yes\nminimize_flexible_growth_ramp no\nuse_advanced_simplex_parameters no\nsimplex_max_cycles 1\nsimplex_score_converge 0.1\nsimplex_cycle_converge 1.0\nsimplex_trans_step 1.0\nsimplex_rot_step 0.1\nsimplex_tors_step 10.0\nsimplex_anchor_max_iterations 500\nsimplex_grow_max_iterations 500\nsimplex_grow_tors_premin_iterations 0\nsimplex_random_seed 73\nsimplex_restraint_min no\nsimplex_final_min no\natom_model all\nvdw_defn_file                                                {dock6_path}parameters/vdw_AMBER_parm99.defn\nflex_defn_file                                               {dock6_path}parameters/flex.defn\nflex_drive_file                                              {dock6_path}parameters/flex_drive.tbl\nligand_outfile_prefix                                        {ligand_outfile_prefix}\nwrite_orientations no\nwrite_mol_solvation no\nnum_scored_conformers 1\nrank_ligands no\nscore_threshold 100.0\n",
+      "dock6/footprint.template": "conformer_search_type rigid\nuse_internal_energy no\n ligand_atom_file                                             {ligand_atom_file}\nlimit_max_ligands no\nskip_molecule no\nread_mol_solvation no\ncalculate_rmsd no\nuse_database_filter no\norient_ligand no\nbump_filter no\nscore_molecules yes\ncontact_score_primary no\ngrid_score_primary no\nmultigrid_score_primary no\ndock3.5_score_primary no\ncontinuous_score_primary no\nfootprint_similarity_score_primary yes\nfps_score_use_footprint_reference_mol2 yes\n fps_score_footprint_reference_mol2_filename                  {fps_score_footprint_reference_mol2_filename}\nfps_score_foot_compare_type Euclidean\nfps_score_normalize_foot no\nfps_score_foot_comp_all_residue yes\n fps_score_receptor_filename                                  {fps_score_receptor_filename}\nfps_score_vdw_att_exp 6\nfps_score_vdw_rep_exp 9\nfps_score_vdw_rep_rad_scale 1\nfps_score_use_distance_dependent_dielectric yes\nfps_score_dielectric 4.0\nfps_score_vdw_fp_scale 1\nfps_score_es_fp_scale 1\nfps_score_hb_fp_scale 0\nminimize_ligand no\natom_model all\n vdw_defn_file                                                {dock6_path}parameters/vdw_AMBER_parm99.defn\n flex_defn_file                                               {dock6_path}parameters/flex.defn\n flex_drive_file                                              {dock6_path}parameters/flex_drive.tbl\n ligand_outfile_prefix                                        {ligand_outfile_prefix}\nwrite_footprints yes\nwrite_hbonds yes\nwrite_orientations no\nnum_scored_conformers 1\nrank_ligands no\n",
+      "dock6/grid.template": "allow_non_integral_charges yes\ncompute_grids yes\ngrid_spacing 0.4\noutput_molecule no\ncontact_score no\nenergy_score yes\nenergy_cutoff_distance 10\natom_model a\nattractive_exponent 6\nrepulsive_exponent 9\ndistance_dielectric yes\ndielectric_factor 4.\nbump_filter yes\nbump_overlap 0.75\nreceptor_file                             {receptor_file}\nbox_file                                  {box_file}\nvdw_definition_file                       {dock6_path}parameters/vdw_AMBER_parm99.defn\nscore_grid_prefix                         {score_grid_prefix}",
+      "dock6/min.template": "conformer_search_type rigid\nuse_internal_energy yes\ninternal_energy_rep_exp 12\ninternal_energy_cutoff 100.0\nligand_atom_file                                             {ligand_atom_file}\nlimit_max_ligands no\nskip_molecule no\nread_mol_solvation no\ncalculate_rmsd yes\nuse_rmsd_reference_mol yes\nrmsd_reference_filename                                      {rmsd_reference_filename}\nuse_database_filter no\norient_ligand no\nbump_filter no\nscore_molecules yes\ncontact_score_primary no\ncontact_score_secondary no\ngrid_score_primary yes\ngrid_score_secondary no\ngrid_score_rep_rad_scale 1\ngrid_score_vdw_scale 1\ngrid_score_es_scale 1\ngrid_score_grid_prefix                                       {grid_score_grid_prefix}\nmultigrid_score_secondary no\ndock3.5_score_secondary no\ncontinuous_score_secondary no\nfootprint_similarity_score_secondary no\npharmacophore_score_secondary no\ndescriptor_score_secondary no\ngbsa_zou_score_secondary no\ngbsa_hawkins_score_secondary no\nSASA_score_secondary no\namber_score_secondary no\nminimize_ligand yes\nsimplex_max_iterations 1000\nsimplex_tors_premin_iterations 0\nsimplex_max_cycles 1\nsimplex_score_converge 0.1\nsimplex_cycle_converge 1.0\nsimplex_trans_step 1.0\nsimplex_rot_step 0.1\nsimplex_tors_step 10.0\nsimplex_random_seed 73\nsimplex_restraint_min yes\nsimplex_coefficient_restraint 10.0\natom_model all\nvdw_defn_file                                                {dock6_path}parameters/vdw_AMBER_parm99.defn\nflex_defn_file                                               {dock6_path}parameters/flex.defn\nflex_drive_file                                              {dock6_path}parameters/flex_drive.tbl\nligand_outfile_prefix                                        {ligand_outfile_prefix}\nwrite_orientations no\nnum_scored_conformers 1\nrank_ligands no\n",
+      "dock6/showbox.template": "Y\n24.0\n{in_surface}\n1\n{out_surface}"
+    },
+    "position": {
+      "x": 1443.6363525390625,
+      "y": 34.90911865234375
+    },
+    "input_processing": "individual"
+  },
+  "detected_installation": "/home/michel/progs/dock6",
+  "receptor_reused_without_preparation": true,
+  "receptor_id": "4M0E_A",
+  "compound_id": "CHEMBL211596",
+  "conformer_search_type": "flex",
+  "ligand_charge_type": "am1",
+  "score": -46.597057,
+  "pose_file": "/tmp/biomol-dock6-user-pipeline-20261009/workspace/projects/bbb23aea3f2e4700bed616e7882c5458/runs/064ae181c1ac4a22b170c35d847e69a0/e333cd607a99492399d54cf52b65d72d/.biomolexplorer/jobs/399048e96b0c4ff3a70df57896deccec/artifacts/Estruturas/4M0E_A/Dock6/flex/CHEMBL211596_scored.mol2",
+  "footprint_file": "/tmp/biomol-dock6-user-pipeline-20261009/workspace/projects/bbb23aea3f2e4700bed616e7882c5458/runs/064ae181c1ac4a22b170c35d847e69a0/e333cd607a99492399d54cf52b65d72d/.biomolexplorer/jobs/399048e96b0c4ff3a70df57896deccec/artifacts/Estruturas/4M0E_A/Dock6/footprint/plots/CHEMBL211596.pdf",
+  "results_table": "/tmp/biomol-dock6-user-pipeline-20261009/workspace/projects/bbb23aea3f2e4700bed616e7882c5458/runs/064ae181c1ac4a22b170c35d847e69a0/e333cd607a99492399d54cf52b65d72d/.biomolexplorer/jobs/399048e96b0c4ff3a70df57896deccec/artifacts/docking_results.csv",
+  "artifact_count": 13,
+  "validation_directory": "/tmp/biomol-dock6-user-pipeline-20261009"
+}

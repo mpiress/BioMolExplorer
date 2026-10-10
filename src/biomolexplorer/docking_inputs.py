@@ -1,10 +1,11 @@
 """Pair docking poses with their reference receptor and selected compounds."""
+from .artifact_choices import matches_selector
 import csv
 from pathlib import Path
 
 
 def target_input(stage, field):
-    return field == 'base_input_path' and (stage['operation'] in ('docking_vina', 'docking_dock6') or
+    return field == 'base_input_path' and (stage['operation'] in ('docking_vina', 'docking_dock6') and stage['parameters'].get('receptor_prepared',True) or
         stage['operation']=='prepare_structures' and stage['parameters'].get('receptor_prepared',False))
 
 
@@ -46,7 +47,7 @@ def dock6_variant_matches(stage, refs, results, store, project_id):
             return [store.scoped_path(project_id,row[0])] if row else []
         paths=[store.scoped_path(project_id,p) for p in results.get(reference['stage'],[])]
         selector=reference.get('selector','auto')
-        return paths if selector=='auto' else [p for p in paths if p.as_posix().endswith('/'+selector)]
+        return paths if selector=='auto' else [p for p in paths if matches_selector(p,selector)]
     receptor_ref=refs['base_input_path']
     receptor_files=files(receptor_ref)
     receptors={p.name.split('.',1)[0] for p in receptor_files if p.name.endswith('.dockprep.pdbqt')}

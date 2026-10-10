@@ -19,15 +19,18 @@ class ImportFiles:
             options=[ft.DropdownOption(key=k,text=v) for k,v in KINDS.items()],disabled=not form.writable)
         self.expected=ft.Text(contract(self.kind.value),size=12,color='#64748B')
         self.kind.on_select=lambda e:self.sync_contract()
-        self.available=ft.Dropdown(label='Arquivo já enviado ao projeto',options=[],disabled=not form.writable,expand=True)
+        self.available=ft.Dropdown(label='Arquivo já enviado ao projeto',options=[],disabled=not form.writable)
         self.table=ft.DataTable(columns=[ft.DataColumn(ft.Text(label)) for label in ('Tipo','Arquivo','Ações')],
-            rows=[],column_spacing=24,data_row_min_height=72,data_row_max_height=88)
+            rows=[],column_spacing=16,horizontal_margin=12,data_row_min_height=80,data_row_max_height=104)
+        self.empty=ft.Text('Nenhum arquivo selecionado. Adicione arquivos do disco ou do projeto.',size=13,color='#64748B')
+        self.table_view=ft.Row([self.table],scroll=ft.ScrollMode.ALWAYS)
         self.count=ft.Text(size=12,color='#64748B')
         self.control=ft.Column([self.kind,self.expected,
             ft.TextButton('Selecionar arquivos no disco',icon=ft.Icons.UPLOAD_FILE,on_click=self.upload,disabled=not form.writable),
-            ft.Row([self.available,ft.TextButton('Adicionar arquivo do projeto',on_click=self.add_available,disabled=not form.writable)],wrap=True),
+            ft.ResponsiveRow([ft.Container(self.available,col={'xs':12,'md':7}),
+                ft.Container(ft.TextButton('Adicionar arquivo do projeto',on_click=self.add_available,disabled=not form.writable),col={'xs':12,'md':5})],spacing=16,run_spacing=12),
             ft.TextButton('Adicionar todos os arquivos do projeto',on_click=self.add_all,disabled=not form.writable),
-            ft.Row([self.table],scroll=ft.ScrollMode.AUTO),self.count],spacing=20,data='input')
+            self.empty,self.table_view,self.count],spacing=20,data='input',horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
         self.redraw()
 
     def sync_contract(self):
@@ -37,7 +40,7 @@ class ImportFiles:
         self.type_controls={};rows=[]
         for identifier,asset in self.entries.items():
             control=ft.Dropdown(value=asset['kind'],options=[ft.DropdownOption(key=k,text=v) for k,v in self.kinds.items()],
-                disabled=not self.form.writable,width=285)
+                disabled=not self.form.writable,width=200)
             async def change(e,identifier=identifier,control=control):
                 previous=self.entries[identifier]['kind']
                 async def action():
@@ -48,11 +51,14 @@ class ImportFiles:
                     self.entries[identifier]['kind']=control.value
                 await self.ui.guard(action)
             control.on_select=change;self.type_controls[identifier]=control
-            remove=ft.IconButton(icon=ft.Icons.REMOVE_CIRCLE_OUTLINE,tooltip='Remover da lista',disabled=not self.form.writable,
+            remove=ft.TextButton('Remover',icon=ft.Icons.DELETE_OUTLINE,tooltip='Remover da lista',disabled=not self.form.writable,
                 on_click=lambda e,identifier=identifier:self.remove(identifier))
             rows.append(ft.DataRow(cells=[ft.DataCell(control),
-                ft.DataCell(ft.Container(verbatim(ft.Text(asset['name'],tooltip=asset['name'])),width=360)),ft.DataCell(remove)]))
+                ft.DataCell(ft.Container(verbatim(ft.Text(asset['name'],tooltip=asset['name'],max_lines=2,overflow=ft.TextOverflow.ELLIPSIS)),width=200)),
+                ft.DataCell(ft.Container(remove,width=120))]))
         self.table.rows=rows
+        self.empty.visible=not rows
+        self.table_view.visible=bool(rows)
         self.available.options=[verbatim(ft.DropdownOption(key=a['id'],text=a['name'])) for a in self.form.assets if a['id'] not in self.entries]
         if self.available.value not in {o.key for o in self.available.options}:self.available.value=None
         self.count.value=f'{len(self.entries)} arquivos selecionados'

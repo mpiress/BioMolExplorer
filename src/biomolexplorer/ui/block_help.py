@@ -21,7 +21,7 @@ NOTES={
     'similarity':'Fluxo recomendado: ChEMBL, PubChem ou ZINC → Gerar fingerprints → Calcular similaridade.',
     'prepare_structures':'Selecione Vina, DOCK6 ou ambos. Receptores já preparados no redocking são reutilizados; os compostos externos são preparados.',
     'docking_vina':'Use receptor e compostos preparados para Vina. Na entrada de compostos, selecione um composto específico ou mantenha todos.',
-    'docking_dock6':'Use receptor e compostos preparados para DOCK6. Resultados Vina são opcionais. Na entrada de compostos, selecione um composto específico ou mantenha todos.',
+    'docking_dock6':'Selecione o receptor e, em Compostos selecionados, compostos ou resultados Vina. Receptores preparados são reutilizados. Escolha um composto específico ou mantenha todos.',
     'retrieve_pubchem':'Também aceita uma referência manual: SMILES, CID ou nome.',
     'graphs':'Conecte Calcular similaridade; compostos auxiliares podem ser enviados na configuração.',
 }

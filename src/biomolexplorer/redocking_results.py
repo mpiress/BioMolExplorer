@@ -94,3 +94,29 @@ class RedockingResults:
             for item in simulation['files']:
                 archive.writestr(item['archive_name'], self.store.read_file(token, pid, item['path']))
         return output.getvalue()
+
+    def scene(self,token,pid,rid,sid,key):
+        simulation=self.simulation(token,pid,rid,sid,key)
+        files=[Path(item['path']) for item in simulation['files'] if item['molecular']]
+        metadata=Path(simulation['metadata']);prepared=metadata.parent/'Prepared'
+        identity=f"{simulation['pdb']}_{simulation['ligand']}_{simulation['residue']}{simulation['chain']}"
+        receptor_id=f"{simulation['pdb']}_{simulation['chain']}"
+        poses=[p for p in files if p.name==identity+'.lig.pdbqt' and p.parent!=prepared]
+        if len(poses)!=1:raise ValueError('A pose do redocking está ausente ou é ambígua.')
+        complex_file=next((p for p in files if p==metadata.parent/(simulation['pdb']+'.pdb')),None)
+        if complex_file is None:complex_file=next((p for p in files if p.name==receptor_id+'.complex.pdb'),None)
+        prepared_receptor=next((p for name in (receptor_id+'.noH.pdb',receptor_id+'.dockprep.pdbqt') for p in files if p.name==name),None)
+        receptor=prepared_receptor or complex_file
+        if receptor is None:raise ValueError('O receptor associado a esta pose não está disponível.')
+        residue=[simulation['ligand'],simulation['residue'],simulation['chain']]
+        layers=[dict(role='receptor',path=str(receptor),format=receptor.suffix[1:]),
+                dict(role='pose',path=str(poses[0]),format='pdbqt')]
+        if complex_file:
+            if receptor==complex_file:layers[0]['exclude_residue']=residue
+            else:layers.append(dict(role='complex',path=str(complex_file),format='pdb',exclude_residue=residue))
+            layers.append(dict(role='reference',path=str(complex_file),format='pdb',residue=residue))
+        else:
+            reference=next((p for p in files if p.parent==prepared and p.name==identity+'.lig.pdb'),None)
+            if reference:layers.append(dict(role='reference',path=str(reference),format='pdb'))
+        return dict(name=identity+' · Redocking',layers=layers,
+            reference_kind='crystal' if complex_file else 'prepared' if len(layers)>2 else None)
