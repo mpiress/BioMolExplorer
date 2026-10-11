@@ -117,50 +117,137 @@
         .site-cta{background:linear-gradient(110deg,#22d3ee,#38bdf8);box-shadow:0 4px 20px rgba(34,211,238,.15)}
         .site-cta:hover{background:linear-gradient(110deg,#67e8f9,#7dd3fc)}
         .site-header a:focus-visible,.site-footer a:focus-visible{outline:2px solid #22d3ee;outline-offset:5px;border-radius:6px}
-        @media(max-width:480px){.site-wordmark{width:64px;height:64px}.site-header h1+p{display:none}}
+        @media(max-width:480px){.site-wordmark{width:64px;height:64px}}
+
+        .hero-buttons a:last-child { margin-left: auto; }
+        @media (min-width: 1024px) {
+            .hero-copy { display: flex; flex-direction: column; }
+            .hero-copy .hero-badge { align-self: flex-start; }
+            .hero-features { margin-top: auto; }
+            .hero-panel { height: 100%; display: flex; flex-direction: column; }
+            .hero-panel > .grid { flex: 1; grid-auto-rows: 1fr; }
+        }
+        /* Presentation canvas: readable blocks at every viewport size. */
+        section[id], #pipeline-config, #pipeline-blocks { scroll-margin-top: 140px; }
+        main, .grid > *, .flex > * { min-width: 0; }
+        h1, h2, h3, h4 { overflow-wrap: anywhere; }
+        pre { max-width: 100%; }
+        a, button { -webkit-tap-highlight-color: transparent; }
+        a:focus-visible, button:focus-visible { outline: 3px solid #0ea5e9; outline-offset: 4px; }
+        .skip-link { position: fixed; top: 8px; left: 8px; z-index: 100; transform: translateY(-160%); padding: 12px 18px; background: white; color: #0f172a; border-radius: 8px; }
+        .skip-link:focus { transform: translateY(0); }
+        .mobile-nav { padding: 0 24px 20px; max-height: 65vh; overflow-y: auto; }
+        .mobile-nav a { display: block; padding: 12px; border-radius: 10px; color: #cbd5e1; }
+        .mobile-nav a:hover { background: #1e293b; color: #67e8f9; }
+        .mobile-nav[hidden] { display: none; }
+        .pipeline-shell { background: #07111f; color: #e2e8f0; border: 1px solid #334155; border-radius: 24px; overflow: hidden; box-shadow: 0 24px 60px #02061718; }
+        .pipeline-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 24px; border-bottom: 1px solid #334155; }
+        .pipeline-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; }
+        .pipeline-canvas { padding: 28px; background-color: #0b1526; background-image: radial-gradient(#334155 1px, transparent 1px); background-size: 20px 20px; }
+        .pipeline-flow { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 24px; }
+        .pipeline-flow li { position: relative; min-width: 0; }
+        .pipeline-flow li:not(:last-child)::after { content: '↓'; position: absolute; left: 50%; bottom: -28px; color: #67e8f9; font-size: 22px; line-height: 28px; }
+        .pipeline-flow li:nth-child(1)::after, .pipeline-flow li:nth-child(3)::after { content: '→'; left: auto; right: -24px; top: 50%; bottom: auto; width: 24px; text-align: center; }
+        .pipeline-flow li:nth-child(3) { grid-column: 2; grid-row: 2; }
+        .pipeline-flow li:nth-child(4) { grid-column: 1; grid-row: 2; }
+        .pipeline-flow li:nth-child(3)::after { content: '←'; right: auto; left: -24px; }
+        .pipeline-node { position: relative; display: block; width: 100%; height: 100%; text-align: left; color: #e2e8f0; background: #0f172a; border: 1px solid #475569; border-top: 3px solid #38bdf8; border-radius: 14px; padding: 18px; cursor: pointer; transition: border-color .2s, background .2s; }
+        .pipeline-node::before, .pipeline-node::after { content: ''; position: absolute; top: 50%; width: 9px; height: 9px; background: #07111f; border: 2px solid #67e8f9; border-radius: 50%; }
+        .pipeline-node::before { left: -5px; } .pipeline-node::after { right: -5px; }
+        .pipeline-node[aria-pressed="true"] { border-color: #34d399; background: #102c30; box-shadow: 0 0 0 2px #34d39926; }
+        .pipeline-node:hover { border-color: #67e8f9; }
+        .pipeline-node .node-category { display: block; color: #94a3b8; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px; }
+        .pipeline-node strong { display: block; font-size: 16px; margin-bottom: 8px; }
+        .pipeline-node .node-setting { display: block; color: #cbd5e1; font-size: 12px; line-height: 1.7; }
+        .pipeline-node .node-output { display: block; color: #6ee7b7; font-size: 11px; border-top: 1px solid #334155; margin-top: 12px; padding-top: 10px; }
+        .pipeline-config { padding: 24px; background: #0f172a; border-left: 1px solid #334155; }
+        .pipeline-config h3 { font-size: 22px; font-weight: 700; margin: 8px 0 12px; color: white; }
+        .pipeline-config p { font-size: 13px; line-height: 1.7; color: #cbd5e1; }
+        .pipeline-config dl { margin: 20px 0; }
+        .pipeline-config dl > div { padding: 10px 0; border-bottom: 1px solid #334155; }
+        .pipeline-config dt { color: #94a3b8; font-size: 12px; }
+        .pipeline-config dd { margin-top: 4px; color: #f1f5f9; font-size: 14px; overflow-wrap: anywhere; }
+        .pipeline-config .config-output { border: 1px solid #065f46; background: #064e3b33; padding: 14px; border-radius: 12px; }
+        .pipeline-config .config-output strong { display: block; color: #6ee7b7; font-size: 12px; margin-bottom: 5px; }
+        @media (min-width: 1280px) { #mobile-menu-toggle, .mobile-nav { display: none; } }
+        @media (max-width: 1023px) { .pipeline-layout { grid-template-columns: minmax(0, 1fr); } .pipeline-config { border-left: 0; border-top: 1px solid #334155; } .pipeline-config dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 24px; } }
+        @media (max-width: 639px) {
+            section.py-24 { padding-top: 56px; padding-bottom: 56px; }
+            section h2.text-4xl { font-size: 1.875rem; line-height: 1.2; }
+            .hero-gradient .hero-heading { font-size: clamp(2rem, 9vw, 3rem); }
+            .hero-gradient .hero-badge { letter-spacing: .08em; font-size: 10px; }
+            .hero-gradient .hero-panel, #workflow .p-10 { padding: 24px; }
+            main .text-justify { text-align: left; }
+            .grid.gap-16, .grid.gap-14 { gap: 32px; }
+            #workflow .flex.items-center.justify-between { flex-wrap: wrap; gap: 8px; }
+            #workflow h3.text-3xl { font-size: 1.5rem; }
+            .pipeline-canvas { padding: 24px; }
+            .pipeline-flow { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+            .pipeline-flow li:nth-child(n) { grid-column: auto; grid-row: auto; }
+            .pipeline-flow li:not(:last-child)::after { content: '↓'; top: auto; bottom: -28px; left: 50%; right: auto; width: auto; }
+            .pipeline-config dl { grid-template-columns: minmax(0, 1fr); }
+            .pipeline-toolbar { padding: 18px 24px; }
+            .workspace-links { flex-direction: column; align-items: flex-start; }
+            .workspace-links a { margin: 0; }
+            .site-header > div { padding: 12px 16px; gap: 10px; }
+            .site-header .site-cta { padding: 10px 12px; font-size: 13px; }
+            .site-wordmark { max-width: 40vw; }
+        }
+        @media(prefers-reduced-motion:reduce) { .pipeline-node { transition: none; } }
     </style>
 </head>
 
 <body class="text-slate-800 antialiased">
+    <a href="#main-content" class="skip-link">Skip to content</a>
 
-    <header class="site-header fixed top-0 left-0 right-0 z-50 backdrop-blur-lg">
+    <header class="site-header sticky top-0 z-50 backdrop-blur-lg">
         <div class="max-w-7xl mx-auto px-6 py-4 flex flex-wrap gap-4 items-center justify-between">
             <div class="flex items-center gap-4">
                 <div>
-                    <h1 class="mb-1"><picture><source media="(max-width: 480px)" srcset="imgs/new_logo.png"><img src="imgs/new_BioMolLogo.png" alt="BioMolExplorer" width="2172" height="724" class="site-wordmark"></picture></h1>
+                    <div class="mb-1"><picture><source media="(max-width: 480px)" srcset="imgs/new_logo.png"><img src="imgs/new_BioMolLogo.png" alt="BioMolExplorer" width="2172" height="724" class="site-wordmark"></picture></div>
                 </div>
             </div>
 
-            <nav aria-label="Main navigation" class="hidden lg:flex items-center gap-5 text-sm text-slate-300">
+            <nav aria-label="Main navigation" class="hidden xl:flex items-center gap-5 text-sm text-slate-300">
                 <a href="#overview" class="hover:text-cyan-300 transition">Overview</a>
                 <a href="#capabilities" class="hover:text-cyan-300 transition">Capabilities</a>
-                <a href="#workflow" class="hover:text-cyan-300 transition">Workflow</a>
+                <a href="#pipeline-example" class="hover:text-cyan-300 transition">Pipeline example</a>
                 <a href="#installation" class="hover:text-cyan-300 transition">Installation</a>
                 <a href="#visual-results" class="hover:text-cyan-300 transition">Visual results</a>
                 <a href="#documentation" class="hover:text-cyan-300 transition">Documentation</a>
             </nav>
 
+            <div class="flex items-center gap-3">
+            <button type="button" id="mobile-menu-toggle" aria-controls="mobile-navigation" aria-expanded="false" aria-label="Open navigation" class="text-cyan-200 border border-slate-600 rounded-xl p-3 leading-none"><i class="fa-solid fa-bars" aria-hidden="true"></i></button>
             <a href="docs/index.html"
                class="inline-flex items-center gap-2 site-cta transition text-slate-950 px-5 py-2.5 rounded-xl font-semibold shadow-lg">
                 <i class="fa-solid fa-terminal"></i>
                 Documentation
             </a>
+            </div>
         </div>
+        <nav id="mobile-navigation" class="mobile-nav" aria-label="Mobile navigation" hidden>
+            <a href="#overview">Overview</a><a href="#pipeline-example">Pipeline example</a>
+            <a href="#capabilities">Capabilities</a><a href="#workspace">Workspace</a>
+            <a href="#workflow">Architecture</a><a href="#installation">Installation</a>
+            <a href="#visual-results">Visual results</a><a href="#documentation">Documentation</a>
+        </nav>
     </header>
+    <main id="main-content">
 
     <section class="hero-gradient grid-pattern min-h-screen flex items-center relative overflow-hidden">
         <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.04)_0,transparent_60%)]"></div>
 
-        <div class="max-w-7xl mx-auto px-6 pt-32 pb-20 relative z-10">
-            <div class="grid lg:grid-cols-2 gap-16 items-center">
+        <div class="max-w-7xl mx-auto px-6 pt-16 pb-20 relative z-10">
+            <div class="hero-columns grid lg:grid-cols-2 gap-16 items-stretch">
 
-                <div>
-                    <div class="inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-xs uppercase tracking-[0.2em] text-brand-primary mb-8">
+                <div class="hero-copy">
+                    <div class="hero-badge inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-xs uppercase tracking-[0.2em] text-brand-primary mb-8">
                         <i class="fa-solid fa-dna"></i>
                         Computer-Aided Drug Design Platform
                     </div>
 
-                    <h1 class="text-5xl md:text-6xl xl:text-7xl font-black text-white leading-tight">
+                    <h1 class="hero-heading text-5xl md:text-6xl xl:text-7xl font-black text-white leading-tight">
                         Molecular Data Exploration for
                         <span class="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
                             Intelligent Drug Discovery
@@ -171,7 +258,11 @@
                         Retrieve molecular data, build the pipeline your study needs, and keep its inputs, settings and results together. BioMolExplorer combines a Flet workspace with Python services for similarity analysis, graph selection, ADMET screening, preparation, redocking and docking.
                     </p>
 
-                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                    <div class="hero-buttons flex flex-wrap justify-between items-center gap-3 mt-7 mb-8">
+                        <a href="#pipeline-example" class="site-cta inline-flex items-center gap-2 text-slate-950 px-5 py-3 rounded-xl font-semibold">Explore a pipeline <i class="fa-solid fa-arrow-down" aria-hidden="true"></i></a>
+                        <a href="#installation" class="inline-flex items-center border border-slate-500 text-slate-200 px-5 py-3 rounded-xl font-semibold hover:border-cyan-300">Set up your workspace</a>
+                    </div>
+                   <div class="hero-features grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
     
                     <div class="w-full bg-slate-900/60 rounded-lg px-4 py-3 text-sm font-mono text-slate-200 border border-slate-700/60 flex items-center justify-start hover:bg-slate-800 transition duration-300 shadow-sm">
                         <i class="fab fa-python text-brand-primary mr-3 text-base shrink-0"></i>
@@ -201,7 +292,7 @@
                 <div class="relative">
                     <div class="absolute -inset-10 bg-emerald-400/10 blur-3xl rounded-full"></div>
 
-                    <div class="glass rounded-[2rem] p-10 relative shadow-glow">
+                    <div class="hero-panel glass rounded-[2rem] p-10 relative shadow-glow">
                     
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                             
@@ -265,18 +356,15 @@
                 <div class="space-y-6 text-slate-600 leading-relaxed text-justify text-sm md:text-base">
                     <p></p>
                     <p>
-                        Managing high-volume heterogeneous molecular repositories remains one of the principal
-                        challenges in modern computer-aided drug design (CADD) workflows. Public biological repositories
-                        often contain inconsistent metadata, incomplete experimental information, duplicate records,
-                        and records with varying levels of quality.
+                        Computer-aided drug design brings together protein structures, compound libraries and bioactivity
+                        records. Inconsistent metadata, duplicate compounds and incomplete experimental information make
+                        that integration difficult. BioMolExplorer organizes retrieval, filtering and analysis in one project.
                     </p>
 
                     <p>
-                        BioMolExplorer was designed to address these limitations through a flexible information retrieval
-                        architecture that integrates and standardizes datasets from PDB, ChEMBL, PubChem, and ZINC. The platform
-                        enables the automated generation of research-ready molecular datasets suitable for computational 
-                        pharmacology, high-throughput virtual screening, network analysis, and comprehensive molecular similarity 
-                        investigations.
+                        Retrieve and standardize datasets from PDB, ChEMBL, PubChem and ZINC, or import compatible files
+                        from your own study. Choose a short screening workflow or combine molecular similarity,
+                        network analysis and receptor-based docking as your research requires.
                     </p>
 
                     <p>
@@ -348,6 +436,62 @@
 
                 </div>
             </div>
+        </div>
+    </section>
+
+    <section id="pipeline-example" class="py-24 bg-slate-50 border-y border-slate-200" aria-labelledby="pipeline-heading">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="max-w-3xl mb-10">
+                <span class="text-emerald-700 font-semibold uppercase tracking-widest text-sm">Inside a pipeline</span>
+                <h2 id="pipeline-heading" class="section-title text-4xl font-black text-slate-900 mt-3">From a reference compound to a screened molecular set</h2>
+                <p class="text-slate-600 mt-6 leading-relaxed">A pipeline connects the output of one scientific block to the input of the next. This example expands a PubChem reference, compares molecular fingerprints, selects a connected group and profiles its ADMET properties. The capture below shows this pipeline in the real BioMolExplorer workspace. Expand the configuration examples to inspect each stage.</p>
+            </div>
+            <figure class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-card mb-8">
+                <a href="imgs/examples/workspace-pipeline.png" class="example-image" data-example aria-label="Enlarge the real pipeline workspace"><img src="imgs/examples/workspace-pipeline.png" width="1700" height="1100" loading="lazy" decoding="async" alt="Actual BioMolExplorer workspace with the stage library, pipeline controls and five connected blocks: Retrieve PubChem, Generate fingerprints, Calculate similarity, Filter by graphs and Evaluate ADMET." style="aspect-ratio: 17 / 11;"><span>View full workspace ↗</span></a>
+                <figcaption class="p-6 md:p-8"><p class="text-sm font-semibold text-emerald-700 mb-2">Actual application · demonstration project</p><h3 class="text-xl font-bold text-slate-900">The pipeline as it appears in your workspace</h3><p class="text-slate-600 mt-3 leading-relaxed">The stage library sits on the left; blocks and their typed input/output ports share the central canvas. Select a block and use Configure selection, or double-click its header, to edit it. This capture uses an isolated example project with configured connections; no scientific calculations were run.</p></figcaption>
+            </figure>
+            <details class="pipeline-examples rounded-3xl border border-slate-200 bg-white p-4 md:p-6">
+                <summary class="cursor-pointer font-bold text-lg text-slate-900 py-2">Explore the real configuration form and example block settings</summary>
+                <figure class="bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden mt-6 mb-8">
+                    <a href="imgs/examples/workspace-configuration.png" class="example-image" data-example aria-label="Enlarge the real fingerprint configuration form"><img src="imgs/examples/workspace-configuration.png" width="1700" height="1100" loading="lazy" decoding="async" alt="Actual BioMolExplorer configuration dialog for Generate fingerprints, showing the visual form and Morgan fingerprint settings." style="aspect-ratio: 17 / 11;"><span>View full configuration ↗</span></a>
+                    <figcaption class="p-6"><h3 class="text-xl font-bold text-slate-900">Configure a block with the application's guided form</h3><p class="text-slate-600 mt-3 leading-relaxed">The real fingerprint editor exposes the algorithm, Morgan radius and bit count alongside input selections. The illustration below lets you browse the same example's stages without launching the application.</p></figcaption>
+                </figure>
+            <div class="pipeline-shell">
+                <div class="pipeline-toolbar">
+                    <div><span class="text-emerald-300 text-xs font-semibold uppercase tracking-widest">Example project</span><p class="font-semibold mt-1">Similarity-guided compound exploration</p></div>
+                    <span class="text-xs text-slate-300 border border-slate-600 rounded-full px-3 py-2">Interactive illustration · no calculations</span>
+                </div>
+                <div class="pipeline-layout">
+                    <div class="pipeline-canvas">
+                        <ol id="pipeline-blocks" class="pipeline-flow" aria-label="Scientific stages in execution order">
+                            <li><button type="button" class="pipeline-node" data-stage="pubchem" aria-pressed="false" aria-controls="pipeline-config"><span class="node-category">01 · Retrieval</span><strong>PubChem compounds</strong><span class="node-setting">Reference: aspirin (CID 2244)<br>Similarity ≥ 90% · up to 100 records</span><span class="node-output">Output → compound table + SMILES</span></button></li>
+                            <li><button type="button" class="pipeline-node" data-stage="fingerprints" aria-pressed="true" aria-controls="pipeline-config"><span class="node-category">02 · Molecular descriptors</span><strong>Generate fingerprints</strong><span class="node-setting">Morgan · radius 2<br>2,048 bits per molecule</span><span class="node-output">Output → molecular fingerprints</span></button></li>
+                            <li><button type="button" class="pipeline-node" data-stage="similarity" aria-pressed="false" aria-controls="pipeline-config"><span class="node-category">03 · Similarity</span><strong>Calculate similarity</strong><span class="node-setting">Metric: Tanimoto<br>Relationship threshold: 70%</span><span class="node-output">Output → similarity relationships</span></button></li>
+                            <li><button type="button" class="pipeline-node" data-stage="graphs" aria-pressed="false" aria-controls="pipeline-config"><span class="node-category">04 · Graph selection</span><strong>Filter by graphs</strong><span class="node-setting">Largest connected component<br>Common fragment analysis</span><span class="node-output">Output → selected compound table</span></button></li>
+                            <li><button type="button" class="pipeline-node" data-stage="admet" aria-pressed="false" aria-controls="pipeline-config"><span class="node-category">05 · Screening</span><strong>ADMET profiling</strong><span class="node-setting">Profile: oral hypothesis<br>Local descriptors and structural alerts</span><span class="node-output">Output → properties + screening subsets</span></button></li>
+                        </ol>
+                        <p class="text-xs text-slate-300 mt-7 leading-relaxed"><i class="fa-solid fa-circle-info text-cyan-300 mr-1" aria-hidden="true"></i> Follow the numbered blocks and arrows. Connections define execution order; moving a block in the workspace changes its position.</p>
+                    </div>
+                    <aside id="pipeline-config" class="pipeline-config" aria-labelledby="config-title" aria-live="polite" aria-atomic="true">
+                        <span class="text-xs uppercase tracking-widest text-emerald-300">Selected block · example settings</span>
+                        <h3 id="config-title">Generate fingerprints</h3>
+                        <p id="config-description">Represent each compound as a molecular fingerprint for the next similarity stage.</p>
+                        <dl id="config-fields"><div><dt>Input</dt><dd>Compound table from PubChem</dd></div><div><dt>Algorithm</dt><dd>Morgan</dd></div><div><dt>Radius</dt><dd>2</dd></div><div><dt>Fingerprint size</dt><dd>2,048 bits</dd></div></dl>
+                        <div class="config-output"><strong>What this block produces</strong><p id="config-result">Fingerprint files that the similarity block reads with the Morgan algorithm identified automatically.</p></div>
+                        <p class="mt-5">In the application, double-click a block or use Configure selection to edit its inputs and parameters.</p>
+                        <a href="#pipeline-blocks" class="inline-flex lg:hidden text-sm text-cyan-300 underline mt-5">Choose another block ↑</a>
+                    </aside>
+                </div>
+            </div>
+            <noscript><p class="mt-4 text-slate-600">Enable JavaScript to inspect each block. The diagram shows the complete sequence and its example parameters.</p></noscript>
+            </details>
+            <div class="grid md:grid-cols-3 gap-6 mt-8">
+                <article class="bg-white border border-slate-200 rounded-2xl p-6"><span class="text-emerald-700 text-sm font-semibold">1. Assemble &amp; configure</span><h3 class="font-bold text-lg mt-2">Choose the stages and their inputs</h3><p class="text-slate-600 text-sm mt-3 leading-relaxed">Add blocks from the library, connect compatible ports and select the output files each stage should consume. Use guided forms or advanced JSON.</p></article>
+                <article class="bg-white border border-slate-200 rounded-2xl p-6"><span class="text-cyan-700 text-sm font-semibold">2. Execute &amp; monitor</span><h3 class="font-bold text-lg mt-2">Run the pipeline or a selected stage</h3><p class="text-slate-600 text-sm mt-3 leading-relaxed">Dependencies run first. Inspect stage progress and logs, and reuse compatible completed results when the application offers that option.</p></article>
+                <article class="bg-white border border-slate-200 rounded-2xl p-6"><span class="text-violet-700 text-sm font-semibold">3. Inspect &amp; export</span><h3 class="font-bold text-lg mt-2">Keep the evidence with the project</h3><p class="text-slate-600 text-sm mt-3 leading-relaxed">Open compound tables, molecular networks and ADMET plots. Download generated files and retain the run's configuration snapshot.</p></article>
+            </div>
+            <p class="text-sm text-slate-600 mt-6 leading-relaxed">Values here illustrate configuration choices, not a validated screening protocol. PubChem's search cutoff and the local Tanimoto relationship threshold control different steps. Docking can be added with a separate prepared-receptor input; it is optional for this example.</p>
+            <a href="docs/en/frontend.html#projects-and-pipelines" class="inline-flex mt-5 text-emerald-700 font-semibold underline">Read the pipeline configuration guide →</a>
         </div>
     </section>
 
@@ -484,9 +628,11 @@
                 <p class="text-slate-600 mt-2 leading-relaxed">Prepared receptors are reused; Vina affinity maps are shared within compatible batches, and DOCK6 grids within each receptor/site. Scientific commands have no implicit duration limit. Compounds that fail preparation or individual DOCK6 calculations are listed separately while the remaining candidates continue.</p>
                 <p class="text-slate-600 mt-3 leading-relaxed">Completed runs bring stage summaries, tables, visual results and logs together. Remove obsolete stage results with confirmation and restore files through project history.</p>
             </div>
-            <a href="docs/en/frontend.html" class="inline-flex mt-6 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-semibold">Explore the workspace guide →</a>
-            <a href="docs/en/projects.html" class="inline-flex mt-6 ml-3 border border-emerald-600 text-emerald-700 px-6 py-3 rounded-xl font-semibold">Projects, migration and versions →</a>
-            <a href="docs/pt/projects.html" lang="pt-BR" class="inline-flex mt-6 ml-3 text-emerald-700 underline font-semibold">Projetos e versões em português</a>
+            <div class="workspace-links flex flex-wrap items-center gap-3 mt-6">
+            <a href="docs/en/frontend.html" class="inline-flex bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-semibold">Explore the workspace guide →</a>
+            <a href="docs/en/projects.html" class="inline-flex border border-emerald-600 text-emerald-700 px-6 py-3 rounded-xl font-semibold">Projects, migration and versions →</a>
+            <a href="docs/pt/projects.html" lang="pt-BR" class="inline-flex text-emerald-700 underline font-semibold">Projetos e versões em português</a>
+            </div>
         </div>
     </section>
 
@@ -517,11 +663,14 @@
                     </h3>
 
                     <p class="text-slate-600 leading-relaxed text-justify">
-                        The scientific modules remain organized into retrieval and analysis workflows. Above them, the Flet workspace manages accounts, project permissions, files and pipeline dependencies. Each scientific stage runs in a separate Python process, with its own configuration snapshot, outputs and logs. The diagram below the heading illustrates the scientific workflow; the <a href="docs/en/architecture.html" class="text-emerald-700 underline">architecture guide</a> documents the current application services and their limits.
+                        The scientific modules remain organized into retrieval and analysis workflows. Above them, the Flet workspace manages accounts, project permissions, files and pipeline dependencies. Each scientific stage runs in a separate Python process, with its own configuration snapshot, outputs and logs. The diagram above illustrates the scientific workflow; the <a href="docs/en/architecture.html" class="text-emerald-700 underline">architecture guide</a> documents the current application services and their limits.
                     </p>
                 </div>
             </div>
 
+            <details class="rounded-3xl border border-slate-200 bg-slate-50 p-4 md:p-6">
+                <summary class="cursor-pointer font-bold text-lg text-slate-900 py-2">Explore the retrieval and analysis modules</summary>
+                <p class="text-slate-600 text-sm mt-2 mb-6">Scientific scripts are also available for command-line workflows. Expand the module descriptions or follow the <a href="docs/en/backend_usage.html" class="text-emerald-700 underline">backend guide</a> for inputs and parameters.</p>
             <div class="grid lg:grid-cols-2 gap-10">
 
                 <div class="bg-slate-950 rounded-[2rem] p-10 text-white relative overflow-hidden border border-slate-800">
@@ -632,6 +781,7 @@
                     </div>
                 </div>
             </div>
+            </details>
         </div>
 
     </section>
@@ -906,6 +1056,7 @@ biomolexplorer-ui --web --dock6-path /path/to/dock6-6.11</code></pre>
         </div>
     </section>
 
+    </main>
     <footer class="site-footer py-12">
         <div class="max-w-7xl mx-auto px-6">
             <div class="flex flex-col lg:flex-row items-center justify-between gap-8">
@@ -942,6 +1093,85 @@ biomolexplorer-ui --web --dock6-path /path/to/dock6-6.11</code></pre>
             </div>
         </div>
     </footer>
+
+<script>
+(() => {
+    const toggle = document.getElementById('mobile-menu-toggle');
+    const navigation = document.getElementById('mobile-navigation');
+    function closeMenu() {
+        navigation.hidden = true;
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.setAttribute('aria-label', 'Open navigation');
+    }
+    toggle.addEventListener('click', () => {
+        const open = toggle.getAttribute('aria-expanded') !== 'true';
+        navigation.hidden = !open;
+        toggle.setAttribute('aria-expanded', String(open));
+        toggle.setAttribute('aria-label', open ? 'Close navigation' : 'Open navigation');
+    });
+    navigation.querySelectorAll('a').forEach(link => link.addEventListener('click', closeMenu));
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && !navigation.hidden) { closeMenu(); toggle.focus(); }
+    });
+    window.matchMedia('(min-width: 1280px)').addEventListener('change', event => { if (event.matches) closeMenu(); });
+
+    const stages = {
+        pubchem: {
+            title: 'PubChem compounds',
+            description: 'Start with your own reference and retrieve structurally similar compounds from PubChem.',
+            fields: [['Reference source', 'Manual reference'], ['Reference type', 'PubChem CID'], ['Reference', '2244 (aspirin)'], ['PubChem similarity cutoff', '90%'], ['Maximum records', '100']],
+            result: 'A compound table with identifiers and SMILES, used as the molecular input of the fingerprint block.'
+        },
+        fingerprints: {
+            title: 'Generate fingerprints',
+            description: 'Represent each compound as a molecular fingerprint for the next similarity stage.',
+            fields: [['Input', 'Compound table from PubChem'], ['Algorithm', 'Morgan'], ['Radius', '2'], ['Fingerprint size', '2,048 bits']],
+            result: 'Fingerprint files that the similarity block reads with the Morgan algorithm identified automatically.'
+        },
+        similarity: {
+            title: 'Calculate similarity',
+            description: 'Compare the generated fingerprints and retain the relationships used to construct the molecular graph.',
+            fields: [['Input', 'Morgan fingerprints'], ['Metric', 'Tanimoto'], ['Relationship threshold', '70%'], ['Fingerprint type', 'Morgan · detected from input']],
+            result: 'Similarity CSVs containing molecular relationships and their weights. Connect these files to graph selection.'
+        },
+        graphs: {
+            title: 'Filter by graphs',
+            description: 'Explore the network and its largest connected component (MCC), then pass its selected molecules to screening.',
+            fields: [['Input', 'Similarity CSV from the previous block'], ['Selection', 'Largest connected component (MCC)'], ['Common fragment search limit', 'No time limit (0 s)']],
+            result: 'Interactive networks, common-fragment figures and selected compound tables. Choose the relevant analysis table as the ADMET input.'
+        },
+        admet: {
+            title: 'ADMET profiling',
+            description: 'Profile the selected compounds using an editable research hypothesis before deciding which candidates to investigate.',
+            fields: [['Input', 'Selected compound table from graphs'], ['Research profile', 'Oral hypothesis'], ['Calculations', 'Local RDKit descriptors'], ['Inspection', 'Structural alerts and ADMET plots']],
+            result: 'Property tables, heuristic classifications, visual plots and screening subsets. Trained prediction models are optional and require their own setup.'
+        }
+    };
+    document.querySelectorAll('[data-stage]').forEach(button => {
+        button.addEventListener('click', () => {
+            const stage = stages[button.dataset.stage];
+            document.querySelectorAll('[data-stage]').forEach(node => node.setAttribute('aria-pressed', String(node === button)));
+            document.getElementById('config-title').textContent = stage.title;
+            document.getElementById('config-description').textContent = stage.description;
+            const fields = document.getElementById('config-fields');
+            fields.replaceChildren(...stage.fields.map(([label, value]) => {
+                const row = document.createElement('div');
+                const term = document.createElement('dt');
+                const detail = document.createElement('dd');
+                term.textContent = label; detail.textContent = value;
+                row.append(term, detail); return row;
+            }));
+            document.getElementById('config-result').textContent = stage.result;
+            if (window.matchMedia('(max-width: 1023px)').matches) {
+                document.getElementById('pipeline-config').scrollIntoView({
+                    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+})();
+</script>
 
 <dialog id="example-dialog" aria-labelledby="example-title">
     <div class="preview-toolbar"><h2 id="example-title">Visual example</h2><button type="button" aria-label="Close image preview">Close ✕</button></div>
