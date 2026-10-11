@@ -47,6 +47,9 @@ def dock6_variant_matches(stage, refs, results, store, project_id):
             return [store.scoped_path(project_id,row[0])] if row else []
         paths=[store.scoped_path(project_id,p) for p in results.get(reference['stage'],[])]
         selector=reference.get('selector','auto')
+        if reference.get('artifact_id'):
+            from .artifacts import validate_reference
+            return [Path(validate_reference(reference,paths))]
         return paths if selector=='auto' else [p for p in paths if matches_selector(p,selector)]
     receptor_ref=refs['base_input_path']
     receptor_files=files(receptor_ref)

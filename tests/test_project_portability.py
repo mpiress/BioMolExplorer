@@ -177,8 +177,9 @@ class ProjectPortabilityTests(unittest.TestCase):
         service=PipelineService(self.store,worker_python=sys.executable)
         try:
             original=self.wait(service,service.submit(self.owner,self.pid))
-            self.assertEqual(original['status'],'awaiting_input')
-            original=self.wait(service,service.resume(self.owner,original['id'],analysis))
+            # Explicit saved file choices already satisfy curation; migration
+            # must preserve that behavior without requesting a new selection.
+            self.assertEqual(original['status'],'succeeded',original.get('error'))
         finally:service.close()
         self.assertEqual(original['status'],'succeeded',original['error'])
         archive=self.store.export_project(self.owner,self.pid)

@@ -30,7 +30,13 @@ class ResultFiles:
 
     def files(self, token, pid, rid, sid):
         stage = self.stage(token, pid, rid, sid)
-        return [{'path': str(p), 'name': p.name, 'size': p.stat().st_size}
+        from .artifacts import records
+        catalog={r['path']:r for r in records(stage,rid)}
+        def information(path):
+            record=catalog[str(path)]
+            origins=sorted({r.get('stage_name',r.get('name','')) for rows in record.get('inputs',{}).values() for r in rows})
+            return dict(record,size=path.stat().st_size,origin=', '.join(origins) or record['stage_name'],description='Origem: '+record['stage_name']+' · '+record['stage_id'][:8]+' · Execução '+str(record['run_id'] or rid)[:8]+(' · Entradas: '+', '.join(origins) if origins else ''))
+        return [information(p)
                 for name in stage.get('artifacts', [])
                 if (p := self.store.scoped_path(pid, name)).is_file()
                 and not (stage['operation']=='retrieve_structures' and p.name in ('pdb_codes.csv','retrieval_report.json'))

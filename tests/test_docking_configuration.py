@@ -65,8 +65,9 @@ class DockingConfigurationTests(unittest.TestCase):
 
     def test_receptor_preparation_runs_only_for_raw_inputs(self):
         options={'receptor':{'charge_type':'am1'},'ligand':{'charge_type':'gas'}}
-        with patch('wrappers.redocking.prepare_structures') as prepare:
-            self.assertEqual(prepare_docking_receptor('input','Target','out',None,7.4,options,True),'input')
+        with patch('wrappers.redocking.prepare_structures') as prepare, patch('biomolexplorer.docking_preparation.validate_receptor_outputs') as validate:
+            self.assertEqual(prepare_docking_receptor('input','Target','out',['1ABC','LIG',1,'A'],7.4,options,True),'input')
+            validate.assert_called_once()
             prepare.assert_not_called()
             result=prepare_docking_receptor('input','Target','out',['1ABC','LIG',1,'A'],7.4,options,False)
             self.assertEqual(result,str(Path('out/Receptor')))

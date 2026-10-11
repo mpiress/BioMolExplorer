@@ -201,5 +201,8 @@
   "Executável DOCK6 ausente ou não executável: {0}": "DOCK6 executable missing or not executable: {0}",
   "Parâmetro global DOCK6 ausente ou vazio: {0}": "Global DOCK6 parameter missing or empty: {0}",
   "A etapa showbox não produziu a caixa do sítio: {0}": "The showbox stage did not produce the site box: {0}",
-  "Grid DOCK6 ausente ou vazio: {0}": "DOCK6 grid missing or empty: {0}"
+  "Grid DOCK6 ausente ou vazio: {0}": "DOCK6 grid missing or empty: {0}",
+  "{0} disponíveis nesta busca · {1} selecionados · Página {2}": "{0} available for this search · {1} selected · Page {2}",
+  "{0} arquivo(s) adicionado(s).": "{0} file(s) added.",
+  "{0} arquivo(s) removido(s).": "{0} file(s) removed."
 }

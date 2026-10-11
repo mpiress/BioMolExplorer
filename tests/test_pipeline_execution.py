@@ -564,9 +564,10 @@ class PipelineExecutionTests(unittest.TestCase):
                     for child in getattr(control,'controls',[]) or []:yield from walk(child)
                     child=getattr(control,'content',None)
                     if isinstance(child,ft.Control):yield from walk(child)
-                selector=next(c for c in walk(dialog.content) if isinstance(c,ft.Dropdown) and c.label=='Resultado usado nesta entrada')
-                self.assertIn('compounds.csv',[o.key for o in selector.options])
-                selector.value='compounds.csv'
+                picker=next(c._artifact_picker for c in walk(dialog.content) if hasattr(c,'_artifact_picker'))
+                self.assertIn('compounds.csv',[o.text for o in picker.available.options])
+                picker.available.value=next(o.key for o in picker.available.options if o.text=='compounds.csv')
+                picker.add_file()
                 self.assertEqual(dialog.actions[-1].content,'Aplicar e continuar pipeline')
                 asyncio.run(dialog.actions[-1].on_click(None))
                 finished=self.wait(run)

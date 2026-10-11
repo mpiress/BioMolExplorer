@@ -26,8 +26,9 @@ def pack(references):
     return unique[0] if len(unique)==1 else {'sources':unique} if unique else None
 
 
-def input_labels(stage,assets=None,automatic=None):
+def input_labels(stage,assets=None,automatic=None,producers=None):
     names={a['id']:a['name'] for a in assets or []}
+    origins={s['id']:s['name'] for s in producers or []}
     if stage.get('provided_results'):
         return [names.get(identifier,'Resultado fornecido') for identifier in stage['provided_results']['asset_ids']]
     labels=[];seen=[]
@@ -38,7 +39,9 @@ def input_labels(stage,assets=None,automatic=None):
             if 'asset' in source:
                 labels.append(names.get(source['asset'],'Arquivo próprio'))
             elif source.get('selector','auto')!='auto':
-                labels.append(source['selector'])
+                origin=origins.get(source['stage'])
+                labels.append((origin+' · '+source['stage'][:8]+' → ' if origin else '')+source['selector'])
             else:
-                labels.append((automatic or {}).get(source['stage'],'Seleção automática'))
+                origin=origins.get(source['stage'])
+                labels.append((origin+' · '+source['stage'][:8]+' → ' if origin else '')+(automatic or {}).get(source['stage'],'Seleção automática'))
     return labels

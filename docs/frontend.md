@@ -579,3 +579,28 @@ Em **Resultados por etapa**, **Remover todos os resultados** pede confirmação 
 No bloco **Avaliar ADMET**, comece pelo perfil e modo de saída; depois ajuste BBB/HIA e critérios. A configuração usa colunas conforme a largura disponível e seções recolhíveis para alertas e intervalos. **Anotar todos os compostos** mantém diversidade; **Filtrar pela hipótese** aplica todos os critérios escolhidos em conjunto. Selecionar ADMET-AI requer sua [instalação no worker](installation.md#preditor-admet-ai-opcional).
 
 No resultado, selecione a tabela ADMET, filtre as classes e use hover para identificar pontos. Clique para abrir a estrutura 2D; quando pontos coincidem, procure pelo código do composto. Zoom, recentrar e ajustar à tela ajudam a explorar o painel. Downloads exportam gráfico PNG e arquivo selecionado. Cores/formas indicam BBB local, não substrato de P-gp. Veja [métodos e perfis ADMET](admet_research.md) para interpretar os arquivos de auditoria e os limites científicos.
+
+
+## Seleção de arquivos por origem e rastreabilidade
+
+Quando as origens já possuem resultados, a configuração do bloco e a janela de
+seleção durante a execução usam o mesmo seletor compacto. Escolha **Bloco de origem**,
+pesquise em **Arquivos disponíveis** e use **Adicionar arquivo**, **Adicionar todos
+da origem** ou **Adicionar todas as origens** desta entrada. As ações em lote
+incluem todos os arquivos compatíveis, não apenas a página ou busca atual.
+A seleção acumula arquivos de origens diferentes sem duplicação. Em **Arquivos
+selecionados**, veja o nome e o produtor, remova um item ou use **Limpar seleção**.
+As listas são paginadas em grupos de 25 e os menus têm altura limitada.
+
+Ao aplicar, as identidades dos artefatos são salvas junto das referências de origem
+e dos seletores existentes. Escolhas antigas ausentes, incompatíveis ou ambíguas
+são mostradas como indisponíveis e devem ser removidas ou substituídas antes da
+execução. Conexões automáticas sem resultados continuam configuráveis; a execução
+pede arquivos explícitos ao alcançar essa entrada.
+
+A execução registra produtor, operação, execução de origem, caminho lógico, nome
+original e contexto do alvo separadamente dos arquivos científicos. Os arquivos
+consumidos ficam associados a cada saída e lote individual. Merge registra todas
+as origens participantes. As tabelas gerais de arquivos mostram a procedência e
+oferecem filtro quando há múltiplas origens. Resultados reutilizados conservam a
+execução que os produziu. Os CSVs científicos e seus nomes não são alterados.

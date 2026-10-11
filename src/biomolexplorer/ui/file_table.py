@@ -14,6 +14,10 @@ class FileTable:
         self.writable=writable
         self.table=ft.DataTable(columns=[ft.DataColumn(ft.Text(n)) for n in ('Arquivo','Tamanho','Ações')],rows=[],
             column_spacing=30,heading_row_color='#F1F5F9',data_row_min_height=58,data_row_max_height=68)
+        origins=sorted({f.get('origin','') for f in files if f.get('origin')})
+        self.origin=ft.Dropdown(label='Origem dos resultados',value='',visible=len(origins)>1,
+            options=[ft.DropdownOption(key='',text='Todas as origens')]+[verbatim(ft.DropdownOption(key=o,text=o),'text') for o in origins],
+            enable_filter=True,enable_search=True,on_select=self.filter_origin)
         self.count=ft.Text(size=13,color='#64748B')
         self.previous=ft.TextButton('Página anterior',on_click=lambda e:self.move(-1))
         self.next=ft.TextButton('Próxima página',on_click=lambda e:self.move(1))
@@ -24,10 +28,14 @@ class FileTable:
     def valid(self):
         return self.active and self.ui.token==self.token and self.ui.current and self.ui.current['id']==self.project_id
 
+    def filter_origin(self,e):
+        self.offset=0;self.redraw();self.ui.page.update()
+
     def redraw(self):
-        if self.offset>=len(self.files):self.offset=max(0,((len(self.files)-1)//self.limit)*self.limit)
+        visible=[f for f in self.files if not self.origin.value or f.get('origin')==self.origin.value]
+        if self.offset>=len(visible):self.offset=max(0,((len(visible)-1)//self.limit)*self.limit)
         rows=[]
-        for item in self.files[self.offset:self.offset+self.limit]:
+        for item in visible[self.offset:self.offset+self.limit]:
             async def download(e,item=item):
                 async def action():
                     if not self.valid():return
@@ -47,12 +55,12 @@ class FileTable:
                     disabled=not self.writable,icon_color='#B91C1C'))
             if self.extra_actions:actions.extend(self.extra_actions(item))
             name=ft.Column([verbatim(ft.Text(item['name'],size=13,tooltip=item['name'])),
-                *([ft.Text(item['description'],size=11,color='#64748B')] if item.get('description') else [])],spacing=3)
+                *([verbatim(ft.Text(item['description'],size=11,color='#64748B',max_lines=1,overflow=ft.TextOverflow.ELLIPSIS,tooltip=item['description']),'value')] if item.get('description') else [])],spacing=3)
             rows.append(ft.DataRow(cells=[ft.DataCell(ft.Container(name,width=420)),
                 ft.DataCell(ft.Text(f"{item.get('size',0)/1024:.1f} KB",size=12)),ft.DataCell(ft.Row(actions,spacing=2))]))
         self.table.rows=rows
-        self.count.value=f'{len(self.files)} arquivos · Página {self.offset//self.limit+1}'
-        self.previous.disabled=self.offset==0;self.next.disabled=self.offset+self.limit>=len(self.files)
+        self.count.value=f'{len(visible)} arquivos · Página {self.offset//self.limit+1}'
+        self.previous.disabled=self.offset==0;self.next.disabled=self.offset+self.limit>=len(visible)
 
     def move(self,direction):
         if not self.valid():return
@@ -78,6 +86,6 @@ class FileTable:
         self.ui.page.show_dialog(dialog)
 
     def build(self):
-        return ft.Column([ft.Row([self.count,self.page_size],wrap=True,alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+        return ft.Column([self.origin,ft.Row([self.count,self.page_size],wrap=True,alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
             ft.Row([self.table],scroll=ft.ScrollMode.AUTO),
             ft.Row([self.previous,self.next],wrap=True,alignment=ft.MainAxisAlignment.SPACE_BETWEEN)],spacing=16)

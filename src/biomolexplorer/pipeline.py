@@ -115,8 +115,10 @@ def validate_pipeline(stages):
             if 'sources' in group and (set(group)!={'sources'} or not isinstance(group['sources'],list) or not group['sources']):
                 raise ValueError('Selecione ao menos um arquivo por entrada.')
             for binding in input_sources(group):
-                if not isinstance(binding,dict) or set(binding) - {'stage','asset','selector','compound_id'} or ('stage' in binding) == ('asset' in binding):
+                if not isinstance(binding,dict) or set(binding) - {'stage','asset','selector','compound_id','artifact_id'} or ('stage' in binding) == ('asset' in binding):
                     raise ValueError('Escolha uma etapa ou um arquivo como entrada.')
+                if 'artifact_id' in binding and (not isinstance(binding['artifact_id'],str) or not re.fullmatch('[a-f0-9]{64}',binding['artifact_id']) or 'stage' not in binding or binding.get('selector','auto')=='auto'):
+                    raise ValueError('Identificador de artefato inválido.')
                 reference = binding.get('stage',binding.get('asset'))
                 if not isinstance(reference,str) or not re.fullmatch('[a-f0-9]{32}',reference):
                     raise ValueError('Uma conexão contém um identificador inválido.')
@@ -431,9 +433,12 @@ class PipelineService:
                         raise ValueError('Use registros PDB com identificador, ligante, número de resíduo e cadeia.')
 
     def _update(self, run_id, status, stages, error=None):
+        from .artifacts import index_run
         with self.store.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             prior=db.execute('SELECT * FROM runs WHERE id=?',(run_id,)).fetchone()
+            assets=[dict(row) for row in db.execute('SELECT id,name,path FROM assets WHERE project_id=?',(prior['project_id'],))] if prior else []
+            index_run(stages,run_id,assets)
             db.execute('UPDATE runs SET status=?,stages=?,updated=?,error=? WHERE id=?',
                        (status,json.dumps(stages),time.time(),error,run_id))
             if prior and prior['status'] in ACTIVE_RUNS and status not in ACTIVE_RUNS:
@@ -455,7 +460,10 @@ class PipelineService:
                 selected.append(assets[ref['asset']]);available.extend(assets.values());continue
             files=[self.store.scoped_path(project_id,p) for p in results.get(ref['stage'],[])]
             available.extend(files);selector=ref.get('selector','auto')
-            if selector!='auto':
+            if ref.get('artifact_id'):
+                from .artifacts import validate_reference
+                matches=[Path(validate_reference(ref,files))]
+            elif selector!='auto':
                 matches=[p for p in files if matches_selector(p,selector)]
                 if len(matches)!=1:raise ValueError('Selecione um caminho de arquivo específico para esta entrada.')
             else:
@@ -679,6 +687,14 @@ class PipelineService:
         return destination,filename,selected
 
     def _resolve(self, project_id, user_id, stage, results, input_directory=None, item=None, cache_only=False, pipeline=None):
+        from .artifacts import validate_reference
+        stage=copy.deepcopy(stage)
+        for group in stage.get('bindings',{}).values():
+            for ref in input_sources(group):
+                if 'stage' in ref:
+                    files=results.get(ref['stage'],[])
+                    chosen=validate_reference(ref,files)
+                    if ref.get('artifact_id'):ref['selector']=selector_for(chosen,files)
         params = self._runtime_parameters(stage)
         if stage['operation'] in ('prepare_structures','docking_vina','docking_dock6'):
             from .docking_inputs import prepared_receptor
@@ -1001,6 +1017,7 @@ class PipelineService:
             except (AccessDenied,InterruptedError):raise
             except Exception as exc:raise RuntimeError(f'Arquivo {index} ({label}): {exc}') from exc
             batch=dict(label=label,artifacts=produced,input_files=copy.deepcopy(item.get('input_files',{})),
+                       artifact_context=copy.deepcopy(item.get('artifact_context',{})),
                        log_path=item.get('log_path'),job_id=item.get('job_id'),configuration=variant)
             item['batches'].append(batch)
             for field,paths in batch['input_files'].items():inputs.setdefault(field,[]).extend(paths)
@@ -1031,6 +1048,7 @@ class PipelineService:
                         write_view(destination,view);artifacts.append(str(destination))
             return artifacts
         params = self._resolve(project_id,user_id,stage,results,stage_dir/'inputs',item,pipeline=execution_context(stages))
+        item['artifact_context']={key:params.get(key) for key in ('target','search_term') if params.get(key) is not None}
         if stage['operation']=='redocking':
             import sys
             from .redocking_config import validate_redocking_tools
@@ -1271,6 +1289,7 @@ class PipelineService:
                     item['cache_key']=key
                     item['cache_software']=software
                     item['software_version']=software.split(':',1)[0]
+                    if cached and cached.get('artifact_records'):item['artifact_records']=copy.deepcopy(cached['artifact_records'])
                     if cached and cached.get('input_files'):item['input_files']=cached['input_files']
                     if cached and cached.get('provided'):item['provided']=True
                     if cached and cached.get('excluded_records'):item['excluded_records']=cached['excluded_records']

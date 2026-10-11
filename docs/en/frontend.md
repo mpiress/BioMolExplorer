@@ -544,3 +544,29 @@ In **Results by stage**, **Remove all results** requires confirmation and remove
 In **Evaluate ADMET**, start with profile and output mode, then adjust BBB/HIA and criteria. The form uses columns when space permits and collapsible sections for alerts/ranges. **Annotate all compounds** preserves diversity; **Filter by hypothesis** combines all chosen criteria. ADMET-AI requires [installation on the worker](installation.md#optional-admet-ai-predictor).
 
 In results, select the ADMET table, filter classes and hover to identify points. Click to inspect the 2D structure; use compound lookup for coincident points. Zoom, recenter and fit-to-screen help navigate. Downloads export PNG and the selected file. Colors/shapes indicate local BBB rather than P-gp substrate status. See [ADMET methods and profiles](admet_research.md) for audit files and scientific limits.
+
+
+## Selecting files by source and tracing results
+
+When completed upstream results are available, the input editor and paused-run
+selection window use the same compact file picker. Choose **Source Block**, search
+**Available Files**, and use **Add File**, **Add All** (the current source), or
+**Add All Sources** (all connected origins of that input). Batch actions include
+all compatible files, not just the current search page. Selections accumulate
+across sources without duplicates. **Selected Files** shows the file and producer;
+remove individual entries or use **Clear Selection**. Available and selected files
+are paginated in groups of 25; dropdown menus have a bounded height.
+
+Applying the configuration saves artifact identities alongside existing source
+and selector references. Missing, incompatible or ambiguous saved choices are
+shown as unavailable and must be removed or replaced before execution. Automatic
+connections without completed results remain configurable and request explicit
+files when execution reaches the input boundary.
+
+Each run records output metadata (producer ID/name/type, producing run, logical
+output path, original filename and target context) separately from scientific
+files. Exact consumed inputs are recorded per output and per individual batch;
+merge preserves all participating sources in this lineage. Generic result-file
+tables show origin details and offer source filtering when several origins are
+present. Reused outputs retain their original producing run. No columns are added
+to scientific CSVs and existing artifact names are preserved.

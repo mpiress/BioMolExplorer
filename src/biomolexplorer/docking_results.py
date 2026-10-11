@@ -31,7 +31,8 @@ class DockingResults(CompoundTables):
         from .docking_data import result_tables
         authoritative={str(p) for p in result_tables(t['path'] for t in result)}
         result=[t for t in result if t['path'] in authoritative]
-        return result
+        from .artifacts import annotate_files
+        return annotate_files(stage,result,rid)
 
     def pose(self,token,pid,rid,sid,table,index,version,column='conformer_file'):
         path=self._path(token,pid,rid,sid,table)

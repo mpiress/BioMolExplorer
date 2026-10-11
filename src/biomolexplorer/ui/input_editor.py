@@ -1,4 +1,5 @@
 """Multiple typed sources and completed-result uploads in guided block forms."""
+import copy
 import flet as ft
 from biomolexplorer.artifact_choices import logical_path, matches_selector
 from biomolexplorer.bindings import sources, pack
@@ -14,21 +15,72 @@ class InputEditor:
         self.is_target=target_input(stage,field['name'])
         self.is_ligand=stage['operation'] in ('docking_vina','docking_dock6','prepare_structures') and field['name']=='base_selected_mols'
         self.rows=[]
+        self.selection=None
+        self.selection_signature=None
+        self.selection_box=ft.Column(spacing=12)
         self.compound_fields={}
         self.on_change=None
         self.box=ft.Column(spacing=24)
         self.value=stage['parameters'].get(field['name'])
         self.expected=input_types(stage,field['name']) or EXTERNAL_INPUTS.get(stage['operation'],{}).get(field['name'],{'other'})
         group=stage.get('bindings',{}).get(field['name'])
-        for reference in sources(group) if group else [{}]:self.add(reference)
+        self.initial_references=copy.deepcopy(sources(group)) if group else []
+        seen=set()
+        for reference in self.initial_references or [{}]:
+            identity=(reference.get('stage'),reference.get('asset'))
+            if identity in seen and hasattr(ui,'artifact_items'):continue
+            seen.add(identity);self.add(reference)
         if self.value and not group:self.rows[0][0].value='configured-path'
         self.control=ft.Column([ft.Text(field['label'],size=16,weight=ft.FontWeight.W_600),
-            self.box,ft.Row([ft.TextButton('Adicionar entrada',icon=ft.Icons.ADD,on_click=self.append,disabled=not writable),
+            self.selection_box,self.box,ft.Row([ft.TextButton('Adicionar entrada',icon=ft.Icons.ADD,on_click=self.append,disabled=not writable),
                 ft.TextButton('Enviar meus arquivos',icon=ft.Icons.UPLOAD_FILE,on_click=self.upload,disabled=not writable)],wrap=True),
             ft.Text('Use a opção de processamento do bloco para manter os arquivos separados ou mesclar as entradas.',size=12,color='#64748B'),
             ft.Text('Selecione um complexo PDB ou reutilize um receptor preparado. Escolha os compostos ou resultados de docking em “Compostos selecionados”.'
                 if stage['operation'] in ('docking_vina','docking_dock6') else '\n'.join(contract(k,'graphs' if stage['operation']=='graphs' else None)
                 for k in sorted(self.expected) if k!='chembl'),size=12,color='#64748B')],spacing=18,data='input')
+        self.refresh_selection(self.initial_references)
+
+    def refresh_selection(self, references=None):
+        signature=[(source.value,selector.value) for source,selector,_ in self.rows]
+        if signature==self.selection_signature:
+            if self.selection:
+                for _,selector,_ in self.rows:selector.visible=False
+            return
+        refs=references if references is not None else self.connection_references()
+        if references is None and self.selection:
+            previous=self.selection.selected_references(self.selection.rows[self.field['name']],validate=False)
+            selected_origins={(r.get('stage'),r.get('asset')) for r in previous}
+            connected={(r.get('stage'),r.get('asset')) for r in refs}
+            refs=[r for r in previous if (r.get('stage'),r.get('asset')) in connected]+[r for r in refs if (r.get('stage'),r.get('asset')) not in selected_origins]
+        self.selection_signature=signature
+        if not hasattr(self.ui,'artifact_items'):return
+        items=self.ui.artifact_items
+        completed=[items[r['stage']] for r in refs if 'stage' in r and r['stage'] in items]
+        explicit=any(r.get('selector','auto')!='auto' for r in refs)
+        self.selection=None;self.selection_box.controls=[]
+        if not refs or not (completed or explicit):return
+        from .file_selection import FileSelection
+        candidate=copy.deepcopy(self.stage)
+        candidate['bindings']={self.field['name']:pack(refs)}
+        pending={'configuration':candidate,'name':candidate['name']}
+        catalog=getattr(self.ui,'pubchem_references' if self.stage['operation']=='retrieve_pubchem' else 'docking_compounds',{})
+        compound_references={path:values for mapping in catalog.values() for path,values in mapping.items()}
+        for origin,mapping in catalog.items():
+            if origin.startswith('asset:'):compound_references[origin]={code:label for values in mapping.values() for code,label in values.items()}
+        self.selection=FileSelection({'stages':completed},pending,self.assets,page=self.ui.page,writable=self.writable,compound_references=compound_references)
+        self.selection_box.controls=[self.selection.pickers[self.field['name']].control]
+        for _,selector,_ in self.rows:selector.visible=False
+
+    def connection_references(self):
+        refs=[]
+        for source,selector,_ in self.rows:
+            if source.value and source.value!='configured-path':
+                kind,identifier=source.value.split(':',1)
+                ref={kind:identifier,'selector':selector.value or 'auto'}
+                compound=self.compound_fields.get(id(source))
+                if compound and compound.value:ref['compound_id']=compound.value
+                refs.append(ref)
+        return refs
 
     def source_options(self):
         options=[ft.DropdownOption(key='',text='Conectar no canvas / selecionar arquivo')]
@@ -38,7 +90,7 @@ class InputEditor:
             and (self.stage['operation'] in ('prepare_structures','docking_vina','docking_dock6') or not self.is_target or prepared_receptor(a['name']))
             and (not self.is_ligand or ligand_input_file(a['name']))
             and (self.stage['operation'] not in ('docking_vina','docking_dock6') or self.field['name']!='base_input_path'
-                 or prepared_receptor(a['name']) or a['name'].endswith('.pdb') and a['name'].count('.')==1)]
+                 or prepared_receptor(a['name']) or a['kind']=='structures' and a['name'].endswith('.pdb') and a['name'].count('.')==1)]
         if self.value:options.append(ft.DropdownOption(key='configured-path',text='Pasta configurada'))
         return options
 
@@ -131,6 +183,8 @@ class InputEditor:
         self.rows.append(item);self.box.controls.append(row)
 
     def changed(self):
+        for _,selector,_ in self.rows:selector.visible=True
+        self.refresh_selection()
         if self.on_change:self.on_change()
         self.ui.page.update()
 
@@ -160,6 +214,12 @@ class InputEditor:
         await self.ui.guard(action)
 
     def read(self):
+        if self.selection:
+            picker=self.selection.pickers[self.field['name']]
+            selected=self.selection.selected_references(self.selection.rows[self.field['name']])
+            if selected:return pack(selected)
+            if picker.touched:raise ValueError('Selecione ao menos um arquivo para esta entrada.')
+            return pack(self.initial_references if self.selection_signature==[(('stage:'+r['stage']) if 'stage' in r else ('asset:'+r['asset']),r.get('selector','auto')) for r in self.initial_references] else self.connection_references())
         if self.stage['operation'] in ('prepare_structures','docking_vina','docking_dock6') and self.field['name']=='base_input_path':
             modes=[self.prepared_source(source.value,selector.value) for source,selector,_ in self.rows if source.value]
             if any(modes) and not all(modes):

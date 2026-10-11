@@ -14,8 +14,8 @@ class CompoundTableViewer:
         self.inline=inline;self.active=True
         self.service=CompoundTables(ui.store)
         self.tables=tables;self.offset=0;self.limit=25;self.sequence=0;self.preview_version=0;self.data=None
-        self.selector=ft.Dropdown(label='Tabela de compostos',value=tables[0]['path'],width=450,
-            options=[ft.DropdownOption(key=t['path'],text=t['name']+(' · conjunto integrado' if t['integrated'] else '')) for t in tables],on_select=self.change_table)
+        self.selector=ft.Dropdown(label='Tabela de compostos',value=tables[0]['path'],width=450,enable_filter=True,enable_search=True,menu_height=320,
+            options=[ft.DropdownOption(key=t['path'],text=t.get('label',t['name'])+(' · conjunto integrado' if t['integrated'] else '')) for t in tables],on_select=self.change_table)
         self.search=ft.TextField(label='Buscar composto ou SMILES',expand=True,on_submit=self.search_rows)
         self.count=ft.Text(size=13,color='#64748B')
         self.notice=ft.Text(size=12,color='#64748B')

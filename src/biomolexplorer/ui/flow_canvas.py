@@ -19,6 +19,7 @@ class FlowCanvas:
     def __init__(self,ui,writable):
         self.ui,self.writable=ui,writable
         self.history=[]; self.future=[]; self.pending=None
+        self.output_draggables={}; self.active_drag=None
         self.stack=ft.Stack(width=flow.CANVAS_WIDTH,height=flow.CANVAS_HEIGHT)
         self.viewer=zoomable_view(content=ft.DragTarget(group='stage-library',content=self.stack,on_accept=self.drop),
             constrained=False,alignment=ft.Alignment.TOP_LEFT,expand=True)
@@ -28,6 +29,26 @@ class FlowCanvas:
 
     @property
     def stages(self): return self.ui.current['pipeline']
+    def drag_started(self,e):
+        source=e.control
+        self.active_drag=(source._i,source.group,source.data)
+
+    def drag_source(self,e,group):
+        """Resolve a drop against the exact source captured at drag start.
+
+        Flet resolves src_id through its live control registry. A redraw can
+        remove that control before the accepted-drop event arrives.
+        """
+        source=getattr(e,'src',None)
+        active=self.active_drag;self.active_drag=None
+        if source is not None and getattr(source,'group',group)==group:
+            return source.data
+        if active and active[:2]==(getattr(e,'src_id',None),group):
+            return active[2]
+        self.pending=None
+        self.status.value='A origem do arraste não está mais disponível. Arraste novamente a saída ou use a conexão por clique.'
+        self.ui.notify(self.status.value)
+        return None
     def remember(self):
         self.history.append(copy.deepcopy(self.stages)); self.history=self.history[-50:]; self.future.clear()
     def changed(self):
@@ -44,6 +65,7 @@ class FlowCanvas:
             self.grid=canvas.Canvas(shapes=grid,width=width,height=height)
         shapes=[]
         by_id={s['id']:s for s in self.stages}
+        self.output_draggables={key:control for key,control in self.output_draggables.items() if key in by_id}
         for index,target in enumerate(self.stages):
             pos=flow.position(target,index)
             for j,port in enumerate(flow.input_ports(target)):
@@ -75,9 +97,14 @@ class FlowCanvas:
         async def output(e):
             if self.writable:
                 self.pending=stage['id']; self.status.value='Escolha uma entrada compatível para '+stage['name']; self.ui.page.update()
-        out=ft.Draggable(group='flow-link',data=stage['id'],max_simultaneous_drags=1 if self.writable else 0,
-            content=icon_button(icon=ft.Icons.RADIO_BUTTON_CHECKED,icon_color=color,tooltip='Conectar saída de '+stage['name'],on_click=output),
-            content_feedback=ft.Icon(ft.Icons.RADIO_BUTTON_CHECKED,color=color,size=28))
+        # Keep the source control ID across selection/autosave redraws.
+        out=self.output_draggables.get(stage['id'])
+        if out is None:
+            out=ft.Draggable(group='flow-link',data=stage['id'],on_drag_start=self.drag_started,
+                content=ft.Container(),max_simultaneous_drags=1 if self.writable else 0)
+            self.output_draggables[stage['id']]=out
+        out.content=icon_button(icon=ft.Icons.RADIO_BUTTON_CHECKED,icon_color=color,tooltip='Conectar saída de '+stage['name'],on_click=output)
+        out.content_feedback=ft.Icon(ft.Icons.RADIO_BUTTON_CHECKED,color=color,size=28)
         out=ft.Semantics(container=True,exclude_semantics=True,label='Conectar saída de '+stage['name'],button=True,on_tap=output,content=out)
         def moved(e):
             if self.writable and hasattr(self.ui,'schedule_save'):self.ui.schedule_save()
@@ -87,7 +114,9 @@ class FlowCanvas:
         rows=[ft.Row([ft.Text('Saída',size=12,color=color,expand=True),out],spacing=0,height=34)]
         for port in flow.input_ports(stage):
             field=port['field']
-            async def accept(e,field=field): await self.link(e.src.data,stage['id'],field)
+            async def accept(e,field=field):
+                source=self.drag_source(e,'flow-link')
+                if source is not None:await self.link(source,stage['id'],field)
             async def click(e,field=field):
                 if self.pending: await self.link(self.pending,stage['id'],field)
                 else: await configure(e)
@@ -98,7 +127,7 @@ class FlowCanvas:
             async def unlink(e,field=field): self.remember(); flow.disconnect(stage,field); self.changed()
             rows.append(ft.Row([dot,ft.Text(port['label'],size=11,expand=True),icon_button(icon=ft.Icons.LINK_OFF,icon_size=16,tooltip='Desconectar '+port['label'],on_click=unlink,disabled=not self.writable) if linked else ft.Container(width=30)],height=34,spacing=0))
         issues=flow.stage_issues(stage)
-        labels=input_labels(stage,getattr(self.ui,'project_assets',[]),getattr(self.ui,'automatic_labels',{}))
+        labels=input_labels(stage,getattr(self.ui,'project_assets',[]),getattr(self.ui,'automatic_labels',{}),self.stages)
         rows.append(ft.Container(height=34,padding=ft.Padding.only(left=8,right=8),content=ft.Text(
             'Entradas: '+('; '.join(labels) if labels else 'Nenhuma / coleta própria'),size=10,max_lines=2,
             overflow=ft.TextOverflow.ELLIPSIS,tooltip='\n'.join(labels))))
@@ -118,7 +147,7 @@ class FlowCanvas:
         else: self.ui.notify('Selecione um bloco para configurar.')
     async def keyboard(self,e):
         if not self.writable or self.ui.current is None or self.ui.tab!='Pipeline' or getattr(self.ui,'editing_stage',False) or getattr(self,'typing',False): return
-        if e.key=='Escape': self.pending=None; self.status.value='Conexão cancelada.'; self.ui.page.update()
+        if e.key=='Escape': self.pending=None; self.active_drag=None; self.status.value='Conexão cancelada.'; self.ui.page.update()
         elif e.ctrl and e.key.lower()=='z': await (self.redo(e) if e.shift else self.undo(e))
         elif e.ctrl and e.key.lower()=='y': await self.redo(e)
         elif e.key=='Delete': await self.delete(e)
@@ -143,7 +172,9 @@ class FlowCanvas:
         if note:body.append(ft.Text(note,size=14));paragraphs.append(note)
         show_help(self.ui,TITLES[stage['operation']][0],body,paragraphs)
     async def drop(self,e):
-        if self.writable: await self.add(e.src.data,e.local_position.x,e.local_position.y)
+        if self.writable:
+            operation=self.drag_source(e,'stage-library')
+            if operation is not None:await self.add(operation,e.local_position.x,e.local_position.y)
     async def add(self,operation,x=None,y=None):
         if not self.writable: return
         if len(self.stages)>=100:
@@ -183,7 +214,7 @@ class FlowCanvas:
                 if group!=category: continue
                 async def add(e,op=operation): await self.add(op)
                 async def information(e,op=operation):self.show_information(new_stage(op))
-                blocks.append(ft.Container(padding=8,bgcolor='#FFFFFF',border_radius=10,border=ft.Border.all(1,'#E2E8F0'),tooltip=help_,content=ft.Row([ft.Draggable(group='stage-library',data=operation,max_simultaneous_drags=1 if self.writable else 0,
+                blocks.append(ft.Container(padding=8,bgcolor='#FFFFFF',border_radius=10,border=ft.Border.all(1,'#E2E8F0'),tooltip=help_,content=ft.Row([ft.Draggable(group='stage-library',data=operation,on_drag_start=self.drag_started,max_simultaneous_drags=1 if self.writable else 0,
                     content_feedback=ft.Container(ft.Text(title,color='#FFFFFF'),bgcolor=COLORS[category],padding=16,border_radius=12),
                     content=ft.Container(width=126,padding=4,content=ft.Row([ft.Icon(ft.Icons.DRAG_INDICATOR,size=16,color=COLORS[category]),ft.Text(title,size=12,expand=True)],spacing=4))),
                     icon_button(icon=ft.Icons.INFO_OUTLINE,icon_size=18,tooltip='Informações do bloco',on_click=information),

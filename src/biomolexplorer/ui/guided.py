@@ -306,7 +306,11 @@ class GuidedForm:
         from biomolexplorer.fingerprint_selection import generated_kind,LABELS
         editor=self.input_editors['base_input_path']
         candidate=copy.deepcopy(self.stage)
-        candidate['bindings']['base_input_path']=editor.read()
+        try:candidate['bindings']['base_input_path']=editor.read()
+        except ValueError as exc:
+            self.field_controls['fingerprint'].disabled=True
+            self.fingerprint_notice.value=str(exc)
+            return
         if not editor.direct_path():candidate['parameters'].pop('base_input_path',None)
         control=self.field_controls['fingerprint']
         try:

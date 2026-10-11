@@ -56,7 +56,8 @@ class CompoundTables:
             if (is_summary or is_integrated or is_provided) and path.is_file():
                 result.append({'path':str(path),'name':name,'integrated':is_integrated})
         result.sort(key=lambda t:(not t['integrated'],t['name']))
-        return result
+        from .artifacts import annotate_files
+        return annotate_files(stage,result,run_id)
 
     def _path(self,token,project_id,run_id,stage_id,filename):
         choices=self.tables(token,project_id,run_id,stage_id)

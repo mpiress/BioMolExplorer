@@ -617,11 +617,13 @@ class WorkspaceUI(ProjectTools):
         from biomolexplorer.templates import quiet_template
         draft['templates']={name:quiet_template(name,text) for name,text in draft.get('templates',{}).items()}
         self.artifact_choices={}
+        self.artifact_items={}
         for run in runs:
             for item in run['stages']:
                 if item['id'] in self.artifact_choices or item['status']!='succeeded':continue
                 from biomolexplorer.artifact_choices import choices
                 self.artifact_choices[item['id']]=choices(item)
+                self.artifact_items[item['id']]=dict(item,run_id=run['id'])
         for source in self.current['pipeline']:
             if source['operation']=='import_results' or source.get('provided_results'):
                 params=source.get('provided_results') or source['parameters']

@@ -59,7 +59,9 @@ class FileSelectionTests(unittest.TestCase):
                 asyncio.run(ui.configure_pending(run['id']))
                 self.assertEqual(len(dialogs),1)
                 dialog=dialogs[0]
-                checks=[c for c in dialog.content.content.controls if isinstance(c,ft.Checkbox)]
+                pickers=[c._artifact_picker for c in dialog.content.content.controls if hasattr(c,'_artifact_picker')]
+                self.assertFalse(any(isinstance(c,ft.Checkbox) for c in dialog.content.content.controls))
+                checks=[flag for picker in pickers for flag,_ in picker.rows]
                 self.assertEqual({c.label for c in checks},{'chosen.csv','compounds.csv'})
                 self.assertFalse(any(c.value for c in checks))
                 # Closing the popup never advances the backend.
@@ -74,7 +76,7 @@ class FileSelectionTests(unittest.TestCase):
                 self.assertEqual([Path(p).name for p in selected],['chosen.csv'])
                 stored=self.store.project(self.token,self.project_id)['pipeline'][1]
                 self.assertEqual(stored['bindings']['base_input_path'],
-                    {'stage':source['id'],'selector':'chosen.csv'})
+                    dict(stage=source['id'],selector='chosen.csv',artifact_id=next(r['artifact_id'] for r in finished['stages'][0]['artifact_records'] if r['name']=='chosen.csv')))
                 self.assertEqual(stored['input_processing'],'individual')
                 self.assertEqual(len(calls),2)
                 self.assertFalse(dialog.open)
@@ -116,7 +118,8 @@ class FileSelectionTests(unittest.TestCase):
         self.assertEqual(form.read()['input_processing'],'merge')
         stage['bindings']['base_input_path']['selector']='compounds.csv'
         ambiguous=FileSelection(run,pending)
-        self.assertFalse(any(check.value for check,_ in ambiguous.rows['base_input_path']))
+        self.assertFalse(any(check.value for check,_ in ambiguous.rows['base_input_path'] if check.available))
+        with self.assertRaisesRegex(ValueError,'indisponível'):ambiguous.read()
 
     def test_deferring_then_configuring_keeps_files_and_processing_mode(self):
         source,stage=new_stage('retrieve_compounds'),new_stage('admet')
@@ -138,7 +141,7 @@ class FileSelectionTests(unittest.TestCase):
                 ui.call=local_call
                 asyncio.run(ui.configure_pending(run['id']))
                 first=dialogs[-1]
-                checks=[c for c in first.content.content.controls if isinstance(c,ft.Checkbox)]
+                checks=[flag for c in first.content.content.controls if hasattr(c,'_artifact_picker') for flag,_ in c._artifact_picker.rows]
                 checks[0].value=True
                 processing=next(c for c in first.content.content.controls if isinstance(c,ft.Dropdown))
                 processing.value='merge'
@@ -146,7 +149,7 @@ class FileSelectionTests(unittest.TestCase):
                 self.assertFalse(ui.editing_stage)
                 asyncio.run(ui.configure_pending(run['id']))
                 second=dialogs[-1]
-                self.assertTrue(next(c for c in second.content.content.controls if isinstance(c,ft.Checkbox)).value)
+                self.assertTrue(next(flag for c in second.content.content.controls if hasattr(c,'_artifact_picker') for flag,_ in c._artifact_picker.rows).value)
                 self.assertEqual(next(c for c in second.content.content.controls if isinstance(c,ft.Dropdown)).value,'merge')
                 asyncio.run(second.actions[1].on_click(None))
                 settings=dialogs[-1]
