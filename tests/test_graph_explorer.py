@@ -337,7 +337,8 @@ class GraphProvenanceTests(unittest.TestCase):
         self.assertEqual(set(viewer.points),{'A','B'});self.assertTrue(viewer.fragment_panel.visible)
         self.assertTrue(any(isinstance(c,ft.Image) for c in viewer.fragment_panel.controls))
         x,y=viewer.points['A'];viewer.hover(SimpleNamespace(local_position=SimpleNamespace(x=x,y=y)))
-        self.assertEqual(viewer.tip_text.value,'A');asyncio.run(viewer.select('A'))
+        self.assertTrue(viewer.tip_text.value.startswith('A\n'));asyncio.run(viewer.select('A'))
+        self.assertFalse(ui.dialogs);asyncio.run(viewer.explorer.inspector.details())
         self.assertIn('molécula 2D',ui.dialogs[-1].title.value)
         asyncio.run(viewer.actions[1].on_click(None));self.assertTrue(ui.saved[-1]['file_name'].endswith('_mcc.csv'))
         results.dataset.value=results.dataset.options[1].key

@@ -48,7 +48,7 @@ class ZoomVisualizationTests(unittest.TestCase):
                 for side in ('left', 'top', 'right', 'bottom'):
                     self.assertEqual(getattr(viewer.boundary_margin, side), math.inf)
 
-    def test_hub_leaf_and_isolate_have_same_small_size_in_full_and_mcc_views(self):
+    def test_hub_leaf_and_isolate_use_bounded_degree_sizes_in_full_and_mcc_views(self):
         viewer = ResultsViewer(self.ui, 'project', self.model)
         self.assertEqual(viewer.nodes['0']['properties']['degree'], 50)
         self.assertEqual(viewer.nodes['1']['properties']['degree'], 1)
@@ -59,8 +59,9 @@ class ZoomVisualizationTests(unittest.TestCase):
             circles = [s for s in viewer.base_shapes if isinstance(s, canvas.Circle)
                        and s.paint.style != ft.PaintingStyle.STROKE]
             self.assertEqual(len(circles), 52 if mode == 'full' else 51)
-            self.assertEqual(len({circle.radius for circle in circles}), 1)
-            self.assertLessEqual(circles[0].radius, 4)
+            self.assertGreater(viewer.radii['0'],viewer.radii['1'])
+            self.assertTrue(all(4<=circle.radius<=10 for circle in circles))
+            if mode=='full':self.assertGreater(viewer.radii['1'],viewer.radii['isolated'])
             self.assertEqual(len([s for s in viewer.base_shapes if isinstance(s, canvas.Line)]), 50)
             self.assertNotEqual(circles[0].paint.color, circles[1].paint.color)
             for identifier in ('0', '1'):

@@ -1,0 +1,82 @@
+[
+  {
+    "analysis": "001_similarity_Tanimoto_morgan_CHEMBL220_SIMS",
+    "nodes": 213,
+    "edges": 1611,
+    "lcc": 71,
+    "rendered": 213,
+    "open_seconds": 1.2549,
+    "cached_reads_seconds": 0.0014,
+    "peak_mib": 46.924
+  },
+  {
+    "analysis": "001_similarity_Tanimoto_morgan_CHEMBL220_FULL",
+    "nodes": 271,
+    "edges": 2167,
+    "lcc": 95,
+    "rendered": 271,
+    "open_seconds": 0.1961,
+    "cached_reads_seconds": 0.0016,
+    "peak_mib": 4.414
+  },
+  {
+    "analysis": "001_similarity_Tanimoto_morgan_CHEMBL220_MOLS",
+    "nodes": 58,
+    "edges": 243,
+    "lcc": 21,
+    "rendered": 58,
+    "open_seconds": 0.0386,
+    "cached_reads_seconds": 0.0007,
+    "peak_mib": 0.758
+  },
+  {
+    "analysis": "001_similarity_Tanimoto_selected_fingerprints",
+    "nodes": 6446,
+    "edges": 24495,
+    "lcc": 1134,
+    "rendered": 0,
+    "open_seconds": 1.2385,
+    "cached_reads_seconds": 0.0005,
+    "peak_mib": 31.748
+  },
+  {
+    "analysis": "001_similarity_Tanimoto_morgan_CHEMBL220_MOLS",
+    "nodes": 101,
+    "edges": 292,
+    "lcc": 21,
+    "rendered": 101,
+    "open_seconds": 0.0538,
+    "cached_reads_seconds": 0.0009,
+    "peak_mib": 0.998
+  },
+  {
+    "analysis": "001_similarity_Tanimoto_morgan_CHEMBL220_MOLS",
+    "nodes": 101,
+    "edges": 292,
+    "lcc": 21,
+    "rendered": 101,
+    "open_seconds": 0.0513,
+    "cached_reads_seconds": 0.0008,
+    "peak_mib": 0.998
+  },
+  {
+    "analysis": "001_fingerprints_morgan_CHEMBL220_MOLS",
+    "nodes": 101,
+    "edges": 311,
+    "lcc": 23,
+    "rendered": 101,
+    "open_seconds": 0.0529,
+    "cached_reads_seconds": 0.0009,
+    "peak_mib": 1.027
+  },
+  {
+    "analysis": "002_similarity_Tanimoto_morgan_CHEMBL220_MOLS",
+    "nodes": 101,
+    "edges": 292,
+    "lcc": 21,
+    "rendered": 101,
+    "open_seconds": 0.0503,
+    "cached_reads_seconds": 0.0009,
+    "peak_mib": 0.996
+  }
+]

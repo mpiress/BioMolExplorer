@@ -1184,13 +1184,20 @@ class WorkspaceUI(ProjectTools):
             raise ValueError('Visualização maior que o limite de 32 MB. Baixe o arquivo para consultá-lo localmente.')
         width=max(320,min(1160,(self.page.width or 1440)-100))
         height=max(300,min(690,(self.page.height or 1000)-220))
+        result=None
         if str(path).endswith(SUFFIX):
             from .results_viewer import ResultsViewer
             model=await self.call(load_view,data)
             if self.token != token or not self.current or self.current['id'] != project_id:
                 return
-            self.result_viewer=ResultsViewer(self,project_id,model)
+            # Raw uploaded JSON cannot assert a trusted run/artifact context.
+            model.pop('dashboard_context',None)
+            viewer=await self.call(ResultsViewer,self,project_id,model)
+            if self.token!=token or not self.current or self.current['id']!=project_id:viewer.close();return
+            self.result_viewer=viewer
+            result=viewer
             content=ft.Column([self.result_viewer.build()],scroll=ft.ScrollMode.AUTO)
+            await viewer.initialize()
             title=model['title']
         elif Path(path).suffix.lower() in ('.png','.jpg','.jpeg'):
             title=Path(path).name
@@ -1207,7 +1214,11 @@ class WorkspaceUI(ProjectTools):
             raise ValueError('Este arquivo não possui visualizador.')
         previous_editing=getattr(self,'editing_stage',False)
         self.editing_stage=True
-        def dismissed(e): self.editing_stage=previous_editing
+        def dismissed(e):
+            self.editing_stage=previous_editing
+            if result:
+                result.close()
+                if getattr(self,'result_viewer',None) is result:self.result_viewer=None
         self.page.show_dialog(ft.AlertDialog(title=text(title,22),content=ft.Container(width=width,height=height,content=content),
                                             on_dismiss=dismissed,
                                             actions=[ft.TextButton('Fechar',on_click=lambda e:self.page.pop_dialog())]))

@@ -246,10 +246,11 @@ o mesmo ajuste ao serem importadas.
 Expanda a etapa em **Execuções** e escolha **Análise de grafos · entrada e origem**.
 O grafo aparece na própria tela. Selecione **Grafo completo**, incluindo compostos
 isolados, ou **Máximo componente conectado (MCC)**. O contorno azul evidencia os
-nós do MCC no grafo completo. Os vértices têm tamanho pequeno e uniforme,
-inclusive na apresentação MCC exportada. As cores Viridis indicam o grau (número
+nós do MCC no grafo completo. O tamanho dos vértices pode refletir a centralidade
+selecionada, com limites visuais; a apresentação MCC exportada conserva seus
+marcadores pequenos e uniformes. As cores Viridis indicam o grau (número
 de conexões); o seletor também oferece conectividade normalizada, definida como
-grau / (n − 1) para o conjunto exibido. A escala explica o intervalo. Essa medida
+grau / (n − 1) para o universo Full Graph ou LCC, antes dos filtros visuais. A escala explica o intervalo. Essa medida
 por nó é diferente da densidade global de arestas, registrada no resultado.
 Os componentes aparecem separados, com distância mínima entre os vértices.
 Redes maiores expandem a área navegável. Em **Navegar entre componentes**, escolha
@@ -257,13 +258,13 @@ um componente para explorar seus compostos e relações; **Todos os componentes*
 retorna à rede completa. Arraste o fundo, amplie, recentre, use **Ajustar à tela**
 para ver o conjunto ou escolha a organização em anéis. Ative os códigos junto
 aos nós quando desejar. Passe o mouse para identificar o composto; o clique
-abre sua molécula 2D e suas propriedades, destaca as conexões e oferece links
-para navegar até cada vizinho com seu valor de similaridade. A busca por código
+atualiza o painel Selected Compound e destaca as conexões. **View Molecular Details**
+abre propriedades e relações completas, com links para cada vizinho e seu escore registrado. A busca por código
 localiza o composto mesmo quando outro componente está selecionado.
 
-Ao selecionar o MCC, o painel à direita mostra o fragmento molecular comum,
-sua imagem, o **SMILES do fragmento**, os números de átomos e ligações e o estado
-da busca. O SMILES e a imagem representam o fragmento encontrado em uma molécula
+Em **Molecular Scaffold → MCS**, o painel à direita apresenta o fragmento
+persistido do MCC, sua imagem, **SMILES do fragmento**, contagens e estado da busca.
+O conjunto e os critérios acompanham o resultado; o modal mostra SMARTS quando disponível. O SMILES e a imagem representam o fragmento encontrado em uma molécula
 de referência; o SMARTS preserva as condições da correspondência no arquivo de
 resultado. Os resultados salvos em versões anteriores recebem o novo layout e
 exibem o SMILES ao serem abertos, preservando os arquivos originais.
@@ -580,27 +581,134 @@ No bloco **Avaliar ADMET**, comece pelo perfil e modo de saída; depois ajuste B
 
 No resultado, selecione a tabela ADMET, filtre as classes e use hover para identificar pontos. Clique para abrir a estrutura 2D; quando pontos coincidem, procure pelo código do composto. Zoom, recentrar e ajustar à tela ajudam a explorar o painel. Downloads exportam gráfico PNG e arquivo selecionado. Cores/formas indicam BBB local, não substrato de P-gp. Veja [métodos e perfis ADMET](admet_research.md) para interpretar os arquivos de auditoria e os limites científicos.
 
+### Exploração estrutural das redes
 
-## Seleção de arquivos por origem e rastreabilidade
+O explorador oferece layouts force-directed, Kamada–Kawai, circular, organização
+por comunidades e uma hierarquia exploratória por distância BFS a partir do nó
+com maior grau em cada componente. Essa hierarquia não representa causalidade.
+Os layouts preservam as relações originais e explicam os limites de custo.
 
-Quando as origens já possuem resultados, a configuração do bloco e a janela de
-seleção durante a execução usam o mesmo seletor compacto. Escolha **Bloco de origem**,
-pesquise em **Arquivos disponíveis** e use **Adicionar arquivo**, **Adicionar todos
-da origem** ou **Adicionar todas as origens** desta entrada. As ações em lote
-incluem todos os arquivos compatíveis, não apenas a página ou busca atual.
-A seleção acumula arquivos de origens diferentes sem duplicação. Em **Arquivos
-selecionados**, veja o nome e o produtor, remova um item ou use **Limpar seleção**.
-As listas são paginadas em grupos de 25 e os menus têm altura limitada.
+Em **Centralidade / tamanho**, escolha grau, Degree Centrality, Betweenness,
+Closeness, Eigenvector ou PageRank. Métricas e rankings usam o universo selecionado
+(Full Graph ou LCC), antes dos filtros. Betweenness acima de 400 nós usa 64 pivôs
+com semente 42; a interface informa a aproximação. Eigenvector exige um universo
+conectado. Os escores não são tratados como distâncias; as métricas são topológicas,
+sem pesos, e não indicam atividade biológica.
 
-Ao aplicar, as identidades dos artefatos são salvas junto das referências de origem
-e dos seletores existentes. Escolhas antigas ausentes, incompatíveis ou ambíguas
-são mostradas como indisponíveis e devem ser removidas ou substituídas antes da
-execução. Conexões automáticas sem resultados continuam configuráveis; a execução
-pede arquivos explícitos ao alcançar essa entrada.
+**Filtros visuais e vizinhança** combina identificadores, grau, centralidade e
+escore das arestas, além de redes ego com raio de 1 a 3 saltos. **Limpar filtros**
+retorna ao universo analisado. Os filtros não alteram os CSVs científicos.
+**Detectar comunidades** usa Louvain sem pesos, resolução 1 e semente 42. Cores,
+IDs de comunidade e contagens permitem explorar grupos topológicos. A agregação
+representa todas as comunidades do universo, antes dos filtros: tamanho indica
+número de compostos e as arestas contam relações entre grupos.
 
-A execução registra produtor, operação, execução de origem, caminho lógico, nome
-original e contexto do alvo separadamente dos arquivos científicos. Os arquivos
-consumidos ficam associados a cada saída e lote individual. Merge registra todas
-as origens participantes. As tabelas gerais de arquivos mostram a procedência e
-oferecem filtro quando há múltiplas origens. Resultados reutilizados conservam a
-execução que os produziu. Os CSVs científicos e seus nomes não são alterados.
+Os indicadores incluem nós, arestas, densidade, componentes, isolados, proporção
+do LCC, grau médio, agrupamento, modularidade e distribuições. **Calcular indicadores**
+executa os cálculos permitidos pelo orçamento. Os seletores de componentes e
+comunidades apresentam páginas de 50 opções; os gráficos estatísticos mostram
+até 25 classes, com a distribuição completa no relatório JSON.
+
+A renderização individual tem limite de 3.000 nós e 12.000 arestas. Quando o limite
+é ultrapassado, use componente, filtros, ego ou agregação; não existe amostragem
+silenciosa. Layouts e métricas adicionais também indicam seus limites. A agregação
+visual tem limite de 500 comunidades. **Exportar métricas CSV**, **Relatório JSON**
+e **Vista SVG** exportam análises topológicas e a vista atual, mantendo as exportações
+MCC já existentes. Em telas pequenas, a inspeção molecular fica abaixo da rede.
+
+### Dashboard molecular integrado
+
+Os controles de layout, centralidade e componentes ficam em painéis recolhíveis;
+a rede ocupa a área principal. Full Graph e LCC mostram contagens próprias.
+Resultados antigos sem fragmento registrado não iniciam uma busca MCS na abertura.
+Coordenadas de componentes válidas são reutilizadas; layouts antigos recebem
+uma disposição em anéis de baixo custo, e layouts custosos são calculados sob demanda.
+
+A aba **Análise molecular** já inicia com dados e gráficos do **MCC / LCC**.
+O seletor **Conjunto de compostos** permite alternar para Full Graph;
+**Analisar descritores** atualiza os atributos numéricos já registrados. Escolha um descritor e compare
+sua distribuição, o perfil do LCC e dos demais componentes, comunidades calculadas
+ou uma dispersão entre descritores e centralidade. Pearson é exploratório, exige
+pelo menos três pares e variância não nula; valores ausentes não são imputados.
+A dispersão tem limite de 2.000 pares, informado na vista. Clique em um ponto para
+inspecionar o composto; **Selecionar intervalo na rede** vincula a seleção visual
+à rede. Trocar o universo atualiza os gráficos moleculares já inicializados. **Comparar estruturas 2D** usa SMILES disponíveis para comparar um composto
+selecionado com um vizinho conectado. A inspeção existente também oferece 3D.
+
+**Atualizar fontes desta execução** lista CSVs identificados pelo produtor,
+execução e artefato. **Carregar fonte selecionada** associa uma única tabela,
+escolhida no seletor, aos códigos de compostos. Na abertura, o CSV de `Molecules`
+do mesmo produtor e identificador da análise é selecionado e carregado automaticamente.
+Se não houver essa correspondência exata, a fonte inicial é **Dados registrados no grafo**.
+Trocar a opção aplica a nova fonte; o botão também permite recarregá-la.
+Quando ambos os SMILES existem,
+suas estruturas canônicas devem concordar. Duplicatas divergentes e conflitos de
+estrutura são excluídos e contados. Valores registrados no grafo têm prioridade;
+a fonte complementa os atributos ausentes. O painel identifica a procedência dos
+campos e o relatório JSON registra a fonte e a regra. Não existe combinação
+automática com outras execuções ou alvos. Tabelas incompatíveis apresentam erro.
+
+Arquivos de visualização acima de 32 MB ficam identificados no seletor e continuam
+ disponíveis para download. Sua presença não impede abrir outras análises do mesmo
+bloco. Os limites de tamanho e renderização preservam os arquivos científicos.
+
+
+#### Navegação, enquadramento e seleção
+
+As abas **Rede**, **Indicadores**, **Análise molecular** e **Ranking** separam os temas
+sem reconstruir o visualizador. A câmera permanece ao navegar entre abas. O grafo
+recebe enquadramento com margem no carregamento, troca Full Graph/LCC, mudança de
+layout, substituição dos vértices apresentados e redimensionamento da área.
+Zoom e arraste não provocam reenquadramento contínuo. **Expandir grafo** recolhe as
+análises e o painel lateral; o mesmo botão ou Esc sai do modo expandido. O painel
+Selected Compound também pode ser recolhido separadamente.
+
+Clique no fundo vazio para limpar o destaque e o composto selecionado, preservando
+filtros e câmera. Esc limpa a seleção fora do modo expandido. O reconhecedor de
+gestos distingue clique de arraste; controles e detalhes moleculares ficam fora
+da região que limpa a seleção. As comunidades permanecem no seletor paginado,
+sem a listagem textual redundante abaixo das configurações.
+
+Em **Indicadores**, cartões apresentam as contagens e métricas do universo;
+os gráficos com eixos e valores por hover se organizam em duas colunas quando
+há espaço. No celular, usam uma coluna. O ranking oferece métrica, pesquisa por ID,
+ordenação, limite de 10/20/50/100 resultados e barras proporcionais. Selecionar um
+composto visível preserva a câmera; **Localizar** faz a centralização explícita.
+
+A pesquisa de fontes aceita nome completo, trecho ou prefixo, sem diferenciar
+maiúsculas/minúsculas. Há até 50 opções por página e rolagem interna. Uma opção
+previamente selecionada continua disponível mesmo fora da pesquisa; a fonte já
+carregada não muda até **Carregar fonte selecionada**. Tooltips mostram nome e origem.
+
+#### Molécula, scaffold e detalhes
+
+O painel Selected Compound mostra a estrutura 2D, métricas resumidas e ações.
+**View Molecular Details** abre um modal responsivo com estruturas, descritores,
+identificadores, informações de rede e relações, com rolagem interna. Descritores
+ausentes não são inventados. A estrutura 3D continua acessível pelo modal.
+
+**Bemis–Murcko** apresenta o scaffold individual de anéis e conectores. Moléculas
+acíclicas têm scaffold vazio, explicado na interface. Esse núcleo não implica
+uma subestrutura comum ao conjunto. O **MCS** é uma análise distinta, sob demanda,
+sobre Full Graph, LCC, comunidade escolhida ou subconjunto filtrado. Um resultado
+persistido do LCC pode ser reutilizado quando seus IDs e contagem correspondem.
+
+A busca interativa exige de 2 até o limite configurado de compostos (padrão 50;
+permitido 2–200), tempo de 1–30 s (padrão 10 s) e até 256 átomos por molécula.
+Nenhum composto é amostrado ou descartado para satisfazer o limite. SMILES ausentes
+ou inválidos impedem apresentar o resultado como comum ao conjunto. A consulta
+usa cobertura de 100%, anéis com anéis e anéis completos; os critérios acompanham
+o resultado. Fragmentos menores que dois átomos não são apresentados como
+informativos. Um timeout identifica o melhor fragmento encontrado como parcial,
+sem afirmar maximalidade. **Interromper MCS** solicita parada pelo callback do RDKit.
+
+Os resultados têm cache em memória por IDs, estruturas e parâmetros. Trocar a
+seleção individual não recalcula o MCS. O composto mostra átomos e ligações da
+consulta quando pertence ao conjunto analisado. O relatório JSON inclui o conjunto,
+SMARTS, critérios, estado e procedência disponíveis. Nenhum arquivo do pipeline
+é sobrescrito por essas análises.
+
+Na abertura, as comunidades são calculadas para o universo apresentado, dentro dos
+limites existentes. Seu cartão não depende de ativar a coloração por comunidades.
+No painel MCS, os parâmetros usam linhas separadas e o desenho aparece ao lado
+do resumo do resultado, com tradução dos textos dinâmicos em português e inglês.
