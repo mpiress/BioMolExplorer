@@ -209,6 +209,9 @@ class ResultFiles:
         for filename in stage.get('artifacts',[]):
             path=self.store.scoped_path(pid,filename)
             if not path.name.endswith(SUFFIX) or not path.is_file():continue
+            if path.stat().st_size>MAX_VIEW_BYTES:
+                result.append({'path':str(path),'name':path.name+' · acima do limite de 32 MB','unavailable':True})
+                continue
             model=load_view(self.store.read_file(token,pid,str(path),MAX_VIEW_BYTES+1))
             if model['kind']=='graph':
                 result.append({'path':str(path),'name':model['title']})
@@ -223,14 +226,38 @@ class ResultFiles:
         path=self.store.scoped_path(pid,filename)
         if str(path) not in stage.get('artifacts',[]) or not path.name.endswith(SUFFIX):
             raise AccessDenied('Grafo não autorizado para esta etapa.')
-        model=load_view(self.store.read_file(token,pid,str(path),MAX_VIEW_BYTES+1))
+        content=self.store.read_file(token,pid,str(path),MAX_VIEW_BYTES+1)
+        model=load_view(content)
         if model['kind']!='graph':raise ValueError('Selecione um resultado de grafos.')
-        # Old runs remain explorable without changing their files or cache hashes.
-        if 'fragment' not in model:
-            from caad.graph_results import common_fragment
-            allowed=set(model['mcc'])
-            model['fragment']=common_fragment([n['properties'].get('canonical_smiles') for n in model['nodes'] if n['id'] in allowed])
+        # Opening old topology must never start an unbounded MCS search.
+        import hashlib
+        model['dashboard_context']={'project_id':pid,'run_id':rid,'stage_id':sid,'path':str(path),'sha256':hashlib.sha256(content).hexdigest()}
         return model
+
+    def graph_sources(self,token,pid,rid):
+        from .artifact_sources import records
+        run=self.store.get_run(token,rid)
+        if run['project_id']!=pid:raise AccessDenied('Resultado de outro projeto.')
+        result=[]
+        for stage in run['stages']:
+            if stage.get('status')!='succeeded':continue
+            for record in records(stage,rid):
+                if Path(record['path']).suffix.lower()=='.csv':
+                    result.append({key:record[key] for key in ('artifact_id','path','name','stage_id','stage_name','run_id','context')})
+        return result
+
+    def graph_enrichment(self,token,pid,rid,sid,filename,source_id,expected_graph_sha256=None):
+        from .molecular_network import enrich
+        model=self.graph_model(token,pid,rid,sid,filename)
+        if expected_graph_sha256 and expected_graph_sha256!=model['dashboard_context']['sha256']:
+            raise ValueError('O resultado do grafo mudou. Atualize o dashboard antes de associar uma fonte.')
+        source=next((s for s in self.graph_sources(token,pid,rid) if s['artifact_id']==source_id),None)
+        if source is None:raise AccessDenied('Fonte molecular não autorizada para esta execução.')
+        content=self.store.read_file(token,pid,source['path'],MAX_VIEW_BYTES+1)
+        if len(content)>MAX_VIEW_BYTES:raise ValueError('Fonte molecular maior que o limite de 32 MB.')
+        import hashlib
+        source=dict(source,content_sha256=hashlib.sha256(content).hexdigest())
+        return enrich(model,content.decode('utf-8-sig'),source)
 
     def graph_png(self,token,pid,rid,sid,filename):
         from caad.graph_results import report_png

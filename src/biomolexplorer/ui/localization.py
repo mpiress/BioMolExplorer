@@ -17,6 +17,7 @@ LANGUAGES = ('en', 'pt')
 
 # Translate system-message payloads while keeping filenames, IDs and user titles intact.
 SYSTEM_ARGUMENTS = {
+    '{0} · {1}: {2} / {3} valores · Pearson r: {4} · associação exploratória, sem inferência causal.': {4},
     'O bloco “{0}” precisa de ajustes: {1}': {1},
     'Arquivo {0} ({1}): {2}': {2},
     'Falha no envio: {0}': {0},

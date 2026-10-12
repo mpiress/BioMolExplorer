@@ -39,6 +39,24 @@ class Page:
 
 
 class FrontendNavigationTests(unittest.TestCase):
+    def test_graph_preview_drops_untrusted_context_and_releases_resources_on_dismiss(self):
+        import json
+        from biomolexplorer.visualizations import SUFFIX
+        data=dict(version=1,kind='graph',title='Preview',nodes=[
+            {'id':'A','x':0,'y':0,'properties':{}},
+            {'id':'B','x':1,'y':0,'properties':{}}],
+            edges=[{'source':'A','target':'B'}],mcc=['A','B'],
+            dashboard_context={'run_id':'untrusted'})
+        self.ui.current=self.project
+        path=self.store.project_dir(self.project['id'])/('preview'+SUFFIX)
+        path.write_text(json.dumps(data))
+        asyncio.run(self.ui.preview_artifact(self.project['id'],str(path)))
+        viewer=self.ui.result_viewer
+        self.assertNotIn('dashboard_context',viewer.data)
+        self.page.dialogs[-1].on_dismiss(None)
+        self.assertFalse(viewer.active);self.assertFalse(viewer.drawing.shapes)
+        self.assertIsNone(self.ui.result_viewer)
+
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         self.store=WorkspaceStore(self.tmp.name)

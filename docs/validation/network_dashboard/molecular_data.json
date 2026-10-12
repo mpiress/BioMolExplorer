@@ -1,0 +1,28 @@
+{
+  "nodes": 213,
+  "available_numeric_fields": [
+    "molecule_properties.alogp",
+    "molecule_properties.aromatic_rings",
+    "molecule_properties.full_mwt",
+    "molecule_properties.hba",
+    "molecule_properties.hbd",
+    "molecule_properties.heavy_atoms",
+    "molecule_properties.mw_freebase",
+    "molecule_properties.np_likeness_score",
+    "molecule_properties.num_ro5_violations",
+    "molecule_properties.psa",
+    "molecule_properties.qed_weighted",
+    "molecule_properties.rtb"
+  ],
+  "mass_degree_pairs": 213,
+  "mass_degree_pearson": 0.23657997119317806,
+  "additional_source": {
+    "filename": "morgan_CHEMBL220_SIMS.csv",
+    "producer_id": "b1f6dca110d545c3816f23e7d250d21f",
+    "run_id": "1f25838a5d82405f92c5596c96cafed8",
+    "artifact_id": "a19585afbd677ea52e9d77b4be23e9689534d6471f6eeecc3260ac178cba2a62",
+    "matched": 213,
+    "conflicts": 0,
+    "unmatched": 0
+  }
+}

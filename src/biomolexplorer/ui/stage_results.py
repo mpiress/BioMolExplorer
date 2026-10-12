@@ -86,8 +86,8 @@ class StageResults:
                 datasets=await self.ui.call(self.service.graph_datasets,self.token,self.project_id,self.run_id,self.stage['id'])
                 if not self.valid():return
                 if datasets:
-                    self.dataset=ft.Dropdown(label='Análise de grafos · entrada e origem',value=datasets[0]['path'],expand=True,
-                        options=[ft.DropdownOption(key=d['path'],text=d['name']) for d in datasets],on_select=self.change_graph)
+                    self.dataset=ft.Dropdown(label='Análise de grafos · entrada e origem',value=next((d['path'] for d in datasets if not d.get('unavailable')),None),expand=True,
+                        options=[ft.DropdownOption(key=d['path'],text=d['name'],disabled=bool(d.get('unavailable'))) for d in datasets],on_select=self.change_graph)
                     files=await self.ui.call(self.service.files,self.token,self.project_id,self.run_id,self.stage['id'])
                     active=any(r['status'] in ('queued','running','awaiting_input') for r in await self.ui.call(self.ui.store.list_runs,self.token,self.project_id))
                     if not self.valid():return
@@ -106,7 +106,10 @@ class StageResults:
                         self.writable and not active,remove=remove,preview=preview)
                     self.root.controls=[ft.Row([self.dataset]),ft.Text('Cada opção corresponde a um arquivo de entrada. As relações e os compostos de análises diferentes são apresentados separadamente.',size=12,color='#64748B'),
                         self.loading,self.graph,ft.ExpansionTile(title=ft.Text('Arquivos desta análise'),controls=[ft.Container(self.graph_files.build(),padding=20)])]
-                    self.ui.page.update();await self.change_graph(None);self.loaded=True;return
+                    if any(d.get('unavailable') for d in datasets):self.root.controls.insert(1,ft.Text('Arquivos acima de 32 MB permanecem disponíveis para download, mas não são carregados no dashboard.',size=12,color='#B45309'))
+                    self.ui.page.update()
+                    if self.dataset.value:await self.change_graph(None)
+                    self.loaded=True;return
             files=await self.ui.call(self.service.files,self.token,self.project_id,self.run_id,self.stage['id'])
             if not self.valid():return
             active=any(r['status'] in ('queued','running','awaiting_input') for r in await self.ui.call(self.ui.store.list_runs,self.token,self.project_id))
@@ -137,7 +140,9 @@ class StageResults:
         async def action():
             if not self.valid():return
             self.sequence+=1;sequence=self.sequence
-            if self.child:self.child.active=False;self.child.selection_version+=1
+            if self.child:
+                if hasattr(self.child,'close'):self.child.close()
+                else:self.child.active=False;self.child.selection_version+=1
             self.loading.visible=True;self.graph.controls=[];self.ui.page.update()
             filename,subset=self.dataset.value,self.subset.value
             try:
@@ -172,7 +177,9 @@ class StageResults:
         async def action():
             if not self.valid():return
             self.sequence+=1;sequence=self.sequence;filename=self.dataset.value
-            if self.child:self.child.active=False;self.child.selection_version+=1
+            if self.child:
+                if hasattr(self.child,'close'):self.child.close()
+                else:self.child.active=False;self.child.selection_version+=1
             self.loading.visible=True;self.graph.controls=[];self.ui.page.update()
             try:
                 model=await self.ui.call(self.service.graph_model,self.token,self.project_id,self.run_id,self.stage['id'],filename)
@@ -194,7 +201,10 @@ class StageResults:
             async def csv(e):await download('csv')
             buttons=[ft.Button('Baixar apresentação MCC',icon=ft.Icons.DOWNLOAD,on_click=png),
                      ft.Button('Baixar compostos do MCC',icon=ft.Icons.DOWNLOAD,on_click=csv)]
-            self.child=ResultsViewer(self.ui,self.project_id,model,popup=True,actions=buttons)
+            child=await self.ui.call(ResultsViewer,self.ui,self.project_id,model,popup=True,actions=buttons)
+            if not self.valid() or sequence!=self.sequence:child.close();return
+            self.child=child
             self.graph.controls=[self.child.build()];self.ui.page.update()
+            await child.initialize()
         if e is None:await action()
         else:await self.ui.guard(action)

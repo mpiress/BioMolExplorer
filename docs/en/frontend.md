@@ -221,8 +221,8 @@ same update on import.
 Expand the stage in **Runs** and select **Análise de grafos · entrada e
 origem**. The graph appears inline. Switch between the full graph, including
 isolates, and the MCC (largest connected component). Blue outlines highlight
-MCC nodes in the full graph. Nodes have a small, uniform size, including in the
-exported MCC presentation. Viridis colors indicate degree
+MCC nodes in the full graph. Interactive node sizes reflect selected centrality
+within visual bounds; exported MCC presentations retain uniform small markers. Viridis colors indicate degree
 (connection count). The color selector also offers normalized connectivity,
 defined as degree / (n − 1) for the displayed dataset. The legend gives the
 range. This per-node measure differs from global edge density, recorded in the
@@ -232,11 +232,12 @@ the canvas expands. **Navigate components** selects a component;
 organization. Selecting a node highlights its neighbors and relations; the
 neighbor list follows connections and displays similarity values. Code searches
 can locate compounds in other components. Toggle node
-labels as needed. Hover to identify a compound; click to open its molecular 2D
-structure and properties.
+labels as needed. Hover to identify a compound; clicking updates Selected Compound.
+**View Molecular Details** opens full structures, properties and relationships.
 
-In MCC mode, the right panel shows the common molecular fragment, its image,
-**Fragment SMILES**, atom and bond counts, and search status. The image and
+Under **Molecular Scaffold → MCS**, the right panel shows the persisted MCC
+fragment, its image, **Fragment SMILES**, counts, scope and search status. The modal
+includes SMARTS when available. The image and
 SMILES depict the matched fragment of a reference molecule. SMARTS remains in
 the result model for matching. Older saved graphs receive this display and
 layout update when opened. Configure the time limit
@@ -544,3 +545,130 @@ In **Results by stage**, **Remove all results** requires confirmation and remove
 In **Evaluate ADMET**, start with profile and output mode, then adjust BBB/HIA and criteria. The form uses columns when space permits and collapsible sections for alerts/ranges. **Annotate all compounds** preserves diversity; **Filter by hypothesis** combines all chosen criteria. ADMET-AI requires [installation on the worker](installation.md#optional-admet-ai-predictor).
 
 In results, select the ADMET table, filter classes and hover to identify points. Click to inspect the 2D structure; use compound lookup for coincident points. Zoom, recenter and fit-to-screen help navigate. Downloads export PNG and the selected file. Colors/shapes indicate local BBB rather than P-gp substrate status. See [ADMET methods and profiles](admet_research.md) for audit files and scientific limits.
+
+### Structural network exploration
+
+The explorer offers force-directed, Kamada–Kawai, circular, community layouts and
+an exploratory BFS hierarchy rooted at the highest-degree node in each component.
+This hierarchy does not imply causality. Layouts preserve original relationships
+and explain computational limits.
+
+**Centrality / size** offers degree, Degree Centrality, Betweenness, Closeness,
+Eigenvector and PageRank. Metrics and rankings describe the selected universe
+(Full Graph or LCC), before visual filters. Above 400 nodes, Betweenness uses 64
+pivots with seed 42, explicitly labeled as approximate. Eigenvector requires a
+connected universe. Scores are not treated as distances: metrics describe
+unweighted topology, not biological activity.
+
+**Visual filters and neighborhood** combines identifiers, degree, centrality,
+edge scores and ego networks with radii of 1–3 hops. Clearing filters returns to
+the analyzed universe without changing scientific CSVs. **Detect communities**
+uses unweighted Louvain with resolution 1 and seed 42. Colors, community IDs and
+counts identify topological groups. Aggregation represents every community in
+the selected universe before filters: nodes count compounds and edges count
+relationships between groups.
+
+Indicators include nodes, edges, density, components, isolates, LCC fraction,
+mean degree, clustering, modularity and distributions. **Calculate indicators**
+runs calculations within the stated budgets. Component and community selectors
+use pages of 50 options; statistical charts show up to 25 bins and the JSON
+report contains complete distributions.
+
+Individual rendering is limited to 3,000 nodes and 12,000 edges. Above that limit,
+use a component, filters, ego or aggregation; there is no silent sampling. Other
+metrics and layouts explicitly report their budgets. Aggregate rendering is
+limited to 500 communities. **Export metrics CSV**, **JSON report** and **SVG view**
+export topological analyses and the current view alongside existing MCC exports.
+On small screens, molecular inspection appears below the network.
+
+### Integrated molecular dashboard
+
+Layout, centrality and component controls use collapsible panels so the network
+occupies the main area. Full Graph and LCC show their own counts. Opening legacy
+results without a recorded fragment does not start an MCS search. Valid component
+coordinates are reused; older layouts receive inexpensive rings, while costly
+layouts run on request.
+
+The **Molecular analysis** tab starts with **MCC / LCC** data and charts.
+**Compound set** switches to Full Graph; **Analyze descriptors** refreshes
+recorded numerical attributes. Select a property to inspect distributions,
+LCC versus other-component profiles, calculated communities, or descriptor–centrality
+scatter plots. Pearson correlation is exploratory, requires at least three pairs
+and nonzero variance, and missing values are not imputed. Scatter rendering is
+limited to 2,000 pairs, explicitly stated. Clicking a point inspects its compound;
+**Select range in network** links the visual selection to the network. Changing the
+universe refreshes initialized molecular charts. **Compare 2D structures**
+uses available SMILES for the selected compound and a connected neighbor. Existing
+compound inspection also provides 3D.
+
+**Refresh sources from this run** lists CSVs by producer, run and artifact identity.
+**Load selected source** joins one table by compound ID. On opening, the `Molecules`
+CSV with the same producer and analysis identifier is selected and loaded automatically.
+Without that exact match, **Data recorded in the graph** is the initial source.
+Selecting another source applies it immediately; the button can reload the choice. When
+both SMILES are available, canonical structures must agree. Conflicting duplicate
+rows and structures are excluded and counted. Recorded graph values take precedence;
+the selected source supplements missing properties. The details panel identifies
+field provenance and the JSON report records the source and matching rule. Other
+runs and targets are never combined automatically. Incompatible tables report errors.
+
+Visualization files above 32 MB are labeled in the selector and remain downloadable.
+They do not block other analyses from the same stage. Size and rendering limits
+preserve original scientific files.
+
+
+#### Navigation, framing and selection
+
+**Network**, **Indicators**, **Molecular analysis** and **Ranking** tabs separate
+analytical topics while retaining the mounted viewer and its camera. Fit to view
+uses actual viewport bounds and a margin on loading, Full Graph/LCC changes,
+layout changes, replacements of displayed vertices and viewport resizing. Manual
+zoom and pan do not continuously trigger fitting. **Expand graph** hides analytical
+controls and the inspector; the same button or Escape exits. The inspector can
+also be collapsed independently.
+
+Clicking empty canvas space clears selection and highlighting without changing
+filters or the camera. Escape clears selection outside expanded mode. The gesture
+recognizer distinguishes clicks from drags; toolbar and detail controls sit outside
+the selection-clearing canvas. Community exploration remains in the paged selector,
+without the redundant textual list below configuration.
+
+Indicator cards describe the selected universe. Charts provide axes and hover
+values, with two columns where space permits and one on phones. Ranking supports
+metric choice, ID search, ordering, 10/20/50/100 rows and proportional bars. Selecting
+an already visible compound preserves the camera; **Locate** explicitly centers it.
+
+Source search accepts complete filenames, substrings and prefixes, ignoring case.
+Options are paged in groups of 50 with internal scrolling. A previously selected
+option remains available outside the current search. Loaded data change only on
+**Load selected source**; tooltips expose complete filename and producer.
+
+#### Molecule, scaffold and details
+
+Selected Compound displays a 2D structure, concise network properties and actions.
+**View Molecular Details** opens a responsive, internally scrolling modal containing
+structures, descriptors, identifiers, network properties and relationships. Missing
+values are never fabricated. Existing 3D exploration remains accessible in the modal.
+
+**Bemis–Murcko** shows the individual ring/linker scaffold; acyclic molecules have
+an explicitly empty scaffold. This does not imply a shared substructure. **MCS**
+is a separate, on-demand analysis of Full Graph, LCC, a chosen community or a
+filtered subset. A persisted LCC result can be reused when its IDs and count agree.
+
+Interactive MCS accepts 2 to the configured molecule limit (default 50; allowed
+2–200), a 1–30 second search timeout (default 10) and up to 256 atoms per molecule.
+No compounds are silently sampled or discarded to fit limits. Missing or invalid
+SMILES prevent claiming a common result. Queries require 100% coverage, ring-to-ring
+matching and complete rings, with criteria shown beside the result. Fragments
+under two atoms are treated as uninformative. Timed-out searches identify their
+best fragment as partial, without claiming maximality. **Interrupt MCS** requests
+termination through RDKit's progress callback.
+
+In-memory caches are keyed by IDs, structures and parameters. Individual selections
+do not recalculate MCS. Matching query atoms and bonds are highlighted when the
+selected compound belongs to the analysis set. JSON reports include IDs, SMARTS,
+criteria, status and available provenance. Pipeline files are never overwritten.
+
+Communities initialize within the existing computation limits, independently of
+community coloring. MCS parameters occupy separate rows; the depiction sits beside
+the result summary, with both static and dynamic texts localized in English/Portuguese.
