@@ -232,6 +232,29 @@ def export_analysis(dataset,edges,output,identifier,title,origin=None,mcs_timeou
         'density':nx.density(graph),'mcc_nodes':len(mcc),'mcc_edges':mcc.number_of_edges(),'mcc_density':nx.density(mcc)}
     selected['degree']=selected['molecule_chembl_id'].map(dict(mcc.degree()))
     for folder in ('plots','Molecules','data/maxcomp','centroids'):(output/folder).mkdir(parents=True,exist_ok=True)
+    # Component numbers come from the same model consumed by the graph viewer.
+    # Export molecular tables, not similarity edge lists, for downstream docking.
+    membership={n['id']:n['properties']['component'] for n in model['nodes']}
+    full=dataset.copy()
+    full['degree']=full['molecule_chembl_id'].map(dict(graph.degree()))
+    full['graph_analysis_id']=identifier
+    full['graph_component']=full['molecule_chembl_id'].map(membership)
+    full['graph_is_mcc']=full['molecule_chembl_id'].isin(model['mcc'])
+    exports=[]
+    def export_subset(frame,name,scope,component=None):
+        frame=frame.copy();frame['graph_scope']=scope
+        relative=Path('Molecules')/name
+        frame.to_csv(output/relative,index=False)
+        exports.append(dict(file=relative.as_posix(),scope=scope,component=component,
+            nodes=len(frame),edges=graph.subgraph(frame['molecule_chembl_id']).number_of_edges()))
+    export_subset(full,identifier+'__full_graph.csv','full_graph')
+    for component,frame in full.groupby('graph_component',sort=True):
+        component=int(component)
+        suffix='_mcc' if component==1 else ''
+        export_subset(frame,
+            f'{identifier}__component_{component:04d}{suffix}.csv',
+            'mcc' if component==1 else 'component',component)
+    model['compound_exports']=exports
     write_view(output/'plots'/(identifier+SUFFIX),model)
     selected.to_csv(output/'Molecules'/(identifier+'.csv'),index=False)
     pd.DataFrame([{'source':a,'target':b,'value':attrs['value']} for a,b,attrs in mcc.edges(data=True)],

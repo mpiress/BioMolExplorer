@@ -107,5 +107,9 @@ class ResultOrigins:
             traces.append(' → '.join(s['stage_name'] + ' / ' + s['name'] for s in route))
         source = ' + '.join(roots)
         origin = source + (' — ' + ' + '.join(branches) if branches else '')
-        return dict(source_label=source, origin=origin, display_name=source + ' — ' + Path(path).name,
+        scope=''
+        if self.catalog[key][0]['operation']=='graphs':
+            from .graph_exports import subset_label
+            scope=subset_label(path)
+        return dict(source_label=source, origin=origin, display_name=source + ' — ' + (scope+' — ' if scope else '') + Path(path).name,
                     source_trace='\n'.join(dict.fromkeys(traces)), source_routes=routes)

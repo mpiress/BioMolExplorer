@@ -1,5 +1,6 @@
 """Native, zoomable Flet graph editor; connections are validated before mutation."""
 import copy
+import math
 from uuid import uuid4
 import flet as ft
 from .localization import verbatim, stage_control
@@ -22,6 +23,7 @@ class FlowCanvas:
         self.output_draggables={}; self.active_drag=None
         self.edges=canvas.Canvas(shapes=[])
         self.nodes={}
+        self._node_states={}; self._option_labels=None
         self.stack=ft.Stack(width=flow.CANVAS_WIDTH,height=flow.CANVAS_HEIGHT)
         self.viewer=zoomable_view(content=ft.DragTarget(group='stage-library',content=self.stack,on_accept=self.drop),
             constrained=False,alignment=ft.Alignment.TOP_LEFT,expand=True)
@@ -59,6 +61,12 @@ class FlowCanvas:
     def refresh(self,update=True,nodes=True,moved_node=None):
         width=min(flow.CANVAS_WIDTH,max(4000,max((flow.position(s,i)['x']+flow.NODE_WIDTH+400 for i,s in enumerate(self.stages)),default=0)))
         height=max(2800,max((flow.position(s,i)['y']+flow.node_height(s)+120 for i,s in enumerate(self.stages)),default=0))
+        # Grow in grid bands: a bottom/right node moving one pixel must not
+        # replace the grid and force a full-page update on every drag event.
+        width=min(flow.CANVAS_WIDTH,math.ceil(width/400)*400)
+        height=math.ceil(height/400)*400
+        if moved_node is not None and hasattr(self,'grid'):
+            width=max(width,self.grid.width);height=max(height,self.grid.height)
         self.stack.height=height;self.stack.width=width
         resized=not hasattr(self,'grid') or self.grid.height!=height or self.grid.width!=width
         if resized:
@@ -83,8 +91,24 @@ class FlowCanvas:
                     paint=ft.Paint(color=COLORS[TITLES[source['operation']][2]],stroke_width=3,style=ft.PaintingStyle.STROKE)))
         self.edges.shapes=shapes;self.edges.width=width;self.edges.height=height
         if nodes:
-            self.nodes={s['id']:self.node(s,i) for i,s in enumerate(self.stages)}
-            self.selection.options=[stage_control(ft.DropdownOption(key=s['id'],text=s['name']),s,'text') for s in self.stages]
+            # Keep unaffected controls (and in-flight gestures) mounted. A stage
+            # replacement must rebuild its callbacks even when values are equal.
+            rebuilt={}; states={}
+            for i,stage in enumerate(self.stages):
+                key=stage['id']
+                labels=input_labels(stage,getattr(self.ui,'project_assets',[]),getattr(self.ui,'automatic_labels',{}),self.stages)
+                state=(stage,copy.deepcopy(stage),labels,self.ui.selected==key,positions[key])
+                old=self._node_states.get(key)
+                if old and old[0] is stage and old[1:]==state[1:]:
+                    rebuilt[key]=self.nodes[key]
+                else:
+                    rebuilt[key]=self.node(stage,i)
+                states[key]=state
+            self.nodes=rebuilt; self._node_states=states
+            option_labels=[(s['id'],s['name']) for s in self.stages]
+            if option_labels!=self._option_labels:
+                self.selection.options=[stage_control(ft.DropdownOption(key=s['id'],text=s['name']),s,'text') for s in self.stages]
+                self._option_labels=option_labels
             self.selection.value=self.ui.selected if self.ui.selected in by_id else None
         if nodes or resized:self.stack.controls=[self.grid,self.edges,*self.nodes.values()]
         if update:
@@ -92,12 +116,19 @@ class FlowCanvas:
             else:self.ui.page.update()
 
     def select_stage(self,stage_id):
+        previous=self.ui.selected
         self.ui.selected=stage_id
         self.selection.value=stage_id
+        changed=[self.selection]
         for stage in self.stages:
+            key=stage['id']
+            if key not in (previous,stage_id):continue
             color=COLORS[TITLES[stage['operation']][2]]
-            self.nodes[stage['id']].border=ft.Border.all(2,color if stage['id']==stage_id else '#DDE5F0')
-        self.ui.page.update()
+            self.nodes[key].border=ft.Border.all(2,color if key==stage_id else '#DDE5F0')
+            old=self._node_states.get(key)
+            if old:self._node_states[key]=(*old[:3],key==stage_id,old[4])
+            changed.append(self.nodes[key])
+        self.ui.page.update(*changed)
     def node(self,stage,index):
         color=COLORS[TITLES[stage['operation']][2]]; pos=flow.position(stage,index)
         async def select(e): self.select_stage(stage['id'])

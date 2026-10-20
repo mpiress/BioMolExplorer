@@ -13,6 +13,41 @@ continuam disponíveis. A cena e a imagem são atualizadas antes das chamadas de
 câmera ao retornar de um subgrafo. Coordenadas ausentes de um layout de outro
 universo são completadas pelo layout integral salvo.
 
+## CSVs por componente e entradas de docking
+
+Ao executar **Filtrar por grafos / Filter by graphs**, cada análise passa a
+produzir tabelas moleculares independentes na pasta `Molecules`:
+
+| Arquivo | Compostos incluídos |
+| --- | --- |
+| `<análise>__full_graph.csv` | Grafo completo, incluindo nós isolados |
+| `<análise>__component_0001_mcc.csv` | MCC / LCC: maior componente conectado, identificado como componente 1 |
+| `<análise>__component_0002.csv`, etc. | Somente os compostos do componente indicado, inclusive componentes unitários |
+
+A numeração corresponde à visualização daquela análise. Cada CSV conserva
+`molecule_chembl_id`, `canonical_smiles` e as demais propriedades moleculares,
+acrescentando `degree`, `graph_analysis_id`, `graph_component`, `graph_is_mcc`
+e `graph_scope`. A visualização salva relaciona cada subconjunto ao seu arquivo
+em `compound_exports`. Análises de entradas diferentes continuam separadas.
+
+Os arquivos também aparecem em **Arquivos desta análise**. Nas configurações de
+Vina ou DOCK6, conecte a saída do bloco de grafos à entrada de compostos e escolha
+os arquivos desejados no seletor. Os rótulos distinguem **Grafo completo**,
+**MCC / LCC · Componente 1** e **Componente N**, mantendo a análise/origem e o
+caminho do arquivo. É possível escolher um ou vários subconjuntos; a seleção
+salva conserva a identidade dos arquivos ao reabrir o pipeline.
+
+Tabelas de arestas (`source,target,value`) continuam disponíveis nos resultados,
+mas não são apresentadas como saídas moleculares do bloco. Um grafo calculado
+somente com arestas externas precisa da tabela de compostos com SMILES para
+que seus subconjuntos possam ser usados em docking.
+
+Os CSVs anteriores `<análise>.csv` e `molecules.csv` são preservados para
+compatibilidade: o primeiro contém o MCC daquela análise; o segundo é a união
+dos MCCs, **não** o grafo completo. Seus rótulos deixam isso explícito.
+Para obter os novos subconjuntos em projetos antigos, execute novamente o bloco
+de grafos; resultados já salvos não são reescritos retroativamente.
+
 ## Recursos disponíveis
 
 Os recursos foram comparados com o [guia oficial do Gephi](https://gephi.org/quickstart/)

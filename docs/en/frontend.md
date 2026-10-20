@@ -6,6 +6,10 @@ The interface brings together authentication, private projects, invitations,
 a file library, a pipeline editor and execution monitoring. It uses the backend
 Python services; scientific calculations continue to run in separate processes.
 
+When opening block settings, a centered indicator with the BioMolExplorer logo
+and a spinning ring shows that information is being read. It disappears when
+the form opens, if an error occurs, or when leaving the project.
+
 ## Portable collaborative projects
 
 Creating a project requires selecting a folder through the button inside **Project folder**; the field cannot be typed into. Desktop and web browse visible folders on the computer running BioMolExplorer. Create folder asks for a name and automatically selects the new folder inside the current location. Enter the name first and choose a parent folder; a subfolder named after the project is created and its

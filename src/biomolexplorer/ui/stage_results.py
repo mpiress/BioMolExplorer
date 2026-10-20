@@ -99,9 +99,10 @@ class StageResults:
                             if self.child:self.child.active=False;self.child.selection_version+=1
                             self.graph.controls=[ft.Text('Visualização removida. Selecione outra análise ou execute a etapa novamente.')]
                     async def preview(item):await self.ui.preview_artifact(self.project_id,item['path'])
-                    descriptions={'Molecules':'Compostos do MCC','maxcomp':'Arestas do MCC','similarity':'Similaridade calculada',
+                    from biomolexplorer.graph_exports import subset_label
+                    descriptions={'Molecules':'Compostos do grafo','maxcomp':'Arestas do MCC','similarity':'Similaridade calculada',
                         'centroids':'Fragmento molecular comum','plots':'Apresentação do MCC e graus'}
-                    self.graph_file_records=[dict(f,description=descriptions.get(Path(f['path']).parent.name,'Resultado')+' · '+f.get('origin',''))
+                    self.graph_file_records=[dict(f,description=(subset_label(f['path'],getattr(self.ui,'tr',None)) or descriptions.get(Path(f['path']).parent.name,'Resultado'))+' · '+f.get('origin',''))
                         for f in files if not f['name'].endswith('.biomol-view.json')]
                     self.graph_files=FileTable(self.ui,self.project_id,[],
                         self.writable and not active,remove=remove,preview=preview)
@@ -189,7 +190,7 @@ class StageResults:
             if not self.valid() or sequence!=self.sequence:return
             identifier=Path(filename).name.removesuffix('.biomol-view.json')
             parent=Path(filename).parent.parent
-            self.graph_files.files=[f for f in self.graph_file_records if Path(f['name']).stem==identifier and Path(f['path']).is_relative_to(parent)]
+            self.graph_files.files=[f for f in self.graph_file_records if (Path(f['name']).stem==identifier or Path(f['name']).stem.startswith(identifier+'__')) and Path(f['path']).is_relative_to(parent)]
             self.graph_files.offset=0;self.graph_files.redraw()
             async def download(kind):
                 async def save():

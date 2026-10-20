@@ -1,0 +1,186 @@
+{
+  "baseline": "4ed01455a4d7b2e7c0109443183b764e973a38dd",
+  "repeats": 21,
+  "before": {
+    "interactions": [
+      {
+        "blocks": 1,
+        "nodes_created": 1,
+        "add": {
+          "median_ms": 1.512,
+          "p95_ms": 1.672
+        },
+        "open": {
+          "median_ms": 4.582,
+          "p95_ms": 5.13
+        },
+        "drag": {
+          "median_ms": 0.26,
+          "p95_ms": 0.294
+        }
+      },
+      {
+        "blocks": 10,
+        "nodes_created": 10,
+        "add": {
+          "median_ms": 6.432,
+          "p95_ms": 6.995
+        },
+        "open": {
+          "median_ms": 5.105,
+          "p95_ms": 5.551
+        },
+        "drag": {
+          "median_ms": 0.348,
+          "p95_ms": 0.372
+        }
+      },
+      {
+        "blocks": 25,
+        "nodes_created": 25,
+        "add": {
+          "median_ms": 14.748,
+          "p95_ms": 15.202
+        },
+        "open": {
+          "median_ms": 5.193,
+          "p95_ms": 5.809
+        },
+        "drag": {
+          "median_ms": 0.476,
+          "p95_ms": 0.515
+        }
+      },
+      {
+        "blocks": 50,
+        "nodes_created": 50,
+        "add": {
+          "median_ms": 29.444,
+          "p95_ms": 49.43
+        },
+        "open": {
+          "median_ms": 5.517,
+          "p95_ms": 6.438
+        },
+        "drag": {
+          "median_ms": 0.684,
+          "p95_ms": 0.745
+        }
+      },
+      {
+        "blocks": 100,
+        "nodes_created": 100,
+        "add": {
+          "median_ms": 64.705,
+          "p95_ms": 91.008
+        },
+        "open": {
+          "median_ms": 6.021,
+          "p95_ms": 31.662
+        },
+        "drag": {
+          "median_ms": 15.86,
+          "p95_ms": 16.309
+        }
+      }
+    ],
+    "unconnected_vina_history": {
+      "files": 5,
+      "rows_per_file": 1000,
+      "reads": 5,
+      "median_ms": 129.503,
+      "p95_ms": 151.33
+    }
+  },
+  "after": {
+    "interactions": [
+      {
+        "blocks": 1,
+        "nodes_created": 1,
+        "add": {
+          "median_ms": 1.515,
+          "p95_ms": 1.727
+        },
+        "open": {
+          "median_ms": 4.484,
+          "p95_ms": 4.827
+        },
+        "drag": {
+          "median_ms": 0.254,
+          "p95_ms": 0.269
+        }
+      },
+      {
+        "blocks": 10,
+        "nodes_created": 1,
+        "add": {
+          "median_ms": 3.149,
+          "p95_ms": 29.715
+        },
+        "open": {
+          "median_ms": 4.947,
+          "p95_ms": 5.377
+        },
+        "drag": {
+          "median_ms": 0.359,
+          "p95_ms": 0.412
+        }
+      },
+      {
+        "blocks": 25,
+        "nodes_created": 1,
+        "add": {
+          "median_ms": 6.14,
+          "p95_ms": 6.567
+        },
+        "open": {
+          "median_ms": 5.359,
+          "p95_ms": 36.078
+        },
+        "drag": {
+          "median_ms": 0.467,
+          "p95_ms": 0.501
+        }
+      },
+      {
+        "blocks": 50,
+        "nodes_created": 1,
+        "add": {
+          "median_ms": 11.911,
+          "p95_ms": 12.497
+        },
+        "open": {
+          "median_ms": 5.525,
+          "p95_ms": 5.996
+        },
+        "drag": {
+          "median_ms": 0.702,
+          "p95_ms": 0.739
+        }
+      },
+      {
+        "blocks": 100,
+        "nodes_created": 1,
+        "add": {
+          "median_ms": 27.295,
+          "p95_ms": 28.014
+        },
+        "open": {
+          "median_ms": 6.11,
+          "p95_ms": 6.47
+        },
+        "drag": {
+          "median_ms": 1.123,
+          "p95_ms": 1.187
+        }
+      }
+    ],
+    "unconnected_vina_history": {
+      "files": 5,
+      "rows_per_file": 1000,
+      "reads": 0,
+      "median_ms": 6.11,
+      "p95_ms": 6.839
+    }
+  }
+}

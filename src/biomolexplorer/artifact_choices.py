@@ -35,6 +35,9 @@ def choices(item):
         files=[p for p in files if p.name=='docking_results.csv' or
                item['operation']=='docking_vina' and p.suffix=='.pdbqt' and p.parent.name=='Vina' or
                item['operation']=='docking_dock6' and p.name.endswith('_scored.mol2') and p.parent.name in ('flex','rigid')]
+    if item['operation']=='graphs' and not item.get('configuration',{}).get('provided_results'):
+        from .graph_exports import molecular_files
+        files=molecular_files(files)
     result=set()
     for p in files:
         parts=p.parts

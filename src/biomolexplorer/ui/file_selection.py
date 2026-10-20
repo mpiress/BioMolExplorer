@@ -118,6 +118,9 @@ class FileSelection:
                     matching=[p for p in matching if p.name=='compounds.csv' and p.parent.parent.name=='compounds']
                 if 'prepared_structures' in kinds and any(p.parent.name == 'Prepared' for p in matching):
                     matching = [p for p in matching if p.parent.name == 'Prepared']
+                if item.get('operation')=='graphs' and not item.get('configuration',{}).get('provided_results'):
+                    from biomolexplorer.graph_exports import molecular_files
+                    matching=molecular_files(matching)
                 for path in sorted(matching):
                     selector = catalog[str(path)]['selector']
                     # Preserve explicit choices from the popup or block settings.
@@ -129,7 +132,11 @@ class FileSelection:
                     record=catalog[str(path)]
                     chosen=any(r.get('artifact_id')==record['artifact_id'] or (not r.get('artifact_id') and chosen and matches_selector(path,r.get('selector','auto'))) for r in configured if r.get('stage')==item['id'])
                     description=origin_labels.describe(path,item['id'],run.get('id'))
-                    check = SimpleNamespace(label=selector,display_label=description['origin']+' — '+selector,
+                    scope=''
+                    if item.get('operation')=='graphs':
+                        from biomolexplorer.graph_exports import subset_label
+                        scope=subset_label(path,getattr(page,'translator',None))
+                    check = SimpleNamespace(label=selector,display_label=description['origin']+' — '+(scope+' — ' if scope else '')+selector,
                         value=chosen,on_change=None,available=path.is_file())
                     reference=artifact_reference(record)
                     previous=next((r for r in configured if r.get('stage')==item['id'] and

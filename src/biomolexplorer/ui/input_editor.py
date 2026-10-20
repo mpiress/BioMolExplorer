@@ -12,6 +12,7 @@ from .localization import verbatim, stage_control
 class InputEditor:
     def __init__(self,ui,stage,field,assets,writable):
         self.ui,self.stage,self.field,self.assets,self.writable=ui,stage,field,assets,writable
+        self.docking_catalog=getattr(ui,'docking_catalog',None)
         self.is_target=target_input(stage,field['name'])
         self.is_ligand=stage['operation'] in ('docking_vina','docking_dock6','prepare_structures') and field['name']=='base_selected_mols'
         self.rows=[]
@@ -130,7 +131,14 @@ class InputEditor:
         elif is_target:names={n for n in names if prepared_receptor(n)}
         if self.stage['operation'] in ('prepare_structures','docking_vina','docking_dock6') and self.field['name']=='base_input_path' and not is_target:
             names={n for n in names if n.endswith('.pdb') and n.rsplit('/',1)[-1].count('.')==1}
-        return [ft.DropdownOption(key='auto',text='Identificar automaticamente')]+[verbatim(ft.DropdownOption(key=n,text=n)) for n in sorted(names)]
+        origin=next((s for s in self.ui.current['pipeline'] if value=='stage:'+s['id']),None)
+        def label(name):
+            if origin and origin['operation']=='graphs':
+                from biomolexplorer.graph_exports import subset_label
+                scope=subset_label(name,getattr(self.ui,'tr',None))
+                if scope:return scope+' — '+name
+            return name
+        return [ft.DropdownOption(key='auto',text='Identificar automaticamente')]+[verbatim(ft.DropdownOption(key=n,text=label(n))) for n in sorted(names)]
 
     def add(self,reference=None):
         ref=reference or {}
@@ -169,9 +177,16 @@ class InputEditor:
                 compound.visible=bool(source.value and (source.value.startswith('asset:') or selector.value!='auto'))
                 compound.disabled=not self.writable or not records
                 compound.helper=None if records else 'Execute a origem para listar os compostos disponíveis.'
-            def compound_source_changed(e):
-                selector.options=self.selectors(source.value);selector.value='auto'
+            source_version=0
+            async def compound_source_changed(e):
+                nonlocal source_version
+                source_version+=1;version=source_version;origin=source.value
+                selector.options=self.selectors(origin);selector.value='auto'
                 sync_compounds(True);self.changed()
+                if self.docking_catalog:
+                    await self.ui.guard(lambda:self.docking_catalog.load(origin))
+                    if version!=source_version or not self.docking_catalog.valid():return
+                    sync_compounds();self.selection_signature=None;self.changed()
             def compound_file_changed(e):sync_compounds(True);self.changed()
             source.on_select=compound_source_changed
             selector.on_select=compound_file_changed

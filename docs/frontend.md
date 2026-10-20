@@ -6,6 +6,10 @@ A interface reúne autenticação, projetos privados, convites, biblioteca de ar
 editor de pipeline e acompanhamento das execuções. Ela usa os serviços Python do
 backend; os cálculos científicos continuam em processos separados.
 
+Ao abrir as configurações de um bloco, um indicador central com o logo do
+BioMolExplorer e um anel giratório informa que os dados estão sendo lidos. Ele
+desaparece ao abrir o formulário, em caso de erro ou ao sair do projeto.
+
 ## Projetos portáteis e colaborativos
 
 A versão atual solicita a pasta do projeto, oferece **Importar projeto**, **Exportar**

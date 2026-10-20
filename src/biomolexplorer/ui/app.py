@@ -147,6 +147,8 @@ class WorkspaceUI(ProjectTools):
 
     def close_project_views(self):
         """Discard private dialogs/drafts when leaving a project or losing access."""
+        loading=getattr(self,'_configuration_loading',None)
+        if loading:loading.close()
         self.dismiss_reuse_prompt()
         viewer = getattr(self,'result_viewer',None)
         if viewer is not None:
@@ -161,6 +163,10 @@ class WorkspaceUI(ProjectTools):
         while self.page.pop_dialog() is not None:
             pass
         self.editing_stage = False
+        self._dialog_request = getattr(self,'_dialog_request',0)+1
+        self._compound_reference_cache = None
+        self.docking_catalog = None
+        self.docking_compounds = {}
         self.dirty = False
         self.selected = None
         self.current_run = None
@@ -587,24 +593,43 @@ class WorkspaceUI(ProjectTools):
         return self.flow_editor.build(include_library=False)
 
     async def open_stage_dialog(self,stage_id,waiting_run_id=None,configuration=None):
+        request=getattr(self,'_dialog_request',0)+1
+        self._dialog_request=request
+        if not hasattr(self,'_dialog_lock'):self._dialog_lock=asyncio.Lock()
+        token,project=self.token,self.current
+        from .configuration_loading import ConfigurationLoading
+        loading=getattr(self,'_configuration_loading',None)
+        if loading is None:
+            loading=self._configuration_loading=ConfigurationLoading(self.page)
+        try:
+            loading.show(request)
+            # Publish feedback before reads or synchronous form construction.
+            await asyncio.sleep(0)
+            async with self._dialog_lock:
+                if self._dialog_request!=request or self.token!=token or self.current is not project:return
+                await self._open_stage_dialog(stage_id,waiting_run_id,configuration,request)
+        finally:
+            loading.hide(request)
+
+    async def _open_stage_dialog(self,stage_id,waiting_run_id=None,configuration=None,request=None):
         from .guided import GuidedForm
         from biomolexplorer.pipeline import validate_pipeline
         token, project = self.token, self.current
         fresh=await self.call(self.store.project,token,project['id'])
-        if self.token != token or self.current is not project:
+        if self.token != token or self.current is not project or self._dialog_request!=request:
             return
         project['role']=fresh['role']
         self.selected=stage_id
-        original=self.selected_stage()
+        original=next((s for s in project['pipeline'] if s['id']==stage_id),None)
         if not original:
             return
         draft=copy.deepcopy(original)
         writable=self.current['role']!='viewer'
         assets=await self.call(self.store.assets,token,project['id'])
-        if self.token != token or self.current is not project:
+        if self.token != token or self.current is not project or self._dialog_request!=request:
             return
         runs=await self.call(self.store.list_runs,token,project['id'])
-        if self.token != token or self.current is not project:
+        if self.token != token or self.current is not project or self._dialog_request!=request:
             return
         if waiting_run_id:
             waiting_run=next((r for r in runs if r['id']==waiting_run_id and r['status']=='awaiting_input'),None)
@@ -635,13 +660,13 @@ class WorkspaceUI(ProjectTools):
             elif source['operation'] in ('retrieve_compounds','retrieve_pubchem','retrieve_zinc'):
                 self.artifact_choices.setdefault(source['id'],set()).add('compounds.csv')
         self.redocking_records={}
-        if draft['operation'] in ('retrieve_pubchem','docking_vina','docking_dock6'):
+        if draft['operation']=='retrieve_pubchem':
             from biomolexplorer.pubchem_retrieval import reference_choices
             references={};seen=set()
-            if draft['operation']=='retrieve_pubchem':self.pubchem_references=references
-            else:self.docking_compounds=references
+            self.pubchem_references=references
             for run in runs:
                 for item in run['stages']:
+                    if self._dialog_request!=request or self.token!=token or self.current is not project:return
                     if item['status']!='succeeded' or item['id'] in seen:continue
                     seen.add(item['id']);records={}
                     for filename in item.get('artifacts',[]):
@@ -657,16 +682,50 @@ class WorkspaceUI(ProjectTools):
                     params=source.get('provided_results') or source['parameters']
                     references['stage:'+source['id']]={p:r for a in params.get('asset_ids',[])
                         for p,r in references.get('asset:'+a,{}).items()}
-            direct=draft['parameters'].get('base_input_path' if draft['operation']=='retrieve_pubchem' else 'base_selected_mols')
+            direct=draft['parameters'].get('base_input_path')
             if direct:
                 folder=self.store.scoped_path(project['id'],direct)
                 references['configured-path']={str(p):await self.call(reference_choices,[p]) for p in folder.glob('*.csv')}
-            if self.token!=token or self.current is not project:return
+            if self.token!=token or self.current is not project or self._dialog_request!=request:return
+        if draft['operation'] in ('docking_vina','docking_dock6'):
+            from .compound_catalog import CompoundCatalog
+            paths={};seen=set()
+            for run in runs:
+                for item in run['stages']:
+                    if self._dialog_request!=request or self.token!=token or self.current is not project:return
+                    if item['status']!='succeeded' or item['id'] in seen:continue
+                    seen.add(item['id'])
+                    paths['stage:'+item['id']]=[self.store.scoped_path(project['id'],p)
+                        for p in item.get('artifacts',[]) if Path(p).suffix.lower()=='.csv']
+            for asset in assets:
+                if asset['kind'] not in ('compounds','other'):continue
+                path=await self.call(self.store.asset_path,token,project['id'],asset['id'])
+                paths['asset:'+asset['id']]=[path]
+            for source in project['pipeline']:
+                if source['operation']=='import_results' or source.get('provided_results'):
+                    params=source.get('provided_results') or source['parameters']
+                    paths['stage:'+source['id']]=[p for a in params.get('asset_ids',[])
+                        for p in paths.get('asset:'+a,[])]
+            direct=draft['parameters'].get('base_selected_mols') or (draft['parameters'].get('base_vina_path') if draft['operation']=='docking_dock6' else None)
+            if direct:
+                folder=self.store.scoped_path(project['id'],direct)
+                paths['configured-path']=await self.call(lambda:list(folder.glob('*.csv')))
+            catalog=CompoundCatalog(self,paths,lambda:self.token==token and self.current is project
+                and self._dialog_request==request)
+            self.docking_catalog=catalog
+            self.docking_compounds=catalog.references
+            from biomolexplorer.bindings import sources
+            group=draft.get('bindings',{}).get('base_selected_mols') or (draft.get('bindings',{}).get('base_vina_path') if draft['operation']=='docking_dock6' else None)
+            origins=[('stage:'+r['stage']) if 'stage' in r else ('asset:'+r['asset'])
+                for r in sources(group) if 'stage' in r or 'asset' in r] if group else []
+            if direct:origins.append('configured-path')
+            for origin in dict.fromkeys(origins):await catalog.load(origin)
         if draft['operation']=='redocking':
             from biomolexplorer.redocking_config import metadata_records
             seen=set()
             for run in runs:
                 for item in run['stages']:
+                    if self._dialog_request!=request or self.token!=token or self.current is not project:return
                     if item['status']!='succeeded' or item['id'] in seen:continue
                     seen.add(item['id'])
                     paths=[self.store.scoped_path(project['id'],p) for p in item.get('artifacts',[])]
@@ -680,10 +739,11 @@ class WorkspaceUI(ProjectTools):
                     self.redocking_records['stage:'+source['id']]=[r for a in params.get('asset_ids',[]) for r in self.redocking_records.get('asset:'+a,[])]
             direct=draft['parameters'].get('base_input_path')
             if direct:
-                from pathlib import Path
                 folder=self.store.scoped_path(project['id'],direct)
                 self.redocking_records['configured-path']=await self.call(metadata_records,list(folder.rglob('pdb_codes.csv')))
-            if self.token!=token or self.current is not project:return
+            if self.token!=token or self.current is not project or self._dialog_request!=request:return
+        if self._dialog_request!=request or self.token!=token or self.current is not project:return
+        if not any(s['id']==stage_id for s in project['pipeline']):return
         mode='visual'
         reader=None
         body=ft.Container(width=min(960,(self.page.width or 1160)-100),height=max(300,min(620,(self.page.height or 900)-250)),padding=24,bgcolor=BG,border_radius=16)
@@ -756,7 +816,10 @@ class WorkspaceUI(ProjectTools):
             ft.TextButton('Visual · formulário guiado',on_click=visual),ft.TextButton('Avançado · parâmetros e scripts',on_click=advanced)],wrap=True)],spacing=12),content=body,
             actions=[ft.TextButton('Cancelar' if writable else 'Fechar',on_click=lambda e:close_dialog(self.page,dialog)),button('Aplicar e continuar pipeline' if waiting_run_id else 'Aplicar configuração',self.event_action(apply),True,disabled=not writable)])
         self.editing_stage=True
-        def dismissed(e): self.editing_stage=False
+        def dismissed(e):
+            if self._dialog_request==request:
+                self.editing_stage=False
+                self._dialog_request+=1
         dialog.on_dismiss=dismissed
         self.page.show_dialog(dialog)
 
