@@ -44,6 +44,8 @@ LABELS = {
  'ligand_ids': 'Códigos de ligantes PDB (ex.: ATP)',
  'pdb_ec': 'Número EC (opcional)', 'organism': 'Organismos', 'max_resolution': 'Resolução máxima (Å)',
  'must_have_ligand': 'Exigir ligante', 'input_file': 'Arquivo de compostos (opcional)',
+ 'ligand_selection': 'Triagem dos ligantes PDB',
+ 'excluded_pdb_ids': 'PDBs excluídos de novas recuperações',
  'mol_filename': 'Nome da tabela de compostos (sem .csv)', 'filename': 'Nome do arquivo',
  'metric': 'Métrica de similaridade', 'fingerprint': 'Tipo de fingerprint', 'radius': 'Raio',
  'morgan_n_bits': 'Número de bits Morgan', 'approximate': 'Busca aproximada (mais rápida)',
@@ -62,6 +64,7 @@ PATH_FIELDS = {'base_input_path','base_selected_mols','base_vina_path','base_doc
 from .retrieval import MODES
 
 ENUMS = {
+ 'ligand_selection':['recommended','all'],
  'docking_engines':['vina','dock6','both'],
  'reference_source':['compounds','manual'],'reference_type':['smiles','cid','name'],'selection_mode':['all','single'],
  'search_mode': list(MODES),
@@ -69,7 +72,7 @@ ENUMS = {
  'fingerprint': ['morgan','maccs','pharmacophore'], 'charge_type': ['gas','am1'], 'conformer_search_type': ['flex','rigid'],
 }
 ENUM_DEFAULTS = {'metric': 'Tanimoto', 'fingerprint': 'morgan'}
-CHOICE_LABELS={'docking_engines':{'vina':'Vina','dock6':'DOCK6','both':'Vina e DOCK6'},'reference_source':{'compounds':'Arquivos ou compostos de outros blocos','manual':'Informar minha referência'},
+CHOICE_LABELS={'ligand_selection':{'recommended':'Priorizar candidatos para redocking','all':'Manter todos os ligantes'},'docking_engines':{'vina':'Vina','dock6':'DOCK6','both':'Vina e DOCK6'},'reference_source':{'compounds':'Arquivos ou compostos de outros blocos','manual':'Informar minha referência'},
               'reference_type':{'smiles':'SMILES','cid':'CID PubChem','name':'Nome do composto'},
               'selection_mode':{'all':'Todos os compostos de entrada','single':'Um composto específico'}}
 PRESETS = {

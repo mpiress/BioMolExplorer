@@ -16,6 +16,9 @@ class GraphInputs:
     def __init__(self,store,project_id,pipeline,results):
         self.store,self.pid,self.results=store,project_id,results
         self.stages={s['id']:s for s in pipeline}
+        from .result_origins import ResultOrigins
+        self.origins=ResultOrigins([dict(s,artifacts=results.get(s['id'],[]),
+            batches=s.get('_execution_batches',[]),artifact_records=s.get('_execution_artifact_records',[])) for s in pipeline])
 
     def path(self,filename):
         path=Path(filename)
@@ -123,7 +126,7 @@ class GraphInputs:
                 validate_file(path,'similarity',validate_rows=False)
                 compounds=self.lineage(ref,str(path)) if 'stage' in ref else []
                 entries.append({'kind':'similarity','file':str(path),'compound_files':[str(p) for p in compounds or explicit],
-                    'label':producer.get('name','Arquivo próprio')+' · '+path.name,
+                    'label':self.origins.describe(path,producer.get('id'))['origin']+' · '+path.name,
                     'metric':producer.get('parameters',{}).get('metric','pronta'),
                     'fingerprint':filename_kind(path.name) or filename_kind(path.name.split('_',1)[-1]) or producer.get('parameters',{}).get('fingerprint','morgan')})
         if params.get('similarity_path'):

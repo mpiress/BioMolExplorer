@@ -15,8 +15,9 @@ from biomolexplorer.catalog import TITLES, PRESETS, new_stage, template_names
 from biomolexplorer.pipeline import PipelineService
 from biomolexplorer.templates import RESOURCE_ROOT
 from biomolexplorer.diagnostics import configure_logging, get_logger, diagnose_exception
-from biomolexplorer.visualizations import SUFFIX, MAX_VIEW_BYTES, load_view
+from biomolexplorer.visualizations import SUFFIX, MAX_VIEW_BYTES, MAX_GRAPH_BYTES, load_view
 from .branding import flag, wordmark, BRAND_BLUE, BRAND_NAVY
+from .removal import RemovalProgress
 from .feedback import readable_error,close_dialog
 from biomolexplorer.workspace import WorkspaceStore, AccessDenied, COLORS
 from .project_tools import ProjectTools
@@ -488,19 +489,21 @@ class WorkspaceUI(ProjectTools):
                 await self.call(self.store.delete_project,token,project_id,expected_directory=project['directory'])
                 if self.token != token:
                     return
-                self.page.pop_dialog()
+                close_dialog(self.page,dialog)
                 await self.show_workspace()
                 self.notify('Projeto e pasta removidos permanentemente.')
-            await self.guard(action)
-        self.page.show_dialog(ft.AlertDialog(modal=True,title=text('Excluir projeto?',24),
+            await progress.run(action)
+        dialog=ft.AlertDialog(modal=True,title=text('Excluir projeto?',24),
             content=ft.Container(width=460,content=ft.Column([
                 user_text(project['name'],18,weight=ft.FontWeight.W_600),
                 text('O projeto será excluído do workspace e sua pasta será removida permanentemente, incluindo entradas, resultados e histórico.'),
                 user_text(project['directory'],12),
                 text('Há uma execução ativa. Conclua ou cancele a execução antes de excluir o projeto.' if active else
                      'Esta ação é permanente e não pode ser desfeita.',12,'#B91C1C')],tight=True,spacing=18)),
-            actions=[ft.TextButton('Manter projeto',on_click=lambda e:self.page.pop_dialog()),
-                     button('Excluir projeto',remove,icon=ft.Icons.DELETE_OUTLINE,disabled=active)]))
+            actions=[ft.TextButton('Manter projeto',on_click=lambda e:close_dialog(self.page,dialog)),
+                     button('Excluir projeto',remove,icon=ft.Icons.DELETE_OUTLINE,disabled=active)])
+        progress=RemovalProgress(self,dialog)
+        self.page.show_dialog(dialog)
 
     async def draw_project(self):
         project = self.current
@@ -511,7 +514,8 @@ class WorkspaceUI(ProjectTools):
         fresh = await self.call(self.store.project,token,project['id'])
         if self.token != token or self.current is not project or self.tab != tab:
             return
-        if (not self.dirty and not getattr(self,'editing_stage',False)) or fresh['role'] == 'viewer':
+        current_response=fresh['revision']>=project['revision'] and fresh['updated']>=project['updated']
+        if current_response and ((not self.dirty and not getattr(self,'editing_stage',False)) or fresh['role'] == 'viewer'):
             project.update(fresh)
             self.base_pipeline=copy.deepcopy(fresh['pipeline'])
             self.dirty = False
@@ -707,7 +711,10 @@ class WorkspaceUI(ProjectTools):
             await self.guard(lambda:render_mode('visual')); self.page.update()
         async def advanced(e):
             await self.guard(lambda:render_mode('advanced')); self.page.update()
+        applied=False
         async def apply(e):
+            nonlocal applied
+            if applied or self.token!=token or self.current is not project:return
             await self.call(self.store.project,self.token,self.current['id'],'editor')
             updated=reader()
             if updated.get('provided_results'):
@@ -727,18 +734,23 @@ class WorkspaceUI(ProjectTools):
             validate_pipeline(candidate)
             if waiting_run_id:
                 resumed=await self.call(self.service.resume,token,waiting_run_id,updated)
+                applied=True
+                self.editing_stage=False
+                close_dialog(self.page,dialog)
+                self.current_run=resumed['id']
+                if getattr(self,'run_progress',None):self.run_progress.update(resumed)
             if hasattr(self,'flow_editor'):self.flow_editor.remember()
             self.current['pipeline']=candidate; self.dirty=True
             await self.save_draft(silent=True)
-            self.editing_stage=False
-            close_dialog(self.page,dialog)
+            applied=True
             if waiting_run_id:
-                self.current_run=resumed['id']
-                if getattr(self,'run_progress',None):self.run_progress.update(resumed)
                 self.tab='Execuções'
                 await self.draw_project()
                 if not self.polling or self.polling.done():self.polling=self.page.run_task(self.poll_runs)
-            elif hasattr(self,'flow_editor'):self.flow_editor.refresh()
+            else:
+                self.editing_stage=False
+                close_dialog(self.page,dialog)
+                if hasattr(self,'flow_editor'):self.flow_editor.refresh()
         await render_mode(mode)
         dialog=ft.AlertDialog(title=ft.Column([text(TITLES[original['operation']][2].upper(),11,TEAL,ft.FontWeight.W_600),stage_control(user_text(original['name'],24,weight=ft.FontWeight.W_700),original),text(TITLES[original['operation']][1],13,MUTED),ft.Row([
             ft.TextButton('Visual · formulário guiado',on_click=visual),ft.TextButton('Avançado · parâmetros e scripts',on_click=advanced)],wrap=True)],spacing=12),content=body,
@@ -749,8 +761,23 @@ class WorkspaceUI(ProjectTools):
         self.page.show_dialog(dialog)
 
     def event_action(self,handler):
+        running=False
         async def wrapped(e):
-            await self.guard(lambda:handler(e))
+            nonlocal running
+            if running:return
+            running=True
+            control=getattr(e,'control',None)
+            disabled=getattr(control,'disabled',False)
+            try:
+                if control is not None:
+                    control.disabled=True
+                    self.page.update()
+                await self.guard(lambda:handler(e))
+            finally:
+                running=False
+                if control is not None:
+                    control.disabled=disabled
+                    self.page.update()
         return wrapped
 
     def auto_bind(self,stage,previous):
@@ -834,12 +861,21 @@ class WorkspaceUI(ProjectTools):
         saved=await self.call(self.store.save_pipeline,token,project['id'],sent,project['revision'],base_pipeline=self.base_pipeline)
         if self.token != token or self.current is not project:
             return
-        self.base_pipeline=copy.deepcopy(saved['pipeline'])
+        previous_pipeline=project['pipeline']
         if project['pipeline']==sent:
-            self.current=saved;self.dirty=False
+            # Dialogs and scheduled work hold this project identity. Preserve
+            # unchanged stage objects too, so canvas gestures stay attached.
+            if saved['pipeline']==sent:
+                saved=dict(saved,pipeline=project['pipeline'])
+            project.update(saved);self.dirty=False
         else:
-            project['revision']=saved['revision'];project['updated']=saved['updated'];self.schedule_save()
-        if self.tab=='Pipeline' and hasattr(self,'flow_editor'):
+            from biomolexplorer.project_merge import merge_pipeline
+            pending=merge_pipeline(sent,project['pipeline'],saved['pipeline'])
+            project.update({key:value for key,value in saved.items() if key!='pipeline'})
+            if pending!=project['pipeline']:project['pipeline']=pending
+            self.schedule_save()
+        self.base_pipeline=copy.deepcopy(saved['pipeline'])
+        if self.tab=='Pipeline' and hasattr(self,'flow_editor') and project['pipeline'] is not previous_pipeline:
             self.flow_editor.refresh()
         if not silent:self.notify('Pipeline salvo.')
 
@@ -890,7 +926,8 @@ class WorkspaceUI(ProjectTools):
                 content=ft.Container(width=560,content=text(
                     'Este projeto já possui resultados salvos. Deseja reaproveitá-los? '
                     'Etapas compatíveis com arquivos íntegros serão consideradas concluídas. '
-                    'Etapas novas ou alteradas serão processadas normalmente.')),
+                    'No redocking, receptores e pares compatíveis de execuções concluídas serão reaproveitados; '
+                    'somente os pares novos ou alterados serão calculados e incorporados à tabela.')),
                 actions=[ft.TextButton('Cancelar',on_click=cancel),
                     button('Não, executar novamente',self.event_action(lambda e:choose(False))),
                     button('Sim, reaproveitar',self.event_action(lambda e:choose(True)),True)],on_dismiss=dismissed)
@@ -1024,6 +1061,7 @@ class WorkspaceUI(ProjectTools):
                     for index,path in enumerate(reports)]
                 stage_label='Reaproveitado' if stage.get('reused') else 'Resultados fornecidos' if stage.get('provided') else STATUS[stage['status']]
                 if stage.get('excluded_records'):stage_label+=f' · {stage["excluded_records"]} registros excluídos'
+                if stage.get('redocking_failures'):stage_label=self.tr(stage_label)+' · '+self.tr(f'{stage["redocking_failures"]} falhas na preparação de complexos')
                 from .run_presentation import STATES,state_icon
                 stage_details=[]
                 from biomolexplorer.preparation_failures import REPORT_NAME as PREPARATION_REPORT
@@ -1083,15 +1121,18 @@ class WorkspaceUI(ProjectTools):
     async def remove_stage_results(self,project_id,run_id,stage_id):
         from biomolexplorer.result_files import ResultFiles
         token=self.token
-        async def remove(e):
+        async def action():
             if self.token!=token:return
             await self.call(ResultFiles(self.store).remove_all,token,project_id,run_id,stage_id)
             close_dialog(self.page,dialog)
             if self.current and self.current['id']==project_id:await self.draw_project()
+        async def remove(e):
+            await progress.run(action)
         dialog=ft.AlertDialog(modal=True,title=text('Remover todos os resultados?',24),
             content=ft.Container(width=520,content=text('Os arquivos desta etapa serão removidos, incluindo referências reaproveitadas em outras execuções. O registro da execução e o log serão preservados. Você poderá restaurar os arquivos pelo histórico.')),
             actions=[ft.TextButton('Cancelar',on_click=lambda e:close_dialog(self.page,dialog)),
-                button('Remover resultados',self.event_action(remove),icon=ft.Icons.DELETE_OUTLINE)])
+                button('Remover resultados',remove,icon=ft.Icons.DELETE_OUTLINE)])
+        progress=RemovalProgress(self,dialog)
         self.page.show_dialog(dialog)
 
     async def open_preparation_failures(self,project_id,run_id,stage_id,path):
@@ -1177,17 +1218,18 @@ class WorkspaceUI(ProjectTools):
             if self.token!=token or not self.current or self.current['id']!=project_id:return
             await ft.UrlLauncher().launch_url(url,mode=ft.LaunchMode.EXTERNAL_APPLICATION,web_only_window_name='_blank')
             return
-        data=await self.call(self.store.read_file,token,project_id,path,MAX_VIEW_BYTES+1)
+        limit=MAX_GRAPH_BYTES if str(path).endswith(SUFFIX) else MAX_VIEW_BYTES
+        data=await self.call(self.store.read_file,token,project_id,path,limit+1)
         if self.token != token or not self.current or self.current['id'] != project_id:
             return
-        if len(data)>MAX_VIEW_BYTES:
-            raise ValueError('Visualização maior que o limite de 32 MB. Baixe o arquivo para consultá-lo localmente.')
+        if len(data)>limit:
+            raise ValueError(f'Visualização maior que o limite de {limit//(1024*1024)} MB. Baixe o arquivo para consultá-lo localmente.')
         width=max(320,min(1160,(self.page.width or 1440)-100))
         height=max(300,min(690,(self.page.height or 1000)-220))
         result=None
         if str(path).endswith(SUFFIX):
             from .results_viewer import ResultsViewer
-            model=await self.call(load_view,data)
+            model=await self.call(load_view,data,max_bytes=limit)
             if self.token != token or not self.current or self.current['id'] != project_id:
                 return
             # Raw uploaded JSON cannot assert a trusted run/artifact context.
@@ -1291,7 +1333,7 @@ class WorkspaceUI(ProjectTools):
             self.editing_stage=False
             close_dialog(self.page,dialog)
         async def apply(e):
-            if self.token!=token or self.current is not project:return
+            if inactive or self.token!=token or self.current is not project:return
             updated=form.read()
             if updated['operation']=='redocking':
                 dismiss()
@@ -1316,6 +1358,7 @@ class WorkspaceUI(ProjectTools):
             drafts.pop(key,None)
             await self.draw_project()
         async def configure(e):
+            if inactive:return
             updated=form.read(require_selection=False)
             dismiss()
             await self.open_stage_dialog(pending['id'],waiting_run_id=run_id,configuration=updated)
@@ -1366,6 +1409,8 @@ class WorkspaceUI(ProjectTools):
                         self.auto_selection_key=key
                 previous = snapshot
                 if self.token == token and self.current_run == run_id and run['status'] not in ('queued','running','awaiting_input'):
+                    failures=sum(s.get('redocking_failures',0) for s in run['stages'])
+                    if failures:self.notify(f'Redocking: {failures} complexos ignorados por falha na preparação. Consulte os resultados destacados.')
                     self.current_run=None
             except Exception as exc:
                 if self.token != token or self.current_run != run_id:

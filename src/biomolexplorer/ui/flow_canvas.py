@@ -20,6 +20,8 @@ class FlowCanvas:
         self.ui,self.writable=ui,writable
         self.history=[]; self.future=[]; self.pending=None
         self.output_draggables={}; self.active_drag=None
+        self.edges=canvas.Canvas(shapes=[])
+        self.nodes={}
         self.stack=ft.Stack(width=flow.CANVAS_WIDTH,height=flow.CANVAS_HEIGHT)
         self.viewer=zoomable_view(content=ft.DragTarget(group='stage-library',content=self.stack,on_accept=self.drop),
             constrained=False,alignment=ft.Alignment.TOP_LEFT,expand=True)
@@ -54,17 +56,19 @@ class FlowCanvas:
     def changed(self):
         self.ui.dirty=True; self.refresh()
         if hasattr(self.ui,'schedule_save'):self.ui.schedule_save()
-    def refresh(self,update=True,nodes=True):
+    def refresh(self,update=True,nodes=True,moved_node=None):
         width=min(flow.CANVAS_WIDTH,max(4000,max((flow.position(s,i)['x']+flow.NODE_WIDTH+400 for i,s in enumerate(self.stages)),default=0)))
         height=max(2800,max((flow.position(s,i)['y']+flow.node_height(s)+120 for i,s in enumerate(self.stages)),default=0))
         self.stack.height=height;self.stack.width=width
-        if not hasattr(self,'grid') or self.grid.height!=height or self.grid.width!=width:
+        resized=not hasattr(self,'grid') or self.grid.height!=height or self.grid.width!=width
+        if resized:
             grid=[]
             for x in range(0,int(width),40): grid.append(canvas.Line(x,0,x,height,paint=ft.Paint(color='#E8EDF5',stroke_width=1)))
             for y in range(0,int(height),40): grid.append(canvas.Line(0,y,width,y,paint=ft.Paint(color='#E8EDF5',stroke_width=1)))
             self.grid=canvas.Canvas(shapes=grid,width=width,height=height)
         shapes=[]
         by_id={s['id']:s for s in self.stages}
+        positions={s['id']:flow.position(s,i) for i,s in enumerate(self.stages)}
         self.output_draggables={key:control for key,control in self.output_draggables.items() if key in by_id}
         for index,target in enumerate(self.stages):
             pos=flow.position(target,index)
@@ -73,17 +77,30 @@ class FlowCanvas:
               for reference in sources(group) if group else []:
                 source=by_id.get(reference.get('stage'))
                 if not source: continue
-                start=flow.position(source,self.stages.index(source)); x=start['x']+flow.NODE_WIDTH-30; y=start['y']+83
+                start=positions[source['id']]; x=start['x']+flow.NODE_WIDTH-30; y=start['y']+83
                 endx=pos['x']+28; endy=pos['y']+117+j*34
                 shapes.append(canvas.Path([canvas.Path.MoveTo(x,y),canvas.Path.CubicTo(x+100,y,endx-100,endy,endx,endy)],
                     paint=ft.Paint(color=COLORS[TITLES[source['operation']][2]],stroke_width=3,style=ft.PaintingStyle.STROKE)))
-        self.stack.controls=[self.grid,canvas.Canvas(shapes=shapes,width=width,height=height)]+([self.node(s,i) for i,s in enumerate(self.stages)] if nodes else self.stack.controls[2:])
-        self.selection.options=[stage_control(ft.DropdownOption(key=s['id'],text=s['name']),s,'text') for s in self.stages]
-        self.selection.value=self.ui.selected if self.ui.selected in by_id else None
-        if update: self.ui.page.update()
+        self.edges.shapes=shapes;self.edges.width=width;self.edges.height=height
+        if nodes:
+            self.nodes={s['id']:self.node(s,i) for i,s in enumerate(self.stages)}
+            self.selection.options=[stage_control(ft.DropdownOption(key=s['id'],text=s['name']),s,'text') for s in self.stages]
+            self.selection.value=self.ui.selected if self.ui.selected in by_id else None
+        if nodes or resized:self.stack.controls=[self.grid,self.edges,*self.nodes.values()]
+        if update:
+            if moved_node is not None and not resized:self.ui.page.update(moved_node,self.edges)
+            else:self.ui.page.update()
+
+    def select_stage(self,stage_id):
+        self.ui.selected=stage_id
+        self.selection.value=stage_id
+        for stage in self.stages:
+            color=COLORS[TITLES[stage['operation']][2]]
+            self.nodes[stage['id']].border=ft.Border.all(2,color if stage['id']==stage_id else '#DDE5F0')
+        self.ui.page.update()
     def node(self,stage,index):
         color=COLORS[TITLES[stage['operation']][2]]; pos=flow.position(stage,index)
-        async def select(e): self.ui.selected=stage['id']; self.refresh()
+        async def select(e): self.select_stage(stage['id'])
         async def configure(e): await self.ui.guard(lambda:self.ui.open_stage_dialog(stage['id']))
         async def results(e): await self.ui.guard(lambda:self.ui.open_stage_results(stage['id']))
         async def information(e): self.show_information(stage)
@@ -93,7 +110,7 @@ class FlowCanvas:
             if not self.writable or e.local_delta is None: return
             stage['position']=flow.bounded_position(pos['x']+e.local_delta.x,pos['y']+e.local_delta.y,stage)
             pos.update(stage['position']); self.ui.dirty=True
-            node.left=pos['x']; node.top=pos['y']; self.refresh(nodes=False)
+            node.left=pos['x']; node.top=pos['y']; self.refresh(nodes=False,moved_node=node)
         async def output(e):
             if self.writable:
                 self.pending=stage['id']; self.status.value='Escolha uma entrada compatível para '+stage['name']; self.ui.page.update()
@@ -109,6 +126,7 @@ class FlowCanvas:
         def moved(e):
             if self.writable and hasattr(self.ui,'schedule_save'):self.ui.schedule_save()
         header=ft.GestureDetector(on_tap=select,on_double_tap=configure,on_pan_start=begin,on_pan_update=move,on_pan_end=moved,
+            drag_interval=32,
             mouse_cursor=ft.MouseCursor.MOVE,content=ft.Container(width=flow.NODE_WIDTH-4,height=64,padding=12,bgcolor=color,border_radius=ft.BorderRadius.only(top_left=14,top_right=14),
             content=ft.Column([ft.Text(TITLES[stage['operation']][2].upper(),size=10,color='#FFFFFF'),stage_control(ft.Text(stage['name'],size=14,color='#FFFFFF',weight=ft.FontWeight.W_600,max_lines=1,overflow=ft.TextOverflow.ELLIPSIS),stage)],spacing=4)))
         rows=[ft.Row([ft.Text('Saída',size=12,color=color,expand=True),out],spacing=0,height=34)]
@@ -141,7 +159,7 @@ class FlowCanvas:
             content=ft.Column([header,ft.Container(ft.Column(rows,spacing=0),padding=ft.Padding.symmetric(horizontal=8))],spacing=0))
         return node
     async def select_from_menu(self,e):
-        self.ui.selected=self.selection.value; self.refresh()
+        self.select_stage(self.selection.value)
     async def configure_selected(self,e):
         if self.ui.selected: await self.ui.guard(lambda:self.ui.open_stage_dialog(self.ui.selected))
         else: self.ui.notify('Selecione um bloco para configurar.')
@@ -204,6 +222,17 @@ class FlowCanvas:
     async def zoom_in(self,e): await self.viewer.zoom(1.2)
     async def zoom_out(self,e): await self.viewer.zoom(.8)
     async def reset(self,e): await self.viewer.reset()
+    async def export_png(self,e):
+        from .pipeline_png import render_pipeline
+        project=self.ui.current;token=self.ui.token
+        stages=copy.deepcopy(self.stages)
+        async def action():
+            data=await self.ui.call(render_pipeline,stages,self.ui.tr)
+            current=self.ui.current
+            same_project=current and (current.get('id')==project['id'] if project.get('id') else current is project)
+            if self.ui.token==token and same_project:
+                await self.ui.picker.save_file(file_name='pipeline.png',src_bytes=data)
+        await self.ui.guard(action)
     def build(self,include_library=True):
         if not hasattr(self.ui,'sidebar_expanded'):self.ui.sidebar_expanded={}
         palette=[]; items=[]; sections=[]
@@ -251,7 +280,8 @@ class FlowCanvas:
             (ft.Icons.UNDO,'Desfazer',self.undo,not self.writable),(ft.Icons.REDO,'Refazer',self.redo,not self.writable),
             (ft.Icons.CONTENT_COPY,'Duplicar bloco',self.duplicate,not self.writable),(ft.Icons.DELETE_OUTLINE,'Excluir bloco',self.delete,not self.writable),
             (ft.Icons.AUTO_FIX_HIGH,'Organizar blocos',self.arrange,not self.writable),(ft.Icons.ZOOM_IN,'Ampliar',self.zoom_in,False),
-            (ft.Icons.ZOOM_OUT,'Reduzir',self.zoom_out,False),(ft.Icons.CENTER_FOCUS_STRONG,'Redefinir visão',self.reset,False)]],spacing=0)
+            (ft.Icons.ZOOM_OUT,'Reduzir',self.zoom_out,False),(ft.Icons.CENTER_FOCUS_STRONG,'Redefinir visão',self.reset,False),
+            (ft.Icons.PHOTO_CAMERA_OUTLINED,'Exportar pipeline completo como PNG',self.export_png,False)]],spacing=0)
         from .action_help import show_action_help
         bar.controls.append(icon_button(icon=ft.Icons.INFO_OUTLINE,tooltip='Controles do canvas',
             on_click=lambda e:show_action_help(self.ui,'canvas')))

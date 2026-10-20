@@ -1,3 +1,4 @@
+from biomolexplorer.molecular_parsing import mol_from_smiles
 from kernel.header_builder import HeaderBuilder
 
 __doc__ = HeaderBuilder.build(
@@ -64,7 +65,7 @@ class Molecule(MyFilters):
 
         try:
 
-            molecules  = [Chem.MolFromSmiles(s) for s in smiles]
+            molecules  = [mol_from_smiles(s) for s in smiles]
             molecules = [smi for smi, mol in zip(smiles, molecules)
                          if mol is not None and len(Chem.GetMolFrags(mol)) == 1]
             return molecules

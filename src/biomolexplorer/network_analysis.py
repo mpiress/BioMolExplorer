@@ -16,6 +16,9 @@ METRICS={
     'closeness':'Closeness · proximidade topológica, com correção de Wasserman–Faust para componentes desconectados.',
     'eigenvector':'Eigenvector · conexões a nós centrais; disponível apenas em universo conectado.',
     'pagerank':'PageRank · importância topológica com amortecimento 0,85; sem pesos de escore.',
+    'core':'K-core · maior núcleo de grau mínimo k ao qual o composto pertence.',
+    'clustering':'Clustering · fração de conexões possíveis entre os vizinhos.',
+    'triangles':'Triangles · número de triângulos que contêm o composto.',
 }
 PALETTE=['#2563EB','#D97706','#0D9488','#7C3AED','#DB2777','#475569','#65A30D','#0891B2']
 
@@ -45,26 +48,28 @@ class NetworkAnalysis:
         if not n:values={}
         elif metric=='degree':values=dict(graph.degree())
         elif metric=='density':values=nx.degree_centrality(graph) if n>1 else {next(iter(graph)):0.0}
+        elif metric=='core':
+            simple=graph.copy();simple.remove_edges_from(nx.selfloop_edges(simple))
+            values=nx.core_number(simple)
+        elif metric in ('clustering','triangles'):
+            from .network_centrality import triangles
+            values,notice=triangles(graph)
+            if metric=='clustering' and values:
+                values={node:2*value/(degree*(degree-1)) if (degree:=len(set(graph[node])-{node}))>1 else 0. for node,value in values.items()}
         elif metric=='betweenness':
-            if n>5000 or m>50000:values={};notice='Betweenness indisponível acima de 5.000 nós ou 50.000 arestas.'
-            else:
-                k=None if n<=400 else min(64,n)
-                values=nx.betweenness_centrality(graph,k=k,seed=42,weight=None)
-                if k:notice=f'Betweenness aproximada: {k} pivôs, semente 42.'
+            from .network_centrality import betweenness
+            values,notice=betweenness(graph,list(nx.connected_components(graph)))
         elif metric=='closeness':
-            if n>1500 or m>20000:values={};notice='Closeness indisponível acima de 1.500 nós ou 20.000 arestas.'
-            else:values=nx.closeness_centrality(graph,wf_improved=True)
+            from .network_centrality import closeness
+            values,notice=closeness(graph,list(nx.connected_components(graph)))
         elif metric=='eigenvector':
-            if not nx.is_connected(graph):values={};notice='Eigenvector exige um universo conectado; escolha LCC.'
-            elif m>50000:values={};notice='Eigenvector indisponível acima de 50.000 arestas.'
-            else:
-                try:values=nx.eigenvector_centrality(graph,max_iter=300,weight=None)
-                except nx.PowerIterationFailedConvergence:values={};notice='Eigenvector não convergiu em 300 iterações.'
+            from .network_centrality import eigenvector
+            values,notice=eigenvector(graph)
         elif metric=='pagerank':
-            if m>50000 or n>20000:values={};notice='PageRank indisponível acima de 20.000 nós ou 50.000 arestas.'
-            else:
-                try:values=nx.pagerank(graph,alpha=.85,weight=None,max_iter=200)
-                except nx.PowerIterationFailedConvergence:values={};notice='PageRank não convergiu em 200 iterações.'
+            try:
+                values=nx.pagerank(graph,alpha=.85,weight=None,max_iter=1000,tol=1e-8)
+                notice='PageRank · solver esparso · amortecimento 0,85 · tolerância 1e-8.'
+            except nx.PowerIterationFailedConvergence:values={};notice='PageRank não convergiu em 1.000 iterações; selecione um componente menor.'
         else:raise ValueError('Métrica topológica desconhecida.')
         self.cache[key]=(values,notice)
         return values,notice
@@ -72,8 +77,8 @@ class NetworkAnalysis:
     def communities(self,mode):
         if mode in self.community_cache:return self.community_cache[mode]
         graph=self.universe(mode)
-        if len(graph)>10000 or graph.number_of_edges()>50000:
-            result=({},None,'Comunidades indisponíveis acima de 10.000 nós ou 50.000 arestas.')
+        if len(graph)>100000 or graph.number_of_edges()>500000:
+            result=({},None,'Comunidades indisponíveis acima de 100.000 nós ou 500.000 arestas.')
         else:
             groups=nx.community.louvain_communities(graph,weight=None,seed=42) if graph.number_of_edges() else [{n} for n in graph]
             groups=sorted(groups,key=lambda c:(-len(c),min(c)))
@@ -94,6 +99,18 @@ class NetworkAnalysis:
             degrees=dict(sorted(Counter(dict(graph.degree()).values()).items())),
             component_sizes=dict(sorted(Counter(map(len,groups)).items())))
         result['clustering_calculated']=calculate
+        result.update(diameter_lcc=None,mean_path_lcc=None,assortativity=None)
+        if calculate and n:
+            if len(self.lcc)<=1500 and self.graph.subgraph(self.lcc).number_of_edges()<=20000:
+                lcc=graph.subgraph(self.lcc)
+                if len(lcc):
+                    diameter=total=pairs=0
+                    for _,lengths in nx.all_pairs_shortest_path_length(lcc):
+                        diameter=max(diameter,max(lengths.values(),default=0))
+                        total+=sum(lengths.values());pairs+=len(lengths)-1
+                    result.update(diameter_lcc=diameter,mean_path_lcc=total/pairs if pairs else 0.)
+            if m and len({d for _,d in graph.degree() if d})>1:
+                result['assortativity']=float(nx.degree_assortativity_coefficient(graph,weight=None))
         self.statistics_cache[mode]=result
         return result
 
@@ -127,7 +144,16 @@ class NetworkAnalysis:
         if kind=='force' and (n>1500 or graph.number_of_edges()>20000):
             return None,'Force-directed indisponível acima de 1.500 nós ou 20.000 arestas.'
         if not n:positions={}
+        elif kind in ('fr_components','fa2','fa2_linlog'):
+            from .graph_layouts import packed_force
+            positions,notice=packed_force(graph,kind)
         elif kind=='circular':positions=nx.circular_layout(graph)
+        elif kind=='random':
+            from .visualizations import _separate_positions
+            positions=_separate_positions({k:(float(p[0])*math.sqrt(n)*2,float(p[1])*math.sqrt(n)*2) for k,p in nx.random_layout(graph,seed=42).items()},graph)
+        elif kind=='radial':
+            from .visualizations import separated_graph_layout
+            positions=separated_graph_layout(graph,circular=True)
         elif kind=='force':positions=nx.spring_layout(graph,seed=42,weight=None,iterations=60)
         elif kind=='kamada':positions=nx.kamada_kawai_layout(graph,weight=None)
         elif kind=='hierarchical':
@@ -175,9 +201,9 @@ class NetworkAnalysis:
                 aggregate[left][right]['count']+=1
         return aggregate,notice
 
-    def export_csv(self,mode,metric):
+    def export_csv(self,mode,metric,scope=None):
         values,notice=self.metrics(mode,metric);mapping=self.community_cache.get(mode,({},None,''))[0]
         stream=io.StringIO();writer=csv.writer(stream)
         writer.writerow(['compound_id','universe','metric','value','community','method_notice'])
-        for node in sorted(self.universe(mode)):writer.writerow([node,mode,metric,values.get(node,''),mapping.get(node,''),METRICS[metric]+' '+notice])
+        for node in sorted(self.universe(mode)):writer.writerow([node,scope or mode,metric,values.get(node,''),mapping.get(node,''),METRICS[metric]+' '+notice])
         return stream.getvalue().encode('utf-8')

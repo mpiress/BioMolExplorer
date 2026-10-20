@@ -150,9 +150,13 @@ class ProjectTools:
     def schedule_save(self):
         task=getattr(self,'_save_task',None)
         if task and not task.done():task.cancel()
+        token,project=self.token,self.current
         async def deferred():
             await asyncio.sleep(.6)
-            if self.current and self.dirty and not getattr(self,'editing_stage',False):
+            # Only the debounce timer may be cancelled. Cancelling to_thread
+            # cannot stop its database write and would lose the returned revision.
+            self._save_task=None
+            if self.token==token and self.current is project and self.dirty and not getattr(self,'editing_stage',False):
                 await self.guard(lambda:self.save_draft(silent=True))
         self._save_task=self.page.run_task(deferred)
 
@@ -160,6 +164,7 @@ class ProjectTools:
         token=self.token
         while self.token==token and self.current and self.current['id']==project_id:
             await asyncio.sleep(2)
+            if self.token!=token or not self.current or self.current['id']!=project_id:return
             try:
                 fresh=await self.call(self.store.project,token,project_id)
             except Exception:
@@ -167,6 +172,7 @@ class ProjectTools:
             if self.token!=token or not self.current or self.current['id']!=project_id:return
             if fresh['role']!=self.current['role']:
                 self.close_project_views();await self.open_project(project_id);return
-            if not self.dirty and not getattr(self,'editing_stage',False) and fresh['updated']!=self.current['updated']:
+            if (not self.dirty and not getattr(self,'editing_stage',False)
+                    and fresh['revision']>=self.current['revision'] and fresh['updated']>self.current['updated']):
                 self.current.update(fresh);self.base_pipeline=copy.deepcopy(fresh['pipeline'])
                 await self.draw_project()

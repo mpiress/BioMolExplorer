@@ -1,4 +1,5 @@
 """Compound identities, pose-preserving preparation and interoperable scores."""
+from biomolexplorer.molecular_parsing import mol_from_smiles
 import csv
 import json
 import math
@@ -316,7 +317,7 @@ def consensus_rows(vina, dock6, weight=1.):
         a,b=first[key],second[key]
         if a['canonical_smiles'] and b['canonical_smiles']:
             from rdkit import Chem
-            if Chem.MolToSmiles(Chem.MolFromSmiles(a['canonical_smiles']))!=Chem.MolToSmiles(Chem.MolFromSmiles(b['canonical_smiles'])):
+            if Chem.MolToSmiles(mol_from_smiles(a['canonical_smiles']))!=Chem.MolToSmiles(mol_from_smiles(b['canonical_smiles'])):
                 raise ValueError('O mesmo código molecular identifica estruturas diferentes: '+key[1])
         rows.append(dict(molecule_chembl_id=key[1],molecule=key[1],canonical_smiles=a['canonical_smiles'] or b['canonical_smiles'],
                          receptor_id=key[0],vina=a['score'],dock6=b['score']))

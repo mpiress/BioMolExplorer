@@ -70,10 +70,10 @@ class NetworkAnalysisTests(unittest.TestCase):
 
     def test_cost_limits_and_empty_legacy_results_are_explicit(self):
         analysis=NetworkAnalysis(model(nx.path_graph(1501)))
-        self.assertFalse(analysis.metrics('full','closeness')[0])
-        self.assertIn('indisponível',analysis.metrics('full','closeness')[1])
+        self.assertEqual(len(analysis.metrics('full','closeness')[0]),1501)
+        self.assertIn('exata',analysis.metrics('full','closeness')[1])
         self.assertIsNone(analysis.layout('full','force')[0])
-        self.assertIn('aproximada',analysis.metrics('full','betweenness')[1])
+        self.assertIn('exata',analysis.metrics('full','betweenness')[1])
         empty=NetworkAnalysis(model(nx.Graph()))
         self.assertEqual(empty.communities('full')[0],{})
         self.assertEqual(empty.statistics('full')['nodes'],0)
@@ -87,22 +87,23 @@ class AnalyticalViewerTests(unittest.TestCase):
         more=next(c for c in view.details.controls if isinstance(c,ft.TextButton) and str(c.content).startswith('Carregar mais'))
         asyncio.run(more.on_click(None));self.assertEqual(len(relations()),80);self.assertTrue(more.disabled)
 
-    def test_dense_ego_falls_back_to_explicit_compound_focus(self):
+    def test_dense_network_retains_search_selection_and_neighbor_navigation(self):
         with patch('biomolexplorer.ui.results_viewer.separated_graph_layout',return_value={str(i):(i,0) for i in range(3102)}):
             view=self.viewer(nx.star_graph(3101))
         view.search.value='0';asyncio.run(view.find(None))
-        self.assertEqual(set(view.points),{'0'});self.assertTrue(view.explorer.focus_only.value)
+        self.assertEqual(len(view.points),3102);self.assertFalse(view.explorer.focus_only.value)
+        self.assertTrue(view.raster.visible)
         asyncio.run(view.follow_relation('1'));self.assertEqual(view.selected,'1')
-        self.assertEqual(set(view.points),{'0','1'})
+        self.assertEqual(len(view.points),3102)
 
-    def test_search_uses_explicit_ego_when_full_graph_exceeds_render_budget(self):
+    def test_search_preserves_full_network_above_vector_render_budget(self):
         with patch('biomolexplorer.ui.results_viewer.separated_graph_layout',return_value={str(i):(i,0) for i in range(3001)}):
             view=self.viewer(nx.path_graph(3001))
         view.search.value='1500';asyncio.run(view.find(None))
         self.assertEqual(view.selected,'1500')
-        self.assertEqual(set(view.points),{'1499','1500','1501'})
-        self.assertEqual(view.explorer.ego,'1500')
-        self.assertTrue(self.ui.notify.called)
+        self.assertEqual(len(view.points),3001)
+        self.assertIsNone(view.explorer.ego)
+        self.assertTrue(view.raster.visible)
     def test_long_hierarchy_has_bounded_canvas_without_omitting_nodes(self):
         with patch('biomolexplorer.ui.results_viewer.separated_graph_layout',return_value={str(i):(i,0) for i in range(1000)}):
             view=self.viewer(nx.path_graph(1000))
@@ -145,11 +146,31 @@ class AnalyticalViewerTests(unittest.TestCase):
         view.explorer.aggregate_choice.value=False;asyncio.run(view.explorer.change())
         asyncio.run(view.explorer.reset_filters());self.assertEqual(len(view.points),6)
 
-    def test_large_network_does_not_render_or_sample_silently(self):
+    def test_large_network_opens_full_molecular_view_without_sampling(self):
         with patch('biomolexplorer.ui.results_viewer.separated_graph_layout',return_value={str(i):(i,0) for i in range(3001)}):
             view=self.viewer(nx.path_graph(3001))
-        self.assertEqual(len(view.points),0)
-        self.assertIn('Nenhum nó foi amostrado',view.explorer.render_notice)
+        self.assertEqual(len(view.points),3001)
+        self.assertEqual(view.mode,'full')
+        self.assertEqual(view.mode_choice.value,'full')
+        self.assertFalse(view.component_choice.disabled)
+        self.assertFalse(view.explorer.aggregate_mode)
+        self.assertTrue(view.raster.visible)
+        self.assertTrue(view.raster.src.startswith(b'\x89PNG'))
+        self.assertLess(len(view.drawing.shapes),100)
+        self.assertEqual(len(view.data['nodes']),3001)
+        self.assertIn('clique',view.explorer.notice.value)
         view.selected='1500';asyncio.run(view.explorer.ego_selected())
         self.assertEqual(set(view.points),{'1499','1500','1501'})
+
+    def test_large_disconnected_network_keeps_full_and_mcc_available(self):
+        graph=nx.disjoint_union(nx.path_graph(4),nx.empty_graph(3000))
+        with patch('biomolexplorer.ui.results_viewer.separated_graph_layout',return_value={str(i):(i,0) for i in range(len(graph))}):
+            view=self.viewer(graph)
+        self.assertEqual(view.mode,'full')
+        self.assertFalse(view.explorer.aggregate_mode)
+        self.assertEqual(len(view.points),3004)
+        asyncio.run(view.change_mode(SimpleNamespace(control=SimpleNamespace(value='mcc'))))
+        self.assertEqual(set(view.points),{'0','1','2','3'})
+        self.assertFalse(view.raster.visible)
+        self.assertEqual(len(view.analysis.graph),3004)
 

@@ -77,7 +77,7 @@ class FlexibleRetrievalTests(unittest.TestCase):
                 return SimpleNamespace(text=ATOM+LIGAND+'END\n',raise_for_status=lambda:None)
             session.get.side_effect=response
             with patch('requests.Session',return_value=session):
-                report=crawler.get_pdb_files({'pdb_ids':['1CRN','4HHB']})
+                report=crawler.get_pdb_files({'pdb_ids':['1CRN','4HHB'],'ligand_selection':'all'})
             self.assertEqual([r['status'] for r in report['downloads']],['downloaded','failed'])
             self.assertTrue((Path(folder)/'1CRN.pdb').is_file())
             rows=pd.read_csv(Path(folder)/'pdb_codes.csv')

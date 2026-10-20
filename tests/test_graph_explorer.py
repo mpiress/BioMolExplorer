@@ -334,12 +334,13 @@ class GraphProvenanceTests(unittest.TestCase):
         async def reset():return None
         viewer.viewer.reset=reset
         asyncio.run(viewer.change_mode(SimpleNamespace(control=SimpleNamespace(value='mcc'))))
-        self.assertEqual(set(viewer.points),{'A','B'});self.assertTrue(viewer.fragment_panel.visible)
-        self.assertTrue(any(isinstance(c,ft.Image) for c in viewer.fragment_panel.controls))
+        self.assertEqual(set(viewer.points),{'A','B'});self.assertFalse(viewer.fragment_panel.visible)
+        self.assertEqual(viewer.explorer.inspector.result['ids'],['A','B'])
+        self.assertTrue(viewer.explorer.inspector.result['image'])
         x,y=viewer.points['A'];viewer.hover(SimpleNamespace(local_position=SimpleNamespace(x=x,y=y)))
         self.assertTrue(viewer.tip_text.value.startswith('A\n'));asyncio.run(viewer.select('A'))
         self.assertFalse(ui.dialogs);asyncio.run(viewer.explorer.inspector.details())
-        self.assertIn('molécula 2D',ui.dialogs[-1].title.value)
+        self.assertEqual(ui.dialogs[-1].title.controls[1].controls[0].value,'A')
         asyncio.run(viewer.actions[1].on_click(None));self.assertTrue(ui.saved[-1]['file_name'].endswith('_mcc.csv'))
         results.dataset.value=results.dataset.options[1].key
         asyncio.run(results.change_graph(None));self.assertFalse(viewer.active)

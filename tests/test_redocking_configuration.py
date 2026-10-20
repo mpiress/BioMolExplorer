@@ -45,6 +45,46 @@ class RedockingConfigurationTests(unittest.TestCase):
         self.assertEqual(config['cofactors'], ['FAD', 'MG'])
         self.assertEqual(GuidedForm(self.ui([result]), result, [], True).read(), result)
 
+    def test_select_all_preserves_existing_settings_and_avoids_duplicates(self):
+        source,stage=new_stage('retrieve_structures'),new_stage('redocking')
+        stage['bindings']['base_input_path']={'stage':source['id']}
+        records=[['1ABC','LIG',12,'A',1.7],['1ABC','ATP',13,'A',1.7],['2XYZ','DRG',1,'B',2.0]]
+        stage['parameters']['pdb_codes']=records[:1]
+        ui=self.ui([source,stage],{'stage:'+source['id']:records})
+        ui.page.update=MagicMock()
+        form=GuidedForm(ui,stage,[],True);pairs=form.redocking_pairs
+        original=pairs.rows[0]
+        original[2][0].value=True;original[2][1].value='FAD'
+        original[3]['receptor']['charge_type'].value='am1'
+        original[3]['ligand']['minimize'].value=False
+        ui.page.update.reset_mock()
+        pairs.select_all_button.on_click(None)
+        ui.page.update.assert_called_once()
+        pairs.select_all_button.on_click(None)
+        self.assertEqual(len(pairs.rows),3)
+        self.assertIs(pairs.rows[0],original)
+        result=form.read()['parameters']
+        self.assertEqual(result['pdb_codes'],records)
+        settings=result['preparation_pairs']
+        self.assertFalse(settings[pair_key(records[0])]['ligand']['minimize'])
+        self.assertEqual(settings[pair_key(records[1])]['receptor']['charge_type'],'am1')
+        self.assertEqual(settings[pair_key(records[1])]['cofactors'],['FAD'])
+
+    def test_select_all_respects_structure_filter_empty_inputs_and_viewer_access(self):
+        source,stage=new_stage('retrieve_structures'),new_stage('redocking')
+        stage['bindings']['base_input_path']={'stage':source['id'],'selector':'1ABC.pdb'}
+        records=[['1ABC','LIG',12,'A',1.7],['2XYZ','DRG',1,'B',2.0]]
+        ui=self.ui([source,stage],{'stage:'+source['id']:records})
+        form=GuidedForm(ui,stage,[],True)
+        form.redocking_pairs.choose_all(None)
+        self.assertEqual(form.read()['parameters']['pdb_codes'],records[:1])
+        viewer=GuidedForm(ui,stage,[],False).redocking_pairs
+        self.assertTrue(viewer.select_all_button.disabled)
+        viewer.choose_all(None)
+        self.assertEqual(viewer.rows,[])
+        empty=GuidedForm(self.ui([stage]),stage,[],True).redocking_pairs
+        self.assertTrue(empty.select_all_button.disabled)
+
     def test_cofactor_codes_and_conflicting_receptors_are_rejected(self):
         records = [['1ABC','LIG',12,'A'], ['1ABC','ATP',13,'A']]
         with self.assertRaisesRegex(ValueError, 'mesmos cofatores'):

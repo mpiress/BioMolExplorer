@@ -41,6 +41,11 @@ class GuidedForm:
         self.title=ft.TextField(label='Nome do bloco',value=TITLES['prepare_structures'][0] if stage['operation']=='prepare_structures' and stage['name'] in ('Preparar meus complexos','Prepare my complexes') else stage['name'],disabled=not writable,data='wide')
         self.enabled=ft.Switch(label='Incluir este bloco na execução',value=stage.get('enabled',True),disabled=not writable)
         self.controls=[self.title,self.enabled]
+        if stage['operation'] in ('similarity','graphs'):
+            self.follow_inputs=ft.Switch(label='Acompanhar novos conjuntos da origem',
+                value=stage.get('follow_inputs',True),disabled=not writable)
+            self.controls.extend([self.follow_inputs,ft.Text(
+                'Inclui as novas saídas compatíveis dos blocos conectados. Desative para executar somente os arquivos selecionados.',size=12)])
         if stage['operation'] not in ('import_results','consensus'):
             self.processing=ft.Dropdown(label='Como processar os arquivos selecionados?',
                 value=stage.get('input_processing','individual'),disabled=not writable,options=[
@@ -53,6 +58,7 @@ class GuidedForm:
                 size=13,color='#64748B'))
         if stage['operation']=='retrieve_structures':
             self.controls.append(ft.Text('Escolha texto, IDs PDB, UniProt, EC ou filtros. Campos preenchidos são combinados; o nome da coleção só organiza a saída.',size=13))
+            self.controls.append(ft.Text('A triagem prioriza moléculas orgânicas em contato com a proteína e sítios anotados. Solventes, íons e cópias equivalentes ficam fora da seleção recomendada. Contato geométrico não confirma sítio ativo; todos os candidatos continuam disponíveis em Ligantes.',size=13))
         elif stage['operation']=='retrieve_compounds':
             self.controls.append(ft.Text('Busque alvos para obter bioatividades ou compostos diretamente por nome, IDs, similaridade ou subestrutura. Limpe filtros para ampliar a seleção.',size=13))
         elif stage['operation']=='retrieve_pubchem':
@@ -114,7 +120,7 @@ class GuidedForm:
             elif key=='sizeof_box':
                 fields=[ft.TextField(label='Caixa '+axis+' (Å)',value=str(v),disabled=not writable,width=150) for axis,v in zip('XYZ',value or [20,20,20])]
                 self.controls.append(ft.Row(fields,wrap=True,spacing=24,run_spacing=24)); self.readers[key]=lambda f=fields:[float(c.value) for c in f]
-            elif key in LISTS or key=='files':
+            elif key in LISTS or key in ('files','excluded_pdb_ids'):
                 self.list_field(key,field['label'],value,LISTS.get(key,[]))
             elif stage['operation']=='prepare_structures' and key=='pH':self.add(key,'pH de protonação do receptor e ligante',value)
             else: self.add(key,'Nome da coleção PubChem' if stage['operation']=='retrieve_pubchem' and key=='target' else 'Nome da coleção PDB (opcional)' if stage['operation']=='retrieve_structures' and key=='target' else field['label'],value,field['choices'])
@@ -523,6 +529,7 @@ class GuidedForm:
         result=copy.deepcopy(self.stage); result['name']=self.title.value or TITLES[result['operation']][0]; result['enabled']=bool(self.enabled.value)
         if 'process_all' in result:result['process_all']=False
         if hasattr(self,'processing'):result['input_processing']=self.processing.value
+        if hasattr(self,'follow_inputs'):result['follow_inputs']=bool(self.follow_inputs.value)
         if result['operation']=='consensus':result['input_processing']='merge'
         for key,getter in self.readers.items():
             if result['operation']=='fingerprints' and key in ('radius','morgan_n_bits') and self.fingerprint_choice.value!='morgan':

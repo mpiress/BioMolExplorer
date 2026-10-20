@@ -3,6 +3,7 @@ from pathlib import Path
 import flet as ft
 from biomolexplorer.compound_tables import CompoundTables
 from biomolexplorer.visualizations import molecule_image
+from .removal import RemovalProgress
 from .feedback import close_dialog
 from .localization import verbatim
 
@@ -133,11 +134,12 @@ class CompoundTableViewer:
                 close_dialog(self.ui.page,dialog)
                 await self.load()
                 self.ui.notify('Composto removido de '+self.data['name']+'.')
-            await self.ui.guard(action)
+            await progress.run(action)
         dialog=ft.AlertDialog(modal=True,title=ft.Text('Remover este composto?',size=22),
             content=ft.Column([verbatim(ft.Text(row['id'],weight=ft.FontWeight.W_600)),
                 ft.Text('A remoção será aplicada apenas a '+self.data['name']+'. O registro original será preservado no histórico de alterações.')],tight=True,spacing=16),
             actions=[ft.TextButton('Manter composto',on_click=lambda e:close_dialog(self.ui.page,dialog)),ft.TextButton('Remover composto',on_click=remove)])
+        progress=RemovalProgress(self.ui,dialog)
         self.ui.page.show_dialog(dialog)
 
     async def download(self,e):

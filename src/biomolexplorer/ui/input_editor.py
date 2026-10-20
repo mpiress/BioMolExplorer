@@ -68,6 +68,7 @@ class InputEditor:
         for origin,mapping in catalog.items():
             if origin.startswith('asset:'):compound_references[origin]={code:label for values in mapping.values() for code,label in values.items()}
         self.selection=FileSelection({'stages':completed},pending,self.assets,page=self.ui.page,writable=self.writable,compound_references=compound_references)
+        self.selection.pickers[self.field['name']].on_change=lambda:self.on_change() if self.on_change else None
         self.selection_box.controls=[self.selection.pickers[self.field['name']].control]
         for _,selector,_ in self.rows:selector.visible=False
 

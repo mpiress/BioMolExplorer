@@ -1,3 +1,4 @@
+from biomolexplorer.molecular_parsing import mol_from_smiles
 from biomolexplorer.paths import directory
 from kernel.header_builder import HeaderBuilder
 
@@ -53,7 +54,7 @@ class MoleculeEvaluator:
     def calculate_properties(self, smiles):
 
         try:
-            mol = Chem.MolFromSmiles(smiles)
+            mol = mol_from_smiles(smiles)
             if mol is None:
                 return None
             return {

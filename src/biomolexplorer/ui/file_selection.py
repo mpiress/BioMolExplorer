@@ -47,6 +47,8 @@ def file_selector(path, files):
 class FileSelection:
     def __init__(self, run, pending, assets=(), state=None, file_actions=None, compound_references=None, page=None, writable=True):
         self.stage = pending['configuration']
+        from biomolexplorer.result_origins import ResultOrigins
+        origin_labels=ResultOrigins(run['stages'],run.get('id'))
         self.rows = {}
         self.pickers = {}
         self.extras = {}
@@ -68,6 +70,10 @@ class FileSelection:
                             'Com várias entradas, o modo individual processa cada combinação de arquivos. '
                             'Metadados necessários acompanham as estruturas escolhidas.',
                             size=12, color='#64748B')]
+        if self.stage['operation'] in ('similarity','graphs'):
+            self.follow_inputs=ft.Switch(label='Acompanhar novos conjuntos da origem',
+                value=(state or {}).get('follow_inputs',self.stage.get('follow_inputs',True)),disabled=not writable)
+            controls.append(self.follow_inputs)
         for field, group in self.stage.get('bindings', {}).items():
             if self.derived_consensus and field=='base_input_path':continue
             kinds = input_types(self.stage,field) or EXTERNAL_INPUTS.get(self.stage['operation'], {}).get(field, {'other'})
@@ -122,7 +128,9 @@ class FileSelection:
                         and sum(matches_selector(p,choice) for p in files)==1 for choice in selectors)
                     record=catalog[str(path)]
                     chosen=any(r.get('artifact_id')==record['artifact_id'] or (not r.get('artifact_id') and chosen and matches_selector(path,r.get('selector','auto'))) for r in configured if r.get('stage')==item['id'])
-                    check = SimpleNamespace(label=selector,value=chosen,on_change=None,available=path.is_file())
+                    description=origin_labels.describe(path,item['id'],run.get('id'))
+                    check = SimpleNamespace(label=selector,display_label=description['origin']+' — '+selector,
+                        value=chosen,on_change=None,available=path.is_file())
                     reference=artifact_reference(record)
                     previous=next((r for r in configured if r.get('stage')==item['id'] and
                         (r.get('artifact_id')==record['artifact_id'] if r.get('artifact_id') else matches_selector(path,r.get('selector','auto')))),{})
@@ -215,6 +223,7 @@ class FileSelection:
                 'selected':{field:self.selected_references(rows,validate=False)
                             for field,rows in self.rows.items()}}
         if hasattr(self,'selection_mode'):result.update(selection_mode=self.selection_mode.value,compound_id=self.compound_id.value)
+        if hasattr(self,'follow_inputs'):result['follow_inputs']=bool(self.follow_inputs.value)
         return result
 
     def read(self, require_selection=True):
@@ -225,9 +234,13 @@ class FileSelection:
             if require_selection and self.selection_mode.value=='single' and not self.compound_id.value:
                 raise ValueError('Selecione um composto de referência para a busca PubChem.')
         stage['input_processing']=self.processing.value
+        if hasattr(self,'follow_inputs'):stage['follow_inputs']=bool(self.follow_inputs.value)
         for field, rows in self.rows.items():
             refs = self.selected_references(rows)
             if not refs:
+                if stage['operation']=='graphs' and field=='base_input_path':
+                    stage['bindings'].pop(field,None)
+                    continue
                 if require_selection:
                     raise ValueError('Selecione ao menos um arquivo para ' + field_label(self.stage['operation'],field) + '.')
                 # Keep the upstream origins available in the settings form when

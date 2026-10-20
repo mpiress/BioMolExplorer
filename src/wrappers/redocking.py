@@ -55,7 +55,7 @@ def perform_redocking(base_input_path:str, target:str, base_output_path:str, pdb
 
         if pdb_codes is None:
             raise ValueError('Selecione pelo menos um par receptor / ligante e sua cadeia na aba Input Data.')
-        from biomolexplorer.redocking_config import validate_pairs
+        from biomolexplorer.redocking_config import validate_pairs, pair_key
         validate_pairs([list(record) for record in pdb_codes.to_records(index=False)] if isinstance(pdb_codes, DataFrame) else pdb_codes, preparation_pairs or {})
         columns=['PDB_CODE','LIGAND','RESNUM','CHAIN','RESOLUTION']
         if isinstance(pdb_codes,DataFrame):
@@ -73,29 +73,63 @@ def perform_redocking(base_input_path:str, target:str, base_output_path:str, pdb
                         key = (str(row['PDB_CODE']), str(row['LIGAND']), str(row['RESNUM']), str(row['CHAIN']))
                         pdb_codes.at[idx, 'RESOLUTION'] = resolutions.get(key)
 
-        if prepare_complex:
+        selected=pdb_codes.copy();failures=[]
+        from biomolexplorer.redocking_cache import PairCache
+        cache=PairCache(base_input_path,base_output_path,
+            [list(r) for r in selected.to_records(index=False)],preparation_pairs or {},
+            dict(pH=pH,sizeof_box=sizeof_box,exhaustiveness=exhaustiveness,num_modes=num_modes,
+                 prepare_complex=prepare_complex,charge_type=charge_type))
+        ready=cache.restore()
+        # Seeds are transport files, not additional result datasets.
+        import shutil
+        for seed in (Path(base_input_path)/'cache').glob('redocking-*'):
+            if seed.is_dir():shutil.rmtree(seed)
+        pdb_codes=pdb_codes[[pair_key(list(r)) not in cache.restored for r in pdb_codes.to_records(index=False)]]
+        if prepare_complex and not pdb_codes.empty:
             dock = Docking(complex_input_path=base_input_path, output_path=base_prepared_complexes)
-            pdb_codes = dock.prepare_for_docking(pdb_codes=pdb_codes.to_records(index=False), charge_type=charge_type, pH=pH, redefine_centerofmass=True, preparation_pairs=preparation_pairs or {})
-            if not pdb_codes:raise ValueError('A preparação não produziu complexos utilizáveis. Consulte o log de preparação.')
+            from biomolexplorer.redocking_preparation import prepare_pairs,write_failures
+            pdb_codes,failures=prepare_pairs(dock,[list(r) for r in pdb_codes.to_records(index=False)],
+                preparation_pairs or {},charge_type,pH,ready=ready)
+            write_failures(failures,base_output_path)
             pdb_codes = DataFrame(pdb_codes, columns=['PDB_CODE', 'LIGAND', 'RESNUM', 'CHAIN', 'RESOLUTION'])
             f1.dataframe_to_csv('pdb_codes', pdb_codes)
 
-
-        validate_structure_pairs(base_input_path, [list(r) for r in pdb_codes.to_records(index=False)], preparation_pairs or {}, prepared=True)
-        vina = DockVina(ligand_input_path=base_prepared_complexes, receptor_input_path=base_prepared_complexes,
+        if not pdb_codes.empty:
+            keys={pair_key(list(r)) for r in pdb_codes.to_records(index=False)}
+            settings={k:v for k,v in (preparation_pairs or {}).items() if k in keys}
+            validate_structure_pairs(base_input_path, [list(r) for r in pdb_codes.to_records(index=False)], settings, prepared=True)
+            vina = DockVina(ligand_input_path=base_prepared_complexes, receptor_input_path=base_prepared_complexes,
                         output_path=base_output_path, complex_input_path=base_input_path,
                         pdb_codes=pdb_codes, centerofmasspath=base_prepared_complexes, sizeof_box=sizeof_box,
                         exhaustiveness=exhaustiveness, num_modes=num_modes)
 
-        vina.redocking(pH=pH)
+            vina.redocking(pH=pH)
 
         f1 = fileHandling(input_path=base_input_path, output_path=base_input_path)
 
-        pdb  = f1.csv_to_dataframe('pdb_codes')
-
-        # Selecting a subset must not delete other structures from the input collection.
-        pdb = pdb[pdb['RMSD'].notnull()]
-        f1.dataframe_to_csv('pdb_codes', pdb)
+        completed=f1.csv_to_dataframe('pdb_codes') if not pdb_codes.empty else DataFrame(columns=columns+['RMSD'])
+        outcomes={pair_key(list(r)[:4]):r for r in completed.to_records(index=False)}
+        failed={pair_key([r[k] for k in columns[:4]]):r for r in failures}
+        rows=[]
+        for record in selected.to_records(index=False):
+            key=pair_key(list(record));row=dict(zip(columns,record))
+            failure=failed.get(key)
+            row.update(RMSD=None,STATUS='preparation_failed' if failure else 'succeeded',
+                       FAILED_STEP=failure['FAILED_STEP'] if failure else '',ERROR=failure['ERROR'] if failure else '')
+            if not failure and key in cache.restored:
+                row['RMSD']=cache.restored[key]['row']['RMSD']
+            elif not failure and key in outcomes:
+                row['RMSD']=outcomes[key]['RMSD']
+            rows.append(row)
+        selected_keys={pair_key(list(r)) for r in selected.to_records(index=False)}
+        rows.extend(entry['row'] for key,entry in cache.restored.items() if key not in selected_keys)
+        f1.dataframe_to_csv('pdb_codes',DataFrame(rows))
+        cache.publish(rows)
+        from biomolexplorer.progress import report_progress
+        report_progress(f'Redocking concluído: {len(rows)-len(failures)} pares preparados; {len(failures)} falhas de preparação.')
+        details=dict(redocking_failures=len(failures),redocking_succeeded=len(rows)-len(failures))
+        if cache.restored:details['redocking_reused']=len(cache.restored)
+        return details
 
 
     except Exception as e:
@@ -120,6 +154,7 @@ def prepare_structures(base_input_path:str, target:str, base_output_path:str,
     if pdb_codes is None:
         import pandas as pd
         metadata = pd.read_csv(source / 'pdb_codes.csv')
+        if 'STATUS' in metadata:metadata=metadata[metadata['STATUS']!='preparation_failed']
         pdb_codes = metadata[['PDB_CODE', 'LIGAND', 'RESNUM', 'CHAIN']].values.tolist()
     output = resolve_path(base_output_path) / target.replace(' ', '') / 'Prepared'
     if receptor_prepared:

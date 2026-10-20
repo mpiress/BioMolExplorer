@@ -102,13 +102,28 @@ class MolecularSourceAuthorizationTests(unittest.TestCase):
 
     def test_oversized_graph_does_not_block_other_saved_analyses(self):
         stage=self.fixture_run();service=ResultFiles(self.store)
-        from biomolexplorer.visualizations import MAX_VIEW_BYTES,SUFFIX
+        from biomolexplorer.visualizations import MAX_GRAPH_BYTES,SUFFIX
         path=Path(stage['artifacts'][0]).parent/('large'+SUFFIX)
-        with path.open('wb') as file:file.truncate(MAX_VIEW_BYTES+1)
+        with path.open('wb') as file:file.truncate(MAX_GRAPH_BYTES+1)
         stage['artifacts'].insert(0,str(path))
         with self.store.connect() as db:db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps([stage]),self.rid))
         choices=service.graph_datasets(self.token,self.pid,self.rid,self.graph['id'])
         self.assertEqual(len(choices),3);self.assertTrue(choices[0]['unavailable'])
         data=service.graph_model(self.token,self.pid,self.rid,self.graph['id'],choices[1]['path'])
         self.assertEqual(data['kind'],'graph')
+
+    def test_large_fingerprint_source_streams_only_matching_molecular_metadata(self):
+        import hashlib
+        stage=self.fixture_run();service=ResultFiles(self.store)
+        source=Path(stage['artifacts'][0]).parent/'fingerprint_metadata.csv'
+        source.write_text('molecule_chembl_id,canonical_smiles,MW,fingerprint\nA,CCO,46.07,"'+('0,'*2048)+'0"\nB,CCCO,60.1,"0,1"\n')
+        stage['artifacts'].append(str(source))
+        with self.store.connect() as db:db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps([stage]),self.rid))
+        selected=next(s for s in service.graph_sources(self.token,self.pid,self.rid) if s['path']==str(source))
+        filename=service.graph_datasets(self.token,self.pid,self.rid,self.graph['id'])[0]['path']
+        with patch('biomolexplorer.result_files.MAX_VIEW_BYTES',64):
+            result=service.graph_enrichment(self.token,self.pid,self.rid,self.graph['id'],filename,selected['artifact_id'])
+        self.assertEqual(result['matched'],2)
+        self.assertNotIn('fingerprint',result['matches']['A']['properties'])
+        self.assertEqual(result['source']['content_sha256'],hashlib.sha256(source.read_bytes()).hexdigest())
 

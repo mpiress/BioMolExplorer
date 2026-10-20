@@ -1,6 +1,7 @@
 """RMSD table with a simulation-specific file and molecular preview dialog."""
 import flet as ft
 from biomolexplorer.redocking_results import RedockingResults
+from .removal import RemovalProgress
 from .feedback import close_dialog
 from .file_table import FileTable
 from .localization import verbatim
@@ -17,9 +18,10 @@ class RedockingResultsTable:
         self.offset = 0
         self.limit = 25
         self.table = ft.DataTable(columns=[ft.DataColumn(ft.Text(title), numeric=title == 'RMSD (Å)')
-            for title in ('PDB', 'Ligante', 'Resíduo', 'Cadeia', 'RMSD (Å)', '3D', 'Resíduos', 'Ações')], rows=[],
+            for title in ('PDB', 'Ligante', 'Resíduo', 'Cadeia', 'Estado', 'RMSD (Å)', '3D', 'Resíduos', 'Ações')], rows=[],
             column_spacing=28, heading_row_color='#F1F5F9')
         self.count = ft.Text(size=13, color='#64748B')
+        self.warning = ft.Text(size=13,color='#B91C1C')
         self.previous = ft.TextButton('Página anterior', on_click=lambda e: self.move(-1))
         self.next = ft.TextButton('Próxima página', on_click=lambda e: self.move(1))
         self.redraw()
@@ -35,6 +37,7 @@ class RedockingResultsTable:
     def redraw(self):
         rows = []
         for simulation in self.simulations[self.offset:self.offset+self.limit]:
+            failed=simulation.get('status')=='preparation_failed'
             async def view(e, key=simulation['id']):
                 if self.valid():
                     await self.ui.guard(lambda: self.open(key))
@@ -42,16 +45,27 @@ class RedockingResultsTable:
                 if self.valid():await self.ui.guard(lambda:self.overlay(key))
             async def contacts(e,key=simulation['id']):
                 if self.valid():await self.ui.guard(lambda:self.contacts(key))
+            async def remove(e,key=simulation['id']):
+                if self.valid():self.confirm_remove(key)
             values = [simulation[k] for k in ('pdb', 'ligand', 'residue', 'chain')]
-            rows.append(ft.DataRow(cells=[ft.DataCell(verbatim(ft.Text(value))) for value in values] + [
-                ft.DataCell(ft.Text(f"{simulation['rmsd']:.3f}")),
-                ft.DataCell(ft.TextButton('3D',icon=ft.Icons.VIEW_IN_AR,on_click=overlay)),
-                ft.DataCell(ft.TextButton('Resíduos',icon=ft.Icons.SCIENCE_OUTLINED,on_click=contacts)),
-                ft.DataCell(ft.TextButton('Ver simulação', icon=ft.Icons.VISIBILITY, on_click=view))]))
+            action=ft.TextButton('Ver simulação', icon=ft.Icons.VISIBILITY, on_click=view)
+            if failed:action=ft.Row([ft.TextButton('Ver erro',on_click=view),
+                ft.IconButton(ft.Icons.DELETE_OUTLINE,tooltip='Excluir falha e complexo de origem',on_click=remove,disabled=not self.results.writable)])
+            rows.append(ft.DataRow(color='#FEF2F2' if failed else None,cells=[ft.DataCell(verbatim(ft.Text(value))) for value in values] + [
+                ft.DataCell(ft.Text('Falha na preparação' if failed else 'Concluído',
+                    color='#B91C1C' if failed else '#15803D',tooltip=simulation.get('error') or None)),
+                ft.DataCell(ft.Text('—' if failed else f"{simulation['rmsd']:.3f}")),
+                ft.DataCell(ft.TextButton('3D',icon=ft.Icons.VIEW_IN_AR,on_click=overlay,disabled=failed)),
+                ft.DataCell(ft.TextButton('Resíduos',icon=ft.Icons.SCIENCE_OUTLINED,on_click=contacts,disabled=failed)),
+                ft.DataCell(action)]))
         self.table.rows = rows
         self.count.value = f'{len(self.simulations)} simulações · Página {self.offset//self.limit+1}'
         self.previous.disabled = self.offset == 0
         self.next.disabled = self.offset+self.limit >= len(self.simulations)
+        failures=sum(s.get('status')=='preparation_failed' for s in self.simulations)
+        if failures:self.count.value=f'{len(self.simulations)} pares de redocking · Página {self.offset//self.limit+1}'
+        self.warning.visible=bool(failures)
+        self.warning.value=f'{failures} complexos ignorados por falha de preparação. Consulte as linhas destacadas.'
 
     def move(self, direction):
         if not self.valid():
@@ -61,8 +75,36 @@ class RedockingResultsTable:
         self.ui.page.update()
 
     def build(self):
-        return ft.Column([self.count, ft.Row([self.table], scroll=ft.ScrollMode.AUTO),
+        return ft.Column([self.count,self.warning, ft.Row([self.table], scroll=ft.ScrollMode.AUTO),
             ft.Row([self.previous, self.next], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)], spacing=16)
+
+    def confirm_remove(self,key):
+        if not self.valid() or not self.results.writable:return
+        simulation=next(s for s in self.simulations if s['id']==key)
+        previous_editing=getattr(self.ui,'editing_stage',False)
+        self.ui.editing_stage=True
+        def dismissed(e=None):self.ui.editing_stage=previous_editing
+        def finish(e=None):
+            dismissed();close_dialog(self.ui.page,dialog)
+        async def remove(e):
+            async def action():
+                if not self.valid():return
+                r=self.results
+                await self.ui.call(self.service.remove_failure,r.token,r.project_id,r.run_id,r.stage['id'],key)
+                if not self.valid():return
+                finish()
+                self.simulations=await self.ui.call(self.service.simulations,r.token,r.project_id,r.run_id,r.stage['id'])
+                self.offset=min(self.offset,max(0,(len(self.simulations)-1)//self.limit*self.limit))
+                self.redraw();self.ui.page.update()
+                self.ui.notify('Falha e complexo de origem removidos. Os demais resultados foram preservados.')
+            await progress.run(action)
+        dialog=ft.AlertDialog(modal=True,title=ft.Text('Excluir falha e complexo de origem?'),on_dismiss=dismissed,
+            content=ft.Column([verbatim(ft.Text(simulation['pdb']+'.pdb')),
+                ft.Text('O PDB de origem será apagado e seus pares removidos da próxima execução deste redocking. Outros pares do mesmo PDB perderão essa entrada. Resultados já concluídos serão preservados. A recuperação original deixará de baixar esse PDB enquanto ele estiver na lista de exclusões.')],tight=True),
+            actions=[ft.TextButton('Cancelar',on_click=finish),
+                ft.TextButton('Excluir complexo',on_click=remove)])
+        progress=RemovalProgress(self.ui,dialog)
+        self.ui.page.show_dialog(dialog)
 
     async def overlay(self,key):
         if self.valid():
@@ -110,11 +152,15 @@ class RedockingResultsTable:
                     name = f"{simulation['pdb']}_{simulation['ligand']}_{simulation['residue']}{simulation['chain']}_redocking.zip"
                     await self.ui.picker.save_file(file_name=name, src_bytes=data)
             await self.ui.guard(action)
-        title = f"{simulation['pdb']} / {simulation['ligand']} / {simulation['residue']} / {simulation['chain']} · RMSD {simulation['rmsd']:.3f} Å"
+        failed=simulation.get('status')=='preparation_failed'
+        failure_label=self.ui.tr('Falha na preparação') if hasattr(self.ui,'tr') else 'Falha na preparação'
+        suffix=failure_label if failed else f"RMSD {simulation['rmsd']:.3f} Å"
+        title = f"{simulation['pdb']} / {simulation['ligand']} / {simulation['residue']} / {simulation['chain']} · {suffix}"
         dialog = ft.AlertDialog(title=verbatim(ft.Text(title, size=20)), on_dismiss=dismissed,
             content=ft.Container(width=max(280, min(1100, (self.ui.page.width or 1440)-100)),
                 height=max(240, min(650, (getattr(self.ui.page,'height',None) or 900)-240)),
                 content=ft.Column([ft.Text('Consulte os arquivos da simulação. Use a opção 3D para examinar o receptor, o ligante de referência ou as poses.'),
+                    *([verbatim(ft.Text(simulation.get('error',''),color='#B91C1C'))] if failed else []),
                     files.build()], scroll=ft.ScrollMode.AUTO, spacing=16)),
             actions=[ft.TextButton('Baixar todos (ZIP)', icon=ft.Icons.DOWNLOAD, on_click=download_all),
                 ft.TextButton('Fechar', on_click=finish)])

@@ -17,6 +17,8 @@ LANGUAGES = ('en', 'pt')
 
 # Translate system-message payloads while keeping filenames, IDs and user titles intact.
 SYSTEM_ARGUMENTS = {
+    'Comunidade {0} · {1}': {1},
+    'Subconjunto filtrado · {0}': {0},
     '{0} · {1}: {2} / {3} valores · Pearson r: {4} · associação exploratória, sem inferência causal.': {4},
     'O bloco “{0}” precisa de ajustes: {1}': {1},
     'Arquivo {0} ({1}): {2}': {2},
@@ -75,16 +77,23 @@ def stage_control(control,stage,attribute='value'):
 
 class Translator:
     def __init__(self, language='pt'):
+        # Canvas updates revisit the same labels. Bound the session cache so
+        # dynamic progress messages cannot accumulate indefinitely.
+        self._translate=lru_cache(maxsize=4096)(self._translate)
         self.set_language(language)
 
     def set_language(self, language):
         if language not in LANGUAGES:
             raise ValueError('Language must be en or pt.')
         self.language = language
+        self._translate.cache_clear()
 
     def __call__(self, value):
         if not isinstance(value, str) or not value:
             return value
+        return self._translate(value)
+
+    def _translate(self, value):
         if value in ('Preparar meus complexos','Prepare my complexes'):
             value='Preparar para docking'
         phrases, patterns = catalogs(self.language)
@@ -164,6 +173,11 @@ class LocalizedPage:
                 self.localize(child, seen)
             return
         if not isinstance(control, (ft.Control, canvas.Shape, ft.TextSpan)):
+            return
+        # Flet owns immutable controls created by its component renderer.
+        # Translating their runtime snapshots would abort the entire update,
+        # including unrelated graphs and charts. Localize our mutable controls.
+        if hasattr(control, '_frozen'):
             return
         protected = getattr(control, '_biomol_verbatim', set())
         saved = getattr(control, '_biomol_messages', {})

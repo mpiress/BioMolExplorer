@@ -1,4 +1,5 @@
 """Read ZINC tranche download lists as data and normalize 2D/3D candidates."""
+from biomolexplorer.molecular_parsing import mol_from_smiles
 import bz2
 import csv
 import gzip
@@ -161,7 +162,7 @@ def retrieve_tranches(list_file,output,download_workers=4):
         with table.open('w',encoding='utf-8',newline='') as stream:
             writer=csv.DictWriter(stream,fieldnames=fields);writer.writeheader()
             def write(row,url,format,conformation=None):
-                code=row['molecule_chembl_id'];molecule=Chem.MolFromSmiles(row['canonical_smiles'])
+                code=row['molecule_chembl_id'];molecule=mol_from_smiles(row['canonical_smiles'])
                 if molecule is None or not molecule.GetNumAtoms():raise ValueError('SMILES ZINC inválido: '+code)
                 row['canonical_smiles']=Chem.MolToSmiles(molecule)
                 previous=seen.get(code)

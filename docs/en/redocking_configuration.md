@@ -4,7 +4,11 @@
 
 ## Select and prepare pairs
 
-After retrieving PDB structures, open the redocking stage configuration. In **Input Data**, explicitly select each PDB / ligand / residue pair. No pair is selected automatically; at least one is required before applying configuration.
+After retrieving PDB structures, open the redocking stage configuration. In **Input Data**, explicitly select each PDB / ligand / residue pair. Initial retrieval does not select execution pairs without a user choice; at least one is required before applying configuration.
+
+An explicit choice in **Results → Ligands → Save ligands** also updates pairs in redocking stages connected to that retrieval. This includes the first ligand selected for a PDB without a configured reference. If redocking inputs were restricted to other files, the reviewed structure is added to the input selection. Other PDB pairs and their settings are retained; a new ligand on the same chain inherits shared receptor preparation settings. Saving the same list again does not duplicate pairs.
+
+Then choose **Run pipeline** and **Yes, reuse** to calculate the new pairs and incorporate them into accumulated results. Curation itself does not start calculations. To repair a ligand choice saved by an older version without reaching redocking, reopen **Ligands** and save the list again.
 
 Each selection has a single **Chain**, used for both receptor and ligand, and its own preparation options. Resolution follows the selected metadata and has no editable control. For user-supplied PDBs without metadata, use the manual pair option.
 
@@ -28,7 +32,7 @@ Selecting a subset does not delete other PDB structures or prepared files from t
 
 ## Preparation failures with classic Chimera
 
-Chimera can exit with status zero even when a `.com` command fails. The pipeline checks those messages and expected files before continuing. Each output must exist, be nonempty and contain atoms; Open Babel conversions follow the same checks. Invalid outputs stop the stage and retain the Chimera script for diagnosis.
+Chimera can exit with status zero even when a `.com` command fails. The pipeline checks those messages and expected files before continuing. Each output must exist, be nonempty and contain atoms; Open Babel conversions follow the same checks. Redocking records per-pair preparation failures and continues with the other pairs, retaining the Chimera script for diagnosis. Global installation or filesystem failures still stop the stage.
 
 Paths in `open` and `write` commands are passed without shell quotes: classic Chimera interprets those quotes as part of the filename. Paths with spaces were verified with the real executable. Tool stdout and stderr are recorded in the scientific logs.
 
@@ -64,3 +68,25 @@ limits.
 Valid redocking preparation is reused for candidate docking rather than repeated per compound. Vina retains maps per configuration within a batch when its Python API supports the template. DOCK6 shares surface, spheres and grids per receptor/site. Candidate preparation remains necessary without a compatible prepared input.
 
 There is no implicit 300-second scientific timeout. Calculations continue until completion, error or cancellation; HTTP timeouts are separate. Individual candidate problems appear in **Excluded compounds**. See [Vina reuse](user_manual.md#reusing-receptors-in-vina), [DOCK6 validation](user_manual.md#dock6-validation-and-exclusions) and [backend duration](backend_usage.md#execution-duration).
+
+## Partial preparation failures and source deletion
+
+Redocking isolates preparation errors per receptor/ligand pair, reusing successfully prepared receptors. A receptor failure skips its dependent pairs; a ligand failure leaves the other ligands eligible. Partial pair outputs are cleaned. If all pairs fail preparation, the stage completes with a warning without starting Vina. Other preparation functions retain their strict behavior, and global installation/configuration/access/storage errors still fail the operation.
+
+`pdb_codes.csv` keeps all selected pairs with `STATUS`, `FAILED_STEP` and `ERROR`. Failed pairs have `STATUS=preparation_failed` and no RMSD. `redocking_failures.csv` records the errors; failed pairs are excluded from valid prepared-pair choices. The interface reports the failure count and highlights error rows in red with **Preparation failed**, RMSD **—**, and **View error**. Pose/contact actions are disabled for those rows.
+
+**Delete failure and source complex** requires confirmation and removes the failed row, the source PDB and execution snapshot, associated source metadata and verified input-cache copies. Source identity follows exact input/batch provenance; unrelated collections with identical filenames are preserved. A source changed since execution cannot be deleted through this stale result.
+
+Deleting one PDB makes all its pairs unavailable for the next execution of that redocking block, while preserving completed historical results and their prepared files. The confirmation explains this shared-file effect. Retrieval sources add the ID to `excluded_pdb_ids`, visible under **PDB IDs excluded from future retrievals**, to prevent automatic download on rerun. Clear that exclusion for an intentional retry. Imported source assets and import references are removed instead.
+
+Deletion requires owner/editor access and a finished execution. File/configuration changes and cache invalidation are audited and rolled back together if the operation fails. Historical restoration copies are not active redocking inputs. Preparation failures never trigger automatic source deletion.
+
+## Incremental redocking and accumulated results
+
+Choose **Yes, reuse** when starting the pipeline to retain compatible completed calculations. A new ligand for an existing PDB/chain reuses the prepared receptor and runs only ligand preparation and its redocking. A new receptor is fully prepared. Previously completed compatible pairs are not calculated again.
+
+The new result table combines new pairs with compatible previous results from the same input source, including previously evaluated receptors and ligands that were not selected again. The original PDB must remain available: deleted inputs are never automatically restored from history. Each pair appears once. Reused poses and prepared structures are copied into the new run so downloads and 3D views remain available.
+
+Compatibility uses PDB contents, chain, cofactors, preparation options, pH, charges, templates, Vina parameters and scientific implementation. Changing the structure or receptor preparation invalidates receptor reuse; changing docking parameters requires a new pose calculation. SHA-256 hashes verify reused files. Older native results can also be adopted when their configuration, prepared files, pose, RMSD and integrity manifest are available.
+
+Only successfully completed pipeline runs supply reusable data. Cancelled, interrupted, failed or awaiting-input runs never supply incremental results, even if an individual stage finished. Partial files may remain in history for diagnostics but are discarded as sources for subsequent calculations. Preparation failures and removed outputs are also excluded. **No, run again** bypasses reuse.

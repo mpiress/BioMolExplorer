@@ -5,6 +5,7 @@ donor/acceptor 4.1 Å with D-H-A >100°; aromatic centres 5.5 Å, 30° angular
 tolerance, 2 Å offset. This is a limited classifier, not the PLIP engine.
 No hydrogen positions or protonation states are invented for classification.
 """
+from biomolexplorer.molecular_parsing import mol_from_smiles
 import math
 from collections import defaultdict
 
@@ -33,7 +34,7 @@ def ligand_molecule(layer,smiles=None):
     elif fmt=='sdf':mol=Chem.MolFromMolBlock(text.split('$$$$')[0],removeHs=True)
     else:mol=None
     if smiles:
-        template=Chem.MolFromSmiles(smiles)
+        template=mol_from_smiles(smiles)
         if template is None:return None
         if mol is None:
             records=atoms(text,fmt)

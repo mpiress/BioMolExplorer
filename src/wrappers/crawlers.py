@@ -1,3 +1,4 @@
+from biomolexplorer.molecular_parsing import mol_from_smiles
 from biomolexplorer.paths import directory, resolve_path, worker_count
 from biomolexplorer.storage import write_dataframe, write_json
 from biomolexplorer.retrieval import collection_name, target_criteria, identifiers, MODES
@@ -179,7 +180,7 @@ def _retrieve_direct_compounds(term, output_path, mode, maximum, threshold, filt
         reference = term.strip()
         if mode == 'similarity' and reference.upper().startswith('CHEMBL'):
             reference = identifiers(reference, 'chembl')[0]
-        elif Chem.MolFromSmiles(reference) is None:
+        elif mol_from_smiles(reference) is None:
             raise ValueError('Informe um SMILES válido para a consulta estrutural.')
         if mode == 'similarity':
             resource = client.similarity
@@ -238,10 +239,14 @@ def _save_compound_dataset(chembl, compounds, root, search_term):
     from biomolexplorer.molecule_quality import clean_dataframe
     chembl=clean_dataframe(chembl,source='ChEMBL')
     if compounds is not None:compounds=clean_dataframe(compounds,source='PubChem')
-    original = chembl.reindex(columns=['molecule_chembl_id', 'canonical_smiles', 'molecule_properties']).copy()
+    # Keep structures, identifiers, names, annotations and descriptor provenance.
+    # Restricting this table to three columns discarded molecular investigation data.
+    from biomolexplorer.compound_properties import compound_frame
+    original = compound_frame(chembl.copy(),source='ChEMBL')
     original['source'] = 'ChEMBL'
     from pandas import concat
     combined = concat([original, compounds], ignore_index=True)
+    combined = compound_frame(combined)
     combined['_structure'] = combined['canonical_smiles'].map(lambda s: PubChemSimilarMols._identity(s)[0])
     combined = combined.dropna(subset=['_structure']).drop_duplicates('_structure').drop(columns='_structure')
     output = root / 'compounds' / collection_name(search_term)
@@ -261,12 +266,14 @@ def load_pdb(target:str="Estruturas", base_output_path:str="datasets", pdb_ec:Op
              max_resolution:Optional[float]=None, must_have_ligand:Optional[bool]=True,
              pdb_query:Optional[str]=None, pdb_ids:Optional[List[str]]=None,
              uniprot_ids:Optional[List[str]]=None, ligand_ids:Optional[List[str]]=None,
-             max_records:int=100):
+             max_records:int=100, ligand_selection:str='recommended', excluded_pdb_ids:Optional[List[str]]=None):
 
     try:
 
         if type(max_records) is not int or max_records<1:
             raise ValueError('O limite PDB deve ser um inteiro positivo.')
+        if ligand_selection not in ('recommended','all'):
+            raise ValueError('Escolha candidatos recomendados ou todos os ligantes.')
         pdb_output_path = f'{base_output_path}/PDB/{collection_name(target)}/'
         pdb = PDBComplex(output_path=pdb_output_path)
 
@@ -274,7 +281,8 @@ def load_pdb(target:str="Estruturas", base_output_path:str="datasets", pdb_ec:Op
             key: value
             for key, value in {
                 'pdb_query': pdb_query, 'pdb_ids': pdb_ids, 'uniprot_ids': uniprot_ids,
-                'ligand_ids': ligand_ids, 'max_records': max_records,
+                'ligand_ids': ligand_ids, 'max_records': max_records, 'ligand_selection':ligand_selection,
+                'excluded_pdb_ids':excluded_pdb_ids,
                 'PolymerEntityTypeID': PolymerEntityTypeID,
                 'ExperimentalMethodID': ExperimentalMethodID,
                 'ec_target': pdb_ec,

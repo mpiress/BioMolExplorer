@@ -12,11 +12,15 @@ class RedockingPairs:
         self.summary = ft.Text()
         self.available = ft.Dropdown(label='PDB / ligante / resíduo / cadeia disponíveis',
             disabled=not form.writable, enable_filter=True, enable_search=True)
+        self.select_all_button = ft.TextButton('Selecionar todos os pares disponíveis',
+            on_click=self.choose_all, disabled=not form.writable)
         self.control = ft.Column([
             ft.Text('Pares para redocking', size=16, weight=ft.FontWeight.W_600),
             ft.Text('Selecione e valide cada par. Configure a cadeia, os cofatores e a preparação abaixo. A resolução é preservada dos metadados.', size=12),
+            ft.Text('Para PDBs recuperados com triagem, esta lista contém os candidatos priorizados. Use Ligantes nos resultados da recuperação para revisar ou incluir alternativas.',size=12),
             self.available,
             ft.TextButton('Selecionar par e configurar preparação', on_click=self.choose, disabled=not form.writable),
+            self.select_all_button,
             ft.TextButton('Informar par manualmente', on_click=lambda e: self.add(), disabled=not form.writable),
             self.summary, self.box], spacing=18, data='input')
         for record in form.stage['parameters'].get('pdb_codes') or []:
@@ -38,6 +42,8 @@ class RedockingPairs:
         self.records = self.candidates()
         self.available.options = [ft.DropdownOption(key=str(i), text=f'{r[0]} / {r[1]} / {r[2]} / {r[3]}') for i, r in enumerate(self.records)]
         self.available.value = None
+        self.select_all_button.disabled=not self.form.writable or not self.records
+        self.sync_preparation()
         self.summarize()
 
     def summarize(self):
@@ -49,10 +55,29 @@ class RedockingPairs:
         if self.available.value is not None:
             self.add(self.records[int(self.available.value)])
 
-    def add(self, record=None, update=True):
+    def choose_all(self, e):
+        if not self.form.writable:return
+        selected=set();receptors={}
+        for fields, _, (has_cofactors,cofactors), options, _ in self.rows:
+            record=[field.value.strip() for field in fields]
+            record[1]=record[1].upper()
+            try:record[2]=int(record[2])
+            except ValueError:pass  # Keep unfinished manual rows for the user.
+            selected.add(pair_key(record))
+            receptors.setdefault((record[0],record[3]),{
+                'cofactors':[c.strip().upper() for c in cofactors.value.split(',') if c.strip()] if has_cofactors.value else [],
+                'receptor':{key:control.value for key,control in options['receptor'].items()}})
+        for record in self.candidates():
+            key=pair_key(record)
+            if key in selected:continue
+            self.add(record,update=False,config=receptors.get((record[0],record[3])))
+            selected.add(key)
+        self.sync_preparation();self.summarize();self.form.ui.page.update()
+
+    def add(self, record=None, update=True, config=None):
         record = list(record or ['', '', '', 'A'])
         saved = self.form.stage['parameters'].get('preparation_pairs') or {}
-        config = copy.deepcopy(saved.get(pair_key(record), {}))
+        config = copy.deepcopy(saved.get(pair_key(record), {}) if config is None else config)
         fields = [ft.TextField(label=label, value=str(value), disabled=not self.form.writable, width=170,
             on_change=lambda e: self.changed()) for label, value in zip(
                 ('Código PDB', 'Ligante', 'Número do resíduo', 'Cadeia'), record[:4])]
@@ -70,9 +95,8 @@ class RedockingPairs:
             self.rows.remove(entry); self.box.controls.remove(panel); self.changed()
         panel.content.controls.append(ft.TextButton('Remover par', on_click=remove, disabled=not self.form.writable))
         self.rows.append(entry); self.box.controls.append(panel)
-        self.sync_preparation()
-        self.summarize()
-        if update: self.form.ui.page.update()
+        if update:
+            self.sync_preparation();self.summarize();self.form.ui.page.update()
 
     def changed(self):
         self.summarize(); self.form.ui.page.update()

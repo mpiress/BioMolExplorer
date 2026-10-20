@@ -1,0 +1,57 @@
+{
+  "project": "Alzheimer",
+  "targets": [
+    {
+      "name": "ACHE",
+      "identifier": "CHEMBL220"
+    },
+    {
+      "name": "BCHE",
+      "identifier": "CHEMBL1914"
+    },
+    {
+      "name": "BACE1",
+      "identifier": "CHEMBL4822"
+    }
+  ],
+  "observed_batches": {
+    "fingerprints": 6,
+    "similarity": 3,
+    "graphs": 3
+  },
+  "diagnosis": "Saved downstream selectors still covered only the three PubChem outputs.",
+  "validation": "Isolated replica of the project connections; real fingerprint, similarity and graph operations; controlled upstream data.",
+  "expected_graphs": [
+    {
+      "target": "ACHE",
+      "identifier": "CHEMBL220",
+      "branch": "ADMET BBB+"
+    },
+    {
+      "target": "ACHE",
+      "identifier": "CHEMBL220",
+      "branch": "PubChem from ADMET BBB+"
+    },
+    {
+      "target": "BCHE",
+      "identifier": "CHEMBL1914",
+      "branch": "ADMET BBB+"
+    },
+    {
+      "target": "BCHE",
+      "identifier": "CHEMBL1914",
+      "branch": "PubChem from ADMET BBB+"
+    },
+    {
+      "target": "BACE1",
+      "identifier": "CHEMBL4822",
+      "branch": "ADMET BBB+"
+    },
+    {
+      "target": "BACE1",
+      "identifier": "CHEMBL4822",
+      "branch": "PubChem from ADMET BBB+"
+    }
+  ],
+  "production_project_modified": false
+}

@@ -1,4 +1,5 @@
 """Independent molecular graph experiments, common fragments and export figures."""
+from biomolexplorer.molecular_parsing import mol_from_smiles
 import ast
 import base64
 import io
@@ -21,7 +22,7 @@ from biomolexplorer.molecule_quality import CURRENT_REPORT, QualityReport, clean
 
 def fragment_molecule(smarts, reference_smiles):
     """Extract actual atoms/bonds for the query from its reference structure."""
-    reference = Chem.MolFromSmiles(reference_smiles) if isinstance(reference_smiles, str) else None
+    reference = mol_from_smiles(reference_smiles) if isinstance(reference_smiles, str) else None
     query = Chem.MolFromSmarts(smarts) if isinstance(smarts, str) and smarts else None
     if reference is None or query is None:
         return None
@@ -72,7 +73,7 @@ def common_fragment(smiles,timeout=0,ring_matches_ring_only=True,complete_rings_
     if not smiles:return result
     molecules=[];seen=set()
     for value in smiles:
-        mol=Chem.MolFromSmiles(value) if isinstance(value,str) and value else None
+        mol=mol_from_smiles(value) if isinstance(value,str) and value else None
         if mol is None:
             return dict(result,status='missing_structures')
         canonical=Chem.MolToSmiles(mol)
@@ -100,6 +101,8 @@ def read_compounds(paths,report=None):
         if not {'molecule_chembl_id','canonical_smiles'}<=set(frame):continue
         validate_file(filename,'compounds',validate_rows=False)
         frame=clean_dataframe(frame,source=filename,report=report)
+        from biomolexplorer.compound_properties import compound_frame
+        frame=compound_frame(frame)
         if any(not isinstance(code,str) or not code for code in frame['molecule_chembl_id']):
             raise ValueError('A tabela de compostos desta análise precisa de códigos preenchidos em molecule_chembl_id.')
         frame=frame.drop(columns=['fingerprint'],errors='ignore')
@@ -108,7 +111,7 @@ def read_compounds(paths,report=None):
     data=pd.concat(frames,ignore_index=True)
     conflicted=[]
     for identifier,group in data.groupby('molecule_chembl_id'):
-        structures={Chem.MolToSmiles(Chem.MolFromSmiles(s)) for s in group['canonical_smiles'] if isinstance(s,str) and Chem.MolFromSmiles(s)}
+        structures={Chem.MolToSmiles(mol_from_smiles(s)) for s in group['canonical_smiles'] if isinstance(s,str) and mol_from_smiles(s)}
         if len(structures)>1:
             (report or CURRENT_REPORT.get() or QualityReport()).exclude('tabelas de compostos',None,[identifier],'código associado a estruturas conflitantes')
             conflicted.append(identifier)
@@ -299,7 +302,7 @@ def analyze_inputs(entries,output,metric='Tanimoto',fingerprint='morgan',thresho
     # convenience union must preserve those structures without ambiguous IDs.
     if not combined.empty:
         combined['_structure']=combined['canonical_smiles'].map(
-            lambda s:Chem.MolToSmiles(Chem.MolFromSmiles(s)) if isinstance(s,str) and s else '')
+            lambda s:Chem.MolToSmiles(mol_from_smiles(s)) if isinstance(s,str) and s else '')
         conflicts=set(combined.groupby('molecule_chembl_id')['_structure'].nunique().loc[lambda n:n>1].index)
         if conflicts:
             import hashlib

@@ -68,7 +68,8 @@ def _select_molecules(records, convert_properties, np_filter, mol_filter, mwt_fi
     if mwt_filter is not None:
         molecules = molecules[molecules['molecule_properties'].apply(
             lambda value: value.get('full_mwt', float('inf')) <= mwt_filter)]
-    return molecules
+    from biomolexplorer.compound_properties import compound_frame
+    return compound_frame(molecules,source='ChEMBL')
 
 
 class MyMolecules():

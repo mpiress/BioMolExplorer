@@ -15,13 +15,16 @@ import requests
 from rdkit import Chem
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+from biomolexplorer.compound_properties import COMMON_COLUMNS,compound_properties
 
 
 class PubChemSimilarMols:
     BASE_URL = 'https://pubchem.ncbi.nlm.nih.gov/rest/pug'
-    COLUMNS = ['molecule_chembl_id', 'canonical_smiles', 'molecule_properties',
+    COLUMNS = list(dict.fromkeys(['molecule_chembl_id', 'canonical_smiles', 'molecule_properties',
                'source', 'PubChem_CID', 'InChIKey', 'Molecular_Formula',
-               'Molecular_Weight', 'PubChem_Threshold_Percent']
+               'Molecular_Weight', 'PubChem_Threshold_Percent','InChI','Title','IUPACName','XLogP',
+               'PubChem_TPSA','HBondDonorCount','HBondAcceptorCount','RotatableBondCount',
+               'Charge','ExactMass','IsotopeAtomCount']+COMMON_COLUMNS))
 
     def __init__(self, output_path, threshold=75, max_records=1000):
         if type(threshold) is not int or not 1 <= threshold <= 100:
@@ -74,7 +77,8 @@ class PubChemSimilarMols:
 
     @staticmethod
     def _identity(smiles):
-        mol = Chem.MolFromSmiles(smiles) if isinstance(smiles, str) and smiles else None
+        from biomolexplorer.molecular_parsing import mol_from_smiles
+        mol = mol_from_smiles(smiles) if isinstance(smiles, str) and smiles else None
         if mol is None:
             return None, None
         return Chem.MolToSmiles(mol, isomericSmiles=True), Chem.MolToInchiKey(mol)
@@ -142,7 +146,9 @@ class PubChemSimilarMols:
             report_progress('Consultando compostos similares no PubChem…', index, len(references))
         candidates = sorted({cid for _, _, cid in matches})
         records, accepted, new_structures = [], {}, {}
-        properties = 'SMILES,ConnectivitySMILES,InChIKey,MolecularFormula,MolecularWeight'
+        properties = ('SMILES,ConnectivitySMILES,InChI,InChIKey,MolecularFormula,MolecularWeight,'
+                      'Title,IUPACName,XLogP,TPSA,HBondDonorCount,HBondAcceptorCount,'
+                      'RotatableBondCount,HeavyAtomCount,Charge,ExactMass,IsotopeAtomCount')
         report_progress('Baixando as propriedades dos novos compostos PubChem…', 0, len(candidates))
         for offset in range(0, len(candidates), 100):
             batch = candidates[offset:offset + 100]
@@ -166,12 +172,16 @@ class PubChemSimilarMols:
                 for identity in (smiles, key, prop.get('InChIKey')):
                     if identity:
                         new_structures[identity] = cid
-                records.append({'molecule_chembl_id': f'PUBCHEM{cid}', 'canonical_smiles': smiles,
+                record={'molecule_chembl_id': f'PUBCHEM{cid}', 'canonical_smiles': smiles,
                                 'molecule_properties': {'full_mwt': float(prop['MolecularWeight'])},
                                 'source': 'PubChem', 'PubChem_CID': cid, 'InChIKey': prop.get('InChIKey'),
                                 'Molecular_Formula': prop.get('MolecularFormula'),
                                 'Molecular_Weight': prop.get('MolecularWeight'),
-                                'PubChem_Threshold_Percent': self.threshold})
+                                'PubChem_Threshold_Percent': self.threshold}
+                record.update({key:prop.get(key) for key in ('InChI','Title','IUPACName','XLogP',
+                    'HBondDonorCount','HBondAcceptorCount','RotatableBondCount','HeavyAtomCount','Charge','ExactMass','IsotopeAtomCount')})
+                record['PubChem_TPSA']=prop.get('TPSA')
+                records.append(compound_properties(record,calculate=True,source='PubChem'))
             report_progress('Baixando as propriedades dos novos compostos PubChem…',
                             min(offset + 100, len(candidates)), len(candidates))
         compounds = pd.DataFrame(records, columns=self.COLUMNS)

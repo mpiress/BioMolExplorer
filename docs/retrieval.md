@@ -23,15 +23,32 @@ Para chamadas legadas sem outros critérios, um nome de coleção diferente do p
 
 A opção **Exigir ligante** permanece ativada por padrão. Desative-a para recuperar estruturas sem ligantes; elas continuam úteis para inspeção, mas precisam de uma referência apropriada para o redocking implementado. Componentes não aquosos detectados no PDB podem incluir íons/aditivos, portanto confira o ligante antes de usá-lo como referência farmacológica.
 
-O máximo padrão é 100 estruturas. A busca é paginada e limitada, com timeout e repetição de falhas transitórias. Os downloads são concorrentes, com até quatro tarefas. Cada resposta deve conter coordenadas e ser lida pelo parser antes da publicação atômica do `.pdb`. Como antes, registros LINK/SSBOND são removidos para o fluxo de preparação existente.
+O máximo padrão é 100 estruturas. A busca é paginada e limitada, com timeout e repetição de falhas transitórias. Os downloads são concorrentes, com até quatro tarefas. Cada resposta deve conter coordenadas e ser lida pelo parser antes da publicação atômica do `.pdb`. Registros LINK/SSBOND e SITE são preservados; as ligações depositadas ajudam a distinguir ligantes livres de grupos ligados à proteína.
 
 Arquivos produzidos:
 
 - `<PDB>.pdb`: estruturas baixadas com sucesso.
-- `pdb_codes.csv`: contratos existentes `PDB_CODE,LIGAND,RESNUM,CHAIN,RESOLUTION`, com os ligantes detectados; estruturas sem ligantes não geram linhas de complexo.
-- `retrieval_report.json`: filtros, consulta, total encontrado quando informado pela API, limite aplicado, IDs selecionados, downloads bem-sucedidos e erros individuais.
+- `pdb_codes.csv`: contratos existentes `PDB_CODE,LIGAND,RESNUM,CHAIN,RESOLUTION`, com os ligantes selecionados pela triagem ou revisados pelo usuário; estruturas sem candidatos selecionados não geram linhas de complexo.
+- `ligand_candidates.csv`: todos os componentes não aquosos avaliados, contatos, anotações e motivo da recomendação/exclusão.
+- `retrieval_report.json`: filtros, consulta, total encontrado quando informado pela API, limite aplicado, IDs selecionados, downloads bem-sucedidos, erros individuais e política/contagens da triagem.
 
 Uma falha individual não perde os downloads válidos. Se nenhum arquivo puder ser baixado, a etapa falha com orientação para o relatório. Uma pesquisa sem resultados também falha explicitamente. Entradas disponíveis somente em mmCIF não são convertidas automaticamente: o pipeline atual consome PDB e o relatório identifica a falha de obtenção desse formato.
+
+## Triagem de ligantes para redocking
+
+**Triagem dos ligantes PDB → Priorizar candidatos para redocking** é o padrão (`ligand_selection="recommended"`). A análise usa as coordenadas do primeiro modelo, sem novas consultas à RCSB por ligante. Um candidato precisa ter carbono, pelo menos seis átomos pesados observados, contato com pelo menos três resíduos proteicos e pelo menos metade dos átomos pesados a até 4 Å da proteína. Hidrogênios, águas e átomos com ocupação zero não contam.
+
+Solventes/aditivos comuns e ligações anotadas à proteína, incluindo ramos de glicanos, ficam fora da seleção inicial. Cofatores são alternativas secundárias quando há outro candidato orgânico; permanecem recomendáveis quando são a única referência adequada. Esses grupos são heurísticos: um aditivo pode ter relevância biológica. **Manter todos os ligantes** (`ligand_selection="all"`) conserva a lista ampla de componentes; nenhuma coordenada é removida dos PDBs.
+
+Anotações SITE/REMARK 800 distinguem sítios de ligação de descrições explicitamente ativas/catalíticas. Havendo candidato em contato com sítio ativo anotado, ele tem prioridade. Contatos geométricos sozinhos não confirmam função catalítica, afinidade ou atividade contra o alvo pesquisado. SITE também pode descrever sítios regulatórios ou ambientes de ligantes; consulte a [documentação wwPDB](https://www.wwpdb.org/documentation/file-format-content/format33/sect7.html). A análise não identifica sítios alostéricos por inferência nem confirma que a cadeia contatada é o alvo de interesse em um heterocomplexo.
+
+Cópias são agrupadas apenas quando têm o mesmo componente, sequências/numeração das cadeias proteicas e resíduos em contato equivalentes. Outros bolsões e componentes continuam como alternativas distintas. O relatório registra o representante de cada cópia omitida. Para preservar o contrato atual de preparação, candidatos sem cadeia, com código de inserção ou em cadeia diferente da proteína contatada requerem revisão manual e não são recomendados automaticamente. Ligantes em interfaces entre cadeias exigem conferir quais cadeias o receptor deve conter; a triagem não altera a montagem do receptor. A análise por contatos proteicos não atende a alvos exclusivamente de DNA/RNA: use a lista ampla nesses casos.
+
+Em **Ligantes**, a lista de novas recuperações começa pelos recomendados. **Mostrar também os demais resíduos** expõe as alternativas com o motivo da triagem; ao selecionar uma opção, veja os contatos e as cadeias, com os resíduos detalhados na dica de ferramenta. **Usar candidatos recomendados** repõe a lista sugerida; **Salvar ligantes** confirma a curadoria. A seleção salva em `pdb_codes.csv` alimenta a preparação e os pares disponíveis no redocking. As recomendações originais permanecem no relatório, e alterações manuais continuam no histórico. Recuperações anteriores também recebem sugestões ao abrir o diálogo, sem modificar sua seleção já salva.
+
+Se nenhum candidato satisfizer os critérios, a estrutura é mantida e o relatório indica a ausência de recomendação. Nenhum resíduo inadequado é escolhido como substituto automático; revise as alternativas ou escolha outro PDB.
+
+PDBs excluídos ao remover uma falha de redocking entram em **PDBs excluídos de novas recuperações** (`excluded_pdb_ids`). A recuperação filtra esses códigos antes dos downloads. Limpe um código dessa lista apenas para tentar recuperá-lo novamente intencionalmente.
 
 ## Revisar estruturas e ligantes na interface
 

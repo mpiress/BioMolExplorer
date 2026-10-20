@@ -1,0 +1,236 @@
+[
+  {
+    "id": "973f878a2c3c4a9385e503472a94accf",
+    "operation": "retrieve_compounds",
+    "name": "ACHE",
+    "enabled": true,
+    "parameters": {
+      "search_mode": "target",
+      "max_targets": 25,
+      "max_records": 1000,
+      "expand_chembl": true,
+      "similarity_threshold": 70,
+      "search_term": "CHEMBL220",
+      "include_pubchem": false
+    },
+    "bindings": {},
+    "process_all": false,
+    "input_processing": "individual"
+  },
+  {
+    "id": "c59267c60f13472ab08f913b4b65e60c",
+    "operation": "retrieve_compounds",
+    "name": "BCHE",
+    "enabled": true,
+    "parameters": {
+      "search_mode": "target",
+      "max_targets": 25,
+      "max_records": 1000,
+      "expand_chembl": true,
+      "similarity_threshold": 70,
+      "search_term": "CHEMBL1914",
+      "include_pubchem": false
+    },
+    "bindings": {},
+    "process_all": false,
+    "input_processing": "individual"
+  },
+  {
+    "id": "e5329dbb652b45b3acc81011313dd402",
+    "operation": "retrieve_compounds",
+    "name": "BACE1",
+    "enabled": true,
+    "parameters": {
+      "search_mode": "target",
+      "max_targets": 25,
+      "max_records": 1000,
+      "expand_chembl": true,
+      "similarity_threshold": 70,
+      "search_term": "CHEMBL4822",
+      "include_pubchem": false
+    },
+    "bindings": {},
+    "process_all": false,
+    "input_processing": "individual"
+  },
+  {
+    "id": "838570dd6e44465a9851672434f526c5",
+    "operation": "admet",
+    "name": "ADMET",
+    "enabled": true,
+    "parameters": {
+      "admet_profile": "cns",
+      "prediction_backend": "admet_ai",
+      "admet_mode": "filter",
+      "alert_policy": "annotate",
+      "hia_target": "any",
+      "property_limits": {},
+      "bbb_target": "BBB+",
+      "max_rule_violations": 0,
+      "alert_catalogs": [
+        "PAINS",
+        "BRENK"
+      ],
+      "rule_set": "lipinski"
+    },
+    "bindings": {
+      "base_input_path": {
+        "sources": [
+          {
+            "stage": "973f878a2c3c4a9385e503472a94accf",
+            "selector": "CHEMBL220_FULL.csv"
+          },
+          {
+            "stage": "c59267c60f13472ab08f913b4b65e60c",
+            "selector": "CHEMBL1914_FULL.csv"
+          },
+          {
+            "stage": "e5329dbb652b45b3acc81011313dd402",
+            "selector": "CHEMBL4822_FULL.csv"
+          }
+        ]
+      }
+    },
+    "input_processing": "individual"
+  },
+  {
+    "id": "2a305928547046b8ac80e675d4384049",
+    "operation": "retrieve_pubchem",
+    "name": "Retrieve PubChem",
+    "enabled": true,
+    "parameters": {
+      "target": "PubChem",
+      "reference_source": "compounds",
+      "reference_type": "smiles",
+      "selection_mode": "all",
+      "compound_id": "",
+      "threshold": 80,
+      "max_records": 1000
+    },
+    "bindings": {
+      "base_input_path": {
+        "sources": [
+          {
+            "stage": "838570dd6e44465a9851672434f526c5",
+            "selector": "CHEMBL220_FULL_BBB+.csv"
+          },
+          {
+            "stage": "838570dd6e44465a9851672434f526c5",
+            "selector": "CHEMBL1914_FULL_BBB+.csv"
+          },
+          {
+            "stage": "838570dd6e44465a9851672434f526c5",
+            "selector": "CHEMBL4822_FULL_BBB+.csv"
+          }
+        ]
+      }
+    },
+    "input_processing": "individual"
+  },
+  {
+    "id": "74ea87aa6f3143378d2a80ac00fafb9d",
+    "operation": "fingerprints",
+    "name": "Generate fingerprints",
+    "enabled": true,
+    "parameters": {
+      "morgan_n_bits": 2048,
+      "radius": 2,
+      "morgan": true,
+      "maccs": false,
+      "pharmacophore": false,
+      "chunk_size": 100
+    },
+    "bindings": {
+      "base_input_path": {
+        "sources": [
+          {
+            "stage": "2a305928547046b8ac80e675d4384049",
+            "selector": "001_CHEMBL220_FULL_BBB+/compounds/PubChem/compounds.csv"
+          },
+          {
+            "stage": "2a305928547046b8ac80e675d4384049",
+            "selector": "002_CHEMBL1914_FULL_BBB+/compounds/PubChem/compounds.csv"
+          },
+          {
+            "stage": "2a305928547046b8ac80e675d4384049",
+            "selector": "003_CHEMBL4822_FULL_BBB+/compounds/PubChem/compounds.csv"
+          },
+          {
+            "stage": "838570dd6e44465a9851672434f526c5",
+            "selector": "CHEMBL220_FULL_BBB+.csv"
+          },
+          {
+            "stage": "838570dd6e44465a9851672434f526c5",
+            "selector": "CHEMBL1914_FULL_BBB+.csv"
+          },
+          {
+            "stage": "838570dd6e44465a9851672434f526c5",
+            "selector": "CHEMBL4822_FULL_BBB+.csv"
+          }
+        ]
+      }
+    },
+    "input_processing": "individual"
+  },
+  {
+    "id": "e1187805f5564b538eb3b0714a696f98",
+    "operation": "similarity",
+    "name": "Calculate similarity",
+    "enabled": true,
+    "parameters": {
+      "metric": "Tanimoto",
+      "fingerprint": "morgan",
+      "approximate": true,
+      "threshold": 80
+    },
+    "bindings": {
+      "base_input_path": {
+        "sources": [
+          {
+            "stage": "74ea87aa6f3143378d2a80ac00fafb9d",
+            "selector": "001_compounds/morgan_compounds.csv"
+          },
+          {
+            "stage": "74ea87aa6f3143378d2a80ac00fafb9d",
+            "selector": "002_compounds/morgan_compounds.csv"
+          },
+          {
+            "stage": "74ea87aa6f3143378d2a80ac00fafb9d",
+            "selector": "003_compounds/morgan_compounds.csv"
+          }
+        ]
+      }
+    },
+    "input_processing": "individual"
+  },
+  {
+    "id": "083f51f59b8748858993cbf4a70326c0",
+    "operation": "graphs",
+    "name": "Filter by graphs",
+    "enabled": true,
+    "parameters": {
+      "mcs_timeout": 0,
+      "mcs_ring_matches_ring_only": true,
+      "mcs_complete_rings_only": false
+    },
+    "bindings": {
+      "similarity_path": {
+        "sources": [
+          {
+            "stage": "e1187805f5564b538eb3b0714a696f98",
+            "selector": "001_morgan_compounds/Similarity/Tanimoto_morgan_compounds.csv"
+          },
+          {
+            "stage": "e1187805f5564b538eb3b0714a696f98",
+            "selector": "002_morgan_compounds/Similarity/Tanimoto_morgan_compounds.csv"
+          },
+          {
+            "stage": "e1187805f5564b538eb3b0714a696f98",
+            "selector": "003_morgan_compounds/Similarity/Tanimoto_morgan_compounds.csv"
+          }
+        ]
+      }
+    },
+    "input_processing": "individual"
+  }
+]

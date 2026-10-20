@@ -1,4 +1,5 @@
 """Versioned DAG execution with project-scoped inputs, templates and permissions."""
+from biomolexplorer.molecular_parsing import mol_from_smiles
 import copy
 import csv
 import json
@@ -27,7 +28,8 @@ ACTIVE_RUNS = ('queued', 'running', 'awaiting_input')
 
 
 def execution_context(stages):
-    return [dict(s['configuration'],_execution_batches=s.get('batches',[])) for s in stages]
+    return [dict(s['configuration'],_execution_batches=s.get('batches',[]),
+                 _execution_artifact_records=s.get('artifact_records',[])) for s in stages]
 
 
 def execution_modes(stages):
@@ -89,6 +91,8 @@ def validate_pipeline(stages):
             raise ValueError('Estado da etapa inválido.')
         if stage.get('input_processing','merge') not in ('merge','individual'):
             raise ValueError('Escolha mesclar arquivos ou processar individualmente.')
+        if 'follow_inputs' in stage and (type(stage['follow_inputs']) is not bool or stage['operation'] not in ('similarity','graphs')):
+            raise ValueError('A opção de acompanhar entradas exige um bloco de similaridade ou grafos.')
         if 'process_all' in stage and (type(stage['process_all']) is not bool or
                 stage['operation'] not in ('retrieve_compounds','retrieve_structures','retrieve_zinc')):
             raise ValueError('A opção de processar tudo deve ser marcada ou desmarcada em um bloco de recuperação.')
@@ -668,7 +672,7 @@ class PipelineService:
                     reader=csv.DictReader(stream);fields=reader.fieldnames;rows=list(reader)
                 filenames={p.name for p in selected}
                 if kind=='structures':rows=[r for r in rows if r['PDB_CODE']+'.pdb' in filenames]
-                else:rows=[r for r in rows if f'{r["PDB_CODE"]}_{r["CHAIN"]}.dockprep.pdbqt' in filenames]
+                else:rows=[r for r in rows if r.get('STATUS')!='preparation_failed' and f'{r["PDB_CODE"]}_{r["CHAIN"]}.dockprep.pdbqt' in filenames]
                 if not rows:raise ValueError('Os arquivos selecionados não possuem registros PDB compatíveis nos metadados.')
                 with metadata.open('w',encoding='utf-8',newline='') as stream:
                     writer=csv.DictWriter(stream,fieldnames=fields);writer.writeheader();writer.writerows(rows)
@@ -911,7 +915,7 @@ class PipelineService:
                     if not result.get('molecule_chembl_id'):
                         from rdkit import Chem
                         import hashlib
-                        smiles=Chem.MolToSmiles(Chem.MolFromSmiles(result['canonical_smiles']))
+                        smiles=Chem.MolToSmiles(mol_from_smiles(result['canonical_smiles']))
                         result['molecule_chembl_id']='USER_'+hashlib.sha256(smiles.encode()).hexdigest()[:12]
                     identifier=result['molecule_chembl_id']
                     if not identifier or not re.fullmatch('[A-Za-z0-9_.+-]{1,100}',identifier) or '..' in identifier:
@@ -1003,7 +1007,7 @@ class PipelineService:
         if stage['operation']=='consensus':stage['input_processing']='merge'
         if stage.get('input_processing')!='individual' or stage.get('provided_results') or stage['operation']=='import_results':
             return self._execute_single(run_id,project_id,user_id,item,stages,run_dir,results,state)
-        artifacts=[];inputs={};excluded=0
+        artifacts=[];inputs={};excluded=0;redocking_failures=0;redocking_reused=0
         item['batches']=[]
         for index,(variant,label) in enumerate(self._variants(project_id,stage,results),1):
             if state['event'].is_set():raise InterruptedError('Execução cancelada.')
@@ -1022,10 +1026,14 @@ class PipelineService:
             item['batches'].append(batch)
             for field,paths in batch['input_files'].items():inputs.setdefault(field,[]).extend(paths)
             excluded+=item.get('excluded_records',0)
+            redocking_failures+=item.get('redocking_failures',0)
+            redocking_reused+=item.get('redocking_reused',0)
             artifacts.extend(produced)
             item['artifacts']=list(artifacts)
         item['input_files']={f:list(dict.fromkeys(paths)) for f,paths in inputs.items()}
         item['excluded_records']=excluded
+        item['redocking_failures']=redocking_failures
+        item['redocking_reused']=redocking_reused
         item.pop('current_batch',None)
         return artifacts
 
@@ -1055,6 +1063,24 @@ class PipelineService:
             tool_path=str(Path(self.worker_python or sys.executable).parent)+os.pathsep+os.environ.get('PATH','')
             validate_redocking_tools(params.get('prepare_complex',True),tool_path)
         resource = materialize_templates(stage_dir / 'resources',stage.get('templates',{}))
+        if stage['operation']=='redocking' and state.get('reuse_results',True):
+            from .redocking_cache import stage_sources
+            seed=stage_dir/'redocking-inputs'
+            target=params['target'].replace(' ','')
+            batch=item.get('current_batch')
+            codes={str(r[0]) for r in params.get('pdb_codes',[])}
+            requested={str(r[0]) for r in item['configuration']['parameters'].get('pdb_codes',[])}
+            # Other selected receptors have their own individual batch. Retain
+            # unselected historical receptors in the first batch only.
+            only_codes=codes if batch and batch['index']>1 else None
+            exclude_codes=requested-codes if batch and batch['index']==1 else set()
+            if stage_sources(self.store,project_id,stage['id'],seed/target,
+                    source=Path(params['base_input_path'])/target,configuration=stage,
+                    only_codes=only_codes,exclude_codes=exclude_codes):
+                import shutil
+                shutil.copytree(Path(params['base_input_path'])/target,seed/target,
+                    dirs_exist_ok=True,ignore=shutil.ignore_patterns('cache'))
+                params['base_input_path']=str(seed)
         manager = JobManager(AppConfig(workspace=stage_dir, cpu_workers=self.cpu_workers,
             worker_python=self.worker_python, job_timeout=self.job_timeout, resource_dir=resource))
         try:
@@ -1089,6 +1115,8 @@ class PipelineService:
                     failure.action = job['result']['diagnostic']['action']
                 raise failure
             from .molecule_quality import REPORT_NAME
+            item['redocking_failures']=job['result'].get('details',{}).get('redocking_failures',0)
+            item['redocking_reused']=job['result'].get('details',{}).get('redocking_reused',0)
             if job['result'].get('details',{}).get('skipped_reason'):
                 item['skip_reason']=job['result']['details']['skipped_reason']
             reports=list((stage_dir/'inputs').rglob(REPORT_NAME))
@@ -1097,6 +1125,9 @@ class PipelineService:
             return job['result']['artifacts']+[str(p) for p in reports]
         finally:
             manager.close()
+            if stage['operation']=='redocking':
+                import shutil
+                shutil.rmtree(stage_dir/'redocking-inputs',ignore_errors=True)
             with self._lock:
                 state['manager'] = None
                 state['job_id'] = None
@@ -1118,14 +1149,25 @@ class PipelineService:
 
     def _cached_stage(self,project_id,user_id,stage,key,software):
         with self.store.connect() as db:
-            previous=db.execute('SELECT id,stages FROM runs WHERE project_id=? ORDER BY created DESC',(project_id,)).fetchall()
-        for run_id,encoded in previous:
+            previous=db.execute('SELECT id,stages,status FROM runs WHERE project_id=? ORDER BY created DESC',(project_id,)).fetchall()
+        latest_redocking_seen=False
+        for run_id,encoded,run_status in previous:
+            if stage['operation']=='redocking' and run_status!='succeeded':
+                continue
             snapshot=json.loads(encoded)
-            old=next((s for s in snapshot if s['id']==stage['id'] and s['status']=='succeeded' and s.get('artifacts')),None)
+            old=next((s for s in snapshot if s['id']==stage['id'] and s['status']=='succeeded'
+                      and (s.get('artifacts') or stage['operation']=='redocking')),None)
             if old is None:
                 continue
+            if stage['operation']=='redocking':
+                # An older exact request may lack pairs accumulated by a newer
+                # run. Reconcile per pair instead of returning that stale table.
+                if latest_redocking_seen:return None
+                latest_redocking_seen=True
+                if old.get('redocking_failures'):return None
             if old.get('outputs_removed'):
                 continue
+            if not old.get('artifacts'):continue
             try:
                 for path in old['artifacts']:
                     self.store.scoped_path(project_id,path)
@@ -1184,6 +1226,7 @@ class PipelineService:
         found=set()
         for run in self.store.list_runs(token,project_id):
             for item in run['stages']:
+                if item['operation']=='redocking' and run['status']!='succeeded':continue
                 if item['id'] in found or item['status']!='succeeded' or not item.get('artifacts') or item.get('outputs_removed'):
                     continue
                 try:
@@ -1232,6 +1275,25 @@ class PipelineService:
                 if cached:return configuration,key,cached
         return None
 
+    def _save_expanded_inputs(self,project_id,user_id,previous,expanded):
+        """Audit inferred growth without overwriting a collaborator's newer choice."""
+        from .project_state import snapshot,record
+        from .analysis_selection import FIELDS
+        field=FIELDS[expanded['operation']][0]
+        with self.store.connect() as db:
+            db.execute('BEGIN IMMEDIATE')
+            self.store._require_user(user_id,project_id,'editor')
+            pipeline=json.loads(db.execute('SELECT pipeline FROM projects WHERE id=?',(project_id,)).fetchone()[0])
+            current=next((s for s in pipeline if s['id']==previous['id']),None)
+            if not current or current['operation']!=previous['operation'] or current.get('follow_inputs') is False:return
+            if current.get('bindings',{}).get(field)!=previous.get('bindings',{}).get(field):return
+            before=snapshot(self.store,db,project_id)
+            current['bindings'][field]=copy.deepcopy(expanded['bindings'][field])
+            if 'follow_inputs' in expanded:current['follow_inputs']=expanded['follow_inputs']
+            db.execute('UPDATE projects SET pipeline=?,revision=revision+1,updated=? WHERE id=?',
+                (json.dumps(pipeline),time.time(),project_id))
+            record(self.store,db,project_id,user_id,'follow_analysis_inputs','Novos conjuntos incluídos: '+current['name'],before)
+
     def _run(self, run_id, project_id, user_id, stages):
         state = self._active[run_id]
         results = {s['id']:s['artifacts'] for s in stages if s['status']=='succeeded'}
@@ -1257,6 +1319,17 @@ class PipelineService:
                     item.update(status='skipped', error='Esta etapa depende de blocos que não concluíram: ' + ', '.join(sorted(unavailable)))
                     self._update(run_id,'running',stages)
                     continue
+                if stage['operation'] in ('similarity','graphs'):
+                    from .analysis_selection import expand_selection
+                    if 'analysis_history' not in state:
+                        with self.store.connect() as db:
+                            state['analysis_history']=[json.loads(row[0]) for row in db.execute(
+                                "SELECT stages FROM runs WHERE project_id=? AND status='succeeded' ORDER BY created DESC",(project_id,))]
+                    expanded,changes=expand_selection(stage,[s for s in stages if s['status']=='succeeded'],state['analysis_history'])
+                    if changes:
+                        self._save_expanded_inputs(project_id,user_id,stage,expanded)
+                        stage=expanded;item.update(configuration=stage,input_expansions=changes,
+                            requires_curation=requires_curation(stage))
                 reusable=self._reuse_stage(project_id,user_id,stage,results,software,stages) if state.get('reuse_results',True) else None
                 if reusable:
                     stage,key,cached=reusable
@@ -1293,6 +1366,8 @@ class PipelineService:
                     if cached and cached.get('input_files'):item['input_files']=cached['input_files']
                     if cached and cached.get('provided'):item['provided']=True
                     if cached and cached.get('excluded_records'):item['excluded_records']=cached['excluded_records']
+                    if cached and cached.get('redocking_failures'):item['redocking_failures']=cached['redocking_failures']
+                    if cached and cached.get('redocking_reused'):item['redocking_reused']=cached['redocking_reused']
                     if cached and cached.get('batches'):item['batches']=cached['batches']
                     if state['event'].is_set():
                         raise InterruptedError('Execução cancelada.')
@@ -1332,6 +1407,43 @@ class PipelineService:
             with self._lock:
                 if self._active.get(run_id) is state:self._active.pop(run_id,None)
 
+    def _validate_analysis_selection(self, project_id, stage, results, pipeline):
+        """Check selections without hashing, cleaning or copying large tables.
+
+        Molecular preparation belongs to the worker, after the run is queued.
+        Keeping it out of resume also keeps the service lock available.
+        """
+        from .artifacts import validate_reference
+        from .input_validation import validate_file
+        stage = copy.deepcopy(stage)
+        for field, group in stage.get('bindings', {}).items():
+            kind = ('similarity' if field == 'similarity_path' else
+                    'fingerprints' if stage['operation'] == 'similarity' else 'compounds')
+            for ref in input_sources(group):
+                if 'stage' in ref:
+                    files = results.get(ref['stage'], [])
+                    path = validate_reference(ref, files)
+                    if ref.get('artifact_id'):ref['selector'] = selector_for(path, files)
+                else:
+                    with self.store.connect() as db:
+                        asset = db.execute('SELECT path FROM assets WHERE project_id=? AND id=?',
+                                           (project_id, ref['asset'])).fetchone()
+                    if asset is None:raise AccessDenied('Arquivo não autorizado.')
+                    path = asset['path']
+                validate_file(self.store.scoped_path(project_id, path), kind, validate_rows=False)
+        if stage['operation'] == 'similarity':
+            from .fingerprint_selection import generated_kind
+            if stage.get('input_processing') == 'individual':
+                for variant, _ in self._variants(project_id, stage, results):
+                    generated_kind(variant, pipeline, results)
+            else:generated_kind(stage, pipeline, results)
+        elif stage['operation'] == 'graphs':
+            from .graph_inputs import GraphInputs
+            entries = GraphInputs(self.store, project_id, pipeline, results).resolve(stage)['graph_inputs']
+            if stage.get('input_processing') == 'merge' and len({
+                    (entry.get('metric', 'pronta'), entry.get('fingerprint', 'morgan')) for entry in entries}) > 1:
+                raise ValueError('Mescle apenas similaridades com a mesma métrica e fingerprint.')
+
     def resume(self, token, run_id, configuration):
         """Confirm one pending stage without rerunning completed retrievals."""
         configuration=execution_stage(configuration,'curated')
@@ -1362,7 +1474,9 @@ class PipelineService:
                     raise ValueError('Escolha explicitamente os arquivos de entrada deste bloco antes de continuar.')
             self._validate_parameters(run['project_id'],configuration,partial=True)
             results={s['id']:s['artifacts'] for s in stages if s['status']=='succeeded'}
-            if configuration.get('input_processing')=='individual':
+            if configuration['operation'] in ('fingerprints', 'similarity', 'graphs'):
+                self._validate_analysis_selection(run['project_id'],configuration,results,context)
+            elif configuration.get('input_processing')=='individual':
                 for variant,_ in self._variants(run['project_id'],configuration,results):
                     self._resolve(run['project_id'],user['id'],variant,results,cache_only=True,pipeline=context)
             else:self._resolve(run['project_id'],user['id'],configuration,results,cache_only=True,pipeline=context)

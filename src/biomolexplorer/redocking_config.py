@@ -102,6 +102,7 @@ def metadata_records(paths):
         if path.name != 'pdb_codes.csv' or not path.is_file(): continue
         with path.open(encoding='utf-8-sig', newline='') as stream:
             for row in csv.DictReader(stream):
+                if row.get('STATUS')=='preparation_failed':continue
                 try:
                     record = [row['PDB_CODE'], row['LIGAND'], int(row['RESNUM']), row['CHAIN']]
                     resolution = row.get('RESOLUTION', '')

@@ -1,4 +1,5 @@
 """Remove bad molecular records from execution copies, with an auditable report."""
+from biomolexplorer.molecular_parsing import mol_from_smiles
 import ast
 import csv
 import hashlib
@@ -18,6 +19,7 @@ class QualityReport:
     def __init__(self, operation='analysis'):
         self.operation = operation
         self.records = []
+        self.notices = []
         self._seen = set()
         self._written = {}
 
@@ -29,14 +31,16 @@ class QualityReport:
         self.records.append(dict(source=str(source), row=row, identifiers=identifiers, reason=reason))
 
     def write(self, output):
-        if not self.records:return None
+        if not self.records and not self.notices:return None
         path = Path(output) / REPORT_NAME
-        if self._written.get(path)==len(self.records) and path.exists():return path
+        signature=(len(self.records),len(self.notices))
+        if self._written.get(path)==signature and path.exists():return path
         write_json(dict(version=1, operation=self.operation, excluded_records=len(self.records),
-                        records=self.records), path)
+                        records=self.records, notices=self.notices), path)
         from .diagnostics import get_logger
-        get_logger('backend').warning('%s: %s registros excluídos; relatório=%s', self.operation, len(self.records), path)
-        self._written[path] = len(self.records)
+        if self.records:get_logger('backend').warning('%s: %s registros excluídos; relatório=%s', self.operation, len(self.records), path)
+        if self.notices:get_logger('backend').info('%s: %s registros com hidrogênios isolados preservados; não são falhas; relatório=%s', self.operation, len(self.notices), path)
+        self._written[path] = signature
         return path
 
 
@@ -49,7 +53,7 @@ def table_kind(path):
     return None
 
 
-def _validated_row(row, kind):
+def _validated_row(row, kind, retained_hydrogens=None):
     """Return normalized data and its molecular identity, or a record error."""
     from rdkit import Chem
     if None in row or any(v is None for v in row.values()):raise ValueError('quantidade de campos diferente do cabeçalho')
@@ -58,7 +62,7 @@ def _validated_row(row, kind):
     signature = None
     if 'canonical_smiles' in row and (kind!='scores' or str(row['canonical_smiles']).strip()):
         smiles = row['canonical_smiles']
-        mol = Chem.MolFromSmiles(smiles) if isinstance(smiles,str) and smiles.strip() else None
+        mol = mol_from_smiles(smiles,retained_hydrogens=retained_hydrogens) if isinstance(smiles,str) and smiles.strip() else None
         if mol is None or not mol.GetNumAtoms():raise ValueError('SMILES ausente ou inválido')
         signature = Chem.MolToSmiles(mol)
         if kind=='compounds' and not code:
@@ -88,7 +92,8 @@ def clean_rows(rows, kind, report, source):
     for number, original in enumerate(rows, 2):
         ids = [original.get('source'),original.get('target')] if kind=='similarity' else [original.get('molecule_chembl_id') or original.get('name')]
         try:
-            row, code, signature = _validated_row(original, kind)
+            retained=[]
+            row, code, signature = _validated_row(original, kind, retained.append)
         except (ValueError, TypeError, SyntaxError, KeyError, OverflowError) as exc:
             report.exclude(source, number, ids, str(exc));continue
         if code and signature is not None:
@@ -96,13 +101,19 @@ def clean_rows(rows, kind, report, source):
             signatures[code] = signature
         width = len(signature[1]) if kind=='fingerprints' else None
         if width is not None:widths[width] += 1
-        valid.append((number,row,code,width))
+        valid.append((number,row,code,width,sum(retained)))
     width = widths.most_common(1)[0][0] if widths else None
-    for number,row,code,current_width in valid:
+    for number,row,code,current_width,retained in valid:
         reason = ('código associado a dados moleculares conflitantes' if code in conflicts else
                   'tamanho de fingerprint incompatível' if current_width is not None and current_width!=width else None)
         if reason:report.exclude(source,number,[code],reason)
-        else:yield row
+        else:
+            if retained:
+                notice=dict(source=str(source),row=number,identifiers=[code] if code else [],
+                            reason='Hidrogênios isolados preservados; registro válido, não excluído.',
+                            retained_hydrogen_atoms=retained)
+                if notice not in report.notices:report.notices.append(notice)
+            yield row
 
 
 def sanitize_csv(source, destination, kind=None, report=None):

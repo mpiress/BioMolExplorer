@@ -18,7 +18,6 @@ import os
 
 from enum import Enum
 from pathlib import Path
-from Bio.PDB import PDBParser, Polypeptide
 from rcsbsearchapi.const import STRUCTURE_ATTRIBUTE_SEARCH_SERVICE
 from rcsbsearchapi.search import AttributeQuery, TextQuery
 from biomolexplorer.retrieval import identifiers
@@ -180,38 +179,20 @@ class PDBComplex():
         self._last_search = {'query': node, 'total_count': total, 'limit_reached': total is not None and total>len(results)}
         return results
 
-    def __identify_ligands(self, pdb_file):
-
-        try:
-            parser = PDBParser(QUIET=True)
-            structure = parser.get_structure('structure', pdb_file)
-
-            resolution = structure.header.get('resolution', None)
-
-            ligands = []
-            for model in structure:
-                for chain in model:
-                    for residue in chain:
-                        if Polypeptide.is_aa(residue, standard=True):
-                            continue
-                        if residue.id[0] != ' ' and residue.resname != 'HOH':
-                            ligands.append((residue.resname, residue.id[1], chain.id))
-
-            return set(ligands), resolution
-
-        except Exception:
-            self.logger.exception('Invalid downloaded PDB: %s', pdb_file)
-            raise
-
-
     def get_pdb_files(self, filters:dict):
         import requests
         from requests.adapters import HTTPAdapter
         from urllib3.util.retry import Retry
         from concurrent.futures import ThreadPoolExecutor, as_completed
         from biomolexplorer.storage import write_text
+        from biomolexplorer.pdb_ligands import analyze_ligands, COLUMNS, policy
+        selection=filters.get('ligand_selection','recommended')
+        if selection not in ('recommended','all'):
+            raise ValueError('Escolha candidatos recomendados ou todos os ligantes.')
         root = Path(directory(self.__outputpath))
         pdb_codes = self.get_pdb_ids_with_filters(filters)
+        excluded=identifiers(filters['excluded_pdb_ids'],'pdb') if filters.get('excluded_pdb_ids') else []
+        pdb_codes=[code for code in pdb_codes if code not in excluded]
         if not pdb_codes:
             write_json({'filters': self._serializable(filters), 'matched': [], 'downloads': []}, root/'retrieval_report.json')
             raise ValueError('Nenhuma estrutura PDB corresponde aos critérios. Remova filtros ou altere a busca.')
@@ -225,13 +206,15 @@ class PDBComplex():
                 response.raise_for_status()
                 if not any(line.startswith(('ATOM  ', 'HETATM')) for line in response.text.splitlines()):
                     raise ValueError('Resposta sem coordenadas PDB; a entrada pode exigir mmCIF.')
-                text = ''.join(line+'\n' for line in response.text.splitlines() if not line.startswith(('LINK', 'SSBOND')))
+                # Keep deposited LINK/SITE records: they are evidence for triage.
+                text = response.text
                 path = root/(code+'.pdb')
-                from io import StringIO
-                ligands, resolution = self.__identify_ligands(StringIO(text))
+                analysis=analyze_ligands(text,code)
+                ligands=analysis['candidates']
                 write_text(text, path)
                 return {'pdb_id': code, 'status': 'downloaded', 'ligands': len(ligands),
-                        'resolution': resolution}, sorted(ligands)
+                        'recommended_ligands':sum(r['RECOMMENDED'] for r in ligands),
+                        'resolution': analysis['resolution']}, ligands
             except Exception as exc:
                 self.logger.exception('PDB download failed: %s', code)
                 return {'pdb_id': code, 'status': 'failed', 'error': str(exc)}, []
@@ -244,19 +227,27 @@ class PDBComplex():
             for completed, future in enumerate(as_completed(futures), 1):
                 outcomes[futures[future]] = future.result()
                 report_progress('Baixando estruturas PDB…', completed, len(pdb_codes))
-        records = []
+        records = [];candidates=[]
         for code in pdb_codes:
             info, ligands = outcomes[code]
-            for name, number, chain in ligands:
-                records.append([code, name, number, chain, info['resolution']])
+            candidates.extend(ligands)
+            for row in ligands:
+                if selection=='all' or row['RECOMMENDED']:
+                    records.append([code,row['LIGAND'],row['RESNUM'],row['CHAIN'],info['resolution']])
         write_dataframe(DataFrame(records, columns=['PDB_CODE', 'LIGAND', 'RESNUM', 'CHAIN', 'RESOLUTION']), root/'pdb_codes.csv')
+        write_dataframe(DataFrame(candidates,columns=COLUMNS),root/'ligand_candidates.csv')
         report = {'filters': self._serializable(filters), 'matched': pdb_codes,
                   'downloads': [outcomes[code][0] for code in pdb_codes],
                   'limit': filters.get('max_records', 100), 'search': getattr(self, '_last_search', {}),
                   'downloaded': sum(info['status']=='downloaded' for info,_ in outcomes.values()),
                   'failed': sum(info['status']=='failed' for info,_ in outcomes.values())}
+        report['ligand_triage']=dict(policy(),selection=selection,candidates=len(candidates),
+            recommended=sum(r['RECOMMENDED'] for r in candidates),selected=len(records),
+            structures_without_recommendation=[code for code in pdb_codes
+                if outcomes[code][0]['status']=='downloaded' and not any(r['RECOMMENDED'] for r in outcomes[code][1])])
         write_json(report, root/'retrieval_report.json')
         report_progress(f"PDB: {report['downloaded']} estruturas baixadas; {report['failed']} falhas de download.")
+        report_progress(f"Ligantes PDB: {len(records)} selecionados de {len(candidates)} resíduos; consulte ligand_candidates.csv para a triagem completa.")
         if not any(info['status']=='downloaded' for info, _ in outcomes.values()):
             raise RuntimeError('Nenhum PDB foi baixado. Consulte retrieval_report.json para os erros individuais.')
         return report

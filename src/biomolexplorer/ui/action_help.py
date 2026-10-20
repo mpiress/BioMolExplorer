@@ -28,7 +28,8 @@ ACTION_HELP = {
         'Selecione um bloco no canvas ou no menu Bloco selecionado. Etapas posteriores não fazem parte dessa execução. A escolha de reaproveitamento também se aplica. Disponível para proprietários e editores.'),
     'canvas': ('Controles do canvas', 'Organize e explore o pipeline sem alterar os cálculos.',
         'Arraste o cabeçalho para mover um bloco; duplo clique abre a configuração. Organizar blocos distribui as etapas pelas dependências. Duplicar cria uma cópia em espaço livre. Use zoom e Redefinir visão para navegar.',
-        'Ctrl+Z desfaz, Ctrl+Y refaz e Delete remove o bloco selecionado. Escape cancela uma conexão em andamento. A lateral pode ser ocultada para ampliar a área de desenho.'),
+        'Ctrl+Z desfaz, Ctrl+Y refaz e Delete remove o bloco selecionado. Escape cancela uma conexão em andamento. A lateral pode ser ocultada para ampliar a área de desenho.',
+        'A câmera exporta todo o pipeline como PNG, incluindo blocos fora da área visível. A imagem preserva as posições e conexões e pode ser salva para artigos e apresentações.'),
 }
 
 

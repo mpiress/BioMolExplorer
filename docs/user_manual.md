@@ -206,6 +206,8 @@ Em **Recuperar compostos**, escolha o modo de consulta: alvo por nome/IDs/UniPro
 
 **Recuperar estruturas PDB** aceita texto, IDs PDB, acessos UniProt e códigos de ligantes; EC é opcional. Organismo, resolução, polímero e método refinam a busca. O nome da coleção é opcional. Consulte [recuperação flexível](retrieval.md) e `retrieval_report.json` para os critérios e resultados. Use o botão **Ligantes** de cada PDB para revisar, remover ou adicionar registros antes de preparar ou fazer redocking. O explorador 3D abre em uma aba do navegador, com rotação pelo mouse, zoom e opções de representação; o botão RCSB abre sua página oficial. `pdb_codes.csv` e `retrieval_report.json` são preservados no disco e ocultos nessa listagem. Uma recuperação sem estruturas compatíveis exige revisar os filtros; não avance com um conjunto vazio.
 
+A recuperação PDB prioriza por padrão moléculas orgânicas em contato com a proteína e sítios anotados, reduzindo solventes, íons e cópias equivalentes na seleção para redocking. Consulte `ligand_candidates.csv` para os contatos e motivos da triagem. Em **Ligantes**, use **Mostrar também os demais resíduos** para incluir uma alternativa ou **Usar candidatos recomendados** para recuperar a sugestão; confirme com **Salvar ligantes**. Contato geométrico não comprova sítio ativo. A opção **Manter todos os ligantes** conserva a seleção ampla.
+
 ### Preparação e redocking
 
 Em **Preparar para docking**, conecte **Receptor PDB (retrieval ou redocking)** e **Compostos selecionados** separadamente. Para um PDB bruto do retrieval, informe os registros `[PDB, ligante de referência, resíduo, cadeia]` ou forneça `pdb_codes.csv`; as opções de preparo do receptor permanecem disponíveis. Para receptores do redocking, escolha o arquivo `.dockprep.pdbqt` no campo **Receptor que deseja utilizar**: os arquivos exclusivos do ligante ficam ocultos e as opções de preparo do receptor são desabilitadas. Os arquivos complementares e os centros acompanham o receptor; ele é reutilizado sem novo preparo.
@@ -219,6 +221,8 @@ Em **Executar redocking**, mantenha **Preparar complexos antes do redocking** at
 Em **Entradas**, selecione e valide ao menos um par PDB / ligante / resíduo / **Cadeia**; a cadeia é comum às duas estruturas. Configure os cofatores e a preparação do receptor e do ligante nessa seleção. A resolução vem dos metadados e as opções do ligante valem também para a conformação. Pares já configurados são reutilizados sem uma nova solicitação. Consulte [Configuração do redocking](redocking_configuration.md) para as opções, validações e diagnóstico.
 
 ### Consultar resultados de redocking
+
+Falhas de preparação são isoladas por par; os outros complexos continuam e a conclusão informa os erros. A tabela mantém os pares que falharam em vermelho, com **Falha na preparação**, RMSD **—** e **Ver erro**. **Excluir falha e complexo de origem** remove o PDB da origem e os pares desse PDB da próxima execução, após confirmação, preservando resultados já concluídos. O código fica excluído da recuperação original até uma liberação intencional no campo **PDBs excluídos de novas recuperações**. Se todos os pares falharem, o processo conclui com aviso e não inicia o Vina.
 
 Ao expandir uma etapa concluída em **Execuções**, a tabela mostra PDB, ligante, resíduo, cadeia e **RMSD (Å)**. **Ver simulação** abre um popup com os arquivos correspondentes àquela seleção. A lista distingue o receptor preparado, o ligante de referência, as poses e os metadados. Arquivos compartilhados pelo receptor ou pela coleção acompanham as simulações correspondentes.
 
@@ -291,9 +295,11 @@ Após conectar os resultados Vina e DOCK6, o consenso segue automaticamente na e
 
 No grafo, escolha **Grafo completo** para ver todos os componentes. Cada componente recebe espaço próprio e os vértices são separados. Use o seletor de componentes para focar uma região; clique em um vértice para ver seus detalhes, vizinhos e pesos das relações. Buscar um código permite encontrar o nó e navegar até seu componente. Use arraste e zoom; **Ajustar à tela** e **Recentrar** ajudam a recuperar a visão geral.
 
+**Restaurar grafo completo** limpa todos os filtros e a agregação e recupera a visão geral, inclusive após investigar uma comunidade. Em **Layout, centralidade e componentes**, escolha ForceAtlas2, LinLog, Fruchterman–Reingold ou outras organizações e configure cores e tamanhos. A legenda indica os valores ou os grupos de cada cor. **Laboratório de dados** permite pesquisar nós e arestas e exportar a tabela completa. PNG/SVG incluem legenda; GEXF/GraphML permitem continuar a análise no Gephi. Consulte [recursos, interpretação e limites](graph_explorer.md).
+
 Ao escolher **MCC**, a exploração se restringe ao maior componente conectado. O painel mostra **SMILES do fragmento**, sua estrutura e o estado da busca do fragmento comum quando esses dados estão disponíveis. O SMILES é extraído da molécula de referência para o padrão encontrado por MCS; a conectividade comum não comprova identidade estereoquímica de todos os compostos. Busca interrompida pelo limite de tempo deve ser interpretada pelo estado informado. Sem SMILES correspondentes, a topologia pode ser explorada, mas não há estrutura molecular do fragmento a mostrar.
 
-Resultados antigos podem ter apenas PNG. Para produzir os artefatos interativos, execute novamente escolhendo **Não, executar novamente**. Visualizações `*.biomol-view.json` acima do limite de abertura de 32 MB podem ser baixadas. Em BOILED-Egg, pontos sobrepostos oferecem seleção dos compostos; busca também permite distingui-los.
+Resultados antigos podem ter apenas PNG. Para produzir os artefatos interativos, execute novamente escolhendo **Não, executar novamente**. O limite de abertura é de 128 MB para grafos e de 32 MB para outras visualizações `*.biomol-view.json`; arquivos maiores podem ser baixados. Em BOILED-Egg, pontos sobrepostos oferecem seleção dos compostos; busca também permite distingui-los.
 
 ## 13. Conferir exclusões, erros e cancelamentos
 
@@ -399,3 +405,20 @@ As ações do workspace ficam na lateral. No projeto, **Navegação do projeto**
 Nos traçados 3D, **Mostrar nomes dos resíduos** permite uma exportação limpa sem remover as interações. Consulte o [visualizador](molecular_viewer.md#ocultar-os-nomes-dos-residuos).
 
 [Veja um footprint DOCK6](../imgs/examples/dock6-footprint.png) com o [PDF original](../imgs/examples/dock6-footprint.pdf): o exemplo do tutorial 1ABE compara contribuições de energia da referência e da pose gerada por Vina → DOCK6. Esses perfis de energia são distintos dos contatos geométricos 3D.
+
+
+## Exportação do pipeline em PNG
+
+A câmera nos controles do canvas salva **todo o pipeline em PNG**, incluindo blocos fora da área visível. A imagem preserva posições, nomes, cores, portas e conexões, independentemente do zoom. O arquivo tem metadados de 300 dpi e resolução ampliada, com limite de 32 milhões de pixels para controlar o uso de memória. Leitores também podem exportar o diagrama para artigos e apresentações.
+
+## Reconhecer as origens e acompanhar novos conjuntos
+
+Os resultados exibem o bloco de origem e o identificador do alvo, como **ACHE · CHEMBL220**, **BCHE · CHEMBL1914** e **BACE1 · CHEMBL4822**. A origem acompanha os arquivos através de ADMET, PubChem, fingerprints, similaridade e grafos, mesmo quando arquivos diferentes se chamam `compounds.csv` ou `morgan_compounds.csv`.
+
+Os seletores permitem pesquisar pelo alvo ou identificador ChEMBL. As tabelas podem ser filtradas por origem; os dashboards de ADMET e grafos mostram **Origem dos dados** e um painel **Arquivo e caminho no pipeline**. No grafo, a origem também acompanha a seleção da fonte molecular, a inspeção dos compostos e os relatórios exportados. Arquivos complementares pertencem ao lote selecionado, evitando misturar análises que usam o mesmo nome de arquivo.
+
+Ao acrescentar as três saídas BBB+ do ADMET às três entradas vindas da PubChem, fingerprints deve produzir seis conjuntos separados. Uma seleção antiga de similaridade ou grafos que abrangia todas as saídas anteriores passa a acompanhar essa ampliação. A seleção efetiva é registrada no histórico e salva no bloco. Assim, resultam seis grafos: ADMET direto e PubChem para cada alvo.
+
+A opção **Acompanhar novos conjuntos da origem**, nos blocos de similaridade e grafos, inclui as saídas compatíveis dos produtores conectados. Desative-a para manter somente os arquivos explicitamente selecionados. Seleções parciais antigas não são convertidas automaticamente em seleções completas. Para manter os seis conjuntos separados, use **Processar individualmente**; a opção merge reúne as entradas conforme a configuração escolhida.
+
+A origem exibida é reconstruída a partir dos arquivos efetivamente usados e do histórico da execução. Não se atribui um alvo apenas porque o nome de um arquivo parece pertencer a ele. Resultados já calculados recebem os novos rótulos ao serem abertos.

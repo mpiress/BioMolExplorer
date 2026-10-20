@@ -1,4 +1,5 @@
 """Human-readable scientific file contracts, without executing uploaded code."""
+from biomolexplorer.molecular_parsing import mol_from_smiles
 import ast
 import csv
 import hashlib
@@ -93,7 +94,7 @@ def validate_file(path,kind,operation=None,validate_rows=True):
                     if identifier and not _code(identifier):raise ValueError(f'Linha {number}: código do composto inválido.')
                     if kind=='compounds':
                         smiles=row['canonical_smiles']
-                        molecule=Chem.MolFromSmiles(smiles)
+                        molecule=mol_from_smiles(smiles)
                         if molecule is None or not molecule.GetNumAtoms():raise ValueError(f'Linha {number}: SMILES inválido.')
                         canonical=Chem.MolToSmiles(molecule)
                         if identifier in seen and seen[identifier]!=canonical:raise ValueError(f'Linha {number}: o código {identifier} representa moléculas diferentes.')
@@ -193,7 +194,7 @@ def merge_csv(paths,destination,kind='compounds'):
                     row={ALIASES.get(k,k):v for k,v in original.items()}
                     if kind=='compounds':
                         from rdkit import Chem
-                        signature=Chem.MolToSmiles(Chem.MolFromSmiles(row['canonical_smiles']))
+                        signature=Chem.MolToSmiles(mol_from_smiles(row['canonical_smiles']))
                         if not row.get('molecule_chembl_id'):
                             row['molecule_chembl_id']='USER_'+hashlib.sha256(signature.encode()).hexdigest()[:12]
                     else:

@@ -67,6 +67,13 @@ class FileSelectionTests(unittest.TestCase):
                 # Closing the popup never advances the backend.
                 dialog.actions[0].on_click(None)
                 self.assertEqual(self.store.get_run(self.token,run['id'])['status'],'awaiting_input')
+                # A queued click on a dismissed dialog must not resume the run.
+                asyncio.run(dialog.actions[-1].on_click(None))
+                self.assertEqual(self.store.get_run(self.token,run['id'])['status'],'awaiting_input')
+                asyncio.run(ui.configure_pending(run['id']))
+                dialog=dialogs[-1]
+                checks=[flag for c in dialog.content.content.controls if hasattr(c,'_artifact_picker')
+                        for flag,_ in c._artifact_picker.rows]
                 for check in checks:check.value=check.label=='chosen.csv'
                 asyncio.run(dialog.actions[-1].on_click(None))
                 finished=self.wait(run)

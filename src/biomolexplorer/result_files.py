@@ -8,7 +8,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from .workspace import AccessDenied
-from .visualizations import MAX_VIEW_BYTES, SUFFIX, egg_view, load_view
+from .visualizations import MAX_VIEW_BYTES, MAX_GRAPH_BYTES, SUFFIX, egg_view, load_view
 
 FILTERS = {'all': 'Todos os compostos da tabela', 'BBB+': 'Apenas BBB+',
            'BBB-': 'Apenas BBB−', 'HIA+': 'Apenas HIA+', 'HIA-':'Apenas HIA−',
@@ -18,6 +18,16 @@ FILTERS = {'all': 'Todos os compostos da tabela', 'BBB+': 'Apenas BBB+',
 class ResultFiles:
     def __init__(self, store):
         self.store = store
+
+    def origins(self, token, pid, rid):
+        from .result_origins import ResultOrigins
+        def load(run_id):
+            try:run=self.store.get_run(token,run_id)
+            except ValueError:return None
+            if run['project_id']!=pid:raise AccessDenied('Resultado de outro projeto.')
+            return run
+        run=load(rid)
+        return ResultOrigins(run['stages'],rid,load_run=load)
 
     def stage(self, token, pid, rid, sid):
         run = self.store.get_run(token, rid)
@@ -32,10 +42,12 @@ class ResultFiles:
         stage = self.stage(token, pid, rid, sid)
         from .artifacts import records
         catalog={r['path']:r for r in records(stage,rid)}
+        origins=self.origins(token,pid,rid)
         def information(path):
             record=catalog[str(path)]
-            origins=sorted({r.get('stage_name',r.get('name','')) for rows in record.get('inputs',{}).values() for r in rows})
-            return dict(record,size=path.stat().st_size,origin=', '.join(origins) or record['stage_name'],description='Origem: '+record['stage_name']+' · '+record['stage_id'][:8]+' · Execução '+str(record['run_id'] or rid)[:8]+(' · Entradas: '+', '.join(origins) if origins else ''))
+            source=origins.describe(path,stage['id'],rid)
+            return dict(record,**source,size=path.stat().st_size,description='Origem: '+source['origin']+' · '+record['selector'],
+                        provenance='Origem: '+source['source_trace']+'\nExecução '+str(record['run_id'] or rid))
         return [information(p)
                 for name in stage.get('artifacts', [])
                 if (p := self.store.scoped_path(pid, name)).is_file()
@@ -60,15 +72,16 @@ class ResultFiles:
         data=self.store.read_file(token,pid,str(metadata),MAX_VIEW_BYTES)
         reader=csv.DictReader(io.StringIO(data.decode('utf-8-sig')))
         from hashlib import sha256
-        from Bio.PDB import parse_pdb_header
-        resolution=parse_pdb_header(str(path)).get('resolution')
-        available=set()
-        for line in self.store.read_file(token,pid,str(path),MAX_VIEW_BYTES).decode().splitlines():
-            if line.startswith('HETATM') and line[17:20].strip() not in ('HOH','WAT'):
-                available.add((line[17:20].strip(),int(line[22:26]),line[21:22].strip()))
-        return {'pdb_id':path.stem.upper(),'revision':sha256(data).hexdigest(),'resolution':resolution,
+        from .pdb_ligands import analyze_ligands
+        text=self.store.read_file(token,pid,str(path),MAX_VIEW_BYTES).decode('utf-8-sig')
+        analysis=analyze_ligands(text,path.stem)
+        available=[dict(row,RESNUM=str(row['RESNUM'])) for row in analysis['candidates']]
+        available.sort(key=lambda r:(r['LIGAND'],int(r['RESNUM']),r['CHAIN'],r['ICODE']))
+        return {'pdb_id':path.stem.upper(),'revision':sha256(data).hexdigest(),'resolution':analysis['resolution'],
                 'ligands':[row for row in reader if row['PDB_CODE'].upper()==path.stem.upper()],
-                'available_ligands':[{'LIGAND':name,'RESNUM':str(number),'CHAIN':chain} for name,number,chain in sorted(available)]}
+                'available_ligands':available,
+                'recommended_ligands':[r for r in available if r['RECOMMENDED']],
+                'triage_available':str(path.parent/'ligand_candidates.csv') in stage.get('artifacts',[])}
 
     def set_pdb_ligands(self,token,pid,rid,sid,filename,records,revision):
         """Replace one structure's curated ligands, preserving other PDB rows."""
@@ -78,6 +91,7 @@ class ResultFiles:
         path=self.store.scoped_path(pid,filename)
         metadata=path.parent/'pdb_codes.csv'
         backup=None
+        changes={}
         try:
             with self.store.change(token,pid,'editor','curate_pdb_ligands','Ligantes revisados: '+path.stem) as db:
                 if db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running')",(pid,)).fetchone():
@@ -101,12 +115,23 @@ class ResultFiles:
                         raise ValueError('Informe código do ligante e cadeia válidos.')
                     key=(ligand,number,chain)
                     if key not in residues:raise ValueError('Este ligante/resíduo/cadeia não foi encontrado na estrutura baixada.')
+                    if any(r.get('ICODE') for r in context['available_ligands']
+                           if (r['LIGAND'],int(r['RESNUM']),r['CHAIN'])==key):
+                        raise ValueError('Este resíduo possui código de inserção, não suportado na preparação atual. Selecione outra referência ou normalize a estrutura externamente.')
                     if key in seen:continue
                     seen.add(key)
                     row={k:'' for k in fields}
                     row.update(PDB_CODE=context['pdb_id'],LIGAND=ligand,RESNUM=str(number),CHAIN=chain)
                     if 'RESOLUTION' in fields:row['RESOLUTION']='' if context['resolution'] is None else str(context['resolution'])
                     curated.append(row)
+                from .redocking_selection import sync_curated_pairs
+                pipeline=json.loads(db.execute('SELECT pipeline FROM projects WHERE id=?',(pid,)).fetchone()[0])
+                changes=sync_curated_pairs(pipeline,sid,path,
+                    self.stage(token,pid,rid,sid)['artifacts'],
+                    [row for row in existing if row['PDB_CODE'].upper()==context['pdb_id']],curated)
+                if changes['updated_redocking_stages']:
+                    db.execute('UPDATE projects SET pipeline=?,revision=revision+1,updated=? WHERE id=?',
+                               (json.dumps(pipeline),time.time(),pid))
                 rows=[row for row in existing if row['PDB_CODE'].upper()!=context['pdb_id']]+curated
                 stream=io.StringIO(newline='');writer=csv.DictWriter(stream,fieldnames=fields)
                 writer.writeheader();writer.writerows(rows)
@@ -122,7 +147,7 @@ class ResultFiles:
         except Exception:
             if backup is not None:write_text(backup,metadata)
             raise
-        return self.pdb_ligands(token,pid,rid,sid,filename)
+        return dict(self.pdb_ligands(token,pid,rid,sid,filename),**changes)
 
     def remove(self, token, pid, rid, sid, filename):
         """Audit deletion, invalidate producer caches and restore bytes on failure."""
@@ -207,6 +232,10 @@ class ResultFiles:
                 columns = set(csv.DictReader(source).fieldnames or [])
             if {'TPSA', 'WLOGP', 'molecule_chembl_id', 'canonical_smiles'} <= columns:
                 result.append({'path': str(path), 'name': path.name})
+        origins=self.origins(token,pid,rid)
+        for item in result:
+            item.update(origins.describe(item['path'],sid,rid))
+            item['label']=item['display_name']
         return sorted(result,key=lambda item:(item['name'].endswith('_evaluated.csv'),len(item['name']),item['name']))
 
     def graph_datasets(self,token,pid,rid,sid):
@@ -215,16 +244,20 @@ class ResultFiles:
         for filename in stage.get('artifacts',[]):
             path=self.store.scoped_path(pid,filename)
             if not path.name.endswith(SUFFIX) or not path.is_file():continue
-            if path.stat().st_size>MAX_VIEW_BYTES:
-                result.append({'path':str(path),'name':path.name+' · acima do limite de 32 MB','unavailable':True})
+            if path.stat().st_size>MAX_GRAPH_BYTES:
+                result.append({'path':str(path),'name':path.name+f' · acima do limite de {MAX_GRAPH_BYTES//(1024*1024)} MB','unavailable':True})
                 continue
-            model=load_view(self.store.read_file(token,pid,str(path),MAX_VIEW_BYTES+1))
+            model=load_view(self.store.read_file(token,pid,str(path),MAX_GRAPH_BYTES+1),max_bytes=MAX_GRAPH_BYTES)
             if model['kind']=='graph':
                 result.append({'path':str(path),'name':model['title']})
         from collections import Counter
         titles=Counter(choice['name'] for choice in result)
         for index,choice in enumerate(result,1):
             if titles[choice['name']]>1:choice['name']=f"Análise {index:02d} · "+choice['name']
+        origins=self.origins(token,pid,rid)
+        for item in result:
+            item.update(origins.describe(item['path'],sid,rid))
+            item['label']=item['origin']+' — '+item['name']
         return result
 
     def graph_model(self,token,pid,rid,sid,filename):
@@ -232,9 +265,12 @@ class ResultFiles:
         path=self.store.scoped_path(pid,filename)
         if str(path) not in stage.get('artifacts',[]) or not path.name.endswith(SUFFIX):
             raise AccessDenied('Grafo não autorizado para esta etapa.')
-        content=self.store.read_file(token,pid,str(path),MAX_VIEW_BYTES+1)
-        model=load_view(content)
+        content=self.store.read_file(token,pid,str(path),MAX_GRAPH_BYTES+1)
+        model=load_view(content,max_bytes=MAX_GRAPH_BYTES)
         if model['kind']!='graph':raise ValueError('Selecione um resultado de grafos.')
+        model['dataset_origin']=self.origins(token,pid,rid).describe(path,sid,rid)
+        source=model['dataset_origin']['source_label']
+        if not model['title'].startswith(source):model['title']=source+' — '+model['title']
         # Opening old topology must never start an unbounded MCS search.
         import hashlib
         model['dashboard_context']={'project_id':pid,'run_id':rid,'stage_id':sid,'path':str(path),'sha256':hashlib.sha256(content).hexdigest()}
@@ -245,11 +281,15 @@ class ResultFiles:
         run=self.store.get_run(token,rid)
         if run['project_id']!=pid:raise AccessDenied('Resultado de outro projeto.')
         result=[]
+        origins=self.origins(token,pid,rid)
         for stage in run['stages']:
             if stage.get('status')!='succeeded':continue
             for record in records(stage,rid):
                 if Path(record['path']).suffix.lower()=='.csv':
-                    result.append({key:record[key] for key in ('artifact_id','path','name','stage_id','stage_name','run_id','context')})
+                    item={key:record[key] for key in ('artifact_id','path','name','stage_id','stage_name','run_id','context')}
+                    description=origins.describe(record['path'],stage['id'],rid)
+                    item.update({key:description[key] for key in ('source_label','origin','display_name','source_trace')})
+                    result.append(item)
         return result
 
     def graph_enrichment(self,token,pid,rid,sid,filename,source_id,expected_graph_sha256=None):
@@ -259,11 +299,19 @@ class ResultFiles:
             raise ValueError('O resultado do grafo mudou. Atualize o dashboard antes de associar uma fonte.')
         source=next((s for s in self.graph_sources(token,pid,rid) if s['artifact_id']==source_id),None)
         if source is None:raise AccessDenied('Fonte molecular não autorizada para esta execução.')
-        content=self.store.read_file(token,pid,source['path'],MAX_VIEW_BYTES+1)
-        if len(content)>MAX_VIEW_BYTES:raise ValueError('Fonte molecular maior que o limite de 32 MB.')
+        path=self.store.scoped_path(pid,source['path'])
+        # Fingerprint sources can contain hundreds of MB of bits. Stream CSV
+        # rows and retain only matching molecular metadata, never the bit column.
         import hashlib
-        source=dict(source,content_sha256=hashlib.sha256(content).hexdigest())
-        return enrich(model,content.decode('utf-8-sig'),source)
+        digest=hashlib.sha256()
+        def lines():
+            with path.open('rb') as stream:
+                for index,raw in enumerate(stream):
+                    digest.update(raw)
+                    yield raw.decode('utf-8-sig' if index==0 else 'utf-8')
+        result=enrich(model,lines(),source)
+        result['source']=dict(source,content_sha256=digest.hexdigest())
+        return result
 
     def graph_png(self,token,pid,rid,sid,filename):
         from caad.graph_results import report_png
@@ -350,7 +398,9 @@ class ResultFiles:
             nodes=[n for n in nodes if str(n['properties'].get('ADMET_selected','')).lower()==str(expected).lower()]
         elif subset != 'all':
             nodes = [n for n in nodes if n['properties'].get(subset[:3]) == subset]
-        return dict(model,nodes=nodes,title=path.stem+' · '+FILTERS[subset],admet_report=self.admet_report(token,pid,rid,sid,filename))
+        return dict(model,nodes=nodes,title=path.stem+' · '+FILTERS[subset],
+                    dataset_origin=next(c for c in choices if c['path']==filename),
+                    admet_report=self.admet_report(token,pid,rid,sid,filename))
 
     def admet_csv(self, token, pid, rid, sid, filename, subset):
         model = self.admet_model(token, pid, rid, sid, filename, subset)

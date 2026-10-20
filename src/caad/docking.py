@@ -378,7 +378,7 @@ class Docking():
 
 
 
-    def prepare_for_docking(self, pdb_codes:list, charge_type:str, pH:float, redefine_centerofmass:bool, preparation_pairs=None) -> bool:
+    def prepare_for_docking(self, pdb_codes:list, charge_type:str, pH:float, redefine_centerofmass:bool, preparation_pairs=None, _prepared_receptors=None) -> bool:
         """
         This function prepares the input files for docking using Chimera and Open Babel software. The input files are prepared in a specific
         format required to perform docking with different docking software. Templates for the input files are available in the src/biomolexplorer/resources folder.
@@ -417,7 +417,7 @@ class Docking():
                 if preparation_pairs is not None:
                     complex_preparation = preparation
 
-                if f'prepare_complex_{receptor}_{chain}.com' not in complexes:
+                if (_prepared_receptors is None or (receptor,chain) not in _prepared_receptors) and f'prepare_complex_{receptor}_{chain}.com' not in complexes:
                     self.generate_docking_script(input_template='src/scripts/chimera/prepare_complex.template',
                                                 output_script=directory(self.outputpath) + f'prepare_complex_{receptor}_{chain}.com',
                                                 pdb_code=directory(self.complexpath) + receptor,
@@ -427,7 +427,7 @@ class Docking():
                     complexes.append(f'prepare_complex_{receptor}_{chain}.com')
 
 
-                if f'prepare_receptor_{receptor}_{chain}.com' not in receptors:
+                if (_prepared_receptors is None or (receptor,chain) not in _prepared_receptors) and f'prepare_receptor_{receptor}_{chain}.com' not in receptors:
                     self.generate_docking_script(input_template='src/scripts/chimera/prepare_receptor.template',
                                                 output_script=directory(self.outputpath) + f'prepare_receptor_{receptor}_{chain}.com',
                                                 input_complex=directory(self.outputpath) + f'{receptor}_{chain}' + '.complex',
@@ -449,23 +449,31 @@ class Docking():
 
 
             args = [(file,) for file in complexes]
-            self.process_in_parallel(method_name='prepare_on_chimera', args_list=args)
+            if _prepared_receptors is None:self.process_in_parallel(method_name='prepare_on_chimera', args_list=args)
+            else:
+                for (file,) in args:self.prepare_on_chimera(file)
 
             args = [(file,) for file in receptors]
-            self.process_in_parallel(method_name='prepare_on_chimera', args_list=args)
+            if _prepared_receptors is None:self.process_in_parallel(method_name='prepare_on_chimera', args_list=args)
+            else:
+                for (file,) in args:self.prepare_on_chimera(file)
 
             converted_receptors = set()
             for pdb in pdb_codes:
                 chain = pdb[3]
                 receptor_key = (pdb[0], chain)
+                if _prepared_receptors is not None and receptor_key in _prepared_receptors:continue
                 if receptor_key in converted_receptors:
                     continue
                 options = dict(DEFAULTS, **(preparation_pairs or {}).get(pair_key(pdb), {}).get('receptor', {}))
                 self.prepare_on_obabel(f'{pdb[0]}_{chain}.dockprep.mol2', f'{pdb[0]}_{chain}.dockprep.pdbqt', ([('p',str(pH))] if options['add_hydrogens'] else []) + [('xr','')], input_format='mol2', output_format='pdbqt')
                 converted_receptors.add(receptor_key)
+                if _prepared_receptors is not None:_prepared_receptors.add(receptor_key)
 
             args = [(file,) for file in ligands]
-            self.process_in_parallel(method_name='prepare_on_chimera', args_list=args)
+            if _prepared_receptors is None:self.process_in_parallel(method_name='prepare_on_chimera', args_list=args)
+            else:
+                for (file,) in args:self.prepare_on_chimera(file)
 
             tmp_codes = []
             for pdb in pdb_codes:

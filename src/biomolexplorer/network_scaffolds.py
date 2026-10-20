@@ -1,4 +1,5 @@
 """Bounded, cancellable structural queries independent of the dashboard controls."""
+from biomolexplorer.molecular_parsing import mol_from_smiles
 import base64
 import io
 
@@ -17,7 +18,7 @@ def individual(smiles, smarts=''):
         from rdkit import Chem
         from rdkit.Chem.Scaffolds import MurckoScaffold
     except ImportError:return dict(image=None,scaffold=None,atoms=0,smiles='',notice='RDKit indisponível neste ambiente.')
-    molecule=Chem.MolFromSmiles(smiles) if isinstance(smiles,str) else None
+    molecule=mol_from_smiles(smiles) if isinstance(smiles,str) else None
     if molecule is None:return dict(image=None,scaffold=None,atoms=0,smiles='',notice='SMILES ausente ou inválido.')
     scaffold=MurckoScaffold.GetScaffoldForMol(molecule)
     query=Chem.MolFromSmarts(smarts) if smarts else None
@@ -36,14 +37,14 @@ def common(rows, timeout, limit, cancelled):
     result=dict(ids=[n for n,_ in rows],compounds=len(rows),timeout=timeout,limit=limit,
         ring_matches_ring_only=True,complete_rings_only=True,threshold=1.0,atom_compare='elements',bond_compare='order',match_valences=False,
         smarts='',image='',atoms=0,bonds=0,status='unavailable')
-    if not 1<=timeout<=30 or not 2<=limit<=200:
-        return dict(result,notice='Use 1–30 segundos e limite de 2–200 compostos.')
+    if not 1<=timeout<=30 or limit<2:
+        return dict(result,notice='Use 1–30 segundos e limite de pelo menos 2 compostos.')
     if len(rows)<2 or len(rows)>limit:
         return dict(result,notice='Selecione de 2 até o limite de compostos. Nenhum subconjunto é amostrado automaticamente.')
     molecules=[]
     for _,smiles in rows:
         if cancelled.is_set():return dict(result,status='cancelled',notice='Cálculo interrompido.')
-        molecule=Chem.MolFromSmiles(smiles) if isinstance(smiles,str) else None
+        molecule=mol_from_smiles(smiles) if isinstance(smiles,str) else None
         if molecule is None:return dict(result,notice='Há SMILES ausentes ou inválidos no conjunto; nenhum composto foi excluído silenciosamente.')
         if molecule.GetNumAtoms()>256:return dict(result,notice='Estrutura acima de 256 átomos: restrinja o conjunto para esta análise interativa.')
         molecules.append(molecule)

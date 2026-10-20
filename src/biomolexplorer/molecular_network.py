@@ -1,4 +1,5 @@
 """Explicit, source-scoped molecular joins and exploratory numerical summaries."""
+from biomolexplorer.molecular_parsing import mol_from_smiles
 import csv
 import ast
 import io
@@ -10,11 +11,11 @@ def enrich(model,content,source):
     from .input_validation import ALIASES
     from rdkit import Chem
     nodes={n['id']:n for n in model['nodes']};groups={};ambiguous=set()
-    reader=csv.DictReader(io.StringIO(content))
+    reader=csv.DictReader(io.StringIO(content) if isinstance(content,str) else content)
     if not reader.fieldnames or not any(ALIASES.get(f,f)=='molecule_chembl_id' for f in reader.fieldnames):
         raise ValueError('A fonte precisa de identificadores molecule_chembl_id.')
     for row in reader:
-        row={ALIASES.get(k,k):v for k,v in row.items() if k is not None}
+        row={ALIASES.get(k,k):v for k,v in row.items() if k is not None and k!='fingerprint'}
         identifier=row.get('molecule_chembl_id')
         if identifier not in nodes or identifier in ambiguous:continue
         if identifier in groups and row!=groups[identifier]:
@@ -23,7 +24,7 @@ def enrich(model,content,source):
     canonical={}
     def signature(value):
         if value not in canonical:
-            molecule=Chem.MolFromSmiles(value) if value else None
+            molecule=mol_from_smiles(value) if value else None
             canonical[value]=Chem.MolToSmiles(molecule) if molecule else None
         return canonical[value]
     matches={};conflicts=sorted(ambiguous)
@@ -41,7 +42,7 @@ def enrich(model,content,source):
         unmatched=len(nodes)-len(matches)-len(conflicts),rule='Exact compound ID; canonical SMILES must agree when available. Graph values take precedence. Ambiguous duplicate rows are excluded.')
 
 
-def numeric_properties(nodes,enrichment=None):
+def numeric_properties(nodes,enrichment=None,calculate=False):
     properties={n['id']:dict(n['properties']) for n in nodes}
     matches=(enrichment or {}).get('matches',{})
     for identifier in properties:
@@ -59,6 +60,8 @@ def numeric_properties(nodes,enrichment=None):
             if isinstance(nested,dict):
                 for field,value in nested.items():
                     if isinstance(value,(str,int,float,bool)) or value is None:row.setdefault(key+'.'+str(field),value)
+        from .compound_properties import compound_properties
+        row.update(compound_properties(row,calculate=calculate))
     numeric={}
     for identifier,row in properties.items():
         for key,value in row.items():

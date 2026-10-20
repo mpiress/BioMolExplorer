@@ -8,6 +8,7 @@ class ArtifactPicker:
     def __init__(self, rows, origins, page=None, extras=None, writable=True):
         self.rows,self.origins,self.page,self.extras=rows,origins,page,extras or {}
         self.writable=writable;self.touched=False;self.offset=0;self.available_offset=0
+        self.on_change=None
         keys=list(origins)
         self.source=ft.Dropdown(label='Bloco de origem',options=[
             verbatim(ft.DropdownOption(key=k,text=origins.get(k,k)+' · '+k.split(':')[-1][:8]),'text') for k in keys],
@@ -35,16 +36,19 @@ class ArtifactPicker:
     @staticmethod
     def origin(ref):return ('stage:'+ref['stage']) if 'stage' in ref else 'asset:'+ref['asset']
 
+    @staticmethod
+    def label(flag):return getattr(flag,'display_label',flag.label)
+
     def available_rows(self):
         query=(self.search.value or '').casefold()
         return [(i,flag,ref) for i,(flag,ref) in enumerate(self.rows)
-            if self.origin(ref)==self.source.value and getattr(flag,'available',True) and query in flag.label.casefold()]
+            if self.origin(ref)==self.source.value and getattr(flag,'available',True) and query in self.label(flag).casefold()]
 
     def redraw(self):
         self.source.tooltip=self.origins.get(self.source.value,'')+' · '+str(self.source.value or '')
         available=self.available_rows()
         self.available_offset=min(self.available_offset,max(0,((len(available)-1)//self.PAGE_SIZE)*self.PAGE_SIZE))
-        self.available.options=[verbatim(ft.DropdownOption(key=str(i),text=flag.label),'text')
+        self.available.options=[verbatim(ft.DropdownOption(key=str(i),text=self.label(flag)),'text')
             for i,flag,_ in available[self.available_offset:self.available_offset+self.PAGE_SIZE]]
         if self.available.value not in {o.key for o in self.available.options}:self.available.value=None
         self.available_previous.disabled=self.available_offset==0
@@ -57,7 +61,7 @@ class ArtifactPicker:
             def remove(e,i=i):self.set_selected([i],False)
             origin=self.origins.get(self.origin(ref),self.origin(ref))
             controls.append(ft.Row([ft.Column([
-                verbatim(ft.Text(flag.label,max_lines=2,overflow=ft.TextOverflow.ELLIPSIS,tooltip=flag.label),'value'),
+                verbatim(ft.Text(self.label(flag),max_lines=2,overflow=ft.TextOverflow.ELLIPSIS,tooltip=self.label(flag)),'value'),
                 verbatim(ft.Text(origin+' · '+self.origin(ref).split(':')[-1][:8],size=11,color='#64748B',max_lines=1,overflow=ft.TextOverflow.ELLIPSIS,tooltip=origin+' · '+self.origin(ref)),'value'),
                 *([ft.Text('Arquivo indisponível — remova ou selecione novamente.',size=12,color='#B91C1C')] if not getattr(flag,'available',True) else [])],expand=True),
                 ft.IconButton(ft.Icons.REMOVE_CIRCLE_OUTLINE,tooltip='Remover arquivo',on_click=remove,disabled=not self.writable)],vertical_alignment=ft.CrossAxisAlignment.START))
@@ -87,6 +91,7 @@ class ArtifactPicker:
             flag.value=value;changed+=1
             if getattr(flag,'on_change',None):callbacks[id(flag.on_change)]=flag.on_change
         for callback in callbacks.values():callback(None)
+        if self.on_change:self.on_change()
         self.feedback.value=f'{changed} arquivo(s) '+('adicionado(s).' if value else 'removido(s).') if changed else 'Arquivo já adicionado ou nenhuma alteração.'
         self.update()
 

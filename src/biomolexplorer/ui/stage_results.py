@@ -6,6 +6,7 @@ from biomolexplorer.result_files import ResultFiles,FILTERS
 from .compound_table import CompoundTableViewer
 from .file_table import FileTable
 from .results_viewer import ResultsViewer
+from .localization import verbatim
 
 
 class StageResults:
@@ -75,8 +76,8 @@ class StageResults:
                 datasets=await self.ui.call(self.service.admet_datasets,self.token,self.project_id,self.run_id,self.stage['id'])
                 if not self.valid():return
                 if datasets:
-                    self.dataset=ft.Dropdown(label='Arquivo de resultados ADMET',value=datasets[0]['path'],expand=True,
-                        options=[ft.DropdownOption(key=d['path'],text=d['name']) for d in datasets],on_select=self.change_admet)
+                    self.dataset=ft.Dropdown(label='Arquivo de resultados ADMET',value=datasets[0]['path'],expand=True,enable_filter=True,enable_search=True,
+                        options=[verbatim(ft.DropdownOption(key=d['path'],text=d.get('label',d['name'])),'text') for d in datasets],on_select=self.change_admet)
                     self.subset=ft.Dropdown(label='Compostos exibidos',value='all',expand=True,
                         options=[ft.DropdownOption(key=k,text=v) for k,v in FILTERS.items()],on_select=self.change_admet)
                     self.root.controls=[ft.ResponsiveRow([ft.Container(ft.Row([self.dataset]),col={'xs':12,'md':6}),
@@ -86,8 +87,8 @@ class StageResults:
                 datasets=await self.ui.call(self.service.graph_datasets,self.token,self.project_id,self.run_id,self.stage['id'])
                 if not self.valid():return
                 if datasets:
-                    self.dataset=ft.Dropdown(label='Análise de grafos · entrada e origem',value=next((d['path'] for d in datasets if not d.get('unavailable')),None),expand=True,
-                        options=[ft.DropdownOption(key=d['path'],text=d['name'],disabled=bool(d.get('unavailable'))) for d in datasets],on_select=self.change_graph)
+                    self.dataset=ft.Dropdown(label='Análise de grafos · entrada e origem',value=next((d['path'] for d in datasets if not d.get('unavailable')),None),expand=True,enable_filter=True,enable_search=True,
+                        options=[verbatim(ft.DropdownOption(key=d['path'],text=d.get('label',d['name']),disabled=bool(d.get('unavailable'))),'text') for d in datasets],on_select=self.change_graph)
                     files=await self.ui.call(self.service.files,self.token,self.project_id,self.run_id,self.stage['id'])
                     active=any(r['status'] in ('queued','running','awaiting_input') for r in await self.ui.call(self.ui.store.list_runs,self.token,self.project_id))
                     if not self.valid():return
@@ -100,7 +101,7 @@ class StageResults:
                     async def preview(item):await self.ui.preview_artifact(self.project_id,item['path'])
                     descriptions={'Molecules':'Compostos do MCC','maxcomp':'Arestas do MCC','similarity':'Similaridade calculada',
                         'centroids':'Fragmento molecular comum','plots':'Apresentação do MCC e graus'}
-                    self.graph_file_records=[dict(f,description=descriptions.get(Path(f['path']).parent.name,'Resultado'))
+                    self.graph_file_records=[dict(f,description=descriptions.get(Path(f['path']).parent.name,'Resultado')+' · '+f.get('origin',''))
                         for f in files if not f['name'].endswith('.biomol-view.json')]
                     self.graph_files=FileTable(self.ui,self.project_id,[],
                         self.writable and not active,remove=remove,preview=preview)
@@ -187,7 +188,8 @@ class StageResults:
                 if self.valid() and sequence==self.sequence:self.loading.visible=False;self.ui.page.update()
             if not self.valid() or sequence!=self.sequence:return
             identifier=Path(filename).name.removesuffix('.biomol-view.json')
-            self.graph_files.files=[f for f in self.graph_file_records if Path(f['name']).stem==identifier]
+            parent=Path(filename).parent.parent
+            self.graph_files.files=[f for f in self.graph_file_records if Path(f['name']).stem==identifier and Path(f['path']).is_relative_to(parent)]
             self.graph_files.offset=0;self.graph_files.redraw()
             async def download(kind):
                 async def save():

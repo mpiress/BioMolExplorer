@@ -30,6 +30,21 @@ def walk(root):
 
 
 class LocalizationTests(unittest.TestCase):
+    def test_frozen_component_controls_do_not_abort_graph_and_chart_updates(self):
+        page=LocalizedPage(Page(),'en')
+        frozen=ft.Text('Concluído')
+        frozen._frozen=True
+        shape=canvas.Text(1,2,'Componente 2');shape._frozen=True
+        status=ft.Text('Aguardando')
+        page.add(ft.Column([frozen,status,canvas.Canvas(shapes=[shape])]))
+        page.update()
+        self.assertEqual(frozen.value,'Concluído')
+        self.assertEqual(shape.value,'Componente 2')
+        self.assertEqual(status.value,'Queued')
+        page.set_language('pt');page.update()
+        self.assertEqual(status.value,'Aguardando')
+        self.assertTrue(hasattr(frozen,'_frozen'))
+
     def test_stage_catalog_and_parameter_labels_have_english_translations(self):
         translate=Translator('en')
         for title,description,category in TITLES.values():

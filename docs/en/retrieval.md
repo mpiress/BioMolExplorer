@@ -21,9 +21,21 @@ Different criteria use AND; values within a list are alternatives (OR). Clear fi
 
 `must_have_ligand` remains true by default. Disable it to retrieve structures without ligands; these require an appropriate ligand reference for the implemented redocking workflow. Detected nonwater components can include ions/additives, so inspect ligand identity.
 
-The default limit is 100 structures. Search pagination and downloads have finite timeouts and transient retries. Up to four downloads run concurrently. Coordinate responses are parsed before atomic publication of `.pdb` files. LINK/SSBOND removal preserves the previous preparation contract.
+The default limit is 100 structures. Search pagination and downloads have finite timeouts and transient retries. Up to four downloads run concurrently. Coordinate responses are parsed before atomic publication of `.pdb` files. Deposited LINK/SSBOND and SITE records are preserved for ligand triage.
 
 Outputs include successful `<PDB>.pdb` files, `pdb_codes.csv` with `PDB_CODE,LIGAND,RESNUM,CHAIN,RESOLUTION`, and `retrieval_report.json` recording criteria/query, available total count, limits, selected IDs and individual download outcomes. Ligand-free structures generate no complex metadata rows. Individual failures retain successful downloads; no matches or no successful downloads produce explicit errors. mmCIF-only entries are reported as unavailable in PDB format; automatic conversion is not introduced into the PDB pipeline.
+
+## Ligand triage for redocking
+
+`ligand_selection="recommended"` is the default. The first deposited model is analyzed locally with a protein atom spatial index: candidates require carbon, at least six observed heavy atoms, three distinct contacting protein residues, and at least half of their heavy atoms within 4 Å of protein atoms. Hydrogens, waters and atoms with zero occupancy do not contribute. Common solvents/additives and annotated protein attachments, including linked glycan branches, are omitted from the shortlist. Cofactors are secondary alternatives if another candidate exists, and remain eligible when alone. These are heuristics; components remain available for manual review.
+
+SITE/REMARK 800 descriptions provide separate evidence for annotated binding or active/catalytic sites. Geometry alone establishes neither catalytic function nor affinity. SITE can also describe regulatory sites and ligand environments; see the [wwPDB specification](https://www.wwpdb.org/documentation/file-format-content/format33/sect7.html). Contact does not establish that a chain is the intended target in a heterocomplex. Strictly equivalent component/pocket copies are grouped, retaining distinct sites. Missing chains, insertion codes and ligand chains without a contacting protein chain require manual review under the current preparation contract. Interface ligands still require checking the receptor chain assembly. This protein-based analysis does not cover DNA/RNA-only targets; use the broad list for those targets.
+
+`pdb_codes.csv` contains the selected shortlist and feeds preparation/redocking. `ligand_candidates.csv` retains all analyzed nonwater components, carbon/heavy atom counts, contacting residue identities/chains, contact fraction, minimum contact distance, SITE evidence, exclusion reasons and equivalent-copy representatives. `retrieval_report.json` records the policy and counts. No atom coordinates are removed from the downloaded structures. Set `ligand_selection="all"` to retain the broad selection.
+
+In **Ligands**, **Also show other residues** exposes alternatives; selecting one displays its contact evidence. **Use recommended candidates** restores the proposed list; **Save ligands** confirms it with the existing audit/history and downstream cache invalidation. Existing results also receive suggestions when the dialog is opened without changing their saved curation. Structures without recommendations remain downloaded; the report flags them rather than choosing an unsuitable fallback.
+
+PDB IDs deleted through failed-redocking curation are added to `excluded_pdb_ids` and filtered before download. Edit **PDB IDs excluded from future retrievals** to permit an intentional retry.
 
 ## ChEMBL search modes
 

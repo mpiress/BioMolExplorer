@@ -20,10 +20,8 @@ GRAPH_NODE_RADIUS = 4
 
 
 def degree_color(value,maximum):
-    fraction=min(1,max(0,value/max(1e-12,maximum)))
-    position=fraction*(len(VIRIDIS)-1);left=min(len(VIRIDIS)-2,int(position));weight=position-left
-    a,b=VIRIDIS[left],VIRIDIS[left+1]
-    return '#'+''.join(f'{round(int(a[i:i+2],16)*(1-weight)+int(b[i:i+2],16)*weight):02X}' for i in (1,3,5))
+    from .graph_appearance import continuous_color
+    return continuous_color(value,maximum)
 
 
 class ResultsViewer:
@@ -50,6 +48,7 @@ class ResultsViewer:
             self.network_positions=(saved if data.get('layout')=='components' and len(set(saved.values()))==len(saved) else separated_graph_layout(self.graph,circular=True))
             self.circular_positions = None
         self.mode = 'full'
+        self.opening_notice=''
         self.layout_mode='network';self.color_mode='degree';self.labels=len(self.nodes)<=20
         self.viewport_width=720;self.viewport_height=560;self.viewport_ready=False;self.camera_request=0
         self.camera_lock=asyncio.Lock()
@@ -65,7 +64,9 @@ class ResultsViewer:
         egg=data['kind']=='egg'
         self.drawing = canvas.Canvas(width=None if egg else self.WIDTH,height=None if egg else self.HEIGHT,
             expand=egg,on_resize=self.resize_egg if egg else None,resize_interval=100)
-        self.scene = ft.Stack([ft.GestureDetector(content=self.drawing, hover_interval=60,
+        self.raster=ft.Image(src='',visible=False,fit=ft.BoxFit.FILL)
+        self.raster_layer=ft.Container(self.raster,ignore_interactions=True,width=self.WIDTH,height=self.HEIGHT,left=0,top=0)
+        self.scene = ft.Stack([self.raster_layer,ft.GestureDetector(content=self.drawing, hover_interval=60,
                              on_hover=self.hover, on_exit=self.leave, on_tap_up=self.click,expand=egg), self.tip],
                              width=None if egg else self.WIDTH,height=None if egg else self.HEIGHT,expand=egg)
         self.viewer = zoomable_view(content=self.scene, constrained=egg,
@@ -101,6 +102,9 @@ class ResultsViewer:
         self.camera_request+=1;request=self.camera_request
         async with self.camera_lock:
             if request!=self.camera_request or not self.active:return
+            # Flush the new scene dimensions and raster before imperative camera
+            # calls; otherwise a community-sized client scene is still mounted.
+            self.ui.page.update()
             await self.viewer.reset()
             if self.data['kind']=='egg' or not self.viewport_ready:return
             points=list(self.points.values())
@@ -187,8 +191,11 @@ class ResultsViewer:
                 if self.circular_positions is None:
                     self.circular_positions = separated_graph_layout(self.graph, circular=True)
                 positions = self.circular_positions
-            elif self.explorer and self.explorer.positions is not None:
+            elif self.layout_mode!='network' and self.explorer and self.explorer.positions is not None:
                 positions=self.explorer.positions
+            # A pending/cost-limited layout may only cover the previous scope.
+            # Complete it from the persisted full layout instead of aborting paint.
+            if not set(nodes)<=positions.keys():positions={**self.network_positions,**positions}
             nodes={key:dict(node,x=positions[key][0],y=positions[key][1]) for key,node in nodes.items()}
             xmin = min((node['x'] for node in nodes.values()), default=-1)
             xmax = max((node['x'] for node in nodes.values()), default=1)
@@ -206,6 +213,7 @@ class ResultsViewer:
             self.WIDTH, self.HEIGHT = max(720, dx*scale+110), max(460, dy*scale+90)
             self.scene.width = self.drawing.width = self.WIDTH
             self.scene.height = self.drawing.height = self.HEIGHT
+            self.raster_layer.width,self.raster_layer.height=self.WIDTH,self.HEIGHT
             self.project = lambda x, y: ((self.WIDTH-dx*scale)/2+(x-xmin)*scale,
                                          (self.HEIGHT-dy*scale)/2+(y-ymin)*scale)
         return {key: self.project(node['x'], node['y']) for key, node in nodes.items()}
@@ -237,7 +245,7 @@ class ResultsViewer:
         self.points = self.coordinates(nodes)
         self.index = PointIndex(self.points)
         shapes = self.egg_background() if self.data['kind'] == 'egg' else []
-        if self.data['kind'] == 'graph' and self.mode == 'full' and self.component_id is None:
+        if self.data['kind'] == 'graph' and self.mode == 'full' and self.component_id is None and self.layout_mode in ('network','radial','fr_components','fa2','fa2_linlog') and len(self.components)<=200 and self.explorer.appearance.components.value:
             for component, identifiers in self.components.items():
                 points = [self.points[identifier] for identifier in identifiers if identifier in self.points]
                 if not points:continue
@@ -252,6 +260,7 @@ class ResultsViewer:
         if self.explorer:
             edges=[dict(source=a,target=b,**attrs) for a,b,attrs in self.explorer.filtered_graph.edges(data=True) if a in nodes and b in nodes]
         for edge in edges:
+            if self.explorer and not self.explorer.appearance.edges.value:continue
             a, b = self.points[edge['source']], self.points[edge['target']]
             shapes.append(canvas.Line(*a, *b, paint=ft.Paint(color='#CBD5E1', stroke_width=.6+min(1,abs(float(edge.get('value',0))))*.7)))
         degrees={key:int(node['properties'].get('degree',0)) for key,node in nodes.items()}
@@ -262,17 +271,15 @@ class ResultsViewer:
         maximum=max(values.values(),default=0)
         mcc=set(self.data['mcc'])
         self.radii={}
+        if self.explorer:
+            colors,radii=self.explorer.appearance.map(nodes,values,metric)
         for identifier, point in self.points.items():
             props = nodes[identifier]['properties']
             color = COLORS.get(props.get('BBB'),COLORS['unknown']) if self.data['kind'] == 'egg' else degree_color(values.get(identifier,0),maximum)
             if self.explorer:
-                color=degree_color(values.get(identifier,0),maximum)
-                mapping=self.analysis.community_cache.get(self.mode,({},None,''))[0]
-                if self.explorer.color_communities.value and identifier in mapping:
-                    from biomolexplorer.network_analysis import PALETTE
-                    color=PALETTE[(mapping[identifier]-1)%len(PALETTE)]
+                color=colors[identifier]
             radius=5 if self.data['kind']=='egg' else GRAPH_NODE_RADIUS
-            if self.explorer:radius=GRAPH_NODE_RADIUS+6*(values.get(identifier,0)/max(maximum,1e-12))**.5
+            if self.explorer:radius=radii[identifier]
             self.radii[identifier]=radius
             if self.data['kind']=='graph' and self.mode=='full' and identifier in mcc:
                 shapes.append(canvas.Circle(*point,radius=radius+1.5,paint=ft.Paint(color=BLUE,stroke_width=1,style=ft.PaintingStyle.STROKE)))
@@ -284,23 +291,27 @@ class ResultsViewer:
             if self.data['kind']=='graph' and self.labels:
                 shapes.append(verbatim(canvas.Text(point[0]+radius+4,point[1]-8,identifier,style=ft.TextStyle(size=10,color=INK))))
         self.base_shapes = shapes
+        self.raster.visible=bool(self.explorer and (len(nodes)>self.analysis.DRAW_NODES or len(edges)>self.analysis.DRAW_EDGES))
+        if self.raster.visible:
+            from .graph_raster import paint_graph
+            self.raster.width,self.raster.height=self.WIDTH,self.HEIGHT
+            self.raster.src=paint_graph(shapes,self.WIDTH,self.HEIGHT)
+        else:self.raster.src=''
         self.highlight()
         self.summary.value = (f'{len(nodes)} compostos · {len(edges)} relações · {len(self.components)} componentes · MCC: {len(mcc)} de {len(self.nodes)} compostos' if self.data['kind'] == 'graph' else f'{len(nodes)} compostos · BBB+: {sum(n["properties"].get("BBB")=="BBB+" for n in nodes.values())} · BBB−: {sum(n["properties"].get("BBB")=="BBB-" for n in nodes.values())}')
         self.scale_label.value=('Grau: 0 → '+str(int(maximum))+' conexões' if self.color_mode=='degree' else f'Conectividade: 0 → {maximum:.3f} · grau / (n − 1)')
         if self.explorer:
             statistics=self.analysis.statistics(self.mode)
             self.summary.value=f'{"Full Graph" if self.mode=="full" else "LCC / MCC"} · {statistics["nodes"]} compostos · {statistics["edges"]} relações · {statistics["components"]} componentes · Exibição: {len(nodes)} compostos / {len(edges)} relações'
-            self.scale_label.value=f'{metric} · tamanho e intensidade: 0 → {maximum:.5g} · espessura: magnitude do escore disponível.'
-            if self.explorer.color_communities.value:
-                self.scale_label.value=f'Tamanho: {metric} · 0 → {maximum:.5g} · Cor: comunidade (C1, C2…) · Espessura: magnitude do escore.'
-            if not values and nodes:self.scale_label.value=f'{metric}: indisponível. Tamanho fixo, sem escala de centralidade.'
+            self.scale_label.value=self.explorer.appearance.size_label+' · Cor: '+self.explorer.appearance.title+' · Espessura: magnitude do escore disponível.'
+            if not values and nodes:self.scale_label.value+=f' {metric}: indisponível; tamanho fixo.'
             self.explorer.update_panels()
-        self.fragment_panel.visible=self.mode=='mcc' and self.data['kind']=='graph'
+        self.fragment_panel.visible=self.explorer is None and self.mode=='mcc' and self.data['kind']=='graph'
         if not nodes:
             self.status.value = 'Nenhum composto disponível nesta visualização.'
 
     def highlight(self):
-        shapes = list(self.base_shapes)
+        shapes = [] if self.raster.visible else list(self.base_shapes)
         if self.selected in self.points:
             if self.data['kind'] == 'graph':
                 network=self.explorer.filtered_graph if self.explorer else self.graph
@@ -320,6 +331,12 @@ class ResultsViewer:
         if position is None:
             return
         identifier = self.index.nearest(position.x, position.y)
+        if self.explorer and self.explorer.aggregate_mode:
+            self.tip.visible=identifier is not None
+            if identifier is not None:
+                self.tip_text.value=f'Comunidade C{identifier} · clique para investigar seus compostos'
+                self.tip.left=min(position.x+12,self.WIDTH-190);self.tip.top=max(0,position.y-42)
+            self.ui.page.update();return
         if identifier == self.hovered:
             return
         self.hovered = identifier
@@ -353,7 +370,9 @@ class ResultsViewer:
         if position is not None:
             identifier = self.index.nearest(position.x, position.y)
             if identifier:
-                await self.ui.guard(lambda: self.pick(identifier))
+                if self.explorer and self.explorer.aggregate_mode:
+                    await self.ui.guard(lambda:self.explorer.open_community(identifier))
+                else:await self.ui.guard(lambda: self.pick(identifier))
             elif self.active and self.ui.token==self.token:self.clear_selection()
 
     async def pick(self, identifier):
@@ -361,15 +380,27 @@ class ResultsViewer:
         overlapping = self.index.nearby(*self.points[identifier])
         if len(overlapping) == 1:
             return await self.select(identifier)
-        choices = []
-        for compound_id in overlapping:
-            async def select_compound(event, compound_id=compound_id):
-                close_dialog(self.ui.page,dialog)
-                await self.ui.guard(lambda:self.select(compound_id))
-            choices.append(verbatim(ft.TextButton(compound_id, on_click=select_compound)))
+        choices=ft.Column(spacing=6,scroll=ft.ScrollMode.AUTO)
+        query=ft.TextField(label='Pesquisar composto neste ponto')
+        offset=0
+        def populate(reset=False):
+            nonlocal offset
+            if reset:offset=0;choices.controls=[]
+            found=[code for code in overlapping if (query.value or '').casefold() in code.casefold()]
+            for compound_id in found[offset:offset+50]:
+                async def select_compound(event, compound_id=compound_id):
+                    close_dialog(self.ui.page,dialog)
+                    await self.ui.guard(lambda:self.select(compound_id))
+                choices.controls.append(verbatim(ft.TextButton(compound_id,on_click=select_compound)))
+            offset+=50;more.visible=offset<len(found)
+        def search(e):populate(True);self.ui.page.update()
+        def load_more(e):populate();self.ui.page.update()
+        query.on_change=search
+        more=ft.TextButton('Carregar mais compostos',on_click=load_more)
+        populate(True)
         dialog=ft.AlertDialog(title=ft.Text('Compostos neste ponto'),
-            content=ft.Container(width=360,height=min(360,len(choices)*50),
-                                 content=ft.Column(choices,scroll=ft.ScrollMode.AUTO)),
+            content=ft.Container(width=360,height=min(460,len(overlapping)*50+90),
+                                 content=ft.Column([query,choices,more],scroll=ft.ScrollMode.AUTO)),
             actions=[ft.TextButton('Fechar',on_click=lambda e:close_dialog(self.ui.page,dialog))])
         self.ui.page.show_dialog(dialog)
 
@@ -380,10 +411,11 @@ class ResultsViewer:
             if not matches:
                 raise ValueError('Código não encontrado nesta visualização. No grafo, confira se você está no MCC ou no grafo completo.')
             chosen = matches[0]
+            component_focus=self.component_id
             if self.explorer:
                 self.explorer.aggregate_mode=False;self.explorer.aggregate_choice.value=False
                 await self.explorer.reset_filters()
-            if chosen not in self.displayed():
+            if chosen not in self.displayed() or component_focus is not None:
                 self.mode = 'full'
                 self.mode_choice.value = 'full'
                 self.component_choice.disabled = False
@@ -435,6 +467,7 @@ class ResultsViewer:
 
     async def select(self, identifier, show_popup=None):
         popup=(self.popup and not self.explorer) if show_popup is None else show_popup
+        if show_popup is None and self.explorer and (self.explorer.focus_mode or self.explorer.sidebar_hidden):popup=True
         # Membership may have changed since opening this dialog.
         self.selection_version += 1
         version, token = self.selection_version, self.ui.token
@@ -445,6 +478,9 @@ class ResultsViewer:
         if self.explorer:
             from biomolexplorer.molecular_network import numeric_properties
             node=dict(node,properties=numeric_properties([node],self.molecular_enrichment)[0][identifier])
+            from biomolexplorer.compound_properties import compound_properties
+            properties=await self.ui.call(compound_properties,node['properties'],True)
+            node=dict(node,properties=properties)
         image = None
         structure_notice = 'Estrutura indisponível: SMILES ausente ou inválido.'
         try:
@@ -531,22 +567,27 @@ class ResultsViewer:
             if not self.active or self.ui.token!=self.token:return
             await self.ui.call(self.ui.store.project, self.ui.token, self.project_id)
             self.mode = event.control.value
+            self.mode_choice.value=self.mode
             if self.explorer:
-                self.explorer.request+=1
+                self.explorer.inspector.invalidate()
+                self.explorer.inspector.scope.value=self.mode
+                self.explorer.inspector.describe_scope()
+                self.explorer.clear_filters()
                 request=self.explorer.request;mode=self.mode
-                self.explorer.ego=None;self.explorer.community_choice.value='all';self.component_id=None;self.component_choice.value='all'
-                self.explorer.focus_only.value=False
-                self.explorer.molecular.linked_ids=None
                 self.explorer.molecular.drawing.shapes=[];self.explorer.molecular.bars.controls=[];self.explorer.molecular.comparison.controls=[]
                 self.explorer.molecular.points={};self.explorer.molecular.scatter_pairs=[];self.explorer.molecular.index=PointIndex({})
                 self.explorer.molecular.summary.value='Universo alterado; clique em Analisar descritores para atualizar os gráficos moleculares.'
                 await self.explorer.prepare()
+                if request!=self.explorer.request or mode!=self.mode or not self.active or self.ui.token!=self.token:return
+                layout_notice=''
                 if self.layout_mode not in ('network','circular'):
-                    positions,_=await self.ui.call(self.analysis.layout,mode,self.layout_mode)
+                    positions,layout_notice=await self.ui.call(self.analysis.layout,mode,self.layout_mode)
                 else:positions=None
                 if request!=self.explorer.request or mode!=self.mode or not self.active or self.ui.token!=self.token:return
                 self.explorer.positions=positions
-                self.explorer.aggregate_mode=bool(self.explorer.aggregate_choice.value)
+                self.explorer.layout_notice=layout_notice
+                if self.layout_mode not in ('network','circular') and positions is None:
+                    self.layout_mode=self.layout_choice.value='network'
             self.component_choice.disabled = self.mode == 'mcc'
             self.selection_version += 1
             self.selected = self.hovered = None
@@ -554,7 +595,9 @@ class ResultsViewer:
             self.details.controls = [ft.Text('Selecione um composto para ver suas informações.')]
             self.status.value = 'Passe o mouse sobre um nó. Clique para abrir o composto.'
             self.redraw()
-            if self.explorer:self.explorer.inspector.clear()
+            if self.explorer:
+                self.explorer.inspector.clear()
+                await self.explorer.inspector.follow_mode()
             await self.fit_view()
             if self.explorer and self.explorer.molecular.initialized:
                 self.explorer.molecular.scope.value=self.mode
@@ -571,6 +614,7 @@ class ResultsViewer:
     def close(self):
         self.active=False;self.selection_version+=1
         self.drawing.shapes=[];self.base_shapes=[];self.points={}
+        self.raster.visible=False;self.raster.src=''
         self.details.controls=[];self.fragment_panel.controls=[]
         if self.explorer:
             self.explorer.request+=1;self.explorer.close()
@@ -594,7 +638,9 @@ class ResultsViewer:
             self.tip.visible = False
             self.details.controls = [ft.Text('Selecione um composto para ver suas informações.')]
             self.redraw()
-            if self.explorer:self.explorer.inspector.clear()
+            if self.explorer:
+                self.explorer.inspector.clear()
+                await self.explorer.inspector.follow_mode()
             await self.fit_view()
             self.ui.page.update()
         await self.ui.guard(action)
@@ -611,6 +657,8 @@ class ResultsViewer:
 
     def build(self):
         from .flow_canvas import icon_button
+        from .dataset_origin import origin_header
+        heading=origin_header(self.data)
         async def zoom_in(e): await self.viewer.zoom(1.25)
         async def zoom_out(e): await self.viewer.zoom(.8)
         async def reset(e): await self.fit_view()
@@ -619,11 +667,12 @@ class ResultsViewer:
                  icon_button(icon=ft.Icons.ZOOM_OUT, tooltip='Reduzir', on_click=zoom_out),
                  ft.TextButton('Recentrar', on_click=reset), ft.TextButton('Ajustar à tela', on_click=fit)]
         if self.data['kind'] == 'graph':
-            self.mode_choice = ft.Dropdown(label='Visualização', value='full', width=300, on_select=self.change_mode,
+            self.mode_choice = ft.Dropdown(label='Visualização', value=self.mode, width=300, on_select=self.change_mode,
                          options=[ft.DropdownOption(key='full', text='Grafo completo'),
                                   ft.DropdownOption(key='mcc', text='Máximo componente conectado (MCC)')])
             tools.insert(0, self.mode_choice)
             self.component_choice = ft.Dropdown(label='Navegar entre componentes', value='all', expand=True,
+                disabled=self.mode=='mcc',
                 on_select=self.change_component, options=[ft.DropdownOption(key='all', text='Todos os componentes')]+[
                     ft.DropdownOption(key=str(index), text=f'Componente {index} · {len(group)} compostos · {self.graph.subgraph(group).number_of_edges()} relações')
                     for index, group in self.components.items()])
@@ -636,7 +685,8 @@ class ResultsViewer:
                 ft.Container(ft.Row([self.layout_choice]),col={'xs':12,'md':6})],spacing=20,run_spacing=16),
                 ft.Row([self.label_choice],wrap=True),
                 ft.Container(height=12,border_radius=6,gradient=ft.LinearGradient(colors=VIRIDIS,begin=ft.Alignment.CENTER_LEFT,end=ft.Alignment.CENTER_RIGHT)),self.scale_label]
-            return self.explorer.build(tools,style)
+            body=self.explorer.build(tools,style)
+            return ft.Column([*heading,body],spacing=16) if heading else body
         else:
             style=[ft.Row([ft.Text('● BBB+ · laranja',color=COLORS['BBB+'],size=12),ft.Text('■ BBB− · azul',color=COLORS['BBB-'],size=12),
                 ft.Text('Branco: região HIA · amarelo: região BBB',size=12,color=INK)],wrap=True,spacing=18)]
@@ -656,4 +706,5 @@ class ResultsViewer:
                             border=ft.Border.all(1, '#DCE5F4'), border_radius=12,
                             content=ft.Column([ft.Row([self.search, icon_button(icon=ft.Icons.SEARCH, tooltip='Buscar composto', on_click=self.find)]),
                                                *([*self.actions,ft.Text('Passe o mouse para identificar um composto. Clique no ponto para abrir sua estrutura 2D.',size=13,color='#64748B'),self.fragment_panel] if self.popup else [self.fragment_panel,ft.Container(self.details, expand=True)])], spacing=18))
-        return ft.ResponsiveRow([left, right], spacing=20, run_spacing=20)
+        body=ft.ResponsiveRow([left, right], spacing=20, run_spacing=20)
+        return ft.Column([*heading,body],spacing=16) if heading else body

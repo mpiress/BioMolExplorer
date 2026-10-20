@@ -1,3 +1,4 @@
+from biomolexplorer.molecular_parsing import mol_from_smiles
 import ast
 from biomolexplorer.paths import directory, resolve_path, worker_count
 from kernel.header_builder import HeaderBuilder
@@ -127,7 +128,7 @@ class Descriptors():
 
     @staticmethod
     def morgan_worker(smiles: str, molecule_chembl_id: str, radius: int, n_bits: int) -> Dict[str, str]:
-        mol = Chem.MolFromSmiles(smiles)
+        mol = mol_from_smiles(smiles)
         if mol:
             return {"molecule_chembl_id": molecule_chembl_id,
                     "fingerprint": list(AllChem.GetMorganFingerprintAsBitVect(mol, radius, nBits=n_bits, useChirality=True, useBondTypes=False, useFeatures=True))}
@@ -143,7 +144,7 @@ class Descriptors():
 
     @staticmethod
     def maccs_worker(smiles: str, molecule_chembl_id: str) -> Dict[str, str]:
-        mol = Chem.MolFromSmiles(smiles)
+        mol = mol_from_smiles(smiles)
         if mol:
             return {"molecule_chembl_id": molecule_chembl_id, "fingerprint": list(MACCSkeys.GenMACCSKeys(mol))}
         return {"molecule_chembl_id": molecule_chembl_id, "fingerprint": None}
@@ -158,7 +159,7 @@ class Descriptors():
 
     @staticmethod
     def pharmacophore_worker(smiles: str, molecule_chembl_id: str) -> Dict[str, str]:
-        mol = Chem.MolFromSmiles(smiles)
+        mol = mol_from_smiles(smiles)
         factory = Gobbi_Pharm2D.factory
         if mol:
             return {"molecule_chembl_id": molecule_chembl_id, "fingerprint": list(Generate.Gen2DFingerprint(mol, factory))}
@@ -171,12 +172,12 @@ class Descriptors():
         try:
 
             if len(smiles) < 2:
-                mol   = Chem.MolFromSmiles(smiles[0])
+                mol   = mol_from_smiles(smiles[0])
                 smile = Chem.MolToSmiles(mol, isomericSmiles=True, canonical=True)
                 img   = Draw.MolToImage(mol)
 
             else:
-                mols  = [Chem.MolFromSmiles(s) for s in smiles]
+                mols  = [mol_from_smiles(s) for s in smiles]
                 mcs   = rdFMCS.FindMCS(mols)
                 mol   = Chem.MolFromSmarts(mcs.smartsString)
                 smile = Chem.MolToSmiles(mol, isomericSmiles=True, canonical=True)

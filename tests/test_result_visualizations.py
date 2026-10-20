@@ -126,7 +126,8 @@ class VisualizationTests(unittest.TestCase):
         viewer.build()
         x,y=viewer.points['A'];event=SimpleNamespace(local_position=SimpleNamespace(x=x,y=y))
         viewer.hover(event)
-        self.assertEqual(viewer.tip_text.value,'A')
+        self.assertEqual(viewer.tip_text.value.splitlines()[0],'A')
+        self.assertIn('full · degree: 1',viewer.tip_text.value)
         asyncio.run(viewer.click(event))
         self.assertEqual(viewer.selected,'A')
         self.assertTrue(checks)
@@ -154,7 +155,7 @@ class VisualizationTests(unittest.TestCase):
         data=self.compounds.copy();data.loc[1,['TPSA','WLOGP']]=data.loc[0,['TPSA','WLOGP']]
         viewer=ResultsViewer(ui,'project',egg_view(data,'EGG'))
         asyncio.run(viewer.pick('A'))
-        choices=dialogs[0].content.content.controls
+        choices=next(control.controls for control in dialogs[0].content.content.controls if hasattr(control,'controls'))
         self.assertEqual([choice.content for choice in choices],['A','B'])
         asyncio.run(choices[1].on_click(None))
         self.assertEqual(viewer.selected,'B')

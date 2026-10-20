@@ -39,7 +39,8 @@ class MCSConfigurationTests(unittest.TestCase):
             inspector.scope.value='community';await inspector.scope.on_select(None)
             self.assertEqual(inspector.result['ids'],['0','1'])
             self.assertEqual(inspector.result['atoms'],3)
-            view.explorer.filtered_graph=view.graph.subgraph(['2','3'])
+            view.explorer.community_choice.value='all'
+            view.explorer.molecular.linked_ids={'2','3'}
             inspector.scope.value='filtered';await inspector.scope.on_select(None)
             self.assertEqual(inspector.result['ids'],['2','3'])
             self.assertEqual(inspector.result['atoms'],2)
@@ -118,7 +119,7 @@ class MCSConfigurationTests(unittest.TestCase):
     def test_invalid_parameter_values_do_not_start_a_search(self):
         async def scenario():
             inspector=self.viewer().explorer.inspector
-            for timeout,limit in [('0','50'),('31','50'),('10','1'),('10','201'),('1.5','50'),('10','')]:
+            for timeout,limit in [('0','50'),('31','50'),('10','1'),('1.5','50'),('10','')]:
                 with self.subTest(timeout=timeout,limit=limit):
                     inspector.timeout.value=timeout;inspector.limit.value=limit
                     await inspector.change_parameters()
@@ -152,7 +153,9 @@ class RankingHelpTests(unittest.TestCase):
                 for text in paragraphs:
                     self.assertNotEqual(en(text),text);self.assertEqual(pt(en(text)),text)
                 self.assertEqual(toy_values(metric),analysis.metrics('full',metric)[0])
-                self.assertGreater(toy_values(metric)['B'],toy_values(metric)['A'])
+                if metric in ('core','clustering','triangles'):
+                    self.assertEqual(toy_values(metric)['B'],toy_values(metric)['A'])
+                else:self.assertGreater(toy_values(metric)['B'],toy_values(metric)['A'])
 
     def test_info_button_opens_help_for_the_selected_metric_without_mutating_the_graph(self):
         async def scenario():

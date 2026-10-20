@@ -42,8 +42,9 @@ class RedockingResults:
                     code, ligand, chain = (record[k].strip() for k in ('PDB_CODE', 'LIGAND', 'CHAIN'))
                     number = record['RESNUM'].strip()
                     int(number)
-                    rmsd = float(record['RMSD'])
-                    if not all(re.fullmatch(r'[A-Za-z0-9_+-]{1,40}', value) for value in (code, ligand, chain)) or not math.isfinite(rmsd) or rmsd < 0:
+                    failed=record.get('STATUS')=='preparation_failed'
+                    rmsd = None if failed else float(record['RMSD'])
+                    if not all(re.fullmatch(r'[A-Za-z0-9_+-]{1,40}', value) for value in (code, ligand, chain)) or (not failed and (not math.isfinite(rmsd) or rmsd < 0)):
                         continue
                 except (KeyError, ValueError, TypeError):
                     continue
@@ -53,7 +54,9 @@ class RedockingResults:
                 seen.add(identity)
                 key = hashlib.sha256((str(metadata)+'\0'+'|'.join(identity)).encode()).hexdigest()
                 simulations.append(dict(id=key, pdb=code, ligand=ligand, residue=number,
-                    chain=chain, rmsd=rmsd, metadata=str(metadata)))
+                    chain=chain, rmsd=rmsd, metadata=str(metadata),
+                    status='preparation_failed' if failed else 'succeeded',error=record.get('ERROR',''),
+                    failed_step=record.get('FAILED_STEP','')))
         return simulations
 
     def simulation(self, token, pid, rid, sid, key):
@@ -94,6 +97,10 @@ class RedockingResults:
             for item in simulation['files']:
                 archive.writestr(item['archive_name'], self.store.read_file(token, pid, item['path']))
         return output.getvalue()
+
+    def remove_failure(self,token,pid,rid,sid,key):
+        from .redocking_curation import remove_failure
+        return remove_failure(self,token,pid,rid,sid,key)
 
     def scene(self,token,pid,rid,sid,key):
         simulation=self.simulation(token,pid,rid,sid,key)

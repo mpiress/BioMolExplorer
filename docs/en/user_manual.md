@@ -397,3 +397,20 @@ Workspace actions are in the sidebar. Inside a project, **Project navigation** a
 In 3D views, **Show residue names** allows cleaner exports while preserving interactions. See the [viewer guide](molecular_viewer.md#hide-residue-names).
 
 [View a DOCK6 footprint](../../imgs/examples/dock6-footprint.png) and its [original PDF](../../imgs/examples/dock6-footprint.pdf): the 1ABE tutorial example compares reference/pose energy contributions after Vina → DOCK6. These energy profiles are distinct from geometric 3D contacts.
+
+
+## Exporting the pipeline as PNG
+
+The camera in the canvas controls saves the **entire pipeline as PNG**, including blocks outside the visible area. The image preserves positions, names, colors, ports and connections independently of zoom. The file includes 300 dpi metadata and increased resolution, capped at 32 million pixels to control memory use. Viewers can also export the diagram for articles and presentations.
+
+## Recognizing dataset origins and following new inputs
+
+Results display the original stage and target identifier, such as **ACHE · CHEMBL220**, **BCHE · CHEMBL1914** and **BACE1 · CHEMBL4822**. Exact file provenance follows ADMET, PubChem, fingerprints, similarity and graphs, including cached results and repeated names such as `compounds.csv`.
+
+Search input selectors by target or ChEMBL identifier and filter result tables by origin. ADMET and graph dashboards show **Data source** and **File and pipeline path**. Graph molecular sources, compound inspection and exported reports retain this identity. Companion files belong to the selected batch rather than every analysis with the same filename.
+
+Adding the three direct ADMET BBB+ datasets alongside three PubChem datasets produces six separate fingerprint datasets. An older similarity or graph selection that covered every previous output follows this growth; the effective selection is audited and saved. The result is six graphs, one direct ADMET dataset and one PubChem dataset per target.
+
+**Follow new datasets from the source** includes compatible outputs from connected producers. Disable it to use only explicitly selected files. Older partial selections are not automatically expanded. Use **Process individually** to keep the six datasets separate; merge deliberately combines selected inputs.
+
+Source labels are reconstructed from actual file inputs and execution history, including earlier runs that produced reused files. They are not guessed from filename patterns. Existing results receive the improved labels when opened.

@@ -1,6 +1,7 @@
 """Reusable paginated file lists with actions aligned on the right."""
 from pathlib import Path
 import flet as ft
+from .removal import RemovalProgress
 from .feedback import close_dialog
 from .localization import verbatim
 
@@ -13,8 +14,9 @@ class FileTable:
         self.extra_actions=extra_actions
         self.writable=writable
         self.table=ft.DataTable(columns=[ft.DataColumn(ft.Text(n)) for n in ('Arquivo','Tamanho','Ações')],rows=[],
-            column_spacing=30,heading_row_color='#F1F5F9',data_row_min_height=58,data_row_max_height=68)
+            column_spacing=30,heading_row_color='#F1F5F9',data_row_min_height=72,data_row_max_height=92)
         origins=sorted({f.get('origin','') for f in files if f.get('origin')})
+        self._origin_values=origins
         self.origin=ft.Dropdown(label='Origem dos resultados',value='',visible=len(origins)>1,
             options=[ft.DropdownOption(key='',text='Todas as origens')]+[verbatim(ft.DropdownOption(key=o,text=o),'text') for o in origins],
             enable_filter=True,enable_search=True,on_select=self.filter_origin)
@@ -32,6 +34,13 @@ class FileTable:
         self.offset=0;self.redraw();self.ui.page.update()
 
     def redraw(self):
+        origins=sorted({f.get('origin','') for f in self.files if f.get('origin')})
+        if origins!=self._origin_values:
+            self.origin.options=[ft.DropdownOption(key='',text='Todas as origens')]+[
+                verbatim(ft.DropdownOption(key=o,text=o),'text') for o in origins]
+            self._origin_values=origins
+        self.origin.visible=len(origins)>1
+        if self.origin.value not in origins:self.origin.value=''
         visible=[f for f in self.files if not self.origin.value or f.get('origin')==self.origin.value]
         if self.offset>=len(visible):self.offset=max(0,((len(visible)-1)//self.limit)*self.limit)
         rows=[]
@@ -54,8 +63,9 @@ class FileTable:
                 actions.append(ft.IconButton(ft.Icons.DELETE_OUTLINE,tooltip='Remover '+item['name'],on_click=remove,
                     disabled=not self.writable,icon_color='#B91C1C'))
             if self.extra_actions:actions.extend(self.extra_actions(item))
-            name=ft.Column([verbatim(ft.Text(item['name'],size=13,tooltip=item['name'])),
-                *([verbatim(ft.Text(item['description'],size=11,color='#64748B',max_lines=1,overflow=ft.TextOverflow.ELLIPSIS,tooltip=item['description']),'value')] if item.get('description') else [])],spacing=3)
+            name=ft.Column([verbatim(ft.Text(item.get('display_name',item['name']),size=13,max_lines=2,
+                    overflow=ft.TextOverflow.ELLIPSIS,tooltip=item.get('provenance',item['name']))),
+                *([verbatim(ft.Text(item['description'],size=11,color='#64748B',max_lines=1,overflow=ft.TextOverflow.ELLIPSIS,tooltip=item.get('provenance',item['description'])),'value')] if item.get('description') else [])],spacing=3)
             rows.append(ft.DataRow(cells=[ft.DataCell(ft.Container(name,width=420)),
                 ft.DataCell(ft.Text(f"{item.get('size',0)/1024:.1f} KB",size=12)),ft.DataCell(ft.Row(actions,spacing=2))]))
         self.table.rows=rows
@@ -79,10 +89,11 @@ class FileTable:
                 self.files=[f for f in self.files if f is not item]
                 self.redraw();close_dialog(self.ui.page,dialog);self.ui.page.update()
                 self.ui.notify('Arquivo removido. A alteração foi registrada no histórico do projeto.')
-            await self.ui.guard(action)
+            await progress.run(action)
         dialog=ft.AlertDialog(modal=True,title=ft.Text('Remover arquivo?',size=22),
             content=ft.Column([verbatim(ft.Text(item['name'])),ft.Text('O arquivo deixará de estar disponível. A próxima execução recalculará a etapa se necessário. O histórico permite restaurar o estado anterior.')],tight=True,spacing=16),
             actions=[ft.TextButton('Manter arquivo',on_click=lambda e:close_dialog(self.ui.page,dialog)),ft.TextButton('Remover arquivo',on_click=remove)])
+        progress=RemovalProgress(self.ui,dialog)
         self.ui.page.show_dialog(dialog)
 
     def build(self):

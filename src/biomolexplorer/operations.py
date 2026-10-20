@@ -15,7 +15,7 @@ OPERATIONS = {
     'expand_similar_compounds': OperationSpec('wrappers.crawlers', 'expand_similar_compounds',
         ('search_term',), ('threshold', 'max_records', 'base_input_path', 'input_file')),
     'retrieve_structures': OperationSpec('wrappers.crawlers', 'load_pdb', (),
-        ('target', 'pdb_query', 'pdb_ids', 'uniprot_ids', 'ligand_ids', 'max_records', 'pdb_ec', 'organism', 'PolymerEntityTypeID', 'ExperimentalMethodID', 'max_resolution', 'must_have_ligand'),
+        ('target', 'pdb_query', 'pdb_ids', 'uniprot_ids', 'ligand_ids', 'max_records', 'pdb_ec', 'organism', 'PolymerEntityTypeID', 'ExperimentalMethodID', 'max_resolution', 'must_have_ligand', 'ligand_selection', 'excluded_pdb_ids'),
         {'PolymerEntityTypeID': 'crawlers.complex:PolymerEntityType',
          'ExperimentalMethodID': 'crawlers.complex:ExperimentalMethod'}),
     'retrieve_zinc': OperationSpec('wrappers.crawlers', 'load_zinc', ('base_input_path',), ('filename','verbose','download_workers')),
@@ -111,8 +111,10 @@ def validate_operation(operation, parameters, *, defer_redocking_selection=False
             if parameters.get('selection_mode')=='single' and not parameters.get('compound_id'):
                 raise ValueError('Selecione um composto de referência para a busca PubChem.')
     if operation == 'retrieve_structures':
+        if parameters.get('ligand_selection','recommended') not in ('recommended','all'):
+            raise ValueError('Escolha candidatos recomendados ou todos os ligantes.')
         from .retrieval import identifiers
-        for key, kind in (('pdb_ids','pdb'), ('uniprot_ids','uniprot'), ('ligand_ids','ligand')):
+        for key, kind in (('pdb_ids','pdb'), ('uniprot_ids','uniprot'), ('ligand_ids','ligand'), ('excluded_pdb_ids','pdb')):
             if parameters.get(key):
                 identifiers(parameters[key], kind)
         if not any(parameters.get(k) for k in ('pdb_query','pdb_ids','uniprot_ids','ligand_ids','pdb_ec',
@@ -193,7 +195,7 @@ def execute_operation(operation, parameters, output_path):
         return OperationResult(operation,artifacts,details)
     finally:
         # Also retain exclusions when a separate provider/engine error occurs.
-        if report.records:report.write(output)
+        if report.records or report.notices:report.write(output)
         preparation.write(output)
         PREPARATION_REPORT.reset(preparation_token)
         CURRENT_REPORT.reset(token)

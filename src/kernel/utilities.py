@@ -1,3 +1,4 @@
+from biomolexplorer.molecular_parsing import mol_from_smiles
 from biomolexplorer.paths import directory, resolve_path, worker_count
 from biomolexplorer.storage import write_dataframe, sync_directory
 from kernel.header_builder import HeaderBuilder
@@ -349,7 +350,7 @@ class MolConverter(MyUtilities):
 
         try:
 
-            mol = Chem.MolFromSmiles(smiles)
+            mol = mol_from_smiles(smiles)
 
             if mol is not None:
                 molblock = Chem.MolToMolBlock(mol)
@@ -367,7 +368,7 @@ class MolConverter(MyUtilities):
 
         try:
 
-            mol = Chem.MolFromSmiles(smiles)
+            mol = mol_from_smiles(smiles)
             img = Draw.MolToImage(mol, size=(300, 300))
 
             path = directory(self.outputpath) + output_file_name.split('.')[0] + '.png'

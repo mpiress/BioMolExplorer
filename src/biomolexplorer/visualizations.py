@@ -1,4 +1,5 @@
 """Versioned, offline visualization artifacts shared by workers and the UI."""
+from biomolexplorer.molecular_parsing import mol_from_smiles
 import json
 import math
 from pathlib import Path
@@ -6,6 +7,7 @@ from .storage import write_json
 
 SUFFIX = '.biomol-view.json'
 MAX_VIEW_BYTES = 32 * 1024 * 1024
+MAX_GRAPH_BYTES = 128 * 1024 * 1024
 
 
 def compound_records(frame):
@@ -140,10 +142,10 @@ def egg_view(dataset, title):
             'description': 'Descritores e classificações heurísticas calculados pela plataforma.'}
 
 
-def load_view(content):
+def load_view(content, *, max_bytes=MAX_VIEW_BYTES):
     """Validate uploaded/local artifacts before constructing native controls."""
-    if len(content) > MAX_VIEW_BYTES:
-        raise ValueError('Visualização maior que o limite de 32 MB.')
+    if len(content) > max_bytes:
+        raise ValueError(f'Visualização maior que o limite de {max_bytes//(1024*1024)} MB.')
     data = json.loads(content)
     if not isinstance(data, dict) or type(data.get('version')) is not int or data['version'] != 1 or data.get('kind') not in ('graph', 'egg'):
         raise ValueError('Formato de visualização não reconhecido.')
@@ -244,7 +246,7 @@ def molecule_image(smiles):
     from io import BytesIO
     from rdkit import Chem
     from rdkit.Chem import Draw
-    molecule = Chem.MolFromSmiles(smiles)
+    molecule = mol_from_smiles(smiles)
     if molecule is None:
         return None
     output = BytesIO()
@@ -256,7 +258,7 @@ def _conformer_molecule(smiles):
     """Generate a reproducible local 3D conformer; this is not a docking pose."""
     from rdkit import Chem
     from rdkit.Chem import AllChem
-    molecule=Chem.MolFromSmiles(smiles) if isinstance(smiles,str) else None
+    molecule=mol_from_smiles(smiles) if isinstance(smiles,str) else None
     if molecule is None or molecule.GetNumAtoms()==0:
         raise ValueError('Não foi possível interpretar o SMILES deste composto.')
     molecule=Chem.AddHs(molecule)

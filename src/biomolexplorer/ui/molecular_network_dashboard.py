@@ -34,7 +34,8 @@ class MolecularDashboard:
         # the same stem. Only the exact molecular artifact is a safe default.
         stem=Path(context['path']).name.removesuffix('.biomol-view.json') if context else ''
         correlated=[source for source in self.sources.values() if source['stage_id']==context['stage_id']
-            and source['name']==stem+'.csv' and 'Molecules' in Path(source['path']).parts] if context else []
+            and source['name']==stem+'.csv' and 'Molecules' in Path(source['path']).parts
+            and Path(source['path']).is_relative_to(Path(context['path']).parent.parent)] if context else []
         if self.request==initial_request and self.source.value=='graph':
             self.source.value=correlated[0]['artifact_id'] if len(correlated)==1 else 'graph'
         automatic_source=self.source.value
@@ -60,21 +61,22 @@ class MolecularDashboard:
     def search_sources(self,e=None):
         if e is not None:self.source_page=0
         query=(self.source_query.value or '').casefold()
-        found=[source for source in self.sources.values() if query in source['name'].casefold()]
+        found=[source for source in self.sources.values() if query in
+               (source.get('origin','')+' '+source['name']+' '+source['stage_name']).casefold()]
         self.source_page=min(self.source_page,max(0,(len(found)-1)//50))
         shown=found[self.source_page*50:(self.source_page+1)*50]
         selected=self.sources.get(self.source.value)
         if selected and selected not in shown:shown=[selected,*shown]
         options=[ft.DropdownOption(key='graph',text='Dados registrados no grafo')]
         for source in shown:
-            label=source['name']+' · '+source['stage_name']+' · '+source['stage_id'][:8]
+            label=source.get('origin',source['stage_name'])+' — '+source['name']
             context=source['context']
             target=context.get('target') or context.get('search_term') or context.get('configured_target')
             if target:label+=' · '+str(target)
             options.append(ft.DropdownOption(key=source['artifact_id'],text=label,content=ft.Text(label,tooltip=label)))
         self.source.options=options
         self.source_count.value=f'{len(found)} correspondências · página {self.source_page+1} / {max(1,(len(found)+49)//50)} · até 50 arquivos por página'+(' · fonte selecionada preservada' if selected and selected not in found else '')
-        self.source.tooltip=selected['name'] if selected else 'Nome completo e origem nas opções'
+        self.source.tooltip=selected.get('source_trace',selected['name']) if selected else 'Nome completo e origem nas opções'
         if e is not None:self.view.ui.page.update()
 
     def page_sources(self,direction):
@@ -104,6 +106,7 @@ class MolecularDashboard:
             context=self.view.data.get('dashboard_context');selected=self.source.value
             if selected=='graph':
                 self.request+=1;self.view.molecular_enrichment=None
+                self.explorer.inspector.invalidate()
                 self.notice.value='Fonte inicial: dados registrados no grafo. Escolha outro arquivo para complementar as propriedades.'
                 await self.analyze()
                 if self.view.active and self.view.selected in self.view.displayed():await self.view.select(self.view.selected,show_popup=False)
@@ -115,6 +118,7 @@ class MolecularDashboard:
                 context['run_id'],context['stage_id'],context['path'],selected,context.get('sha256'))
             if request!=self.request or not self.view.active or self.view.ui.token!=self.view.token:return
             self.view.molecular_enrichment=result
+            self.explorer.inspector.invalidate()
             self.view.selection_version+=1
             self.notice.value=f'Associação ao Full Graph: {result["matched"]} correspondências · {len(result["conflicts"])} IDs conflitantes excluídos · {result["unmatched"]} ausentes. Valores originais do grafo têm prioridade.'
             self.refresh_options();await self.analyze()
@@ -139,9 +143,10 @@ class MolecularDashboard:
             if not view.active or view.ui.token!=view.token:return
             await view.ui.call(view.ui.store.project,view.token,view.project_id)
             self.request+=1;request=self.request;mode=self.scope.value
-            _,numeric=await view.ui.call(numeric_properties,view.data['nodes'],view.molecular_enrichment)
+            scope=self.explorer.analysis.universe(mode)
+            _,numeric=await view.ui.call(numeric_properties,[node for node in view.data['nodes'] if node['id'] in scope],view.molecular_enrichment,True)
             if request!=self.request or not view.active or view.ui.token!=view.token or self.scope.value!=mode:return
-            self.refresh_options(numeric);scope=self.explorer.analysis.universe(mode)
+            self.refresh_options(numeric)
             y={n:v for n,v in numeric.get(self.property.value,{}).items() if n in scope}
             x=(await view.ui.call(self.explorer.analysis.metrics,mode,self.explorer.metric))[0] if self.axis.value=='topology' else numeric.get(self.axis.value,{})
             if request!=self.request or not view.active or view.ui.token!=view.token or self.scope.value!=mode:return
