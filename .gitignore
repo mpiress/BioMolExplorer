@@ -1,0 +1,16 @@
+.vscode
+datasets/
+__pycache__/
+logs/
+app/
+
+# Application state and package build artifacts
+.biomolexplorer/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+workspace-data/
+
+# Isolated optional neural ADMET predictor
+.admet-env/
