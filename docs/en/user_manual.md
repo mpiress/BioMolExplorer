@@ -4,6 +4,8 @@
 
 This manual follows a study from choosing a language to exporting the project. Button names below refer to the English interface. For technical parameters and APIs, see the [Flet workspace](frontend.md), [backend usage](backend_usage.md), [projects and versions](projects.md) and [pipeline validation](pipeline_validation.md) guides.
 
+[Quick examples for each feature](#quick-examples-for-each-feature)
+
 ## 1. Prepare the environment and start the application
 
 Download the [project from GitHub](https://github.com/mpiress/BioMolExplorer) and enter its source code folder:
@@ -58,7 +60,7 @@ Linux example: `/home/researcher/studies/enzyme-a`. In browser mode, this path b
 
 The selected folder stores `project.json`, files in `assets/`, runs in `runs/`, versions in `.history/` and project working copies. The central database retains accounts, sessions, permissions and indexes; general infrastructure logs use the configured logging directory. Results and run-associated logs are available through the project. Restarting with the same workspace preserves the folder association.
 
-Search by name or description to find a project. Archiving removes it from the active list; restoring allows you to use it again. Deleting removes normal project access while preserving its files on disk.
+Search by name or description to find a project. Archiving removes it from the active list; restoring allows you to use it again. Deletion requires confirmation and permanently removes the project folder, including inputs, results and history. Export a backup first; history cannot undo project deletion.
 
 ## 4. Understand the project areas
 
@@ -267,7 +269,7 @@ Inspect the responsive EGG, click points for molecular structures, and review `_
 
 ### Vina, DOCK6 and consensus
 
-**Docking with Vina** and **Docking with DOCK6** accept compounds from any block publishing molecules: ChEMBL, PubChem, ZINC, ADMET, fingerprints, graphs, consensus or user imports. Select a table at the compound input and connect the prepared receptor separately. Graphs, ADMET and the other engine are optional. PubMed provides literature references; molecules obtained from those references must be imported with identifiers and SMILES or valid structures.
+**Docking with Vina** and **Docking with DOCK6** accept compounds from any block publishing molecules: ChEMBL, PubChem, ZINC, ADMET, fingerprints, graphs, consensus or user imports. Select a table at the compound input and connect the prepared receptor separately. Graphs, ADMET and the other engine are optional.
 
 Reuse conformations by connecting **Vina → DOCK6** or **DOCK6 → Vina** at the compound input and selecting `docking_results.csv` or a specific pose. Identity and SMILES are retained; conversion uses the selected conformation instead of generating one from SMILES. Without an input pose, preparation generates a 3D conformer. DOCK6 uses the receptor site center to select spheres and position newly generated ligands; its optional Vina pose input remains available for refining corresponding candidates.
 
@@ -433,28 +435,196 @@ Adding the three direct ADMET BBB+ datasets alongside three PubChem datasets pro
 
 Source labels are reconstructed from actual file inputs and execution history, including earlier runs that produced reused files. They are not guessed from filename patterns. Existing results receive the improved labels when opened.
 
-## Incremental redocking and docking
 
-Choose result reuse to recover validated artifacts from an unchanged stage.
-When adding compounds or PDB/ligand pairs, compatible calculations are restored
-individually and only new, incomplete or invalid items are processed. The final
-table includes all currently selected items; removed selections remain in
-history without reappearing in the current selection.
+## Quick examples for each feature
 
-Receptor preparation, ligand preparation, Vina docking, DOCK6 site/grids,
-minimization, docking and footprints have independent checkpoints. Changing
-the Vina box or exhaustiveness recalculates docking while preserving compatible
-preparations. Changing only DOCK6 flex/rigid mode retains the site and
-minimization. Missing or modified files invalidate the affected checkpoint.
-Reuse never relies on a filename alone.
+The following four-line examples describe the current interface. IDs in parentheses match the catalog; import is a workspace block. Use data and criteria appropriate to your study. External searches require network access; preparation and docking require the engines listed in the installation guide.
 
-Validated results are committed after each item, allowing recovery after
-cancellation or batch failure. Vina lists completed, reused and failed items in
-`vina_execution.json`; per-compound failure reports remain available. Choosing
-**No, run again** disables checkpoint reads for the requested execution.
+### Import my files (`import_results`)
 
-The project's relational index is stored at
-`.biomolexplorer/cache/calculations/index.sqlite3`. Content-addressed objects
-are shared by multiple calculations without duplication inside the cache.
-Outputs retain their usual formats and can be edited independently of stored
-objects. Do not manually edit the index.
+```text
+Add the import block and choose the data type.
+Upload compounds.csv with molecule_chembl_id and canonical_smiles.
+Validate the file and connect its output to Evaluate ADMET.
+Run the consumer block and inspect its result table.
+```
+
+### Retrieve ChEMBL (`retrieve_compounds`)
+
+```text
+Add Retrieve ChEMBL and search for target CHEMBL220.
+Review bioactivity filters and similar-compound expansion.
+Save the configuration and run the block.
+Select molecules or similars at the next block input.
+```
+
+### Retrieve PubChem (`retrieve_pubchem`)
+
+```text
+Add Retrieve PubChem and choose a manual reference.
+Select CID and enter 2244; set cutoff 90 and maximum 10.
+Save and run the search, which requires network access.
+Connect the compound table to ADMET or fingerprints.
+```
+
+### Expand similar compounds (`expand_similar_compounds`)
+
+```text
+Connect a ChEMBL retrieval to Expand similar compounds.
+Choose the source collection and the desired threshold.
+Save and run the expansion.
+Inspect new compounds and relationships before selecting its output.
+```
+
+### Retrieve PDB structures (`retrieve_structures`)
+
+```text
+Add Retrieve PDB structures and enter ID 1P0I.
+Set the target name and review filters and ligand screening.
+Run the block and open the retrieved records.
+Inspect chain, ligand and 3D structure before redocking.
+```
+
+### Retrieve ZINC (`retrieve_zinc`)
+
+```text
+Obtain a list of ZINC SMI or MOL2 tranche URLs.
+Upload the list and select it in Retrieve ZINC.
+Set concurrent downloads and run the block.
+Inspect the report and connect the compound table to the next block.
+```
+
+### Prepare for docking (`prepare_structures`)
+
+```text
+Connect the receptor and compound table at separate inputs.
+Choose Vina, DOCK6 or both as output formats.
+Review cofactors, hydrogens, gas/am1 charges and minimization.
+Run and connect prepared receptor and candidates to the selected engine.
+```
+
+### Evaluate ADMET (`admet`)
+
+```text
+Connect a compound table to Evaluate ADMET.
+Choose an oral profile, annotation mode and local RDKit method.
+Review BBB/HIA, rules and alerts; save and run.
+Open the EGG and tables; select a compatible output to continue.
+```
+
+### Generate fingerprints (`fingerprints`)
+
+```text
+Connect a table containing identifiers and valid SMILES.
+Choose Morgan with radius 2 and 2048 bits.
+Save and run; inspect the generated collection.
+Connect the output to Calculate similarity.
+```
+
+### Calculate similarity (`similarity`)
+
+```text
+Connect previously calculated Morgan fingerprints.
+Choose Tanimoto and a 70% threshold.
+Review approximate mode before running.
+Connect relationship CSVs to Filter by graphs.
+```
+
+### Filter by graphs (`graphs`)
+
+```text
+Connect calculated similarity relationships to the graph block.
+Review common-fragment options and run.
+Open Full Graph or MCC and inspect components and molecules.
+Select the analysis compound table for ADMET or docking.
+```
+
+### Run redocking (`redocking`)
+
+```text
+Connect PDBs and select receptor/ligand/residue/chain pairs.
+Validate curation and review cofactors and Chimera preparation.
+Review box, effort and poses; confirm and run with Vina.
+Inspect RMSD, logs, Residues and the 3D button for completed pairs.
+```
+
+### Docking with Vina (`docking_vina`)
+
+```text
+Connect the receptor and compounds at their respective inputs.
+Select the receptor, molecular table and required preparation.
+Review box, pH, search effort and pose count.
+Run and inspect scores and the pose/receptor 3D comparison.
+```
+
+### Docking with DOCK6 (`docking_dock6`)
+
+```text
+Configure the DOCK6 installation containing bin/ and parameters/.
+Connect a compatible receptor and compounds; Vina poses are optional.
+Review charges, surface, spheres and flexible or rigid search.
+Run and inspect scores, 3D poses and available footprints.
+```
+
+### Docking consensus (`consensus`)
+
+```text
+Connect Vina and DOCK6 results at their respective inputs.
+Use matching compounds and receptors in both result sets.
+Review repulsion weight and run consensus.
+Sort normalized scores and inspect the available poses.
+```
+
+### Projects, language and collaboration
+
+```text
+Choose English at sign-in and access your account.
+Create a project and select its destination folder.
+Open Share and invite an existing account as viewer or editor.
+Inspect history to identify changes and versions.
+```
+
+### Execution, cancellation and reuse
+
+```text
+Configure and save blocks; connect their dependencies.
+Run the pipeline and monitor stages and logs in Runs.
+Use Cancel run to stop an active run.
+Reopen the project and reuse compatible results when continuing.
+```
+
+### Input selection and merge
+
+```text
+Connect two compound sources to a consumer block.
+Select only the produced outputs you want to process.
+Use individual processing to keep collections separate.
+Choose merge when compatible inputs should be combined.
+```
+
+### 2D, 3D and contact inspection
+
+```text
+Open a compound table and inspect its 2D structure.
+In docking or redocking results, click 3D.
+In the viewer tab, rotate the scene and change styles and layers.
+Open Residues to inspect geometric contacts.
+```
+
+### Results, cleanup and history
+
+```text
+Finish or cancel the run before removing its data.
+Open Results by stage and choose Remove all results.
+Review the confirmation and apply the intended removal.
+Use history to restore result files if needed.
+```
+
+### Export and migrate
+
+```text
+Use the canvas camera to export the pipeline as PNG.
+Download tables, figures or the simulation ZIP from Results.
+Export the project from its card to preserve configuration and data.
+Import the package in the destination workspace and check its tools.
+```

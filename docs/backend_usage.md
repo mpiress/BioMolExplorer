@@ -106,6 +106,7 @@ Consulte `biomolexplorer.operations.OPERATIONS` para os parâmetros completos.
 | Operação | Entradas principais | Saídas |
 | --- | --- | --- |
 | `retrieve_compounds` | `search_term`, opções PubChem e filtros ChEMBL | Dados por fonte e `compounds/<alvo>/compounds.csv` |
+| `retrieve_pubchem` | Referência manual SMILES/CID/nome ou compostos, limiar e máximo | Tabela de similares e relatório por referência |
 | `expand_similar_compounds` | `search_term`, `base_input_path` contendo `ChEMBL/molecules` e `ChEMBL/similars` | Compostos novos, relações e conjunto consolidado |
 | `retrieve_structures` | Texto/IDs/UniProt/ligantes ou filtros; `target` opcional | PDBs, `pdb_codes.csv`, relatório |
 | `retrieve_zinc` | `base_input_path`, `filename` do arquivo de tranches | `compounds.csv`, MOL2 individuais e relatório |
@@ -240,7 +241,7 @@ Consulte [Logs e diagnóstico](logging.md) para o formato comum, contexto por ex
 
 ## Contrato interoperável de docking
 
-**Docking com Vina** e **Docking com DOCK6** recebem compostos de qualquer bloco que publique moléculas: ChEMBL, PubChem, ZINC, ADMET, fingerprints, grafos, consenso ou importação do usuário. Selecione a tabela na entrada de compostos e conecte separadamente o receptor preparado. Não é obrigatório passar por grafos, ADMET ou pelo outro motor. PubMed fornece referências bibliográficas; moléculas obtidas dessas referências devem ser importadas com código e SMILES ou estrutura válida.
+**Docking com Vina** e **Docking com DOCK6** recebem compostos de qualquer bloco que publique moléculas: ChEMBL, PubChem, ZINC, ADMET, fingerprints, grafos, consenso ou importação do usuário. Selecione a tabela na entrada de compostos e conecte separadamente o receptor preparado. Não é obrigatório passar por grafos, ADMET ou pelo outro motor.
 
 Para reutilizar conformações, conecte **Vina → DOCK6** ou **DOCK6 → Vina** na entrada de compostos, escolhendo `docking_results.csv` ou a pose desejada. A identidade e o SMILES são preservados; a conversão utiliza a conformação selecionada, sem gerar outra a partir do SMILES. Sem uma pose de entrada, a preparação gera um conformero 3D. DOCK6 usa o centro do sítio do receptor para selecionar esferas e posicionar ligantes recém-gerados; a entrada opcional de poses Vina continua disponível para refinamento de candidatos correspondentes.
 

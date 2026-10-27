@@ -1,11 +1,6 @@
-# Runtime environment for the backend, UI and scientific workers.
-# DOCK6 remains an external installation. Chimera is an explicit legacy fallback,
-# not a requirement for standard native receptor/ligand preparation.
-# Standard ff14SB/GAFF preparation/minimization requires the AmberTools tools
-# isolated in requirements-ambertools.yml: its current native
-# libxml2/ICU stack conflicts with Open Babel/PyMOL in this environment.
-# ADMET-AI is deliberately isolated by scripts/setup_admet_ai.py because its
-# ML dependency stack must not replace the versions used by the main worker.
+# Active Chimera preparation: docs/chimera_migration.md.
+# Chimera is required by molecular preparation protocols.
+# Native DMS surface port: docs/dms_migration.md (NumPy + SciPy; no DMS executable).
 name: BioMolExplorer
 channels:
   - conda-forge

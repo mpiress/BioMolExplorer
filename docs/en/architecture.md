@@ -310,7 +310,7 @@ See the [frontend guide](frontend.md) for scientific interpretation and limits.
 
 ## Chimera dependency assessment
 
-The [Chimera replacement assessment](chimera_migration.md) records current functions, Python alternatives, contracts and validation criteria. The review retained the backend and scientific dependencies because full equivalence has not been demonstrated.
+The [Chimera preparation guide](chimera_migration.md) describes active entry points, receptor and ligand options, exported formats and diagnostics. Chimera prepares structures; Vina and DOCK6 execute their respective protocols.
 
 ## DMS dependency assessment
 

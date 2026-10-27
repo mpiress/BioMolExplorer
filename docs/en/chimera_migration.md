@@ -1,33 +1,60 @@
-# Chimera-free main preparation path
+# Molecular preparation with Chimera
 
 > Native migration history. Since 2026-10-26, docking and redocking use Chimera-only preparation again. See the [current configuration](molecular_preparation.md). The descriptions below document the earlier implementation.
 
-Updated October 23, 2026.
+## Active path
 
-## Current status
+Receptor and ligand preparation uses UCSF Chimera. Controls expose solvent and
+hydrogen removal, hydrogen addition, `gas` or `am1` charges, minimization and
+cofactors. Receptor and ligand settings are independent. Open Babel applies pH
+during conversion; pH is not a Chimera template argument. This guide describes
+the current code and provides no alternative backend setup.
 
-In-process Python/Gemmi structure selection, trusted-graph crystal ligand extraction, ff14SB receptor preparation, direct ligand charging and sander minimization replace Chimera on the standard path. Meeko/AutoDockAdapter exports Vina inputs; DOCK6 receives charged SYBYL MOL2.
+## Entry points
 
-legacy_chimera remains an explicit option for validated special systems, historical scientific protocols and custom Chimera templates. Missing native tools or trusted chemistry produce actionable errors, not silent legacy fallback. The historical caad.redocking preparation API delegates to the shared caad.docking adapter.
+| Operation | Implementation | Purpose |
+| --- | --- | --- |
+| Standalone preparation | `wrappers.redocking.prepare_structures` | Receptors and candidates for Vina, DOCK6 or both |
+| Redocking | `wrappers.redocking.perform_redocking` | Explicit pairs, preparation and RMSD with Vina |
+| Vina docking | `wrappers.docking.perform_docking_vina` | Candidates and receptor, reusing compatible prepared structures |
+| DOCK6 docking | `wrappers.docking.perform_docking_dock6` | Candidates, receptor, spheres, grids, docking and footprint |
+| Consensus | `wrappers.docking.generate_consensus` | Combine scores for compound/receptor pairs present in both engines |
 
-## Scientific interpretation
+`biomolexplorer.redocking_config` validates pairs and applies template options.
+`biomolexplorer.redocking_preparation` isolates pair failures and reuses receptors.
+`biomolexplorer.docking_preparation` prepares candidates and validates receptor
+formats. The docking backend is implemented in `src/caad/docking.py`.
 
-- STRUCTURE_SELECTION: operational equivalence; selected heavy atoms, identifiers and coordinates are preserved.
-- CRYSTAL_LIGAND_PREPARATION: CCD or named SDF/MOL2 topology is matched to crystal coordinates; bond orders are never invented from distances.
-- RECEPTOR_PREPARATION: ff14SB is retained; protonation decisions, H placement and LEaP-built missing atoms are documented.
-- CHARGE_ASSIGNMENT: direct Antechamber Gasteiger/AM1-BCC; RDKit is allowed for standard non-minimized Vina. Amber minimization preserves the selected charge method.
-- MINIMIZATION: controlled MMTK-to-sander change, vacuum ff14SB/GAFF, 100 SD + 10 CG cycles. Numerical identity is not required.
-- FORMAT_CONVERSION: in-process adapters, no external process just to select atoms.
-- LEGACY_FALLBACK: explicit compatibility only.
+## Resources and results
 
-Meeko poses can recover their explicit chemical graph/index mapping. Unannotated PDBQT needs the corresponding chemical source. The legacy reference-ligand template was also corrected: reopening PDB before MOL2 export lost assigned charges. MOL2 now comes directly from the charged molecule; old accidental zero-charge results are not a scientifically valid reference.
+Preparation templates live in `src/biomolexplorer/resources/chimera/`:
 
-## Validation and limitations
+| Template | Responsibility |
+| --- | --- |
+| `prepare_complex.template` | Select chain and cofactors for the working complex |
+| `prepare_receptor.template` | Prepare the receptor and export MOL2 and PDB without H |
+| `prepare_ligand.template` | Separate and prepare the reference ligand as PDB and MOL2 |
+| `prepare_better_conform.template` | Prepare a conformation for the DOCK6 protocol |
 
-Real 1LGU/AAH checks cover paired structural selection, receptor preparation, Vina redocking, continuous DOCK6 scoring, native SES/spheres/box/grid and flexible DOCK6 docking. Short minimization checks energy trends, RMSD, clashes and bond lengths. Cold/warm reuse and absence of Chimera calls are measured.
+Open Babel produces formats such as PDBQT. Centers and metadata identify the
+binding site. Reused receptors must contain the formats required by the engine:
+Vina requires PDBQT; DOCK6 also uses MOL2 and PDB without H. The SES surface is
+computed by `biomolexplorer.molecular_surface` using NumPy and SciPy and written
+in the format consumed by `sphgen`. No standalone DMS executable is needed.
 
-See [real results](../validation/native_structures_2026-10-23.json) and [configuration/scientific protocol](molecular_preparation.md). [Earlier reports](../validation/chimera_remaining_2026-10-23.md) are historical, not the current dependency status.
+## Execute and diagnose
 
-Metals/coordination, covalent ligands, radicals, unsupported charge states and residues without parameters require dedicated handling. Model-compound-pKa protonation is not site-specific prediction. Separate vacuum minimization can worsen a fixed-pose interaction score even while lowering intramolecular energy; docking pose quality must be assessed separately. One protein target does not establish systematic non-regression or universal chemical coverage.
+```text
+Connect receptor and compounds to Prepare for docking.
+Choose the engine and review receptor and ligand settings.
+Run and inspect prepared files, centers and metadata.
+Connect outputs to the corresponding engine and inspect its results.
+```
 
-Sources: [wwPDB CCD](https://www.wwpdb.org/data/ccd), [Amber sander tutorial](https://ambermd.org/tutorials/basic/tutorial5/index.php). Dynamics keeps its separate DOCK6/AmberTools protocol and remains Chimera-free.
+Chimera and protocol executables must be accessible to the worker. Command failures
+retain diagnostic information; inspect stage logs before changing parameters.
+Cancellation stops scientific processes. Files alone do not establish chemical
+validity: assess structures, RMSD and scores against suitable study references.
+
+See [installation](installation.md), [redocking](redocking_configuration.md),
+[user manual](user_manual.md) and [molecular surfaces](dms_migration.md).
