@@ -4,6 +4,8 @@
 
 Este manual acompanha um estudo desde a escolha do idioma até a exportação do projeto. Os nomes dos botões abaixo correspondem à interface em português. Para conhecer parâmetros técnicos e APIs, consulte [Workspace Flet](frontend.md), [uso do backend](backend_usage.md), [projetos e versões](projects.md) e [validação do pipeline](pipeline_validation.md).
 
+[Exemplos rápidos por funcionalidade](#exemplos-rapidos-por-funcionalidade)
+
 ## 1. Preparar o ambiente e iniciar
 
 Baixe o [projeto no GitHub](https://github.com/mpiress/BioMolExplorer) e entre na pasta do código:
@@ -58,7 +60,7 @@ Exemplo Linux: `/home/pesquisador/estudos/enzima-a`. No navegador, esse caminho 
 
 A pasta escolhida guarda `project.json`, arquivos em `assets/`, execuções em `runs/`, versões em `.history/` e as cópias de trabalho do projeto. O banco central conserva contas, sessões, permissões e índices; logs gerais de infraestrutura ficam no diretório de logs configurado. Resultados e logs associados às execuções podem ser consultados pelo projeto. Reabrir a aplicação com o mesmo workspace conserva a associação à pasta.
 
-Use busca por nome ou descrição para localizar um projeto. Arquivar retira o projeto da lista ativa; restaurar permite voltar a usá-lo. Excluir remove o acesso normal ao projeto, preservando os arquivos no disco.
+Use busca por nome ou descrição para localizar um projeto. Arquivar retira o projeto da lista ativa; restaurar permite voltar a usá-lo. Excluir exige confirmação e remove permanentemente a pasta do projeto, incluindo entradas, resultados e histórico. Exporte um backup antes; a exclusão não pode ser desfeita pelo histórico.
 
 ## 4. Conhecer as áreas do projeto
 
@@ -273,7 +275,7 @@ Seleções de arquivos já salvas nos blocos dispensam nova escolha durante a ex
 
 ### Vina, DOCK6 e consenso
 
-**Docking com Vina** e **Docking com DOCK6** recebem compostos de qualquer bloco que publique moléculas: ChEMBL, PubChem, ZINC, ADMET, fingerprints, grafos, consenso ou importação do usuário. Selecione a tabela na entrada de compostos e conecte separadamente o receptor preparado. Não é obrigatório passar por grafos, ADMET ou pelo outro motor. PubMed fornece referências bibliográficas; moléculas obtidas dessas referências devem ser importadas com código e SMILES ou estrutura válida.
+**Docking com Vina** e **Docking com DOCK6** recebem compostos de qualquer bloco que publique moléculas: ChEMBL, PubChem, ZINC, ADMET, fingerprints, grafos, consenso ou importação do usuário. Selecione a tabela na entrada de compostos e conecte separadamente o receptor preparado. Não é obrigatório passar por grafos, ADMET ou pelo outro motor.
 
 Para reutilizar conformações, conecte **Vina → DOCK6** ou **DOCK6 → Vina** na entrada de compostos, escolhendo `docking_results.csv` ou a pose desejada. A identidade e o SMILES são preservados; a conversão utiliza a conformação selecionada, sem gerar outra a partir do SMILES. Sem uma pose de entrada, a preparação gera um conformero 3D. DOCK6 usa o centro do sítio do receptor para selecionar esferas e posicionar ligantes recém-gerados; a entrada opcional de poses Vina continua disponível para refinamento de candidatos correspondentes.
 
@@ -422,3 +424,197 @@ Ao acrescentar as três saídas BBB+ do ADMET às três entradas vindas da PubCh
 A opção **Acompanhar novos conjuntos da origem**, nos blocos de similaridade e grafos, inclui as saídas compatíveis dos produtores conectados. Desative-a para manter somente os arquivos explicitamente selecionados. Seleções parciais antigas não são convertidas automaticamente em seleções completas. Para manter os seis conjuntos separados, use **Processar individualmente**; a opção merge reúne as entradas conforme a configuração escolhida.
 
 A origem exibida é reconstruída a partir dos arquivos efetivamente usados e do histórico da execução. Não se atribui um alvo apenas porque o nome de um arquivo parece pertencer a ele. Resultados já calculados recebem os novos rótulos ao serem abertos.
+
+
+## Exemplos rápidos por funcionalidade
+
+Os exemplos abaixo são roteiros de quatro linhas para a interface atual. Os IDs entre parênteses correspondem ao catálogo; importação é um bloco do workspace. Use dados e critérios adequados ao seu estudo. Buscas externas exigem rede; preparo e docking exigem os motores indicados no guia de instalação.
+
+### Importar meus arquivos (`import_results`)
+
+```text
+Adicione o bloco de importação e escolha o tipo de dado.
+Envie compostos.csv com molecule_chembl_id e canonical_smiles.
+Valide o arquivo e conecte a saída a Avaliar ADMET.
+Execute o bloco consumidor e confira a tabela de resultados.
+```
+
+### Recuperar ChEMBL (`retrieve_compounds`)
+
+```text
+Adicione Recuperar ChEMBL e busque pelo alvo CHEMBL220.
+Revise os filtros de bioatividade e a expansão por similares.
+Salve a configuração e execute o bloco.
+Selecione molecules ou similars na entrada do próximo bloco.
+```
+
+### Recuperar PubChem (`retrieve_pubchem`)
+
+```text
+Adicione Recuperar PubChem e escolha referência manual.
+Selecione CID e informe 2244; use limiar 90 e máximo 10.
+Salve e execute a busca, que requer acesso à rede.
+Conecte a tabela de compostos a ADMET ou fingerprints.
+```
+
+### Expandir similares (`expand_similar_compounds`)
+
+```text
+Conecte uma recuperação ChEMBL ao bloco Expandir similares.
+Escolha o conjunto de origem e informe o limiar desejado.
+Salve e execute a expansão.
+Confira novos compostos e relações antes de selecionar a saída.
+```
+
+### Recuperar estruturas PDB (`retrieve_structures`)
+
+```text
+Adicione Recuperar estruturas PDB e informe o ID 1P0I.
+Defina o nome do alvo e revise filtros e triagem de ligantes.
+Execute e abra os registros recuperados.
+Confira cadeia, ligante e estrutura 3D antes do redocking.
+```
+
+### Recuperar ZINC (`retrieve_zinc`)
+
+```text
+Obtenha uma lista de URLs de tranches SMI ou MOL2 da ZINC.
+Envie a lista e selecione-a em Recuperar ZINC.
+Ajuste os downloads simultâneos e execute.
+Confira o relatório e conecte a tabela de compostos ao próximo bloco.
+```
+
+### Preparar para docking (`prepare_structures`)
+
+```text
+Conecte o receptor e a tabela de compostos em entradas separadas.
+Escolha Vina, DOCK6 ou ambos como formatos de saída.
+Revise cofatores, hidrogênios, cargas gas/am1 e minimização.
+Execute e conecte receptor e candidatos preparados ao motor escolhido.
+```
+
+### Avaliar ADMET (`admet`)
+
+```text
+Conecte uma tabela de compostos ao bloco Avaliar ADMET.
+Escolha perfil oral, modo de anotação e método RDKit local.
+Revise BBB/HIA, regras e alertas; salve e execute.
+Abra o EGG e as tabelas; selecione a saída compatível para continuar.
+```
+
+### Gerar fingerprints (`fingerprints`)
+
+```text
+Conecte uma tabela com identificadores e SMILES válidos.
+Escolha Morgan com raio 2 e 2048 bits.
+Salve e execute; confira o conjunto gerado.
+Conecte a saída ao bloco Calcular similaridade.
+```
+
+### Calcular similaridade (`similarity`)
+
+```text
+Conecte os fingerprints Morgan já calculados.
+Escolha Tanimoto e limiar de 70%.
+Revise o modo aproximado antes de executar.
+Conecte os CSVs de relações ao bloco Filtrar por grafos.
+```
+
+### Filtrar por grafos (`graphs`)
+
+```text
+Conecte relações de similaridade prontas ao bloco de grafos.
+Revise as opções de fragmento comum e execute.
+Abra Full Graph ou MCC e inspecione componentes e moléculas.
+Selecione a tabela molecular da análise para ADMET ou docking.
+```
+
+### Executar redocking (`redocking`)
+
+```text
+Conecte PDBs e selecione os pares receptor/ligante/resíduo/cadeia.
+Valide a curadoria e confira cofatores e preparo com Chimera.
+Revise caixa, esforço e poses; confirme e execute com Vina.
+Avalie RMSD, logs, Resíduos e o botão 3D de cada par concluído.
+```
+
+### Docking com Vina (`docking_vina`)
+
+```text
+Conecte o receptor e os compostos nas respectivas entradas.
+Selecione o receptor, a tabela molecular e o preparo necessário.
+Confira caixa, pH, esforço de busca e número de poses.
+Execute e abra scores e comparação 3D da pose com o receptor.
+```
+
+### Docking com DOCK6 (`docking_dock6`)
+
+```text
+Configure a instalação DOCK6 com bin/ e parameters/.
+Conecte receptor compatível e compostos; poses Vina são opcionais.
+Revise cargas, superfície, esferas e busca flexível ou rígida.
+Execute e inspecione scores, poses 3D e footprint disponível.
+```
+
+### Consenso de docking (`consensus`)
+
+```text
+Conecte resultados Vina e DOCK6 às respectivas entradas.
+Use compostos e receptores correspondentes nos dois resultados.
+Revise o peso de repulsão e execute o consenso.
+Ordene os scores normalizados e inspecione as poses disponíveis.
+```
+
+### Projetos, idioma e colaboração
+
+```text
+Escolha Português no login e entre com sua conta.
+Crie um projeto e selecione a pasta de destino.
+Abra Compartilhar e convide uma conta existente como leitor ou editor.
+Consulte o histórico para identificar alterações e versões.
+```
+
+### Execução, cancelamento e reutilização
+
+```text
+Configure e salve os blocos; conecte suas dependências.
+Execute o pipeline e acompanhe etapas e logs em Execuções.
+Use Cancelar execução para interromper uma execução ativa.
+Reabra o projeto e reutilize resultados compatíveis ao continuar.
+```
+
+### Seleção de entradas e merge
+
+```text
+Conecte duas fontes de compostos ao bloco consumidor.
+Escolha apenas as saídas produzidas que deseja processar.
+Use Processar individualmente para manter os conjuntos separados.
+Escolha merge quando quiser reunir entradas compatíveis.
+```
+
+### Inspeção 2D, 3D e contatos
+
+```text
+Abra uma tabela de compostos e consulte a estrutura 2D.
+Nos resultados de docking ou redocking, clique em 3D.
+Na aba do visualizador, gire a cena e altere estilos e camadas.
+Abra Resíduos para consultar os contatos geométricos.
+```
+
+### Resultados, limpeza e histórico
+
+```text
+Finalize ou cancele a execução antes de remover seus dados.
+Abra Resultados por etapa e escolha Remover todos os resultados.
+Confira a confirmação e aplique a remoção desejada.
+Use o histórico para restaurar arquivos de resultados se necessário.
+```
+
+### Exportar e migrar
+
+```text
+Use a câmera do canvas para exportar o pipeline em PNG.
+Baixe tabelas, figuras ou o ZIP da simulação em Resultados.
+Exporte o projeto pelo cartão para guardar configuração e dados.
+Importe o pacote no workspace de destino e confira as ferramentas.
+```

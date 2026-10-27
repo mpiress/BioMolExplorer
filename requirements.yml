@@ -1,5 +1,5 @@
-# Chimera replacement review: docs/chimera_migration.md.
-# Current backend still requires Chimera; candidate libraries are not activated.
+# Active Chimera preparation: docs/chimera_migration.md.
+# Chimera is required by molecular preparation protocols.
 # Native DMS surface port: docs/dms_migration.md (NumPy + SciPy; no DMS executable).
 name: BioMolExplorer
 channels:

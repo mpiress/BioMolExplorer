@@ -314,7 +314,7 @@ A [validação do pipeline](pipeline_validation.md) reúne matriz, regressões e
 
 ## Avaliação da dependência Chimera
 
-A [análise de substituição do Chimera](chimera_migration.md) registra as funções atuais, alternativas Python, contratos e critérios de validação. A revisão manteve o backend e as dependências científicas: equivalência completa ainda não foi demonstrada.
+O [guia de preparação com Chimera](chimera_migration.md) descreve os pontos de entrada ativos, opções de receptor e ligante, formatos exportados e diagnóstico. Chimera é a ferramenta de preparação; Vina e DOCK6 executam seus respectivos protocolos.
 
 ## Avaliação da dependência DMS
 

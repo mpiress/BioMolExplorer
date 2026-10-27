@@ -19,7 +19,7 @@
 | [Logs e diagnóstico](logging.md) | Contexto, causas, códigos de erro, resumos e filtros | [HTML](pt/logging.html) |
 | [Validação do pipeline](pipeline_validation.md) | Matriz de conexões, regressões e limites da verificação | [HTML](pt/pipeline_validation.html) |
 
-[Avaliação da substituição do Chimera](chimera_migration.md) · [HTML](pt/chimera_migration.html): inventário, alternativas e decisão de preservar o protocolo.
+[Preparação molecular com Chimera](chimera_migration.md) · [HTML](pt/chimera_migration.html): operações ativas, configurações, formatos e diagnóstico.
 
 [Porte nativo DMS e validação](dms_migration.md) · [HTML](pt/dms_migration.html): superfície SES em Python, contrato sphgen e referências do algoritmo C.
 
@@ -40,7 +40,7 @@
 | [Logs and diagnostics](en/logging.md) | Context, causes, error codes, summaries and filters | [HTML](en/logging.html) |
 | [Pipeline validation](en/pipeline_validation.md) | Connection matrix, regressions and verification limits | [HTML](en/pipeline_validation.html) |
 
-[Chimera replacement assessment](en/chimera_migration.md) · [HTML](en/chimera_migration.html): inventory, alternatives and decision to preserve the protocol.
+[Molecular preparation with Chimera](en/chimera_migration.md) · [HTML](en/chimera_migration.html): active operations, settings, formats and diagnostics.
 
 [Native DMS port and validation](en/dms_migration.md) · [HTML](en/dms_migration.html): native Python SES surfaces, sphgen contract and C reference comparisons.
 
@@ -58,6 +58,7 @@ translation and regenerate the HTML pages from the project root:
 
 ```bash
 python scripts/build_docs.py
+python scripts/validate_docs.py
 ```
 
 O gerador usa apenas a biblioteca padrão Python. As páginas geradas são estáticas,

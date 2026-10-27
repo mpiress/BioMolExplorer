@@ -456,7 +456,7 @@ See [Logs and diagnostics](logging.md) for the common format, execution context,
 
 ## Docking inputs and results
 
-**Docking with Vina** and **Docking with DOCK6** accept compounds from any block publishing molecules: ChEMBL, PubChem, ZINC, ADMET, fingerprints, graphs, consensus or user imports. Select a table at the compound input and connect the prepared receptor separately. Graphs, ADMET and the other engine are optional. PubMed provides literature references; molecules obtained from those references must be imported with identifiers and SMILES or valid structures.
+**Docking with Vina** and **Docking with DOCK6** accept compounds from any block publishing molecules: ChEMBL, PubChem, ZINC, ADMET, fingerprints, graphs, consensus or user imports. Select a table at the compound input and connect the prepared receptor separately. Graphs, ADMET and the other engine are optional.
 
 Reuse conformations by connecting **Vina → DOCK6** or **DOCK6 → Vina** at the compound input and selecting `docking_results.csv` or a specific pose. Identity and SMILES are retained; conversion uses the selected conformation instead of generating one from SMILES. Without an input pose, preparation generates a 3D conformer. DOCK6 uses the receptor site center to select spheres and position newly generated ligands; its optional Vina pose input remains available for refining corresponding candidates.
 
