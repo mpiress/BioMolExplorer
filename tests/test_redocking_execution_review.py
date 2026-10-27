@@ -88,7 +88,9 @@ class RedockingExecutionReviewTests(unittest.TestCase):
         self.assertEqual(calls,[])
 
     def test_missing_chimera_fails_before_submitting_a_scientific_job(self):
-        source,stage=self.configuration();self.save([source,stage]);manager,calls=self.immediate_manager()
+        source,stage=self.configuration()
+        stage['parameters']['preparation_pairs']={'1ABC|LIG|1|A':{'preparation_backend':'legacy_chimera'}}
+        self.save([source,stage]);manager,calls=self.immediate_manager()
         with patch('biomolexplorer.pipeline.JobManager',manager),patch('shutil.which',return_value=None):
             service=PipelineService(self.store)
             try:run=self.wait(service.submit(self.token,self.project_id))

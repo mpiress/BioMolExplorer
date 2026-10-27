@@ -8,6 +8,12 @@ within the application; viewing does not send structures to external services.
 
 ## Open a structure or result
 
+In the browser, result **3D** buttons open a new tab directly on the click,
+avoiding popup blocking after server processing. The viewer displays loading
+feedback while preparing the scene. Authorization and file availability are
+checked again before returning molecular data. The desktop application continues
+to open the external browser.
+
 | Source | Action and contents |
 | --- | --- |
 | Retrieved PDB or molecular file | **View 3D structure** opens the selected file |

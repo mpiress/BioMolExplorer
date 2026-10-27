@@ -15,7 +15,7 @@ cd BioMolExplorer
 
 Sem Git, use **Code → Download ZIP**, extraia o arquivo e abra um terminal na pasta extraída. O [guia de instalação e configuração](installation.md) detalha o download, as ferramentas externas e os caminhos.
 
-**Instale UCSF Chimera 1.17 e DOCK6 6.11 antes de iniciar a aplicação.** Eles precisam estar disponíveis no computador dos cálculos, inclusive em modo web. A instalação da interface e do ambiente Conda não instala essas ferramentas; sem elas, as etapas que dependem delas falharão. Conclua as verificações do guia de instalação antes de executar os comandos de inicialização.
+**Configure UCSF Chimera, Open Babel e Vina no ambiente científico principal.** DOCK6 é necessário para seus blocos. O ambiente AmberTools separado é usado apenas pelos protocolos de dinâmica que o exigem; consulte o guia de instalação.
 
 1. Na raiz do código baixado, crie o ambiente científico.
 2. Ative o ambiente e instale a interface.
@@ -285,6 +285,22 @@ O botão **Footprint** do DOCK6 abre um popup integrado com o gráfico das energ
 
 Após conectar os resultados Vina e DOCK6, o consenso segue automaticamente na execução do pipeline, sem confirmação de arquivos ou parâmetros adicionais. A tabela apresenta código do composto, score Vina, score DOCK6 e score normalizado (0 a 1). Clique no cabeçalho de uma coluna para alternar a ordenação crescente e decrescente; a ordenação considera toda a tabela antes da paginação. O score normalizado é a média das normalizações min-max dos dois motores, e valores maiores indicam posições melhores no ranking. O CSV também preserva z-score e min-max. Há botões **3D Vina**, **3D DOCK6** e **Remover** em cada linha. O consenso usa os scores originais dos dois motores, sem exigir receptor, ligante de referência ou pose. Arquivos estruturais disponíveis são anexos opcionais para visualização e sua ausência não bloqueia o cálculo. Para um composto ou scores constantes, as normalizações são zero. A remoção exige permissão de edição, fica registrada e afeta próximas entradas; não recalcula análises já concluídas. As tabelas principais de cada lote são usadas sem reintroduzir linhas removidas a partir das tabelas auxiliares.
 
+### Dinâmica molecular com DOCK6 e AmberTools
+
+O preparo de candidatos possui seleção automática de backend e políticas distintas de carga para Vina e DOCK6, com preservação do método Antechamber no DOCK6. Consulte [preparação molecular e backends](molecular_preparation.md) para opções nativas, fallback de minimização, cache e sistemas especiais.
+
+**Dinâmica com DOCK6** recebe receptores PDB e compostos de etapas compatíveis, incluindo poses DOCK6 e Vina, MOL2, SDF, PDBQT e tabelas CSV. Selecione explicitamente os pares na configuração: nenhum produto cartesiano é executado por padrão. Uma tabela deve apontar para uma pose 3D (`pose_file`, `conformer_file`, `prepared_mol2` ou `prepared_pdbqt`); SMILES sozinho não define uma posição de ligação e causa uma falha explicativa apenas naquele par. Conversões de poses usam Open Babel e preservam coordenadas; confirme quimicamente os tipos, protonação e associação ao receptor.
+
+**AMBER Score (DOCK6)** prepara e refina separadamente receptor, ligante e complexo em solvente implícito. **AMBER Score + trajetória sander** acrescenta minimização e uma trajetória NetCDF independente. O protocolo não possui uma etapa de equilibração validada: não interprete esse refinamento curto como dinâmica de produção ou energia livre de ligação. Os helpers da instalação DOCK6 testada usam **ff94 e GAFF**, não ff14SB/GAFF2; não se anuncia uma atualização de campo de força que não ocorreu. Não remova silenciosamente cofatores, águas ou metais: erros de parametrização precisam ser resolvidos antes de interpretar o resultado.
+
+O painel por par apresenta RMSD do backbone e do ligante (ajuste à proteína, sem reajustar o ligante), RMSF C-alfa em torno da média alinhada, raio de giro ponderado por massa, ligações H exclusivamente da interface com ocupância, SASA LCPO, distância entre centros de massa do ligante e sítio inicial e contatos por resíduo (4 Å). O sítio inicial inclui resíduos até 5 Å do ligante no primeiro quadro salvo. A referência de RMSD é esse primeiro quadro, não necessariamente a pose inicial. `analysis.json` consolida séries, máscaras, ocupâncias e definições; `protocol.json` registra parâmetros, hashes das ferramentas e entradas, campos de força e restrições. São necessários ao menos dois quadros. A máscara sander padrão `:1` mantém apenas o primeiro resíduo móvel: verifique-a, sobretudo em ligantes multirresíduo; RMSF de proteína congelada não informa sua flexibilidade. Compare métricas somente em protocolos e receptores equivalentes, sem ranking definitivo de afinidade.
+
+Cada par possui um identificador estável derivado do receptor e do ligante. `dynamics_results.json` é o índice principal, `dynamics_results.csv` é o resumo e `pairs/<id>/` contém os arquivos daquele cálculo. Pares concluídos e íntegros são reutilizados; pares alterados, corrompidos ou com falha são recalculados isoladamente. Falhar um par não descarta os demais. Verifique DOCK6, `sander` e `cpptraj` conforme o guia de instalação antes de usar trajetórias.
+
+O índice SQLite compartilhado valida hashes antes do reuso e deduplica artefatos por conteúdo. Preparações de receptor, ligante e complexo têm checkpoints próprios, independentes dos parâmetros de temperatura e duração; falhar o ligante não descarta o receptor concluído. Desativar o reuso força novo processamento. As séries numéricas ficam consolidadas, mas topologias, coordenadas e trajetória continuam em formatos nativos necessários às ferramentas. Referências dos métodos: [RMSD](https://amberhub.chpc.utah.edu/rmsd/), [RMSF](https://amberhub.chpc.utah.edu/atomicfluct-rmsf/), [ligações H](https://amberhub.chpc.utah.edu/hbond/) e [SASA LCPO](https://amberhub.chpc.utah.edu/surf/).
+
+**Comparar pares por receptor e protocolo** abre uma tabela descritiva, agrupada por hash do receptor, parâmetros e ferramentas. Compare apenas linhas do mesmo grupo; a tabela não produz ranking de afinidade. Os logs identificam a fase da falha (`failed_stage`), preservando saídas dos helpers AMBER para diagnóstico de parâmetros ausentes. Após sucesso, cópias locais dos scripts auxiliares e o arquivo transitório de cargas são removidos; `BIOMOL_MD_DEBUG=1` os preserva para depuração. Topologias, entradas científicas, logs, trajetória e análises não são removidos.
+
 ## 12. Explorar resultados e navegar pelos grafos
 
 1. Abra **Execuções** e expanda a etapa, ou use **Resultados** no bloco.
@@ -294,6 +310,8 @@ Após conectar os resultados Vina e DOCK6, o consenso segue automaticamente na e
 5. Baixe o arquivo para conservar os dados completos da análise.
 
 No grafo, escolha **Grafo completo** para ver todos os componentes. Cada componente recebe espaço próprio e os vértices são separados. Use o seletor de componentes para focar uma região; clique em um vértice para ver seus detalhes, vizinhos e pesos das relações. Buscar um código permite encontrar o nó e navegar até seu componente. Use arraste e zoom; **Ajustar à tela** e **Recentrar** ajudam a recuperar a visão geral.
+
+Cada análise grava um único CSV indexado do grafo completo, com `graph_analysis_id`, `graph_component` e `graph_is_mcc`. Os componentes são filtros desse arquivo e do artefato interativo, não cópias físicas. Exporte CSV, SVG, PNG ou métricas sob demanda. Resultados antigos com um CSV por componente continuam legíveis; novas execuções evitam essa multiplicação.
 
 **Restaurar grafo completo** limpa todos os filtros e a agregação e recupera a visão geral, inclusive após investigar uma comunidade. Em **Layout, centralidade e componentes**, escolha ForceAtlas2, LinLog, Fruchterman–Reingold ou outras organizações e configure cores e tamanhos. A legenda indica os valores ou os grupos de cada cor. **Laboratório de dados** permite pesquisar nós e arestas e exportar a tabela completa. PNG/SVG incluem legenda; GEXF/GraphML permitem continuar a análise no Gephi. Consulte [recursos, interpretação e limites](graph_explorer.md).
 
@@ -422,3 +440,31 @@ Ao acrescentar as três saídas BBB+ do ADMET às três entradas vindas da PubCh
 A opção **Acompanhar novos conjuntos da origem**, nos blocos de similaridade e grafos, inclui as saídas compatíveis dos produtores conectados. Desative-a para manter somente os arquivos explicitamente selecionados. Seleções parciais antigas não são convertidas automaticamente em seleções completas. Para manter os seis conjuntos separados, use **Processar individualmente**; a opção merge reúne as entradas conforme a configuração escolhida.
 
 A origem exibida é reconstruída a partir dos arquivos efetivamente usados e do histórico da execução. Não se atribui um alvo apenas porque o nome de um arquivo parece pertencer a ele. Resultados já calculados recebem os novos rótulos ao serem abertos.
+
+## Reexecução incremental de redocking e docking
+
+Ao escolher reutilizar os resultados, um bloco sem alterações usa os artefatos
+validados da execução anterior. Ao acrescentar compostos ou pares PDB/ligante,
+os cálculos compatíveis são recuperados individualmente e somente os itens
+novos, incompletos ou inválidos são processados. A tabela final reúne todos os
+itens selecionados; seleções removidas permanecem no histórico, sem reaparecer
+na seleção atual.
+
+Preparação de receptor, preparação de ligante, docking Vina, sítio/grid DOCK6,
+minimização, docking DOCK6 e footprint possuem checkpoints independentes.
+Alterar a caixa ou o exhaustiveness do Vina recalcula o docking e conserva as
+preparações compatíveis. Alterar somente o modo flex/rigid do DOCK6 conserva o
+sítio e a minimização. Arquivos alterados ou ausentes invalidam o checkpoint
+afetado. O reuso nunca depende apenas do nome do arquivo.
+
+Resultados validados são publicados após cada item, permitindo retomada após
+cancelamento ou falha do lote. O Vina registra os itens concluídos, reutilizados
+e falhos em `vina_execution.json`. Os relatórios por composto continuam
+disponíveis. Escolher **Não, executar novamente** desativa a leitura desses
+checkpoints para a execução solicitada.
+
+O índice relacional fica em `.biomolexplorer/cache/calculations/index.sqlite3`
+no projeto. Os objetos são identificados pelo conteúdo e podem ser
+compartilhados por vários cálculos sem duplicação dentro do cache. As saídas
+continuam disponíveis nos formatos habituais e podem ser editadas sem alterar
+o objeto armazenado. Não edite manualmente o índice.

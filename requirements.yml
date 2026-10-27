@@ -1,30 +1,40 @@
-# Chimera replacement review: docs/chimera_migration.md.
-# Current backend still requires Chimera; candidate libraries are not activated.
-# Native DMS surface port: docs/dms_migration.md (NumPy + SciPy; no DMS executable).
+# Runtime environment for the backend, UI and scientific workers.
+# DOCK6 remains an external installation. Chimera is an explicit legacy fallback,
+# not a requirement for standard native receptor/ligand preparation.
+# Standard ff14SB/GAFF preparation/minimization requires the AmberTools tools
+# isolated in requirements-ambertools.yml: its current native
+# libxml2/ICU stack conflicts with Open Babel/PyMOL in this environment.
+# ADMET-AI is deliberately isolated by scripts/setup_admet_ai.py because its
+# ML dependency stack must not replace the versions used by the main worker.
 name: BioMolExplorer
 channels:
   - conda-forge
-  - defaults
+  - nodefaults
 dependencies:
-  - python=3.12.3
-  - pip
-  - openbabel=3.1.1
-  - chembl_webresource_client=0.10.9
-  - numpy=1.26.4
-  - pandas=2.1.4
-  - rdkit=2023.09.6
-  - networkx=3.3
-  - biopython=1.84
-  - datasketch=1.6.5
-  - seaborn=0.13.2
-  - pymol-open-source=3.0.0
-  - vina=1.2.5
-  - requests
-  - matplotlib
-  - pillow
+  - python>=3.12,<3.13
+  - pip>=24
+  - setuptools>=68
+  - openbabel>=3.1.1,<3.2
+  - chembl_webresource_client>=0.10.9,<0.11
+  - numpy>=1.26.4,<2
+  - pandas>=2.1.4,<3
+  - rdkit>=2024.03,<2027
+  - networkx>=3.3,<4
+  - biopython>=1.84,<2
+  - datasketch>=1.6.5,<2
+  - seaborn>=0.13.2,<0.14
+  - pymol-open-source>=3.0,<4
+  - vina>=1.2.5,<1.3
+  - requests>=2.31,<3
+  - matplotlib>=3.8,<4
+  - pillow>=10,<13
   - poppler
-  - scipy  
-  - urllib3
-  - setuptools
+  - scipy>=1.11,<2
+  - urllib3>=2,<3
   - pip:
+    # Python ligand adapter; Gemmi is imported by Meeko, including ligand APIs.
+    - meeko>=0.7.1,<0.8
+    - gemmi>=0.7,<0.8
     - rcsbsearchapi==1.6.0
+    - flet==1.0.3
+    - flet-web==1.0.3

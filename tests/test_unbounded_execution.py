@@ -29,7 +29,7 @@ class UnboundedExecutionTests(unittest.TestCase):
                 return SimpleNamespace(returncode=0,stderr='')
             with patch('biomolexplorer.docking_data.subprocess.run',side_effect=convert):
                 self.assertEqual(convert_structure(source,destination),destination)
-            with patch('biomolexplorer.docking_data.subprocess.run',return_value=SimpleNamespace(returncode=0,stdout='CCO\tinput')) as run:
+            with patch('biomolexplorer.docking_data.shutil.which',return_value='obabel'),patch('biomolexplorer.docking_data.subprocess.run',return_value=SimpleNamespace(returncode=0,stdout='CCO\tinput')) as run:
                 self.assertEqual(structure_smiles(source),'CCO')
                 self.assertIsNone(run.call_args.kwargs.get('timeout'))
             with patch('biomolexplorer.docking_data.subprocess.run',return_value=SimpleNamespace(returncode=1,stderr='bad input')):
@@ -69,6 +69,37 @@ class UnboundedExecutionTests(unittest.TestCase):
                     time.sleep(.02);job=manager.get(job['id'])
                 self.assertEqual(job['status'],'running')
                 self.assertEqual(manager.cancel(job['id'])['status'],'cancelled')
+
+    def test_cancellation_stops_child_that_ignores_term_after_worker_exits(self):
+        import signal
+        real_popen=subprocess.Popen;processes=[]
+        with tempfile.TemporaryDirectory() as temp:
+            ready=Path(temp)/'child.pid'
+            child='import os,signal,time,pathlib;signal.signal(signal.SIGTERM,signal.SIG_IGN);pathlib.Path('+repr(str(ready))+').write_text(str(os.getpid()));time.sleep(60)'
+            worker='import subprocess,sys,time;subprocess.Popen([sys.executable,"-c",'+repr(child)+']);time.sleep(60)'
+            def launch(args,**options):
+                process=real_popen([sys.executable,'-c',worker],**options)
+                processes.append(process);return process
+            try:
+                with patch('biomolexplorer.jobs.subprocess.Popen',side_effect=launch),JobManager(AppConfig(Path(temp))) as manager:
+                    job=manager.submit('admet',{'base_input_path':temp})
+                    deadline=time.monotonic()+5
+                    while not ready.exists() and time.monotonic()<deadline:time.sleep(.02)
+                    self.assertTrue(ready.exists(),'Worker child did not start')
+                    pid=int(ready.read_text())
+                    self.assertEqual(manager.cancel(job['id'])['status'],'cancelled')
+                    deadline=time.monotonic()+3
+                    def running():
+                        stat=Path('/proc')/str(pid)/'stat'
+                        try:return stat.read_text().split()[2] not in ('Z','X')
+                        except FileNotFoundError:return False
+                    while running() and time.monotonic()<deadline:time.sleep(.02)
+                    self.assertFalse(running(),'Scientific child survived cancellation')
+            finally:
+                for process in processes:
+                    try:os.killpg(process.pid,signal.SIGKILL)
+                    except ProcessLookupError:pass
+                    process.wait(timeout=5)
 
     def test_graph_fragment_default_is_unlimited_and_explicit_limits_remain_valid(self):
         stage=new_stage('graphs');self.assertEqual(stage['parameters']['mcs_timeout'],0)

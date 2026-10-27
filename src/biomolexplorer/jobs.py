@@ -127,16 +127,22 @@ class JobManager:
 
     @staticmethod
     def _stop(process):
-        if process.poll() is None:
-            # Stop nested docking commands/pools as well as the Python worker.
+        # The worker can exit on TERM while a child ignores it. Always finish
+        # stopping the owned process group, even after its leader has exited.
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            return
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            pass
+        finally:
             try:
-                os.killpg(process.pid, signal.SIGTERM)
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
                 os.killpg(process.pid, signal.SIGKILL)
-                process.wait(timeout=5)
             except ProcessLookupError:
                 pass
+        process.wait(timeout=5)
 
     def cancel(self, job_id):
         with self._lock:
@@ -176,6 +182,9 @@ class JobManager:
                     environment['PATH']=str(dock_bin)+os.pathsep+environment['PATH']
                 environment['BIOMOL_WORKSPACE'] = str(self.config.workspace)
                 environment['BIOMOL_CPU_WORKERS'] = str(self.config.cpu_workers)
+                environment['BIOMOL_PREPARATION_CACHE'] = str(self.config.preparation_cache or
+                    self.config.state_dir / 'cache' / 'ligand-preparation')
+                environment['BIOMOL_REUSE_PREPARATIONS'] = '1' if self.config.reuse_preparations else '0'
                 environment['BIOMOL_LOG_DIR'] = str(log_directory() / 'jobs' / job_id)
                 environment['BIOMOL_LOG_CONTEXT'] = json.dumps(current_context())
                 environment['MPLBACKEND'] = 'Agg'

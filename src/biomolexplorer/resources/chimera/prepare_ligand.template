@@ -6,8 +6,6 @@ addh
 addcharge all spec #0 chargeModel 14sb method {charge_type}
 minimize spec #0
 write format pdb #0 {output_ligand}.lig.pdb
-close session
-open {output_ligand}.lig.pdb
 write format mol2 #0 {output_ligand}.lig.mol2
 close session
 close all

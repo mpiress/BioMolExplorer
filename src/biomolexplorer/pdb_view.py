@@ -101,6 +101,17 @@ class StructureViewers:
         self._result_spec(record)
         return self._issue(record)
 
+    def reserve_result(self,token,pid,rid,sid,kind,selection,language='pt',name=None):
+        """Prepare a client-side navigation link without loading result files.
+
+        The HTML shell authorizes the project; the scene request revalidates
+        the run, stage, selection and every file before returning molecular data.
+        """
+        self.store.project(token,pid)
+        if kind not in ('redocking','docking'):raise AccessDenied('Conformação não autorizada.')
+        return self._issue(dict(token=token,pid=pid,rid=rid,sid=sid,kind=kind,
+            selection=selection,language=language,deferred=True,name=name or '3D'))
+
     def _result_spec(self,record):
         if record['kind']=='redocking':
             from .redocking_results import RedockingResults
@@ -155,13 +166,14 @@ class StructureViewers:
                 if len(data)>MAX_VIEW_BYTES or not data.startswith(b'%PDF-'):raise ValueError('PDF indisponível.')
                 return 200,'application/pdf',data,dict(PRIVATE_HEADERS,**{'Content-Disposition':'inline'})
             if 'kind' in record:
-                spec=self._result_spec(record)
                 if len(parts)==2:
                     if parts[1]!='scene':raise AccessDenied('Conformação não autorizada.')
+                    spec=self._result_spec(record)
                     from .docking_scene import scene_payload
                     data=scene_payload(self.store,record['token'],record['pid'],spec,cutoff=8.,include_interactions=True)
                     return 200,'application/json',json.dumps(data,ensure_ascii=False).encode(),PRIVATE_HEADERS
-                document=viewer_document(spec['name'],record['language'],prefix,scene=True)
+                name=record['name'] if record.get('deferred') else self._result_spec(record)['name']
+                document=viewer_document(name,record['language'],prefix,scene=True)
                 return 200,'text/html; charset=utf-8',document.encode(),PRIVATE_HEADERS
             if len(parts)==2:
                 if parts[1]!='structure':raise AccessDenied('Conformação não autorizada.')

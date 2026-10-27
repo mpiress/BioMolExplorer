@@ -2,12 +2,13 @@
 import csv
 import io
 import flet as ft
+from .processing import save_file
 from biomolexplorer.docking_scene import scene_payload
 from .feedback import close_dialog
 from .localization import verbatim
 
 
-async def residue_dialog(ui,pid,spec_loader,valid,open_3d):
+async def residue_dialog(ui,pid,spec_loader,valid,open_3d,open_3d_url=None):
     if not valid():return
     cutoff=ft.TextField(label='Distância de contato (Å)',value='4',width=190)
     # A scrollable Column still grows to its content unless its parent gives it
@@ -46,7 +47,7 @@ async def residue_dialog(ui,pid,spec_loader,valid,open_3d):
         if not valid():return
         stream=io.StringIO();fields=['resn','resi','icode','chain','pose','reference','pose_atoms','reference_atoms']
         writer=csv.DictWriter(stream,fields,extrasaction='ignore');writer.writeheader();writer.writerows(state['rows'])
-        await ui.picker.save_file(file_name='residue_contacts.csv',src_bytes=stream.getvalue().encode())
+        await save_file(ui,file_name='residue_contacts.csv',src_bytes=stream.getvalue().encode())
     async def download(e):await ui.guard(export)
     async def view(e):
         if valid():await ui.guard(open_3d)
@@ -77,7 +78,8 @@ async def residue_dialog(ui,pid,spec_loader,valid,open_3d):
     dialog=ft.AlertDialog(title=ft.Text('Resíduos próximos ao ligante'),content=content,
         inset_padding=16,content_padding=ft.Padding.symmetric(horizontal=24,vertical=12),
         clip_behavior=ft.ClipBehavior.HARD_EDGE,on_dismiss=dismissed,
-        actions=[ft.TextButton('Abrir comparação 3D',on_click=view),ft.TextButton('Baixar contatos (CSV)',on_click=download),
+        actions=[ft.TextButton('Abrir comparação 3D',on_click=None if open_3d_url else view,
+            url=ft.Url(open_3d_url,target=ft.UrlTarget.BLANK) if open_3d_url else None),ft.TextButton('Baixar contatos (CSV)',on_click=download),
             ft.TextButton('Fechar',on_click=close)])
     resize()
     await load()

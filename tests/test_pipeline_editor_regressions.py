@@ -89,6 +89,17 @@ class PipelineEditorRegressionTests(unittest.TestCase):
             self.assertEqual(saved['pipeline'][0]['parameters']['target'],'Minha coleção')
         asyncio.run(scenario())
 
+    def test_empty_redocking_can_be_saved_while_pipeline_is_being_built(self):
+        async def scenario():
+            stage=new_stage('redocking');self.ui.current['pipeline']=[stage];self.ui.dirty=False
+            await self.ui.open_stage_dialog(stage['id'])
+            dialog=self.page.dialogs[-1]
+            await dialog.actions[-1].on_click(SimpleNamespace(control=dialog.actions[-1]))
+            self.assertFalse(dialog.open);self.assertFalse(self.ui.editing_stage)
+            saved=self.store.project(self.token,self.pid)['pipeline'][0]
+            self.assertEqual(saved['parameters'].get('pdb_codes'),[])
+        asyncio.run(scenario())
+
     def test_remote_merge_and_edits_made_during_save_are_both_preserved(self):
         async def scenario():
             await self.ui.save_draft(silent=True)

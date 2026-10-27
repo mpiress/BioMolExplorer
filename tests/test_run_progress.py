@@ -31,6 +31,9 @@ class WorkerRetrievalTests(unittest.TestCase):
         commands = []
         def launch(args, **kwargs):
             commands.append(args)
+            self.assertEqual(kwargs['env']['BIOMOL_PREPARATION_CACHE'],
+                str(store.project_dir(project['id'])/'.biomolexplorer'/'cache'/'ligand-preparation'))
+            self.assertEqual(kwargs['env']['BIOMOL_REUSE_PREPARATIONS'],'0')
             return original([args[0], str(fixture), *args[3:]], **kwargs)
         with tempfile.TemporaryDirectory(prefix='biomol default retrieval ') as temp:
             store = WorkspaceStore(temp)
@@ -54,7 +57,8 @@ class WorkerRetrievalTests(unittest.TestCase):
                         time.sleep(.05)
                     self.assertEqual(run['status'], 'succeeded', run.get('error'))
                     result = run['stages'][0]
-                    dataset = next(path for path in result['artifacts'] if path.endswith('/compounds/CHEMBL220/compounds.csv'))
+                    dataset = next(path for path in result['artifacts'] if Path(path).name=='B01__chembl__mol.csv')
+                    self.assertFalse(any(Path(p).stem.endswith('_FULL') or Path(p).name=='compounds.csv' for p in result['artifacts']))
                     import pandas as pd
                     compounds = pd.read_csv(dataset)
                     self.assertEqual(compounds['molecule_chembl_id'].tolist(), ['CHEMBL4087364'])
@@ -111,7 +115,7 @@ class WorkerRetrievalTests(unittest.TestCase):
                             if failure:
                                 self.assertIn('tempo limite' if failure == 'timeout' else 'HTTP 500', run['error'])
                             else:
-                                dataset = next(p for p in result['artifacts'] if p.endswith('/compounds.csv'))
+                                dataset = next(p for p in result['artifacts'] if Path(p).name=='B01__chembl__mol.csv')
                                 self.assertIn('CHEMBL4087364', Path(dataset).read_text())
                 finally:
                     service.close()

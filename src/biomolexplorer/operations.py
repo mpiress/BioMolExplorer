@@ -8,6 +8,15 @@ from .contracts import OperationResult, OperationSpec
 from .paths import resolve_path
 
 OPERATIONS = {
+    'dynamics_dock6': OperationSpec('wrappers.dynamics','perform_dynamics_dock6',
+        ('base_input_path','base_selected_mols'),
+        ('dock6_app_path','ambertools_path','ambertools_env','md_inputs','md_seed_path','selected_pairs','excluded_pairs',
+         'amber_score_type','amber_score_movable_region','amber_score_minimization_rmsgrad',
+         'amber_score_before_md_minimization_cycles','amber_score_md_steps','amber_score_after_md_minimization_cycles',
+         'amber_score_gb_model','amber_score_nonbonded_cutoff','amber_score_temperature',
+         'amber_score_movable_distance_cutoff','amber_score_receptor_movable_atom_expr','amber_score_complex_movable_atom_expr',
+         'amber_score_abort_on_unprepped_ligand','use_existing_ligand_charges','md_time_step','trajectory_stride',
+         'md_heating_steps','md_equilibration_steps','random_seed','md_movable_mask','analyze_trajectory')),
     'retrieve_pubchem': OperationSpec('biomolexplorer.pubchem_retrieval','retrieve_pubchem',(),
         ('target','reference_source','reference_type','reference','selection_mode','compound_id','threshold','max_records','base_input_path','input_file')),
     'retrieve_compounds': OperationSpec('wrappers.crawlers', 'retrieve_compounds',
@@ -31,7 +40,7 @@ OPERATIONS = {
         (), ('similarity_path','base_input_path',
              'mcs_timeout','mcs_ring_matches_ring_only','mcs_complete_rings_only','graph_inputs')),
     'redocking': OperationSpec('wrappers.redocking', 'perform_redocking', ('base_input_path', 'target'),
-        ('pdb_codes', 'pH', 'sizeof_box', 'exhaustiveness', 'num_modes', 'prepare_complex', 'charge_type', 'preparation_pairs')),
+        ('pdb_codes', 'pH', 'sizeof_box', 'exhaustiveness', 'num_modes', 'prepare_complex', 'charge_type', 'preparation_pairs', 'redocking_engine', 'dock6_app_path', 'conformer_search_type')),
     'docking_vina': OperationSpec('wrappers.docking', 'perform_docking_vina',
         ('base_input_path', 'target', 'base_selected_mols', 'mol_filename'),
         ('pdb_code', 'pH', 'sizeof_box', 'exhaustiveness', 'num_modes', 'preparation_options', 'receptor_prepared')),
@@ -59,6 +68,9 @@ def validate_operation(operation, parameters, *, defer_redocking_selection=False
     if operation=='admet':
         from .admet_config import resolve_config
         resolve_config(parameters)
+    if operation=='dynamics_dock6':
+        from .md_config import validate_settings
+        validate_settings(parameters)
     if operation=='retrieve_zinc':
         from .zinc_retrieval import validate_download_workers
         validate_download_workers(parameters.get('download_workers',4))
@@ -124,6 +136,8 @@ def validate_operation(operation, parameters, *, defer_redocking_selection=False
     if operation == 'redocking' and not (defer_redocking_selection and not parameters.get('pdb_codes')):
         from .redocking_config import validate_pairs
         validate_pairs(parameters.get('pdb_codes'), parameters.get('preparation_pairs') or {})
+    if operation=='redocking' and parameters.get('redocking_engine','vina') not in ('vina','dock6'):
+        raise ValueError('Motor de redocking inválido.')
     if operation=='prepare_structures' and parameters.get('docking_engines','both') not in ('vina','dock6','both'):
         raise ValueError('Selecione Vina, DOCK6 ou ambos para a saída de preparação.')
     if operation in ('prepare_structures','docking_vina','docking_dock6') and 'preparation_options' in parameters:
@@ -188,6 +202,9 @@ def execute_operation(operation, parameters, output_path):
         if preparation_path:
             details['preparation_failures']=len(preparation.records)
             details['preparation_report']=str(preparation_path)
+            if operation in ('docking_vina','docking_dock6'):
+                details['docking_failures']=(details.get('vina_failures',0)+len(preparation.records)
+                    if operation=='docking_vina' else max(details.get('docking_failures',0),len(preparation.records)))
         if path:details['exclusion_report']=str(path)
         artifacts=list(result.artifacts)
         for extra in (path,preparation_path):
@@ -223,7 +240,9 @@ def _execute_operation(operation, parameters, output_path):
         # directory. Work on a snapshot, preserving the user's retrieval data.
         target = kwargs['target'].replace(' ', '')
         snapshot = output / 'structures'
-        shutil.copytree(Path(kwargs['base_input_path']) / target, snapshot / target)
+        from .calculation_cache import copy_artifact
+        shutil.copytree(Path(kwargs['base_input_path']) / target, snapshot / target,
+                        copy_function=copy_artifact,ignore=shutil.ignore_patterns('.calculation-cache'))
         kwargs['base_input_path'] = str(snapshot)
     if operation == 'fingerprints':
         # The legacy wrapper puts outputs beside its input; explicitly isolate them.
@@ -233,10 +252,13 @@ def _execute_operation(operation, parameters, output_path):
         kwargs['base_output_path'] = str(output)
         result = getattr(import_module(spec.module), spec.function)(**kwargs)
         if operation == 'admet':
-            result = result.run_pipeline()
+            evaluator=result
+            result = evaluator.run_pipeline()
     artifacts = [str(p) for p in sorted(output.rglob('*')) if p.is_file()
                  and 'cache' not in p.parts and '.quality-inputs' not in p.parts
                  and (p.suffix in ('.csv', '.png', '.json', '.pdb', '.pdbqt', '.mol2', '.sdf', '.pdf')
+                      or operation=='dynamics_dock6' and p.suffix in ('.prmtop','.inpcrd','.nc','.rst7','.restart','.out','.dat','.in','.log','.frcmod')
                       or p.name.endswith('_footprint_scored.txt'))]
     details = {'rows': len(result)} if hasattr(result, 'columns') else result if isinstance(result,dict) else {}
+    if operation=='admet':details.update(rows=evaluator.total_evaluated,hypothesis_selected=evaluator.total_hypothesis_selected)
     return OperationResult(operation, artifacts, details)

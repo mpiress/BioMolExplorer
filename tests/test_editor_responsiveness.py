@@ -29,6 +29,20 @@ class EditorResponsivenessTests(unittest.TestCase):
             parse.assert_not_called()
         self.assertTrue(self.page.dialogs[-1].open)
 
+    def test_toolbar_add_uses_visible_viewport_and_unlink_resets_input_dependent_state(self):
+        self.ui.schedule_save=lambda:None
+        editor=FlowCanvas(self.ui,True)
+        editor.viewport_scale=.5;editor.viewport_offset=ft.Offset(-2000,-1000)
+        editor.viewport_width=1000;editor.viewport_height=700
+        asyncio.run(editor.add('docking_vina'))
+        docking=editor.stages[-1];position=docking['position']
+        self.assertGreater(position['x'],4000);self.assertGreater(position['y'],2000)
+        docking['parameters'].update(target='Changed',pdb_code=['1ABC','LIG',1,'A'],exhaustiveness=99)
+        docking['bindings']={'base_input_path':{'stage':self.stage['id']}}
+        flow.disconnect(docking,'base_input_path')
+        defaults=new_stage('docking_vina')['parameters']
+        self.assertEqual(docking['parameters'],defaults);self.assertEqual(docking['bindings'],{})
+
     def test_replacement_rebinds_gestures_and_removal_releases_controls(self):
         self.ui.schedule_save=lambda:None
         editor=FlowCanvas(self.ui,True)

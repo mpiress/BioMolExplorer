@@ -1,6 +1,7 @@
 """Paginated retrieval results, local molecule previews and dataset curation."""
 from pathlib import Path
 import flet as ft
+from .processing import save_file
 from biomolexplorer.compound_tables import CompoundTables
 from biomolexplorer.visualizations import molecule_image
 from .removal import RemovalProgress
@@ -26,7 +27,7 @@ class CompoundTableViewer:
         async def next_page(e):await self.move(1)
         self.previous=ft.TextButton('Página anterior',on_click=previous)
         self.next=ft.TextButton('Próxima página',on_click=next_page)
-        self.loading=ft.ProgressBar(visible=False)
+        self.loading=ft.Container(visible=False)
         self.page_size=ft.Dropdown(label='Itens por página',value='25',width=160,
             options=[ft.DropdownOption(key=str(n),text=str(n)) for n in (10,25,50,100)],on_select=self.change_size)
 
@@ -139,7 +140,7 @@ class CompoundTableViewer:
             content=ft.Column([verbatim(ft.Text(row['id'],weight=ft.FontWeight.W_600)),
                 ft.Text('A remoção será aplicada apenas a '+self.data['name']+'. O registro original será preservado no histórico de alterações.')],tight=True,spacing=16),
             actions=[ft.TextButton('Manter composto',on_click=lambda e:close_dialog(self.ui.page,dialog)),ft.TextButton('Remover composto',on_click=remove)])
-        progress=RemovalProgress(self.ui,dialog)
+        progress=RemovalProgress(self.ui,dialog,'Removendo composto…')
         self.ui.page.show_dialog(dialog)
 
     async def download(self,e):
@@ -147,7 +148,7 @@ class CompoundTableViewer:
             if not self.valid():return
             path,filename=self.selector.value,Path(self.selector.value).name
             data=await self.ui.call(self.ui.store.read_file,self.token,self.project_id,path)
-            if self.valid():await self.ui.picker.save_file(file_name=filename,src_bytes=data)
+            if self.valid():await save_file(self.ui,file_name=filename,src_bytes=data)
         await self.ui.guard(action)
 
     def build(self):

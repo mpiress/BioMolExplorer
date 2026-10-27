@@ -95,6 +95,8 @@ Complete documentation, installation instructions, workflow descriptions, and ex
 * Graph-based molecular network modeling.
 * Redocking using AutoDock Vina, with explicit pair selection, per-pair preparation and an RMSD results table with simulation downloads and 3D inspection.
 * Independent and consensus docking using AutoDock Vina and DOCK6, with pose/receptor overlays, interaction hover details and per-residue DOCK6 footprint inspection.
+* Pairwise molecular refinement with DOCK6 AMBER Score and optional AmberTools `sander` trajectories, indexed checkpoints and per-pair failure isolation.
+* Stable artifact identities, verified reuse and indexed full-graph outputs that avoid generating one physical file per component.
 * Block information popups describing inputs and outputs, with concise notices for incompatible connections.
 * Optional per-file compound selection for Vina/DOCK6, with no repeat input prompt when docking files are already configured.
 * ADMET profiling for early-stage compound prioritization.
@@ -110,11 +112,11 @@ Complete documentation, installation instructions, workflow descriptions, and ex
   <img src="imgs/BioMolExplorer.png" width="95%">
 </p>
 
-BioMolExplorer integrates information retrieval, molecular fingerprint generation, similarity analysis, graph-based network modeling, consensus docking, and ADMET profiling into a unified computational pipeline for intelligent drug discovery.
+BioMolExplorer integrates information retrieval, molecular fingerprint generation, similarity analysis, indexed graph exploration, ADMET profiling, redocking, docking and optional molecular dynamics into a unified computational pipeline for intelligent drug discovery.
 
 ## ⚡ Quick Start
 
-**Before starting BioMolExplorer, install and configure UCSF Chimera 1.17 and DOCK6 6.11 on the computer that will run the calculations.** Installing the Python package or Conda environment does not install these external tools. The interface may open without them, but preparation, redocking and docking stages requiring them will fail. Follow the [installation and configuration guide](docs/en/installation.md) ([Português](docs/installation.md)) for official downloads, executable checks and DOCK6 path configuration. Git and Anaconda or Miniconda are also needed for the commands below.
+**Docking and redocking preparation use UCSF Chimera 1.17 exclusively, with gas/am1 charges and optional Chimera minimization. Install Open Babel, Vina and DOCK6 for the corresponding stages.** Separate AmberTools is retained only for dynamics protocols requiring it. See the [installation guide](docs/en/installation.md) ([Português](docs/installation.md)).
 
 Clone the repository:
 
@@ -132,7 +134,7 @@ conda env create -f requirements.yml
 conda activate BioMolExplorer
 ```
 
-After installing the external tools, activating the environment and completing the guide's checks, install and start the interface. Replace the example DOCK6 path with its installation root containing `bin/` and `parameters/`; its `bin/` and Chimera's executable directory must be on `PATH`.
+After installing the external tools, activate only the main `BioMolExplorer` environment and complete the guide checks. Chimera, Open Babel and Vina must be discoverable; DOCK6 needs its installation root containing `bin/` and `parameters/`. Docking/redocking do not use the separate AmberTools environment. Dynamics may invoke its optional tools through `conda run`.
 
 ```bash
 python -m pip install -e '.[ui]'
@@ -615,15 +617,17 @@ charge_type='am1'
 
 🧩 Complex Preparation Workflow
 
-When `prepare_complex=True`, the system uses auxiliary scripts located at:
+Explicit `legacy_chimera` execution retains auxiliary scripts at:
 
 ```
 src/biomolexplorer/resources/chimera
 ```
 
-These scripts rely on command-line operations from **UCSF Chimera** to process molecular structures in the background.
+Docking and redocking use these UCSF Chimera scripts for preparation, charges and minimization. Historical automatic/Python settings are normalized to Chimera.
 
-The [Chimera replacement assessment](docs/en/chimera_migration.md) ([Português](docs/chimera_migration.md)) maps every current function and evaluates Python alternatives. Chimera remains required because complete scientific and configuration compatibility has not been established.
+The [Chimera migration report](docs/en/chimera_migration.md) ([Português](docs/chimera_migration.md)) distinguishes structural equivalence from controlled protonation/minimization changes and documents the explicit special-system fallback.
+
+Chimera prepares the molecular inputs; Open Babel converts formats for Vina and DOCK6. Explicit per-role gas/am1 charges are preserved through minimization. See [Molecular preparation](docs/en/molecular_preparation.md) ([Português](docs/molecular_preparation.md)).
 
 The [native DMS port report](docs/en/dms_migration.md) ([Português](docs/dms_migration.md)) describes the Python SES generator and its comparison with the official C distribution. NumPy and SciPy replace the DMS executable; the `.dms` format consumed by sphgen remains.
 
@@ -903,7 +907,7 @@ com limites de concorrência e cancelamento. A duração científica não tem li
 - [Documentação em português e inglês](docs/README.md)
 - [English: workspace, backend and architecture](docs/index.html)
 
-Antes de iniciar, instale Chimera 1.17 e DOCK6 6.11 e confira os executáveis conforme o guia de instalação. Na raiz do código baixado, com o ambiente científico ativo e as ferramentas no `PATH`:
+Para preparar docking e redocking, instale UCSF Chimera, Open Babel e Vina; instale DOCK6 para seus protocolos. O ambiente AmberTools separado permanece restrito aos protocolos de dinâmica que o exigem. Na raiz do código, ative o ambiente científico principal:
 
 ```bash
 python -m pip install -e '.[ui]'

@@ -72,7 +72,7 @@ def plan(store, token, name, parent, db=None):
 
 
 def purge_rows(store, db, project_id):
-    for table in ('members', 'assets', 'uploads', 'runs', 'project_history', 'project_locations'):
+    for table in ('members', 'assets', 'uploads', 'runs', 'project_history', 'project_locations','block_ids'):
         db.execute(f'DELETE FROM {table} WHERE project_id=?', (project_id,))
     if db.execute("SELECT 1 FROM sqlite_master WHERE name='compound_edits'").fetchone():
         db.execute('DELETE FROM compound_edits WHERE project_id=?', (project_id,))

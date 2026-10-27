@@ -24,10 +24,29 @@ def selector_for(path, files):
     raise ValueError('Os resultados contêm caminhos de arquivo duplicados.')
 
 
+def produced_files(item):
+    """Public outputs; ADMET inputs are lineage, not downstream datasets."""
+    files=list(dict.fromkeys(Path(p) for p in item.get('artifacts',[])))
+    config=item.get('configuration',item)
+    if item.get('operation',config.get('operation'))!='admet' or config.get('provided_results'):return files
+    inputs={str(Path(p)) for owner in [item,*item.get('batches',item.get('_execution_batches',[]))]
+            for paths in owner.get('input_files',{}).values() for p in paths}
+    result=[]
+    for path in files:
+        if str(path) in inputs or '.quality-inputs' in path.parts or '.inputs' in path.parts:continue
+        if path.suffix.lower()=='.csv':
+            canonical=re.fullmatch(r'B\d+__admet__(?:compounds|evaluated|selected|rejected|bbb-pos|bbb-neg|hia-pos|hia-neg|alerts|rules-lipinski-veber|rules-lipinski|rules-veber|rules-fragment)(?:-[a-f0-9]{8})?',path.stem)
+            if not canonical:
+                fields=columns(path)
+                if not ({'BBB','HIA'}<=fields or 'ADMET_selected' in fields):continue
+        result.append(path)
+    return result
+
+
 def choices(item):
-    files=[Path(p) for p in item.get('artifacts',[])]
+    files=produced_files(item)
     if item['operation'] in ('retrieve_compounds','retrieve_pubchem','expand_similar_compounds') and not item.get('configuration',{}).get('provided_results'):
-        files=[p for p in files if p.suffix=='.csv' and (p.name=='compounds.csv' and p.parent.parent.name=='compounds'
+        files=[p for p in files if p.suffix=='.csv' and (any('__'+role in p.stem for role in ('compounds','mol','sim','merged')) or p.name=='compounds.csv' and p.parent.parent.name=='compounds'
                 or p.stem.endswith(('_FULL','_MOLS','_SIMS')))]
     if item['operation']=='retrieve_structures':
         files=[p for p in files if p.suffix.lower()=='.pdb']

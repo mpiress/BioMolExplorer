@@ -173,6 +173,22 @@ class ResultsDisplayTests(unittest.TestCase):
         self.assertEqual(stages[0]['artifacts'],[str(self.compounds)])
         self.assertTrue(stages[0]['outputs_removed']);self.assertTrue(self.compounds.exists())
 
+    def test_project_wide_removal_preserves_imported_inputs_and_is_one_audited_change(self):
+        asset=self.store.project_dir(self.pid)/'inputs.csv';asset.write_text('name,smiles\nA,CCO\n')
+        run=self.store.get_run(self.token,self.rid)
+        imported=new_stage('import_results')
+        run['stages'].append(dict(id=imported['id'],name=imported['name'],operation='import_results',
+            configuration=imported,status='succeeded',artifacts=[str(asset)],provided=True))
+        with self.store.connect() as db:db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(run['stages']),self.rid))
+        self.assertEqual(self.service.remove_project_results(self.token,self.pid),3)
+        self.assertTrue(asset.exists());self.assertFalse(self.compounds.exists());self.assertFalse(self.admet_csv.exists())
+        stages=self.store.get_run(self.token,self.rid)['stages']
+        self.assertEqual(stages[-1]['artifacts'],[str(asset)])
+        event=self.store.history(self.token,self.pid)[0]
+        self.assertEqual(event['action'],'remove_project_results')
+        self.store.rollback(self.token,self.pid,event['id'])
+        self.assertTrue(self.compounds.exists());self.assertTrue(self.admet_csv.exists())
+
     @unittest.skipIf(StageResults is None,'Install ui extra')
     def test_bulk_removal_confirmation_executes_and_refreshes_the_stage(self):
         from biomolexplorer.ui.app import WorkspaceUI
@@ -354,6 +370,28 @@ class ResultsDisplayTests(unittest.TestCase):
         new=ui.stage_results[key];self.assertIsNot(new,old);self.assertFalse(old.active)
         self.assertTrue(new.expanded);asyncio.run(new.load());self.assertEqual(new.child.data['total'],32)
 
+    def test_delete_all_refreshes_cards_without_success_or_reuse_badges(self):
+        from biomolexplorer.ui.app import WorkspaceUI
+        from test_frontend_navigation import walk
+        fake=self.ui();ui=object.__new__(WorkspaceUI);ui.__dict__.update(fake.__dict__)
+        ui.current_run=ui.run_progress=None;ui.polling=SimpleNamespace(done=lambda:False)
+        asyncio.run(ui.runs_view(True))
+        key=(self.rid,self.retrieval['id']);old=ui.stage_results[key];old.expanded=True
+        run=self.store.get_run(self.token,self.rid)
+        for stage in run['stages']:stage['reused']=True
+        with self.store.connect() as db:db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(run['stages']),self.rid))
+        self.service.remove_project_results(self.token,self.pid)
+        view=asyncio.run(ui.runs_view(True))
+        values=[c.value for c in walk(view) if isinstance(c,ft.Text)]
+        self.assertEqual(values.count('Resultados excluídos · execute o bloco para gerar novamente'),2)
+        self.assertNotIn('Reaproveitado',values)
+        self.assertFalse(old.active)
+        result=ui.stage_results[key];self.assertTrue(result.expanded)
+        asyncio.run(result.load())
+        self.assertIn('Resultados excluídos',result.root.controls[0].value)
+        # Historical success is preserved for audit and rollback.
+        self.assertEqual(self.store.get_run(self.token,self.rid)['stages'][0]['status'],'succeeded')
+
 
 @unittest.skipIf(GuidedForm is None,'Install ui extra')
 class FingerprintFormTests(unittest.TestCase):
@@ -400,6 +438,6 @@ class FingerprintFormTests(unittest.TestCase):
             try:
                 params=service._resolve(pid,store.user(token)['id'],stage,{producer['id']:[str(path)]})
                 self.assertEqual(params['fingerprint'],'maccs')
-                self.assertEqual(params['filename'],'selected_fingerprints.csv')
+                self.assertEqual(Path(params['base_input_path'])/params['filename'],path)
                 self.assertTrue((Path(params['base_input_path'])/params['filename']).is_file())
             finally:service.close()

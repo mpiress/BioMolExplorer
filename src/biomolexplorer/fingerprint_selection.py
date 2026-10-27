@@ -1,5 +1,6 @@
 """Infer fingerprint algorithms from generated inputs, including older projects."""
 from pathlib import Path
+import re
 from .bindings import sources
 
 KINDS = ('morgan', 'maccs', 'pharmacophore')
@@ -8,7 +9,8 @@ LABELS = {'morgan': 'Morgan', 'maccs': 'MACCS', 'pharmacophore': 'Farmacóforo'}
 
 def filename_kind(filename):
     name = Path(filename).name.lower()
-    return next((kind for kind in KINDS if name.startswith(kind + '_')), None)
+    return next((kind for kind in KINDS if name.startswith(kind + '_') or
+                 re.search(r'__fingerprint__'+kind+r'(?:[.-]|$)',name)), None)
 
 
 def generated_kind(stage, pipeline, artifacts=None):

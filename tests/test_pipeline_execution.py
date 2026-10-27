@@ -64,6 +64,14 @@ class PipelineExecutionTests(unittest.TestCase):
             run=self.wait(service.resume(self.token,run['id'],configuration))
         return run
 
+    def output_name(self,run,producer,legacy_name):
+        from biomolexplorer.artifact_naming import publication_metadata
+        from biomolexplorer.artifact_choices import selector_for
+        item=next(s for s in run['stages'] if s['id']==producer['id'])
+        path=next(p for p in item['artifacts'] if Path(p).name==legacy_name or
+            publication_metadata(p).get('legacy_name')==legacy_name)
+        return selector_for(path,item['artifacts'])
+
     def immediate_manager(self, fail_operations=()):
         """Provider-independent supervisor boundary, with real pipeline/store calls."""
         calls = []
@@ -121,9 +129,10 @@ class PipelineExecutionTests(unittest.TestCase):
             finally:
                 service.close()
         self.assertEqual(run['status'],'succeeded',run['error'])
-        self.assertEqual(len(calls),3)
+        self.assertEqual(len(calls),1)
         self.assertEqual([s['status'] for s in run['stages']],['succeeded']*3)
-        self.assertEqual(len({s['artifacts'][0] for s in run['stages']}),3)
+        self.assertEqual(len({s['artifacts'][0] for s in run['stages']}),1)
+        self.assertTrue(all(s.get('reused') for s in run['stages'][1:]))
 
     def test_provider_failure_only_blocks_its_descendants(self):
         source = new_stage('retrieve_compounds')
@@ -366,8 +375,8 @@ class PipelineExecutionTests(unittest.TestCase):
                 self.assertEqual(run['status'],'awaiting_input')
                 self.assertEqual(len(calls),1)
                 analysis['bindings']['base_input_path']={'sources':[
-                    {'stage':source['id'],'selector':'compounds.csv'},
-                    {'stage':source['id'],'selector':'extra.csv'}]}
+                    {'stage':source['id'],'selector':self.output_name(run,source,'compounds.csv')},
+                    {'stage':source['id'],'selector':self.output_name(run,source,'extra.csv')}]}
                 run=self.wait(service.resume(self.token,run['id'],analysis))
             finally:service.close()
         self.assertEqual(run['status'],'succeeded',run['error'])
@@ -398,12 +407,12 @@ class PipelineExecutionTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError,'execução ativa'):
                     service.submit(self.token,self.project_id)
                 with self.assertRaises(ValueError):self.store.delete_project(self.token,self.project_id)
-                first['bindings']['base_input_path']['selector']='compounds.csv'
+                first['bindings']['base_input_path']['selector']=self.output_name(run,source,'compounds.csv')
                 run=self.wait(service.resume(self.token,run_id,first))
                 self.assertEqual(run['id'],run_id)
                 self.assertEqual(run['status'],'awaiting_input')
                 self.assertEqual([s['status'] for s in run['stages']],['succeeded','succeeded','awaiting_input'])
-                second['bindings']['base_input_path']['selector']='compounds.csv'
+                second['bindings']['base_input_path']['selector']=self.output_name(run,first,'compounds.csv')
                 run=self.wait(service.resume(self.token,run_id,second))
                 self.assertEqual(run['status'],'succeeded',run['error'])
                 self.assertEqual([op for op,_ in calls],['retrieve_compounds','admet','admet'])
@@ -447,7 +456,7 @@ class PipelineExecutionTests(unittest.TestCase):
             service=PipelineService(self.store)
             try:
                 self.assertEqual(self.store.get_run(self.token,run['id'])['status'],'awaiting_input')
-                stage['bindings']['base_input_path']['selector']='compounds.csv'
+                stage['bindings']['base_input_path']['selector']=self.output_name(run,source,'compounds.csv')
                 resumed=self.wait(service.resume(self.token,run['id'],stage))
                 self.assertEqual(resumed['status'],'succeeded',resumed['error'])
                 run=self.wait(service.submit(self.token,self.project_id,reuse_results=False))
@@ -478,10 +487,10 @@ class PipelineExecutionTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError,'não está nos resultados'):
                     service.resume(self.token,run['id'],stage)
                 self.assertEqual(self.store.get_run(self.token,run['id'])['status'],'awaiting_input')
-                stage['bindings']['base_input_path']['selector']='extra.csv'
+                stage['bindings']['base_input_path']['selector']=self.output_name(run,source,'extra.csv')
                 run=self.wait(service.resume(self.token,run['id'],stage))
                 self.assertEqual(run['status'],'succeeded',run['error'])
-                self.assertEqual([Path(p).name for p in run['stages'][1]['input_files']['base_input_path']],['extra.csv'])
+                self.assertEqual([Path(p).name for p in run['stages'][1]['input_files']['base_input_path']],[stage['bindings']['base_input_path']['selector']])
             finally:service.close()
 
     def test_curated_run_does_not_hold_an_executor_slot(self):
@@ -567,7 +576,7 @@ class PipelineExecutionTests(unittest.TestCase):
                 picker=next(c._artifact_picker for c in walk(dialog.content) if hasattr(c,'_artifact_picker'))
                 # Display labels include origin/target; select the persisted file identity.
                 options=[o for o in picker.available.options
-                         if picker.rows[int(o.key)][1].get('selector')=='compounds.csv']
+                         if picker.rows[int(o.key)][1].get('selector')==self.output_name(run,source,'compounds.csv')]
                 self.assertEqual(len(options),1)
                 picker.available.value=options[0].key
                 picker.add_file()
@@ -578,7 +587,7 @@ class PipelineExecutionTests(unittest.TestCase):
                 self.assertFalse(dialog.open)
                 saved=self.store.project(self.token,self.project_id)
                 configured=next(s for s in saved['pipeline'] if s['id']==stage['id'])
-                self.assertEqual(configured['bindings']['base_input_path']['selector'],'compounds.csv')
+                self.assertEqual(configured['bindings']['base_input_path']['selector'],self.output_name(run,source,'compounds.csv'))
             finally:service.close()
 
 

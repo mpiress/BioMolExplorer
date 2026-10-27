@@ -6,7 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from biomolexplorer.artifacts import records, reference, validate_reference, index_run
+from biomolexplorer.artifacts import records, reference, validate_reference, index_run, locator
 from biomolexplorer.catalog import new_stage, operation_fields
 from biomolexplorer.bindings import pack, sources
 from biomolexplorer.pipeline import PipelineService, validate_pipeline
@@ -38,6 +38,12 @@ class ArtifactRegistryTests(unittest.TestCase):
         self.assertNotEqual(old['occurrence_id'],new['occurrence_id'])
         a.update(artifact_records=[new],reused_from_run='new')
         self.assertEqual(records(a,'reused')[0]['run_id'],'new')
+
+    def test_redocking_cache_materialization_keeps_downstream_identity(self):
+        stage='a'*32
+        direct=f'/project/runs/old/{stage}/individual/001_4M0E/structures/Prepared/4M0E_A.dockprep.pdbqt'
+        cached=f'/project/runs/new/{stage}/individual/001_4M0E/structures/cache/redocking-0/structures/Prepared/4M0E_A.dockprep.pdbqt'
+        self.assertEqual(locator(stage,direct),locator(stage,cached))
 
     def test_five_thousand_files_render_only_one_page_and_bulk_update_once(self):
         from biomolexplorer.ui.artifact_picker import ArtifactPicker

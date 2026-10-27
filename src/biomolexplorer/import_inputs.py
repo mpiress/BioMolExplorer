@@ -1,6 +1,6 @@
 """Per-file import types with compatibility for legacy single-type blocks."""
 KINDS={'compounds','structures','prepared_structures','fingerprints','similarity',
-       'vina','dock6','scores','visualization','other','zinc_urls'}
+       'vina','dock6','scores','visualization','other','zinc_urls','molecular_poses','receptor_pdb','dynamics'}
 
 
 def file_kind(params,asset_id):

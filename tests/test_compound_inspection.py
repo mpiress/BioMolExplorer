@@ -21,6 +21,25 @@ from wrappers.crawlers import _save_compound_dataset
 
 
 class CompoundInspectionTests(unittest.TestCase):
+    def test_chembl_handoff_has_only_disjoint_mol_sim_and_keeps_annotations(self):
+        from kernel.utilities import fileHandling
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary);mols=root/'mols';sims=root/'sims';mols.mkdir();sims.mkdir()
+            def row(code,smiles):
+                return dict(molecule_chembl_id=code,pref_name='Name '+code,
+                    molecule_structures={'canonical_smiles':smiles,'standard_inchi_key':'key-'+code},
+                    molecule_properties={'full_mwt':'46'})
+            pd.DataFrame([row('M1','CCO')]).to_csv(mols/'provider.csv',index=False)
+            pd.DataFrame([row('M1','CCO'),row('DUP','CCO'),row('S1','CCC')]).to_csv(sims/'provider.csv',index=False)
+            output=root/'output'
+            fileHandling(output_path=str(output)).prepare_datamols('target',str(mols),str(sims))
+            self.assertEqual({p.name for p in output.glob('*.csv')},{'target_MOLS.csv','target_SIMS.csv'})
+            first=pd.read_csv(output/'target_MOLS.csv');second=pd.read_csv(output/'target_SIMS.csv')
+            self.assertEqual(first['molecule_chembl_id'].tolist(),['M1'])
+            self.assertEqual(second['molecule_chembl_id'].tolist(),['S1'])
+            self.assertEqual(first['pref_name'].tolist(),['Name M1'])
+            self.assertEqual(first['standard_inchi_key'].tolist(),['key-M1'])
+
     def viewer(self,graph):
         graph=nx.relabel_nodes(graph,str)
         rows=pd.DataFrame([dict(molecule_chembl_id=code,canonical_smiles='CCO',

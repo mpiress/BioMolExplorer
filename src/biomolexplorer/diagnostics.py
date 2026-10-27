@@ -71,7 +71,7 @@ class TextFormatter(logging.Formatter):
         location = f'{record.pathname}:{record.lineno}'
         message = record.getMessage()
         details = []
-        for key in ('error_code', 'action', 'duration_ms', 'returncode', 'tool', 'cwd', 'diagnostic_path', 'configuration'):
+        for key in ('error_code', 'action', 'duration_ms', 'returncode', 'tool', 'cwd', 'diagnostic_path', 'configuration', 'compound_identifier', 'total', 'workers'):
             if hasattr(record, key): details.append(f'{key}={getattr(record,key)}')
         result = f'{timestamp} {record.levelname} {record.name} event={record.event} [{context or "application"}] {message}'
         if details: result += '\n  ' + ' | '.join(details)
@@ -86,7 +86,7 @@ class JsonFormatter(logging.Formatter):
                       level=record.levelname, logger=record.name, event=record.event,
                       message=redact(record.getMessage()), pid=record.process, thread=record.threadName,
                       source=dict(file=record.pathname, line=record.lineno, function=record.funcName))
-        for key in (*_CONTEXT_KEYS, 'error_code', 'action', 'duration_ms', 'returncode', 'tool', 'cwd', 'diagnostic_path', 'artifacts', 'channel', 'configuration'):
+        for key in (*_CONTEXT_KEYS, 'error_code', 'action', 'duration_ms', 'returncode', 'tool', 'cwd', 'diagnostic_path', 'artifacts', 'channel', 'configuration', 'compound_identifier', 'total', 'workers'):
             value = getattr(record, key, None)
             if value is not None: result[key] = redact(value) if isinstance(value, str) else value
         if record.exc_info and record.exc_info[0] is not None:

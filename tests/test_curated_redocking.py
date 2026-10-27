@@ -74,8 +74,20 @@ class CuratedPairPlanTests(unittest.TestCase):
         stage=self.store.project(self.token,self.pid)['pipeline'][1]
         settings=stage['parameters']['preparation_pairs']
         self.assertEqual(settings['1ABC|LIG|101|A'],options)
-        self.assertEqual(settings['1ABC|ATP|102|A'],{'receptor':{'minimize':False},'cofactors':[]})
+        self.assertEqual(settings['1ABC|ATP|102|A'],options)
         self.assertEqual(len(stage['parameters']['pdb_codes']),3)
+
+    def test_new_receptor_inherits_general_preparation_without_other_receptor_cofactors(self):
+        consumer=self.consumer()
+        general={'receptor':{'minimize':False},'ligand':{'charge_type':'am1'},
+                 'preparation_backend':'legacy_chimera','ambertools_env':'BioMolExplorer-AmberTools'}
+        consumer['parameters']['preparation_pairs']={'2XYZ|ATP|3|B':dict(general,cofactors=['FAD'])}
+        project=self.store.project(self.token,self.pid)
+        self.store.save_pipeline(self.token,self.pid,[self.config,consumer],project['revision'])
+        self.save([dict(LIGAND='LIG',RESNUM=101,CHAIN='A')])
+        settings=self.store.project(self.token,self.pid)['pipeline'][1]['parameters']['preparation_pairs']
+        self.assertEqual(settings['1ABC|LIG|101|A'],general)
+        self.assertEqual(settings['2XYZ|ATP|3|B']['cofactors'],['FAD'])
 
     def test_removal_prunes_only_the_edited_metadata_pair(self):
         self.consumer()
@@ -151,7 +163,8 @@ class CuratedRedockingExecutionTests(unittest.TestCase):
         producer=new_stage('retrieve_structures');producer['name']='BChE PDB'
         producer['parameters'].update(target='Target',pdb_ids=['1ABC','1P0I'])
         consumer=new_stage('redocking');consumer['input_processing']='individual'
-        consumer['parameters'].update(target='Target',pdb_codes=[['1ABC','LIG',1,'A']])
+        consumer['parameters'].update(target='Target',pdb_codes=[['1ABC','LIG',1,'A']],
+            preparation_pairs={'1ABC|LIG|1|A':{'preparation_backend':'legacy_chimera'}})
         consumer['bindings']['base_input_path']={'stage':producer['id'],'selector':'1ABC.pdb'}
         fixture.save([producer,consumer]);calls=[]
         class Manager:

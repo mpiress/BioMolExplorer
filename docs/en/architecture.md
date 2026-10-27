@@ -138,6 +138,12 @@ boundaries. The `molecule_chembl_id` identifier field remains part of the CSV
 contract for compatibility, including `PUBCHEM<CID>` values. A future schema
 version may adopt `compound_id` with an explicit migration.
 
+## Artifact flow and identity
+
+Every registered output has a stable block/logical-path `artifact_id`, a per-run `occurrence_id`, SHA-256 manifest, producer, batch, context and the inputs actually consumed. A physical path locates bytes but is not their identity. Names describe scientific content (`docking_results.csv`, `pdb_codes.csv`, `dynamics_results.json`) inside directories already identified by run, block and, when needed, pair, avoiding long IDs in displayed filenames.
+
+The pipeline favors one authoritative index plus required heavy artifacts over derived copies. Graphs write one full CSV with component columns and one `*.biomol-view.json`; components are navigated or exported on demand. Redocking and dynamics retain verified pair checkpoints, reusing receptor/preparation or results only when inputs, settings, tools and hashes match. Batches and stages reuse output only from completed runs. Legacy formats remain readable but are not regenerated when an equivalent indexed representation exists.
+
 ## Job lifecycle
 
 ```text
@@ -394,3 +400,28 @@ delimits geometric and WebGL coverage.
 `vina_session.py` retains affinity maps per configuration in the worker; receptor/box changes invalidate sessions. `dock6_validation.py` checks MOL2 inputs/outputs. `preparation_failures.py` maintains per-compound exclusions shared with the pipeline. DOCK6 uses site-shared grids and independent candidate subprocesses. Global errors still propagate. `stage_cache.py` includes preparation, interoperability and validation implementations in its signature to prevent incompatible reuse after code changes.
 
 `ui/action_help.py` provides contextual help; `ui/run_presentation.py` presents run summaries. Artifact removal in `result_files.py` checks permissions/active runs, records history and invalidates references. See the [interface guide](frontend.md#navigation-canvas-and-completed-runs) and [execution evidence](pipeline_validation.md#vina-and-dock6-batch-validation).
+
+## Incremental docking calculation index
+
+`calculation_cache.py` complements whole-stage caching with project-scoped
+SQLite tables: `experiments(namespace,key,metadata)`,
+`artifacts(namespace,experiment_key,role,sha256)` and `objects(sha256,size)`.
+`subjects(namespace,experiment_key,role,identifier,input_sha256)` provides
+indexed lookup by compound, receptor, reference identity or input hash.
+Validated checkpoints are published transactionally under per-key locks.
+Content-addressed objects are checked by SHA-256 before reuse. Reflinks, with
+independent-copy fallback, keep editable outputs separate from cached objects.
+Metadata retains project/run/job origin when available.
+
+`structure_cache.py` separates receptor and reference-ligand preparation;
+`redocking_cache.py` publishes completed pairs independently of the enclosing
+run's final status. `vina_batch.py` keys calculations by receptor/ligand content,
+effective options and Vina version/binary. `dock6_cache.py` separates shared
+site/grids from compound calculations, including effective templates,
+executables and parameter files. Large-file hashes are memoized by file
+signature within a batch to avoid rereading grids for each compound.
+
+The scheduler retains whole-stage/batch shortcuts and includes scientific tool
+identity in reuse checks. Batches with individual failures are retried through
+per-item reuse rather than treated as wholly complete. The existing reuse
+choice controls these worker checkpoints without adding interface options.

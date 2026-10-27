@@ -7,6 +7,9 @@ def subset_label(path, translate=None):
     """Describe a molecular CSV without reading it or changing its selector."""
     translate=translate or (lambda value:value)
     path=Path(path)
+    from .artifact_naming import publication_metadata
+    original=publication_metadata(path).get('legacy_name')
+    if original:path=path.with_name(original)
     match=re.fullmatch(r'(.+)__full_graph',path.stem)
     if match:return translate('Grafo completo')+' · '+match[1]
     match=re.fullmatch(r'(.+)__component_(\d+)(_mcc)?',path.stem)

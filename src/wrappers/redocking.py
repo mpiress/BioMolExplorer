@@ -36,7 +36,8 @@ ChargeType = Literal['gas', 'am1']
 
 def perform_redocking(base_input_path:str, target:str, base_output_path:str, pdb_codes:Optional[List[Tuple[str, str, str, str]]]=None,
                       pH:Optional[float]=7.4, sizeof_box:Optional[List]=[24,24,24], exhaustiveness:Optional[int]=20,
-                      num_modes:Optional[int]=10, prepare_complex:Optional[bool]=True, charge_type:Optional[ChargeType]='gas', preparation_pairs:Optional[dict]=None) -> None:
+                      num_modes:Optional[int]=10, prepare_complex:Optional[bool]=True, charge_type:Optional[ChargeType]='gas', preparation_pairs:Optional[dict]=None,
+                      redocking_engine:str='vina', dock6_app_path:str='', conformer_search_type:str='flex') -> None:
 
     logger = LoggerManager.get_logger('wrapper_redocking', log_file='logs/redocking.log')
 
@@ -49,8 +50,17 @@ def perform_redocking(base_input_path:str, target:str, base_output_path:str, pdb
 
         from biomolexplorer.redocking_config import validate_structure_pairs, validate_redocking_tools
         records = [list(r) for r in pdb_codes.to_records(index=False)] if isinstance(pdb_codes, DataFrame) else pdb_codes
+        from biomolexplorer.redocking_config import chimera_pairs
+        preparation_pairs=chimera_pairs(records or [],preparation_pairs)
         validate_structure_pairs(base_input_path, records, preparation_pairs or {}, prepared=not prepare_complex)
-        validate_redocking_tools(prepare_complex)
+        if redocking_engine not in ('vina','dock6'):raise ValueError('Motor de redocking inválido.')
+        if conformer_search_type not in ('flex','rigid'):raise ValueError('Busca conformacional inválida.')
+        validate_redocking_tools(prepare_complex,preparation_pairs=preparation_pairs,engine=redocking_engine)
+        if redocking_engine=='dock6':
+            from biomolexplorer.docking_tools import dock6_root
+            root=dock6_root(dock6_app_path or None)
+            if root is None:raise ValueError('Instalação DOCK6 não encontrada. Configure a pasta bin/ e parameters/.')
+            dock6_app_path=str(root)
         f1 = fileHandling(input_path=base_input_path, output_path=base_input_path)
 
         if pdb_codes is None:
@@ -78,7 +88,8 @@ def perform_redocking(base_input_path:str, target:str, base_output_path:str, pdb
         cache=PairCache(base_input_path,base_output_path,
             [list(r) for r in selected.to_records(index=False)],preparation_pairs or {},
             dict(pH=pH,sizeof_box=sizeof_box,exhaustiveness=exhaustiveness,num_modes=num_modes,
-                 prepare_complex=prepare_complex,charge_type=charge_type))
+                 prepare_complex=prepare_complex,charge_type=charge_type,
+                 redocking_engine=redocking_engine,dock6_app_path=dock6_app_path,conformer_search_type=conformer_search_type))
         ready=cache.restore()
         # Seeds are transport files, not additional result datasets.
         import shutil
@@ -102,8 +113,20 @@ def perform_redocking(base_input_path:str, target:str, base_output_path:str, pdb
                         output_path=base_output_path, complex_input_path=base_input_path,
                         pdb_codes=pdb_codes, centerofmasspath=base_prepared_complexes, sizeof_box=sizeof_box,
                         exhaustiveness=exhaustiveness, num_modes=num_modes)
-
-            vina.redocking(pH=pH)
+            checkpoint_rows=[]
+            def checkpoint(record,rmsd):
+                match=next((r for r in selected.to_records(index=False)
+                            if pair_key(list(r))==pair_key(record)),record+[None])
+                row=dict(zip(columns,match));row.update(RMSD=float(rmsd),STATUS='succeeded',FAILED_STEP='',ERROR='')
+                checkpoint_rows.append(row)
+                cache.publish(checkpoint_rows)
+            if redocking_engine=='vina':
+                vina.pair_checkpoint=checkpoint
+                vina.redocking(pH=pH)
+            else:
+                from biomolexplorer.dock6_redocking import redock
+                redock([list(r) for r in pdb_codes.to_records(index=False)],
+                    base_prepared_complexes,base_output_path,dock6_app_path,conformer_search_type,checkpoint,settings)
 
         f1 = fileHandling(input_path=base_input_path, output_path=base_input_path)
 
@@ -114,16 +137,16 @@ def perform_redocking(base_input_path:str, target:str, base_output_path:str, pdb
         for record in selected.to_records(index=False):
             key=pair_key(list(record));row=dict(zip(columns,record))
             failure=failed.get(key)
-            row.update(RMSD=None,STATUS='preparation_failed' if failure else 'succeeded',
+            row.update(RMSD=None,STATUS=failure['STATUS'] if failure else 'succeeded',
                        FAILED_STEP=failure['FAILED_STEP'] if failure else '',ERROR=failure['ERROR'] if failure else '')
             if not failure and key in cache.restored:
                 row['RMSD']=cache.restored[key]['row']['RMSD']
             elif not failure and key in outcomes:
                 row['RMSD']=outcomes[key]['RMSD']
             rows.append(row)
-        selected_keys={pair_key(list(r)) for r in selected.to_records(index=False)}
-        rows.extend(entry['row'] for key,entry in cache.restored.items() if key not in selected_keys)
         f1.dataframe_to_csv('pdb_codes',DataFrame(rows))
+        from biomolexplorer.redocking_preparation import write_failures
+        write_failures(failures,base_output_path)
         cache.publish(rows)
         from biomolexplorer.progress import report_progress
         report_progress(f'Redocking concluído: {len(rows)-len(failures)} pares preparados; {len(failures)} falhas de preparação.')
@@ -154,7 +177,7 @@ def prepare_structures(base_input_path:str, target:str, base_output_path:str,
     if pdb_codes is None:
         import pandas as pd
         metadata = pd.read_csv(source / 'pdb_codes.csv')
-        if 'STATUS' in metadata:metadata=metadata[metadata['STATUS']!='preparation_failed']
+        if 'STATUS' in metadata:metadata=metadata[metadata['STATUS'].isin(('succeeded','SUCCESS'))]
         pdb_codes = metadata[['PDB_CODE', 'LIGAND', 'RESNUM', 'CHAIN']].values.tolist()
     output = resolve_path(base_output_path) / target.replace(' ', '') / 'Prepared'
     if receptor_prepared:
@@ -175,7 +198,9 @@ def prepare_structures(base_input_path:str, target:str, base_output_path:str,
         settings={pair_key(record):preparation_options for record in pdb_codes}
         if not receptor_prepared:validate_pairs([list(r) for r in pdb_codes],settings)
     if not receptor_prepared:
-        prepared = docking.prepare_for_docking(pdb_codes, charge_type, pH, True, preparation_pairs=settings)
+        from biomolexplorer.redocking_preparation import prepare_pairs,write_failures
+        prepared,failures=prepare_pairs(docking,pdb_codes,settings or {},charge_type,pH)
+        write_failures(failures,output.parent)
     records = [list(record[:4]) + [record[4] if len(record) > 4 else None] for record in prepared]
     write_dataframe(DataFrame(records, columns=['PDB_CODE','LIGAND','RESNUM','CHAIN','RESOLUTION']),
                     output.parent / 'pdb_codes.csv')

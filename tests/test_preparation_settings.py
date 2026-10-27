@@ -37,7 +37,8 @@ class PreparationSettingsTests(unittest.TestCase):
         self.assertFalse(any(n.startswith('chimera/') for n in form.template_readers))
         self.assertNotIn('charge_type',form.field_controls)
         self.assertIn('receptor e ligante',form.field_controls['pH'].label)
-        receptor=panel.control.controls[0].controls
+        from test_frontend_navigation import walk
+        receptor=list(walk(panel.control.controls[0]))
         self.assertIn(panel.has_cofactors,receptor);self.assertIn(panel.cofactors,receptor)
         for role in ('receptor','ligand'):
             self.assertEqual(set(panel.settings[role]),set(DEFAULTS))
@@ -88,10 +89,9 @@ class PreparationSettingsTests(unittest.TestCase):
             root=Path(folder);source=root/'input'/'Target';source.mkdir(parents=True)
             (source/'pdb_codes.csv').write_text('PDB_CODE,LIGAND,RESNUM,CHAIN\n1ABC,LIG,1,A\n2ABC,LIG,2,B\n')
             records=[['1ABC','LIG',1,'A'],['2ABC','LIG',2,'B']]
-            with patch('wrappers.redocking.Docking') as engine:
-                engine.return_value.prepare_for_docking.return_value=records
+            with patch('wrappers.redocking.Docking'),patch('biomolexplorer.redocking_preparation.prepare_pairs',return_value=(records,[])) as prepare:
                 prepare_structures(str(root/'input'),'Target',str(root/'output'),preparation_options=config)
-                settings=engine.return_value.prepare_for_docking.call_args.kwargs['preparation_pairs']
+                settings=prepare.call_args.args[2]
                 self.assertEqual(settings,{pair_key(r):config for r in records})
                 self.assertTrue((root/'output/Target/pdb_codes.csv').exists())
 
@@ -162,25 +162,32 @@ class CandidatePreparationTests(unittest.TestCase):
     def test_exported_candidates_are_reused_without_conversion(self):
         from biomolexplorer.docking_data import write_csv,prepare_ligands,copy_input_records,input_records
         with tempfile.TemporaryDirectory() as folder:
-            root=Path(folder);a=root/'A.pdbqt';b=root/'A.mol2';a.write_text('vina prepared');b.write_text('dock6 prepared')
+            root=Path(folder);a=root/'A.pdbqt';b=root/'A.mol2'
+            pdbqt='ROOT\nATOM      1  C   UNL A   1       0.000   0.000   0.000  1.00  0.00     0.000 C\nENDROOT\nTORSDOF 0\n'
+            mol2='@<TRIPOS>MOLECULE\nA\n1 0 0 0 0\nSMALL\nUSER_CHARGES\n@<TRIPOS>ATOM\n1 C 0 0 0 C.3 1 LIG 0.0\n@<TRIPOS>BOND\n'
+            a.write_text(pdbqt);b.write_text(mol2)
             table=root/'compounds.csv'
             write_csv(table,[dict(molecule_chembl_id='A',canonical_smiles='CCO',conformer_file=str(b),
                 prepared_pdbqt=str(a),prepared_mol2=str(b),docking_engines='both',prepared_origin='pose')])
             copied=copy_input_records(input_records([table],[table,a,b]),root/'materialized')
             with patch('biomolexplorer.docking_data.convert_structure') as convert:
-                for format,expected in (('pdbqt','vina prepared'),('mol2','dock6 prepared')):
+                for format,expected in (('pdbqt',pdbqt),('mol2',mol2)):
                     outputs=prepare_ligands(copied,root/format,format)
                     self.assertEqual(outputs[0].read_text(),expected)
                 convert.assert_not_called()
             write_csv(table,[dict(molecule_chembl_id='A',canonical_smiles='CCO',prepared_pdbqt=str(a),docking_engines='vina')])
-            with self.assertRaisesRegex(ValueError,'formato solicitado'):prepare_ligands(table,root/'invalid','mol2')
+            self.assertEqual(prepare_ligands(table,root/'invalid','mol2'),[])
+            from biomolexplorer.preparation_failures import REPORT_NAME
+            self.assertIn('formato solicitado',(root/'invalid'/REPORT_NAME).read_text())
 
     def test_charge_fields_have_vertical_separation(self):
         panel=self.form().preparation_settings
+        from test_frontend_navigation import walk
         for group in panel.control.controls:
-            charge=group.controls[-1]
-            self.assertIsInstance(charge,ft.Container)
-            self.assertGreaterEqual(charge.padding.top,24)
+            charge=next(c for c in walk(group) if isinstance(c,ft.Container)
+                and c.content is panel.settings['receptor' if group is panel.groups['receptor'] else 'ligand']['charge_type'])
+            self.assertGreaterEqual(charge.padding.top,12)
+            self.assertIsNone(charge.height)
 
     def test_preparation_errors_keep_receptor_filenames_in_english(self):
         translate=Translator('en')

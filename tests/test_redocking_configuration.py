@@ -22,7 +22,11 @@ class RedockingConfigurationTests(unittest.TestCase):
         ui = self.ui([source, stage], {'stage:'+source['id']: [['1ABC','LIG',12,'A',1.7]]})
         form = GuidedForm(ui, stage, [], True)
         self.assertEqual(len(form.redocking_pairs.available.options), 1)
-        with self.assertRaisesRegex(ValueError, 'Selecione pelo menos um par'): form.read()
+        draft=form.read()
+        self.assertEqual(draft['parameters']['pdb_codes'],[])
+        # Draft settings can be saved; execution still requires selected pairs.
+        with self.assertRaisesRegex(ValueError, 'Selecione pelo menos um par'):
+            validate_pairs(draft['parameters']['pdb_codes'],{})
         form.redocking_pairs.available.value = '0'
         form.redocking_pairs.choose(None)
         result = form.read()
@@ -81,7 +85,8 @@ class RedockingConfigurationTests(unittest.TestCase):
         viewer=GuidedForm(ui,stage,[],False).redocking_pairs
         self.assertTrue(viewer.select_all_button.disabled)
         viewer.choose_all(None)
-        self.assertEqual(viewer.rows,[])
+        self.assertEqual(len(viewer.rows),1)
+        self.assertTrue(all(field.disabled for field in viewer.rows[0][0]))
         empty=GuidedForm(self.ui([stage]),stage,[],True).redocking_pairs
         self.assertTrue(empty.select_all_button.disabled)
 
@@ -94,7 +99,7 @@ class RedockingConfigurationTests(unittest.TestCase):
 
     def test_generated_scripts_keep_cofactors_and_use_exact_ligand_chain(self):
         record = ['1ABC','LIG',12,'BC']
-        config = {'cofactors': ['FAD'], 'ligand_chain': 'D',
+        config = {'preparation_backend':'legacy_chimera','cofactors': ['FAD'], 'ligand_chain': 'D',
                   'ligand': {'add_hydrogens': False, 'minimize': False, 'charge_type': 'am1'},
                   'receptor': {'remove_solvent': False}}
         with tempfile.TemporaryDirectory() as folder:
@@ -151,7 +156,7 @@ class RedockingConfigurationTests(unittest.TestCase):
             dock.outputpath = folder; dock.complexpath = folder; dock.logger = MagicMock()
             dock.process_in_parallel = MagicMock(side_effect=RuntimeError('Chimera failed'))
             with self.assertRaisesRegex(RuntimeError, 'Chimera failed'):
-                dock.prepare_for_docking(records, 'am1', 7.4, True, {})
+                dock.prepare_for_docking(records, 'am1', 7.4, True, {pair_key(records[0]):{'preparation_backend':'legacy_chimera'}})
             source = Path(folder,'prepare_ligand_4M0E_1YL_604A.com').read_text()
             self.assertIn('select :604.A', source)
             self.assertIn('method am1', source)
@@ -161,7 +166,7 @@ class RedockingConfigurationTests(unittest.TestCase):
             dock.process_in_parallel.side_effect = None
             dock.prepare_on_obabel = MagicMock(return_value=True)
             dock.calculate_ligand_centerofmass = MagicMock(return_value=[1,2,3])
-            prepared = dock.prepare_for_docking(records, 'am1', 7.4, True, {})
+            prepared = dock.prepare_for_docking(records, 'am1', 7.4, True, {pair_key(records[0]):{'preparation_backend':'legacy_chimera'}})
             self.assertEqual(prepared, [('4M0E','1YL',604,'A',2.0)])
             self.assertTrue(Path(folder,'centers.csv').is_file())
 
@@ -181,8 +186,10 @@ class RedockingConfigurationTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'Cofator não encontrado'):
                 validate_structure_pairs(folder,[record],{pair_key(record):{'cofactors':['FAD']}})
         with patch('shutil.which',return_value=None):
+            with self.assertRaisesRegex(ValueError,'vina'):
+                validate_redocking_tools(prepare=False)
             with self.assertRaisesRegex(ValueError,'chimera'):
-                validate_redocking_tools()
+                validate_redocking_tools(preparation_pairs={pair_key(record):{'preparation_backend':'legacy_chimera'}})
 
     def test_verbose_is_hidden_and_overrides_cannot_enable_vina_verbosity(self):
         from biomolexplorer.catalog import operation_fields

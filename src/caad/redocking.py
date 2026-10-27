@@ -75,7 +75,10 @@ from kernel.descriptors import Descriptors
 #----------------------------------------------------------------------------------------------
 
 
-class Docking():
+from caad.docking import Docking as SharedDocking
+
+
+class Docking(SharedDocking):
 
     def __init__(self, ligand_input_path:Optional[str]=None, receptor_input_path:Optional[str]=None,
                  complex_input_path:Optional[str]=None, output_path:Optional[str]=None,
@@ -134,40 +137,8 @@ class Docking():
 
 
     def generate_docking_script(self, input_template:str, output_script:str, **kwargs):
-        """
-        A generic function to generate docking scripts by replacing placeholders in the
-        input template with provided keyword arguments. Such a function is useful to prepare
-        different types of docking scripts for different docking softwares.
-
-        Args:
-            input_template (str): The path to the input template file.
-            output_script (str): The path to the output script file.
-            **kwargs: Keyword arguments used to replace placeholders in the input template.
-
-        Raises:
-            Exception: If any error occurs during the generation of the docking script, a log file will
-            be created and posted in the log folder.
-
-        """
-        try:
-            with open(resolve_path(input_template), 'r') as template_file:
-                template_content = template_file.read()
-
-            config_content = template_content.format(**kwargs)
-
-            with open(output_script, 'w') as output_file:
-                output_file.write(config_content)
-
-        except Exception as e:
-            self.logger.error(f'during to perform {input_template} -> {output_script} in generate_docking_script function', exc_info=True)
-            raise
-
-        finally:
-
-            sync_directory(directory(self.outputpath))
-
-
-
+        """Compatibility API backed by the shared native/explicit-legacy adapter."""
+        return super().generate_docking_script(input_template,output_script,**kwargs)
 
     def perform_subprocess(self, command, local_path=None, shell=False, check=True):
         """Execute a scientific tool; errors propagate to the job boundary.
@@ -179,35 +150,8 @@ class Docking():
 
 
     def prepare_on_chimera(self, filename:str) -> bool:
-        """
-        Some docking steps need to perform a specific input data file extension, and some features are
-        required to report that. So, this function prepares such input data files when necessary,
-        using the chimera shell execution to perform ones.
-
-        Args:
-            filename (str): The input file to be prepared for docking.
-
-        Raises:
-            Exception: If any error occurs during the preparation of the input file, a log file will
-            be created and posted in the log folder.
-
-        """
-        try:
-            command = ['chimera', '--nogui', '--silent', filename]
-            self.perform_subprocess(command, self.outputpath)
-
-        except Exception as e:
-            self.logger.error(f'during to perform {filename} in prepare_on_chimera function', exc_info=True)
-            raise
-
-        finally:
-
-            os.remove(directory(self.outputpath) + filename) if os.path.isfile(directory(self.outputpath) + filename) else None
-            sync_directory(directory(self.outputpath))
-
-
-
-
+        """Compatibility API backed by the shared native/explicit-legacy adapter."""
+        return super().prepare_on_chimera(filename)
 
     def prepare_on_obabel(self, inputfile:str, outputfile:str, params:Optional[List[Tuple[str, str]]]=[], input_format:Optional[str]='mol2', output_format:Optional[str]='pdb') -> bool:
         """
@@ -352,109 +296,9 @@ class Docking():
 
 
 
-    def prepare_for_docking(self, pdb_codes:list, charge_type:str, pH:float, redefine_centerofmass:bool) -> bool:
-        """
-        This function prepares the input files for docking using Chimera and Open Babel software. The input files are prepared in a specific
-        format required to perform docking with different docking software. Templates for the input files are available in the src/biomolexplorer/resources folder.
-        Some limitations are present in the preparation of the input files, such as the need to preserve declared variables because they are used
-        to replace placeholders in the output scripts prepared.
-
-        Args:
-            pdb_codes (List[Tuple[str, str]]): The list of PDB codes to be used in the docking preparation. If None is provided, such codes are
-            extracted utilizing the default PDB pathway provided in the complexpath variable to retrieve the PDB codes.
-            pH (float): The pH value to be used for protonation. If It is not explicitly described, the default value used is 7.4.
-            redefine_centerofmass (bool): If True, the function will calculate the center of mass of the ligand.
-
-        Raises:
-            Exception: If any error occurs during the preparation of the input files for docking, a log file will be created and posted in the log folder.
-
-        """
-        try:
-
-            centers   = {}
-            complexes = []
-            receptors = []
-            ligands   = []
-
-
-            for pdb in pdb_codes:
-                receptor = pdb[0]
-                ligand   = pdb[1]
-                resnum   = pdb[2]
-                chain    = pdb[3]
-                chain_id = ',.'.join(chain) if len(chain) > 1 else chain
-
-                if f'prepare_complex_{receptor}_{chain}.com' not in complexes:
-                    self.generate_docking_script(input_template='src/scripts/chimera/prepare_complex.template',
-                                                output_script=directory(self.outputpath) + f'prepare_complex_{receptor}_{chain}.com',
-                                                pdb_code=directory(self.complexpath) + receptor,
-                                                input_complex=directory(self.complexpath) + receptor,
-                                                chain=chain_id,
-                                                output_complex=f'{receptor}_{chain}')
-                    complexes.append(f'prepare_complex_{receptor}_{chain}.com')
-
-
-                if f'prepare_receptor_{receptor}_{chain}.com' not in receptors:
-                    self.generate_docking_script(input_template='src/scripts/chimera/prepare_receptor.template',
-                                                output_script=directory(self.outputpath) + f'prepare_receptor_{receptor}_{chain}.com',
-                                                input_complex=directory(self.outputpath) + f'{receptor}_{chain}' + '.complex',
-                                                receptor=directory(self.outputpath) + f'{receptor}_{chain}')
-                    receptors.append(f'prepare_receptor_{receptor}_{chain}.com')
-
-
-                extention = f'{receptor}_{ligand}_{resnum}{chain}'
-                self.generate_docking_script(input_template='src/scripts/chimera/prepare_ligand.template',
-                                             output_script=directory(self.outputpath) + f'prepare_ligand_{extention}.com',
-                                             input_complex=directory(self.outputpath) + f'{receptor}_{chain}' + '.complex',
-                                             resnum=resnum,
-                                             chain=chain[0],
-                                             charge_type=charge_type,
-                                             input_ligand=directory(self.outputpath) + f'{extention}',
-                                             output_ligand=directory(self.outputpath) + f'{extention}')
-                ligands.append(f'prepare_ligand_{extention}.com')
-
-
-
-            args = [(file,) for file in complexes]
-            self.process_in_parallel(method_name='prepare_on_chimera', args_list=args)
-
-            args = [(file,) for file in receptors]
-            self.process_in_parallel(method_name='prepare_on_chimera', args_list=args)
-
-            for pdb in pdb_codes:
-                chain = pdb[3]
-                self.prepare_on_obabel(f'{pdb[0]}_{chain}.dockprep.mol2', f'{pdb[0]}_{chain}.dockprep.pdbqt', [('p',str(pH)), ('xr','')], input_format='mol2', output_format='pdbqt')
-
-            args = [(file,) for file in ligands]
-            self.process_in_parallel(method_name='prepare_on_chimera', args_list=args)
-
-            tmp_codes = []
-            for pdb in pdb_codes:
-                chain = pdb[3]
-                key = f'{pdb[0]}_{pdb[1]}_{pdb[2]}{chain}'
-                self.prepare_on_obabel(f'{key}.lig.mol2', f'{key}.lig.pdbqt', [('p',str(pH))], input_format='mol2', output_format='pdbqt')
-                if redefine_centerofmass:
-                    center = self.calculate_ligand_centerofmass(f'{key}.lig.pdb', pdb[1])
-                    if center != None:
-                        centers[key] = center
-                        tmp_codes.append(tuple(pdb))
-
-
-            if redefine_centerofmass:
-                f1 = fileHandling(input_path=self.outputpath, output_path=self.outputpath)
-                tmp = f1.csv_to_dataframe('centers').to_dict(orient='list') if f1.isFile('centers')[0] else {}
-                tmp.update(centers)
-                df = DataFrame(tmp)
-                f1.dataframe_to_csv('centers', df)
-
-            return tmp_codes if redefine_centerofmass else list(pdb_codes)
-
-
-        except Exception as e:
-             return None
-
-        finally:
-            sync_directory(directory(self.outputpath))
+    def prepare_for_docking(self, pdb_codes:list, charge_type:str, pH:float, redefine_centerofmass:bool, preparation_pairs=None, _prepared_receptors=None):
+        """Compatibility API backed by the shared native/explicit-legacy adapter."""
+        return super().prepare_for_docking(pdb_codes,charge_type,pH,redefine_centerofmass,preparation_pairs,_prepared_receptors)
 
 class DockVina(Docking):
 

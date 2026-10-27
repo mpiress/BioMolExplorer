@@ -41,15 +41,15 @@ class GraphSubsetExportTests(unittest.TestCase):
         models=[load_view(path.read_bytes()) for path in sorted(output.glob('plots/*'+SUFFIX))]
         return output,models
 
-    def test_every_visible_component_and_full_graph_have_exact_molecular_csvs(self):
+    def test_full_graph_is_the_single_indexed_component_source(self):
         output,models=self.generate(second=True)
         for model in models:
             membership={n['id']:n['properties']['component'] for n in model['nodes']}
             exports=model['compound_exports']
-            self.assertEqual(len(exports),model['statistics']['components']+1)
+            self.assertEqual(len(exports),1)
             for item in exports:
                 frame=pd.read_csv(output/item['file'],dtype={'molecule_chembl_id':str})
-                expected=set(membership) if item['scope']=='full_graph' else {n for n,c in membership.items() if c==item['component']}
+                expected=set(membership)
                 self.assertEqual(set(frame['molecule_chembl_id']),expected)
                 self.assertEqual(set(frame['graph_scope']),{item['scope']})
                 self.assertEqual(set(frame['graph_analysis_id']),{model['analysis_id']})
@@ -57,7 +57,9 @@ class GraphSubsetExportTests(unittest.TestCase):
                 self.assertTrue(frame['canonical_smiles'].notna().all())
                 self.assertIn('activity',frame)
                 self.assertEqual(len(frame),item['nodes'])
-                if item['scope']=='mcc':self.assertEqual(expected,set(model['mcc']))
+            self.assertEqual(len(model['component_index']),model['statistics']['components'])
+            self.assertEqual({r['component'] for r in model['component_index']},set(membership.values()))
+            self.assertFalse(list((output/'Molecules').glob(model['analysis_id']+'__component_*.csv')))
             legacy=pd.read_csv(output/'Molecules'/(model['analysis_id']+'.csv'),dtype={'molecule_chembl_id':str})
             self.assertEqual(set(legacy['molecule_chembl_id']),set(model['mcc']))
         self.assertEqual(set(pd.read_csv(output/'Molecules/molecules.csv',dtype={'molecule_chembl_id':str})['molecule_chembl_id']),{'001','B','C','D','E','F'})
@@ -81,9 +83,7 @@ class GraphSubsetExportTests(unittest.TestCase):
             target=Path(exported['file']).name
             index=next(i for i,(_,ref) in enumerate(picker.rows) if Path(ref['selector']).name==target)
             label=picker.label(picker.rows[index][0])
-            if exported['scope']=='full_graph':self.assertIn('Grafo completo',label)
-            else:self.assertIn('Componente '+str(exported['component']),label)
-            if exported['scope']=='mcc':self.assertIn('MCC / LCC',label)
+            self.assertIn('Grafo completo',label)
             self.assertIn('Graph strategy',label)
             picker.set_selected([index],True)
             selected=form.read()

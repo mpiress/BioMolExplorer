@@ -40,7 +40,7 @@ class MoleculeEvaluator:
         params.AddCatalog(FilterCatalogParams.FilterCatalogs.PAINS)
         self.pains_catalog = FilterCatalog(params)
         self.alert_catalogs = {'PAINS':self.pains_catalog}
-        for name in ('BRENK','NIH'):
+        for name in ('BRENK','NIH','ZINC','CHEMBL'):
             params=FilterCatalogParams();params.AddCatalog(getattr(FilterCatalogParams.FilterCatalogs,name))
             self.alert_catalogs[name]=FilterCatalog(params)
 
@@ -92,7 +92,9 @@ class MoleculeEvaluator:
             Lipinski_violations=sum((mw>500,logp>5,hbd>5,hba>10)),
             Veber_violations=sum((rb>10,tpsa>140)),
             Fragment_violations=sum((mw>300,logp>3,hbd>3,hba>3,rb>3,tpsa>60)))
-        alerts=[name+': '+entry.GetDescription() for name in catalogs for entry in self.alert_catalogs[name].GetMatches(mol)]
+        matches={name:list(self.alert_catalogs[name].GetMatches(mol)) for name in catalogs}
+        alerts=[name+': '+entry.GetDescription() for name,entries in matches.items() for entry in entries]
+        values.update({'Alert_'+name:bool(entries) for name,entries in matches.items()})
         values.update(StructuralAlert_count=len(alerts),StructuralAlerts='; '.join(alerts))
         warnings=[]
         if props['Fragments']>1:warnings.append('Disconnected structure: salt/mixture; descriptors describe the submitted structure')

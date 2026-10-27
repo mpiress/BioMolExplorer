@@ -109,7 +109,8 @@ class RefinedViewerTests(AnalyticalViewerTests):
             asyncio.run(inspector.calculate());asyncio.run(view.select('0'));asyncio.run(view.select('1'));asyncio.run(inspector.calculate())
             self.assertEqual(calculate.call_count,1);self.assertEqual(inspector.result['coverage'],1)
             self.assertEqual(inspector.structure['highlighted_atoms'],6)
-        self.assertFalse(view.ui.page.show_dialog.called)
+        self.assertTrue(all(not call.args[0].open for call in view.ui.page.show_dialog.call_args_list))
+        self.assertIsNone(inspector.dialog)
         asyncio.run(inspector.details());self.assertTrue(view.ui.page.show_dialog.called)
 
     def test_cancelled_pending_mcs_cannot_replace_previous_result(self):
@@ -162,16 +163,16 @@ class RefinedViewerTests(AnalyticalViewerTests):
         from biomolexplorer.ui.localization import LocalizedPage
         view=self.viewer(nx.path_graph(2));inspector=view.explorer.inspector
         inspector.result=dict(scope='LCC · resultado persistido',compounds=71,atoms=17,status='complete',
-            notice='Resultado reutilizado do pipeline; os critérios originais estão preservados.',ring_matches_ring_only=True,complete_rings_only=False,timeout=0,image='')
+            notice='Resultado reutilizado do pipeline; os critérios originais estão preservados.',ring_matches_ring_only=True,complete_rings_only=False,timeout=0,image='',ids=[str(i) for i in range(71)])
         inspector.show_result();page=LocalizedPage(SimpleNamespace(),'en');page.localize(inspector.result_panel)
-        info=inspector.result_panel.controls[0].controls[1].content
+        info=inspector.result_panel.controls[1]
         self.assertEqual(info.controls[0].value,'LCC · persisted result')
         self.assertEqual(info.controls[1].value,'71 compounds · 17 atoms')
         self.assertEqual(info.controls[2].value,'Completed')
-        self.assertEqual(inspector.result_panel.controls[2].value,'Ring-to-ring matching: Yes')
+        self.assertEqual(inspector.result_panel.controls[3].value,'Ring-to-ring matching: Yes')
         page.set_language('pt');page.localize(inspector.result_panel)
         self.assertEqual(info.controls[0].value,'LCC · resultado persistido')
-        self.assertEqual(inspector.result_panel.controls[2].value,'Anéis com anéis: Sim')
+        self.assertEqual(inspector.result_panel.controls[3].value,'Anéis com anéis: Sim')
 
     def test_close_requests_mcs_cancellation_and_restores_keyboard(self):
         view=self.viewer(nx.path_graph(2));inspector=view.explorer.inspector

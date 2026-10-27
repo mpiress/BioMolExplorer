@@ -19,6 +19,19 @@ from wrappers.admet import ADMETWrapper
 
 
 class ResearchAdmetTests(unittest.TestCase):
+    def test_descriptors_are_shared_across_outputs_but_current_filters_are_reapplied(self):
+        import os
+        with patch.dict(os.environ,{'BIOMOL_PREPARATION_CACHE':str(self.root/'shared/ligand-preparation')}):
+            first=ADMETWrapper(str(self.root/'first'),str(self.source),'compounds.csv',admet_profile='exploratory')
+            with patch.object(first,'generate_plot'),patch.object(first.evaluator,'calculate_properties',wraps=first.evaluator.calculate_properties) as calculate:
+                first.run_pipeline();self.assertEqual(calculate.call_count,3)
+            second=ADMETWrapper(str(self.root/'second'),str(self.source),'compounds.csv',
+                admet_profile='exploratory',admet_mode='filter',property_limits={'MW':[None,1]})
+            with patch.object(second,'generate_plot'),patch.object(second.evaluator,'calculate_properties',wraps=second.evaluator.calculate_properties) as calculate:
+                result=second.run_pipeline()
+                self.assertEqual(calculate.call_count,0)
+                self.assertTrue(result.empty)
+
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
         self.root=Path(self.temp.name);self.source=self.root/'source';self.source.mkdir()
@@ -52,7 +65,7 @@ class ResearchAdmetTests(unittest.TestCase):
     def test_alert_exclusion_keeps_complete_audit_and_annotate_mode_keeps_failed_candidates(self):
         wrapper,filtered=self.run_admet(admet_profile='custom',admet_mode='filter',alert_catalogs=['BRENK'],alert_policy='exclude')
         self.assertNotIn('NITRO',filtered['molecule_chembl_id'].tolist())
-        evaluated=pd.read_csv(self.root/'output/compounds_evaluated.csv')
+        evaluated=pd.read_csv(self.root/'output/compounds_alerts.csv')
         rejected=evaluated[evaluated['ADMET_selected']==False]
         self.assertIn('Alertas estruturais',rejected.iloc[0]['ADMET_reasons'])
         _,annotated=self.run_admet(admet_profile='custom',admet_mode='annotate',alert_catalogs=['BRENK'],alert_policy='exclude')
@@ -67,7 +80,7 @@ class ResearchAdmetTests(unittest.TestCase):
 
     def test_all_rejected_and_empty_inputs_preserve_schema(self):
         _,result=self.run_admet(admet_profile='custom',admet_mode='filter',property_limits={'MW':[900,None]})
-        self.assertTrue(result.empty);self.assertEqual(len(pd.read_csv(self.root/'output/compounds_evaluated.csv')),3)
+        self.assertTrue(result.empty);self.assertEqual(len(pd.read_csv(self.root/'output/compounds_alerts.csv')),3)
         self.assertIn('ADMET_selected',result.columns)
         pd.DataFrame(columns=['molecule_chembl_id','canonical_smiles']).to_csv(self.source/'compounds.csv',index=False)
         _,empty=self.run_admet(admet_profile='exploratory');self.assertTrue(empty.empty)
@@ -105,7 +118,7 @@ class ResearchAdmetTests(unittest.TestCase):
         with patch('biomolexplorer.admet_predictors.predict_admet_ai',side_effect=predict):
             _,result=self.run_admet(admet_profile='custom',prediction_backend='admet_ai',admet_mode='filter',property_limits={'ML_hERG':[None,.2]})
         self.assertTrue(result.empty)
-        evaluated=pd.read_csv(self.root/'output/compounds_evaluated.csv')
+        evaluated=pd.read_csv(self.root/'output/compounds_alerts.csv')
         self.assertEqual(len(evaluated),3);self.assertEqual(evaluated['ML_hERG'].tolist(),[.8]*3)
         self.assertTrue(evaluated['BBB'].str.startswith('BBB').all())
 
@@ -114,8 +127,8 @@ class ResearchAdmetTests(unittest.TestCase):
         operation=execute_operation('admet',dict(base_input_path=str(self.source),input_file='compounds.csv',
             admet_profile='peripheral',admet_mode='filter'),output)
         names={Path(p).name for p in operation.artifacts}
-        self.assertTrue({'compounds.csv','compounds_evaluated.csv','compounds_admet_report.json'}<=names)
-        self.assertTrue((pd.read_csv(output/'compounds.csv')['BBB']=='BBB-').all())
+        self.assertTrue({'compounds_BBB+.csv','compounds_BBB-.csv','compounds_HIA+.csv','compounds_HIA-.csv','compounds_alerts.csv','compounds_admet_report.json'}<=names)
+        self.assertTrue((pd.read_csv(output/'compounds_BBB-.csv')['BBB']=='BBB-').all())
 
     def test_egg_resize_uses_full_viewport_and_preserves_hit_testing_and_outliers(self):
         from biomolexplorer.ui.results_viewer import ResultsViewer
@@ -144,3 +157,17 @@ class ResearchAdmetTests(unittest.TestCase):
         with self.assertRaises(ValueError):settings.read()
         form.writable=False;readonly=AdmetSettings(form)
         self.assertTrue(readonly.profile.disabled);self.assertTrue(all(c.disabled for c in readonly.fields.values()))
+
+    def test_all_supported_structural_catalogs_are_configurable_and_explained(self):
+        import flet as ft
+        from biomolexplorer.admet_config import ALERT_CATALOGS
+        from biomolexplorer.ui.admet_settings import AdmetSettings
+        form=SimpleNamespace(ui=SimpleNamespace(page=SimpleNamespace(update=lambda:None)),writable=True,
+            stage=new_stage('admet'),field_controls={},readers={})
+        settings=AdmetSettings(form)
+        self.assertEqual(set(settings.catalogs),{'PAINS','BRENK','NIH','ZINC','CHEMBL'})
+        icons=[c for c in settings.control.content.controls[2].controls[0].controls
+               for c in c.content.controls if isinstance(c,ft.IconButton)]
+        self.assertEqual(len(icons),len(ALERT_CATALOGS));self.assertTrue(all(i.tooltip for i in icons))
+        for control in settings.catalogs.values():control.value=True
+        self.assertEqual(set(settings.read()['alert_catalogs']),set(ALERT_CATALOGS))

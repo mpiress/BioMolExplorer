@@ -64,8 +64,10 @@ class ResultOrigins:
         params = config.get('parameters', {})
         step = dict(stage_id=record['stage_id'], stage_name=record['stage_name'],
                     operation=record['operation'], name=record['name'], path=record['path'],
-                    run_id=record['run_id'], identifier=params.get('search_term') or
-                    record.get('context', {}).get('search_term') or '')
+                    run_id=record['run_id'], target=record.get('context',{}).get('target') or params.get('target'),
+                    identifier=params.get('search_term') or
+                    record.get('context', {}).get('search_term') or
+                    record.get('context', {}).get('target') or params.get('target') or '')
         parents = self.parents(record, stage)
         paths = []
         for parent in parents:
@@ -96,7 +98,10 @@ class ResultOrigins:
         for route in routes:
             root = route[0]
             label = root['stage_name'] or root['name']
-            if root['identifier'] and root['identifier'] != label:
+            target=str(root.get('target') or '')
+            if target and target not in ('MeuAlvo','Estruturas') and target.casefold() not in label.casefold():
+                label+=' · '+target
+            if root['identifier'] and str(root['identifier']).casefold() not in label.casefold():
                 label += ' · ' + str(root['identifier'])
             if label not in roots:
                 roots.append(label)
@@ -111,5 +116,8 @@ class ResultOrigins:
         if self.catalog[key][0]['operation']=='graphs':
             from .graph_exports import subset_label
             scope=subset_label(path)
-        return dict(source_label=source, origin=origin, display_name=source + ' — ' + (scope+' — ' if scope else '') + Path(path).name,
+        from .artifact_naming import human_name
+        record=self.catalog[key][0]
+        display=human_name(record)
+        return dict(source_label=source, origin=origin, display_name=source + ' — ' + (scope+' — ' if scope else '') + display,
                     source_trace='\n'.join(dict.fromkeys(traces)), source_routes=routes)

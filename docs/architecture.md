@@ -140,6 +140,12 @@ a fronteira de processos. O campo de identificador `molecule_chembl_id` continua
 como contrato de CSV para compatibilidade, inclusive para `PUBCHEM<CID>`.
 Uma futura versão de esquema poderá adotar `compound_id`, com migração explícita.
 
+## Fluxo e identidade dos artefatos
+
+Cada saída registrada possui `artifact_id` estável por bloco e caminho lógico, `occurrence_id` por execução, manifest SHA-256, produtor, lote, contexto e entradas efetivamente consumidas. O caminho físico localiza os bytes, mas não é a identidade. Nomes seguem o conteúdo científico (`docking_results.csv`, `pdb_codes.csv`, `dynamics_results.json`) dentro de diretórios já identificados por execução, bloco e, quando necessário, par; por isso não repetem IDs longos no nome exibido.
+
+O pipeline prioriza um índice autoritativo e artefatos pesados necessários, em vez de cópias derivadas. Grafos gravam um CSV completo com colunas de componente e um `*.biomol-view.json`; componentes são navegados ou exportados sob demanda. Redocking e dinâmica mantêm checkpoints verificados por par, reutilizando receptor/preparo ou resultado somente quando entradas, opções, ferramentas e hashes coincidem. Lotes e etapas só reutilizam saídas de execuções concluídas. Formatos legados continuam legíveis, mas não são regenerados quando há uma representação indexada equivalente.
+
 ## Ciclo das tarefas
 
 ```text
@@ -404,3 +410,31 @@ cobertura geométrica e WebGL.
 `vina_session.py` mantém mapas de afinidade por configuração no worker; alterações de receptor/caixa invalidam a sessão. `dock6_validation.py` verifica entradas e saídas MOL2. `preparation_failures.py` mantém a lista por composto, compartilhada com o pipeline. O fluxo DOCK6 usa grid comum por sítio e subprocessos independentes para candidatos. Erros globais continuam propagados. `stage_cache.py` inclui implementações de preparação, interoperabilidade e validação na assinatura, evitando reaproveitar resultados incompatíveis após mudanças de código.
 
 `ui/action_help.py` organiza ajuda contextual; `ui/run_presentation.py` apresenta resumos de execução. A remoção de artefatos em `result_files.py` verifica permissão e execuções ativas, registra histórico e invalida referências. Veja [guia da interface](frontend.md#navegacao-canvas-e-execucoes-concluidas) e [evidências de execução](pipeline_validation.md#validacao-de-lotes-vina-e-dock6).
+
+## Índice incremental de cálculos de docking
+
+`calculation_cache.py` complementa o cache integral de `stage_cache.py` com
+SQLite por projeto. `experiments(namespace,key,metadata)` identifica o protocolo;
+`artifacts(namespace,experiment_key,role,sha256)` relaciona seus arquivos;
+`objects(sha256,size)` deduplica o conteúdo. A publicação é transacional, depois
+da validação. `subjects(namespace,experiment_key,role,identifier,input_sha256)`
+permite consultas indexadas por composto, receptor, referência e hash de entrada.
+A publicação usa locks compartilhados por chave, com até 64 arquivos de lock.
+Objetos são conferidos por SHA-256 antes do
+reuso; reflinks (ou cópias independentes) protegem o cache de alterações nas
+saídas. Metadados preservam a origem de projeto/run/job quando disponível.
+
+`structure_cache.py` separa receptores e ligantes de referência;
+`redocking_cache.py` também publica pares concluídos para retomada independente
+do estado final do run. `vina_batch.py` identifica cada cálculo pelo conteúdo
+do receptor/ligante, opções efetivas e versão/binário do Vina, publicando poses
+válidas antes de avançar. `dock6_cache.py` separa sítio/grids e cálculos por
+composto, incluindo templates efetivos, executáveis e parâmetros DOCK6.
+Hashes de arquivos grandes são memorizados por assinatura de arquivo durante
+o lote, evitando reler grids a cada composto.
+
+O scheduler mantém o atalho de etapa/lote integral e incorpora a identidade das
+ferramentas no cache científico. Lotes com falhas individuais não são tratados
+como resultados integralmente completos: a próxima execução reaproveita os
+sucessos e tenta novamente os demais. A escolha de reuso existente é propagada
+ao worker e controla também os checkpoints, sem novas opções na interface.

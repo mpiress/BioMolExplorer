@@ -253,5 +253,11 @@
   " · {0} falhas na preparação de complexos": " · {0} complex preparation failures",
   "{0} falhas na preparação de complexos": "{0} complex preparation failures",
   "{0} pares de redocking · Página {1}": "{0} redocking pairs · Page {1}",
-  "Novos conjuntos incluídos: {0}": "New datasets included: {0}"
+  "Novos conjuntos incluídos: {0}": "New datasets included: {0}",
+  "Preparando ligantes antes do docking (0/{0}).": "Preparing ligands before docking (0/{0}).",
+  "Preparação de ligantes: {0}/{1} avaliados; {2} prontos; {3} reutilizados; {4} falhas. Docking iniciará após a preparação.": "Ligand preparation: {0}/{1} evaluated; {2} ready; {3} reused; {4} failed. Docking will start after preparation.",
+  "{0} PDBs selecionados · {1} alvos/origens · {2} revisados · {3} a revisar · {4} indisponíveis": "{0} selected PDBs · {1} targets/sources · {2} reviewed · {3} to review · {4} unavailable",
+  "{0}–{1} de {2} PDBs nesta visualização": "{0}–{1} of {2} PDBs in this view",
+  "Exibindo arquivos {0}–{1} de {2}. Pesquise pelo alvo ou use Mais arquivos.": "Showing files {0}–{1} of {2}. Search by target or use More files.",
+  "{0} moléculas · Página {1}": "{0} molecules · Page {1}"
 }

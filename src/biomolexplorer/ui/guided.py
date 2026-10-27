@@ -41,17 +41,23 @@ class GuidedForm:
         self.title=ft.TextField(label='Nome do bloco',value=TITLES['prepare_structures'][0] if stage['operation']=='prepare_structures' and stage['name'] in ('Preparar meus complexos','Prepare my complexes') else stage['name'],disabled=not writable,data='wide')
         self.enabled=ft.Switch(label='Incluir este bloco na execução',value=stage.get('enabled',True),disabled=not writable)
         self.controls=[self.title,self.enabled]
+        if stage['operation'] in ('consensus','dynamics_dock6'):
+            self.controls.append(ft.Text('Este bloco reúne as entradas selecionadas e reaproveita os cálculos válidos de cada complexo.',size=12,color='#64748B'))
         if stage['operation'] in ('similarity','graphs'):
             self.follow_inputs=ft.Switch(label='Acompanhar novos conjuntos da origem',
                 value=stage.get('follow_inputs',True),disabled=not writable)
             self.controls.extend([self.follow_inputs,ft.Text(
                 'Inclui as novas saídas compatíveis dos blocos conectados. Desative para executar somente os arquivos selecionados.',size=12)])
-        if stage['operation'] not in ('import_results','consensus'):
+        if stage['operation'] not in ('import_results','consensus','dynamics_dock6'):
             self.processing=ft.Dropdown(label='Como processar os arquivos selecionados?',
                 value=stage.get('input_processing','individual'),disabled=not writable,options=[
                     ft.DropdownOption(key='individual',text='Processar individualmente'),
-                    ft.DropdownOption(key='merge',text='Mesclar arquivos (merge)')])
-            self.controls.append(self.processing)
+                    ft.DropdownOption(key='merge',text='Mesclar arquivos (merge)'),
+                    ft.DropdownOption(key='both',text='Individual + conjunto completo (ALL)')])
+            self.controls.extend([self.processing,ft.Text(
+                'Individual mantém os conjuntos separados. Merge reúne as entradas selecionadas sem duplicar moléculas. '
+                'Individual + ALL também produz a análise do conjunto completo. Resultados válidos já calculados são reaproveitados.',
+                size=12,color='#64748B')])
         if stage['operation'] in ('retrieve_compounds','retrieve_pubchem','retrieve_structures','retrieve_zinc'):
             self.controls.append(ft.Text(
                 'Escolhas de arquivos salvas nos blocos são respeitadas. A execução solicita uma seleção apenas para entradas ainda não configuradas.',
@@ -61,6 +67,7 @@ class GuidedForm:
             self.controls.append(ft.Text('A triagem prioriza moléculas orgânicas em contato com a proteína e sítios anotados. Solventes, íons e cópias equivalentes ficam fora da seleção recomendada. Contato geométrico não confirma sítio ativo; todos os candidatos continuam disponíveis em Ligantes.',size=13))
         elif stage['operation']=='retrieve_compounds':
             self.controls.append(ft.Text('Busque alvos para obter bioatividades ou compostos diretamente por nome, IDs, similaridade ou subestrutura. Limpe filtros para ampliar a seleção.',size=13))
+            self.controls.append(ft.Text('MOL identifica as moléculas recuperadas e SIM os novos similares. Selecione os conjuntos no próximo bloco; use merge ou Individual + ALL quando desejar analisá-los juntos.',size=12,color='#64748B'))
         elif stage['operation']=='retrieve_pubchem':
             self.controls.append(ft.Text('Informe um SMILES, CID ou nome, envie um CSV de compostos ou conecte uma origem. A saída contém os novos similares PubChem. Conecte ChEMBL e PubChem às próximas etapas para analisar separadamente ou mesclar.',size=13))
         if stage['operation']=='import_results':
@@ -87,6 +94,7 @@ class GuidedForm:
             for k in KINDS:self.readers[k]=lambda k=k:self.fingerprint_choice.value==k
         for field in operation_fields(stage['operation']):
             key=field['name']; value=stage['parameters'].get(key,field['default'])
+            if stage['operation']=='dynamics_dock6' and key not in ('base_input_path','base_selected_mols','dock6_app_path','ambertools_path','ambertools_env'):continue
             if stage['operation']=='admet':
                 from biomolexplorer.admet_config import PARAMETERS
                 if key in PARAMETERS:continue
@@ -118,12 +126,19 @@ class GuidedForm:
             elif key in ('pdb_code','pdb_codes'):
                 self.records(key,field['label'],value)
             elif key=='sizeof_box':
-                fields=[ft.TextField(label='Caixa '+axis+' (Å)',value=str(v),disabled=not writable,width=150) for axis,v in zip('XYZ',value or [20,20,20])]
-                self.controls.append(ft.Row(fields,wrap=True,spacing=24,run_spacing=24)); self.readers[key]=lambda f=fields:[float(c.value) for c in f]
+                from .settings_layout import grid
+                fields=[ft.TextField(label='Caixa '+axis+' (Å)',value=str(v),disabled=not writable,
+                    tooltip='Dimensão da caixa de busca neste eixo, em angstroms.') for axis,v in zip('XYZ',value or [20,20,20])]
+                self.field_controls[key]=grid(fields)
+                self.controls.append(self.field_controls[key]); self.readers[key]=lambda f=fields:[float(c.value) for c in f]
             elif key in LISTS or key in ('files','excluded_pdb_ids'):
                 self.list_field(key,field['label'],value,LISTS.get(key,[]))
             elif stage['operation']=='prepare_structures' and key=='pH':self.add(key,'pH de protonação do receptor e ligante',value)
             else: self.add(key,'Nome da coleção PubChem' if stage['operation']=='retrieve_pubchem' and key=='target' else 'Nome da coleção PDB (opcional)' if stage['operation']=='retrieve_structures' and key=='target' else field['label'],value,field['choices'])
+        if stage['operation']=='dynamics_dock6':
+            from .md_settings import MDSettings
+            self.md_settings=MDSettings(self)
+            self.controls.extend([self.md_settings.pair_control,self.md_settings.control])
         if stage['operation']=='admet':
             from .admet_settings import AdmetSettings
             self.admet_settings=AdmetSettings(self)
@@ -134,10 +149,11 @@ class GuidedForm:
             if stage['operation'] in ('docking_vina','docking_dock6'):
                 complex_control=self.field_controls['pdb_code']
                 self.controls.remove(complex_control)
-                self.preparation_settings.groups['receptor'].controls.insert(1,complex_control)
+                from .settings_layout import add_field
+                add_field(self.preparation_settings.groups['receptor'],complex_control,first=True)
                 ph_control=self.field_controls['pH']
                 self.controls.remove(ph_control)
-                self.preparation_settings.groups['ligand'].controls.append(ph_control)
+                add_field(self.preparation_settings.groups['ligand'],ph_control)
             self.controls.append(ft.Text('Selecione o receptor e uma ou mais fontes de compostos. Receptores do redocking serão reutilizados sem novo preparo.',size=12,data='input'))
             self.controls.append(self.preparation_settings.control)
             self.readers['preparation_options']=self.preparation_settings.read
@@ -172,6 +188,8 @@ class GuidedForm:
                 self.redocking_pairs.sync_preparation()
                 ui.page.update()
             self.field_controls['prepare_complex'].on_change=redocking_inputs
+            self.field_controls['redocking_engine'].on_select=self.sync_redocking_engine
+            self.sync_redocking_engine()
         if stage['operation']=='fingerprints':
             def choose(e=None):
                 for key in ('radius','morgan_n_bits'):
@@ -203,28 +221,22 @@ class GuidedForm:
     def layout(self):
         """Group fields into roomy cards; expansion content has explicit spacing."""
         from .branding import BRAND_BLUE
+        from .settings_layout import field as settings_field,section as settings_section,FIELD_GAP
         def fields(controls):
             cells=[]
             for control in controls:
-                if isinstance(control,(ft.TextField,ft.Dropdown)):
-                    control.width=None
-                long_label=len(str(getattr(control,'label','')))>34
-                col=12 if control.data=='wide' or long_label or not isinstance(control,(ft.TextField,ft.Dropdown)) else {'xs':12,'md':6}
-                if self.stage['operation']=='admet':
-                    if control is self.title:col={'xs':12,'lg':8}
-                    elif control is self.enabled:col={'xs':12,'lg':4}
-                    elif isinstance(control,(ft.TextField,ft.Dropdown)):col={'xs':12,'lg':6}
-                cells.append(ft.Container(content=control,col=col,padding=ft.Padding.symmetric(vertical=6),visible=control.visible))
+                cells.append(settings_field(control,full=control.data in ('wide','input')
+                    or not isinstance(control,(ft.TextField,ft.Dropdown,ft.Switch,ft.Checkbox))))
                 # Hidden conditional fields also release their space in the form.
-                conditional=('radius','morgan_n_bits') if self.stage['operation']=='fingerprints' else ('max_targets','expand_chembl','similarity_threshold') if self.stage['operation']=='retrieve_compounds' else ('base_input_path','input_file','reference_type','reference','selection_mode','compound_id') if self.stage['operation']=='retrieve_pubchem' else ()
+                conditional=('sizeof_box','exhaustiveness','num_modes','dock6_app_path','conformer_search_type') if self.stage['operation']=='redocking' else ('radius','morgan_n_bits') if self.stage['operation']=='fingerprints' else ('max_targets','expand_chembl','similarity_threshold') if self.stage['operation']=='retrieve_compounds' else ('base_input_path','input_file','reference_type','reference','selection_mode','compound_id') if self.stage['operation']=='retrieve_pubchem' else ()
                 if control in [self.field_controls.get(k) for k in conditional]:
                     key=next(k for k in conditional if self.field_controls[k] is control)
                     self.conditional_cells[key]=cells[-1]
-            return ft.ResponsiveRow(cells,spacing=24,run_spacing=20)
+            return ft.ResponsiveRow(cells,spacing=FIELD_GAP,run_spacing=12)
         def card(title,description,controls):
-            return ft.Container(padding=16 if self.stage['operation']=='admet' else 24,bgcolor='#FFFFFF',border_radius=16,border=ft.Border.all(1,'#E2E8F0'),content=ft.Column([
-                ft.Text(title,size=17,weight=ft.FontWeight.W_600,color='#172B4D'),
-                ft.Text(description,size=12,color='#64748B'),ft.Container(height=4),fields(controls)],spacing=12))
+            # Keep conditional cells owned by this form while sharing the
+            # section shell and field rules with specialized settings panels.
+            return settings_section(title,[fields(controls)],description)
         sections=[card('Identificação','Nomeie a etapa e escolha se ela participa da execução.',self.controls[:2])]
         inputs=[c for c in self.controls[2:] if c.data=='input']
         if self.stage['operation']=='graphs':
@@ -261,8 +273,18 @@ class GuidedForm:
             if key=='radius' and self.stage['operation']=='fingerprints': integers.add('radius')
             kind=int if key in integers else float if key in NUMERIC else int if type(value)is int else float if type(value)is float else str
             getter=lambda:None if not control.value else kind(control.value)
+        from .settings_layout import PARAMETER_HELP
+        if key in PARAMETER_HELP:control.tooltip=PARAMETER_HELP[key]
         if key in ('search_term','target'): control.data='wide'
         controls.append(control); self.readers[key]=getter;self.field_controls[key]=control
+    def sync_redocking_engine(self,e=None):
+        dock6=self.field_controls['redocking_engine'].value=='dock6'
+        for key in ('sizeof_box','exhaustiveness','num_modes','dock6_app_path','conformer_search_type'):
+            control=self.field_controls[key]
+            control.visible=dock6 if key in ('dock6_app_path','conformer_search_type') else not dock6
+            if key in self.conditional_cells:self.conditional_cells[key].visible=control.visible
+        if e is not None:self.ui.page.update()
+
     def sync_retrieval(self,e=None):
         mode=self.field_controls['search_mode'].value or 'target'
         direct=mode in ('molecule_id','molecule_name','similarity','substructure')
@@ -346,9 +368,10 @@ class GuidedForm:
         rows=[]; box=ft.Column()
         automatic=ft.Checkbox(label='Detectar complexos pelos metadados dos arquivos',value=value is None,disabled=not self.writable)
         def add(record=None):
-            record=record or ['', '', '', 'A']; fields=[ft.TextField(label=l,value=str(v),width=w,disabled=not self.writable) for l,v,w in zip(['Código PDB','Ligante','Número do resíduo','Cadeia'],record[:4],[150,120,150,90])]
-            fields.append(ft.TextField(label='Resolução (Å, opcional)',value=str(record[4]) if len(record)>4 and record[4] is not None else '',width=170,disabled=not self.writable))
-            row=ft.Row(fields,wrap=True,spacing=20,run_spacing=24)
+            from .settings_layout import grid
+            record=record or ['', '', '', 'A']; fields=[ft.TextField(label=l,value=str(v),disabled=not self.writable) for l,v in zip(['Código PDB','Ligante','Número do resíduo','Cadeia'],record[:4])]
+            fields.append(ft.TextField(label='Resolução (Å, opcional)',value=str(record[4]) if len(record)>4 and record[4] is not None else '',disabled=not self.writable))
+            row=ft.Column([grid(fields)],spacing=16)
             def remove(e): rows.remove(fields); box.controls.remove(row); self.ui.page.update()
             row.controls.append(ft.IconButton(icon=ft.Icons.DELETE_OUTLINE,on_click=remove,disabled=not self.writable)); rows.append(fields); box.controls.append(row)
         records=(value if isinstance(value[0],(list,tuple)) else [value]) if value else []
@@ -581,6 +604,9 @@ class GuidedForm:
             else:result['parameters'].pop('charge_type',None)
             if result['operation'] in ('docking_vina','docking_dock6') and result['parameters']['receptor_prepared']:
                 result['parameters'].pop('pdb_code',None)
+        if result['operation']=='dynamics_dock6':
+            from biomolexplorer.md_config import validate_settings
+            validate_settings(result['parameters'])
         validate_templates(result.get('templates',{}))
         if result['operation']=='similarity':
             from biomolexplorer.fingerprint_selection import generated_kind

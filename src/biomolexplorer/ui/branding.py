@@ -13,6 +13,13 @@ def image_bytes(name):
 def logo(size=48):
     return ft.Image(src=image_bytes('logo.png'),width=size,height=size*231/247,fit=ft.BoxFit.CONTAIN,semantics_label='Logo BioMolExplorer')
 
+
+def processing_emblem(size=112,label='Processando dados…'):
+    ring=ft.ProgressRing(width=size,height=size,stroke_width=4,color=BRAND_BLUE,semantics_label=label)
+    emblem=ft.Stack([ring,logo(size*64/112)],width=size,height=size,alignment=ft.Alignment.CENTER)
+    emblem._processing_ring=ring
+    return emblem
+
 def wordmark(width=240):
     return ft.Image(src=image_bytes('wordmark.png'),width=width,height=width*209/662,fit=ft.BoxFit.CONTAIN,semantics_label='BioMolExplorer')
 

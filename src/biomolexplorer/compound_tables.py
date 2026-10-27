@@ -52,6 +52,9 @@ class CompoundTables:
             name=path.name
             is_summary=path.suffix.lower()=='.csv' and path.stem.upper().endswith(('_FULL','_MOLS','_SIMS'))
             is_integrated=name=='compounds.csv' and path.parent.parent.name=='compounds'
+            from .artifact_naming import PATTERN
+            match=PATTERN.match(path.stem)
+            is_summary=is_summary or bool(match and match[3] in ('mol','sim','merged','compounds'))
             is_provided=bool(stage.get('configuration',{}).get('provided_results')) and path.suffix.lower()=='.csv'
             if (is_summary or is_integrated or is_provided) and path.is_file():
                 result.append({'path':str(path),'name':name,'integrated':is_integrated})

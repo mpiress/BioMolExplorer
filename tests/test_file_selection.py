@@ -36,7 +36,7 @@ class FileSelectionTests(unittest.TestCase):
             def submit(manager,operation,parameters):
                 job=super().submit(operation,parameters)
                 if operation=='retrieve_compounds':
-                    extra=manager.config.workspace/'chosen.csv'
+                    extra=manager.config.workspace/'chosen_MOLS.csv'
                     extra.write_text('molecule_chembl_id,canonical_smiles\nCHEMBL2,CCC\n')
                     report=manager.config.workspace/'report.csv'
                     report.write_text('status\nok\n')
@@ -62,7 +62,7 @@ class FileSelectionTests(unittest.TestCase):
                 pickers=[c._artifact_picker for c in dialog.content.content.controls if hasattr(c,'_artifact_picker')]
                 self.assertFalse(any(isinstance(c,ft.Checkbox) for c in dialog.content.content.controls))
                 checks=[flag for picker in pickers for flag,_ in picker.rows]
-                self.assertEqual({c.label for c in checks},{'chosen.csv','compounds.csv'})
+                self.assertEqual({c.label for c in checks},{'B01__chembl__mol.csv','B01__chembl__compounds.csv'})
                 self.assertFalse(any(c.value for c in checks))
                 # Closing the popup never advances the backend.
                 dialog.actions[0].on_click(None)
@@ -74,16 +74,16 @@ class FileSelectionTests(unittest.TestCase):
                 dialog=dialogs[-1]
                 checks=[flag for c in dialog.content.content.controls if hasattr(c,'_artifact_picker')
                         for flag,_ in c._artifact_picker.rows]
-                for check in checks:check.value=check.label=='chosen.csv'
+                for check in checks:check.value=check.label=='B01__chembl__mol.csv'
                 asyncio.run(dialog.actions[-1].on_click(None))
                 finished=self.wait(run)
                 self.assertEqual(finished['id'],run['id'])
                 self.assertEqual(finished['status'],'succeeded',finished['error'])
                 selected=finished['stages'][1]['input_files']['base_input_path']
-                self.assertEqual([Path(p).name for p in selected],['chosen.csv'])
+                self.assertEqual([Path(p).name for p in selected],['B01__chembl__mol.csv'])
                 stored=self.store.project(self.token,self.project_id)['pipeline'][1]
                 self.assertEqual(stored['bindings']['base_input_path'],
-                    dict(stage=source['id'],selector='chosen.csv',artifact_id=next(r['artifact_id'] for r in finished['stages'][0]['artifact_records'] if r['name']=='chosen.csv')))
+                    dict(stage=source['id'],selector='B01__chembl__mol.csv',artifact_id=next(r['artifact_id'] for r in finished['stages'][0]['artifact_records'] if r['name']=='B01__chembl__mol.csv')))
                 self.assertEqual(stored['input_processing'],'individual')
                 self.assertEqual(len(calls),2)
                 self.assertFalse(dialog.open)
@@ -168,14 +168,14 @@ class FileSelectionTests(unittest.TestCase):
                     for child in getattr(control,'controls',[]) or []:yield from walk(child)
                 dropdowns=[c for c in walk(settings.content) if isinstance(c,ft.Dropdown)]
                 selected=next(c for c in dropdowns if c.label=='Resultado usado nesta entrada')
-                self.assertEqual(selected.value,'compounds.csv')
+                self.assertEqual(selected.value,'B01__chembl__compounds.csv')
                 self.assertEqual(next(c for c in dropdowns if c.label=='Como processar os arquivos selecionados?').value,'merge')
                 self.assertEqual(self.store.get_run(self.token,run['id'])['status'],'awaiting_input')
                 asyncio.run(settings.actions[-1].on_click(None))
                 finished=self.wait(run)
                 self.assertEqual(finished['status'],'succeeded',finished['error'])
                 stored=self.store.project(self.token,self.project_id)['pipeline'][1]
-                self.assertEqual(stored['bindings']['base_input_path']['selector'],'compounds.csv')
+                self.assertEqual(stored['bindings']['base_input_path']['selector'],'B01__chembl__compounds.csv')
                 self.assertEqual(stored['input_processing'],'merge')
             finally:service.close()
 

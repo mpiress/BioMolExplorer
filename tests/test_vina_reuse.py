@@ -1,7 +1,9 @@
 """Receptor reuse, scientific configuration and shared maps regression checks."""
 import sys
 import importlib.util
+import json
 import math
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -23,6 +25,8 @@ class VinaReuseTests(unittest.TestCase):
         self.addCleanup(self.module.stop)
 
     def config(self, compound='M1', center=0, size=12, extra=''):
+        (self.root/(compound+'.pdbqt')).write_text(
+            'ROOT\nATOM      1  C   UNL A   1       0.000   0.000   0.000  1.00  0.00     0.000 C\nENDROOT\nTORSDOF 0\n')
         path = self.root/(compound+'.vina')
         path.write_text(f'receptor = rec.pdbqt\nligand = {compound}.pdbqt\nout = {compound}.out.pdbqt\n'
                         f'center_x = {center}\ncenter_y = 0\ncenter_z = 0\n'
@@ -68,6 +72,49 @@ class VinaReuseTests(unittest.TestCase):
             VinaSessions().run(self.config(),self.root)
         self.factory.return_value.dock.assert_called_once()
 
+    def test_nonfinite_ligand_is_rejected_before_native_vina(self):
+        configuration=self.config('BROKEN')
+        (self.root/'BROKEN.pdbqt').write_text(
+            'ROOT\nATOM      1  C   UNL A   1         nan     nan     nan  1.00  0.00       nan C\nENDROOT\nTORSDOF 0\n')
+        with self.assertRaisesRegex(ValueError,'coordenadas, cargas ou tipos'):
+            VinaSessions().run(configuration,self.root)
+        self.factory.assert_not_called()
+
+    def test_batch_records_invalid_ligand_and_does_not_call_vina(self):
+        from biomolexplorer.storage import write_json
+        from biomolexplorer.vina_batch import execute
+        configuration=self.config('BROKEN_BATCH')
+        (self.root/'BROKEN_BATCH.pdbqt').write_text(
+            'ROOT\nATOM      1  C   UNL A   1         nan     nan     nan  1.00  0.00       nan C\nENDROOT\nTORSDOF 0\n')
+        request=self.root/'request.json';state=self.root/'state.json'
+        write_json({'directory':str(self.root),'configurations':[configuration.name]},request)
+        with patch('biomolexplorer.vina_session.VinaSessions.run') as run:
+            result=execute(request,state)
+        run.assert_not_called()
+        self.assertEqual(result['completed'],[])
+        self.assertEqual(result['failed'][0]['compound_identifier'],'BROKEN_BATCH')
+        self.assertIn('coordenadas, cargas ou tipos',result['failed'][0]['error'])
+
+    def test_native_abort_isolated_and_remaining_ligands_resume(self):
+        from biomolexplorer.vina_batch import run_resilient
+        from biomolexplorer.storage import write_json
+        configurations=[self.config('M'+str(index)) for index in range(1,4)]
+        calls=[]
+        def child(command,**kwargs):
+            calls.append(command)
+            state=Path(command[command.index('--state')+1])
+            if len(calls)==1:
+                write_json({'active':'M2.vina','completed':[{'configuration':'M1.vina','duration_ms':10}],'failed':[]},state)
+                return SimpleNamespace(returncode=-6,stdout='',stderr="terminate called after throwing 'internal_error'")
+            write_json({'active':None,'completed':[{'configuration':'M3.vina','duration_ms':11}],'failed':[]},state)
+            return SimpleNamespace(returncode=0,stdout='',stderr='')
+        with patch('biomolexplorer.vina_batch.subprocess.run',side_effect=child):
+            summary=run_resilient(configurations,self.root)
+        self.assertEqual([r['configuration'] for r in summary['completed']],['M1.vina','M3.vina'])
+        self.assertEqual(summary['failed'][0]['configuration'],'M2.vina')
+        self.assertEqual(len(summary['attempts']),2)
+        self.assertEqual(json.loads((self.root/'vina_execution.json').read_text())['vina_version'],summary['vina_version'])
+
     def test_redocking_receptor_reused_for_every_batch_without_preparation(self):
         from wrappers.docking import prepare_docking_receptor
         prepared=self.root/'Target/Prepared';prepared.mkdir(parents=True)
@@ -112,16 +159,55 @@ class VinaReuseTests(unittest.TestCase):
                         centerofmasspath=str(self.root),sizeof_box=[12]*3,exhaustiveness=2,num_modes=3)
         engine.retrieve_centerofmass_dataset=MagicMock(return_value=[0,0,0])
         engine.perform_subprocess=MagicMock()
-        engine.docking(str(self.root))
+        def batch(configurations,directory):
+            for configuration in configurations:
+                options={line.split('=',1)[0].strip():line.split('=',1)[1].strip()
+                         for line in Path(configuration).read_text().splitlines() if '=' in line}
+                (Path(directory)/options['out']).write_text('pose')
+            return {'completed':[{'configuration':Path(c).name} for c in configurations],'failed':[],'attempts':[{}]}
+        with patch('biomolexplorer.vina_batch.run_resilient',side_effect=batch) as runner:
+            engine.docking(str(self.root))
         engine.perform_subprocess.assert_not_called()
-        self.factory.assert_called_once()
-        writes=[Path(c.args[0]).name for c in self.factory.return_value.write_poses.call_args_list]
+        self.factory.assert_not_called()
+        writes=[Path(c).with_suffix('.lig.pdbqt').name for c in runner.call_args.args[0]]
         self.assertEqual(set(writes),{f'1ABC_LIG_{residue}A_M{mol}.lig.pdbqt' for residue in (1,2) for mol in (1,2,3)})
         self.assertEqual(receptor.read_text(),'prepared receptor')
+        engine.selected_ligand_files=[ligands/'M2.lig.pdbqt']
+        with patch('biomolexplorer.vina_batch.run_resilient',side_effect=batch) as runner:
+            engine.docking(str(self.root))
+        self.assertEqual(len(runner.call_args.args[0]),2)
+        self.assertTrue(all(path.stem.endswith('_M2') for path in runner.call_args.args[0]))
 
 
 @unittest.skipUnless(importlib.util.find_spec('vina'), 'Vina Python API is not installed')
 class RealVinaReuseTests(unittest.TestCase):
+    def test_real_child_commits_results_and_unchanged_batch_starts_no_worker(self):
+        from biomolexplorer.vina_batch import run_resilient
+        with tempfile.TemporaryDirectory(prefix='bme real incremental ') as folder:
+            root=Path(folder)
+            atom='ATOM      1  C   ALA A   1       0.000   0.000   0.000  1.00  0.00     0.000 C\n'
+            (root/'rec.pdbqt').write_text(atom)
+            configs=[]
+            for kind in ('OA','NA'):
+                (root/(kind+'.pdbqt')).write_text('ROOT\n'+atom+
+                    f'ATOM      2  X   UNL A   1       1.400   0.000   0.000  1.00  0.00     0.000 {kind}\nENDROOT\nTORSDOF 0\n')
+                config=root/(kind+'.vina')
+                config.write_text(f'receptor = rec.pdbqt\nligand = {kind}.pdbqt\nout = {kind}.out.pdbqt\n'
+                    'center_x = 0\ncenter_y = 0\ncenter_z = 0\nsize_x = 6\nsize_y = 6\nsize_z = 6\n'
+                    'cpu = 1\nseed = 73\nverbosity = 0\nexhaustiveness = 1\nnum_modes = 1\n')
+                configs.append(config)
+            with patch.dict(os.environ,{'PYTHONPATH':str(Path(__file__).parents[1]/'src'),
+                                       'BIOMOL_PREPARATION_CACHE':str(root/'cache/ligands'),
+                                       'BIOMOL_REUSE_PREPARATIONS':'1'}):
+                first=run_resilient(configs,root)
+                self.assertEqual(first['failed'],[]);self.assertEqual(len(first['completed']),2)
+                poses={kind:(root/(kind+'.out.pdbqt')).read_bytes() for kind in ('OA','NA')}
+                with patch('biomolexplorer.vina_batch.subprocess.run') as child:
+                    second=run_resilient(configs,root)
+                child.assert_not_called()
+                self.assertTrue(all(row['reused'] for row in second['completed']))
+                for kind in ('OA','NA'):self.assertEqual((root/(kind+'.out.pdbqt')).read_bytes(),poses[kind])
+
     def test_real_engine_docks_different_atom_types_with_one_session(self):
         from biomolexplorer.docking_data import score
         with tempfile.TemporaryDirectory(prefix='bme vina reuse ') as folder:

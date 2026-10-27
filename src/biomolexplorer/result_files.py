@@ -41,6 +41,7 @@ class ResultFiles:
     def files(self, token, pid, rid, sid):
         stage = self.stage(token, pid, rid, sid)
         from .artifacts import records
+        from .artifact_naming import publication_metadata
         catalog={r['path']:r for r in records(stage,rid)}
         origins=self.origins(token,pid,rid)
         def information(path):
@@ -52,7 +53,8 @@ class ResultFiles:
                 for name in stage.get('artifacts', [])
                 if (p := self.store.scoped_path(pid, name)).is_file()
                 and not (stage['operation']=='retrieve_structures' and p.name in ('pdb_codes.csv','retrieval_report.json'))
-                and not (stage['operation'] == 'admet' and p.suffix.lower() == '.json' and p.name!='molecule_exclusions.json' and not p.name.endswith('_admet_report.json'))]
+                and not (stage['operation'] == 'admet' and p.suffix.lower() == '.json' and p.name!='molecule_exclusions.json'
+                    and not publication_metadata(p).get('legacy_name',p.name).endswith('_admet_report.json'))]
 
     def preparation_failures(self,token,pid,rid,sid,filename):
         from .preparation_failures import REPORT_NAME
@@ -61,6 +63,36 @@ class ResultFiles:
             raise AccessDenied('Relatório não autorizado para esta etapa.')
         data=self.store.read_file(token,pid,str(path),MAX_VIEW_BYTES)
         return list(csv.DictReader(io.StringIO(data.decode('utf-8-sig'))))
+
+    @staticmethod
+    def _pdb_review_signature(path,ligands):
+        from hashlib import sha256
+        stat=path.stat()
+        rows=sorted(tuple(str(r.get(key,'')) for key in ('PDB_CODE','LIGAND','RESNUM','CHAIN','RESOLUTION')) for r in ligands)
+        return sha256(json.dumps([stat.st_size,stat.st_mtime_ns,rows]).encode()).hexdigest()
+
+    def pdb_review_statuses(self,token,pid,rid):
+        """Read each metadata table once; never parse every selected structure."""
+        run=self.store.get_run(token,rid)
+        if run['project_id']!=pid:raise AccessDenied('Resultado de outro projeto.')
+        result={};tables={}
+        for stage in run['stages']:
+            if stage['operation']!='retrieve_structures':continue
+            artifacts=set(stage.get('artifacts',[]))
+            for value in artifacts:
+                path=self.store.scoped_path(pid,value);metadata=path.parent/'pdb_codes.csv'
+                if path.suffix.lower()!='.pdb' or str(metadata) not in artifacts or not path.is_file():continue
+                if metadata not in tables:
+                    data=self.store.read_file(token,pid,str(metadata),MAX_VIEW_BYTES)
+                    grouped={}
+                    for row in csv.DictReader(io.StringIO(data.decode('utf-8-sig'))):
+                        grouped.setdefault(row['PDB_CODE'].upper(),[]).append(row)
+                    tables[metadata]=grouped
+                ligands=tables[metadata].get(path.stem.upper(),[])
+                review=stage.get('pdb_reviews',{}).get(str(path),{})
+                result[str(path)]=dict(ligands=ligands,reviewed=bool(review and
+                    review.get('signature')==self._pdb_review_signature(path,ligands)),reviewed_at=review.get('reviewed_at'))
+        return result
 
     def pdb_ligands(self, token, pid, rid, sid, filename):
         stage=self.stage(token,pid,rid,sid)
@@ -77,8 +109,10 @@ class ResultFiles:
         analysis=analyze_ligands(text,path.stem)
         available=[dict(row,RESNUM=str(row['RESNUM'])) for row in analysis['candidates']]
         available.sort(key=lambda r:(r['LIGAND'],int(r['RESNUM']),r['CHAIN'],r['ICODE']))
+        ligands=[row for row in reader if row['PDB_CODE'].upper()==path.stem.upper()]
+        review=stage.get('pdb_reviews',{}).get(str(path),{})
         return {'pdb_id':path.stem.upper(),'revision':sha256(data).hexdigest(),'resolution':analysis['resolution'],
-                'ligands':[row for row in reader if row['PDB_CODE'].upper()==path.stem.upper()],
+                'ligands':ligands,'reviewed':bool(review and review.get('signature')==self._pdb_review_signature(path,ligands)),
                 'available_ligands':available,
                 'recommended_ligands':[r for r in available if r['RECOMMENDED']],
                 'triage_available':str(path.parent/'ligand_candidates.csv') in stage.get('artifacts',[])}
@@ -143,6 +177,9 @@ class ResultFiles:
                         if str(metadata) in item.get('artifacts',[]):
                             item['artifact_manifest']=artifact_manifest(item['artifacts'])
                             item['curated_at']=time.time();changed=True
+                            if str(path) in item.get('artifacts',[]):
+                                item.setdefault('pdb_reviews',{})[str(path)]={
+                                    'signature':self._pdb_review_signature(path,curated),'reviewed_at':time.time()}
                     if changed:db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(stages),run[0]))
         except Exception:
             if backup is not None:write_text(backup,metadata)
@@ -210,6 +247,53 @@ class ResultFiles:
         for _,backup in backups:self._cleanup_backup(backup)
         return len(backups)
 
+    def remove_project_results(self,token,pid):
+        """Atomically remove every computed result while preserving user inputs."""
+        backups=[]
+        try:
+            with self.store.change(token,pid,'editor','remove_project_results','Todos os resultados do projeto removidos') as db:
+                if db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running','awaiting_input')",(pid,)).fetchone():
+                    raise ValueError('Aguarde a execução terminar antes de remover arquivos.')
+                rows=db.execute('SELECT id,stages FROM runs WHERE project_id=?',(pid,)).fetchall()
+                decoded=[(run_id,json.loads(encoded)) for run_id,encoded in rows]
+                # Imported/provided files belong to the project input library,
+                # even when they are exposed as stage artifacts.
+                result_paths={str(self.store.scoped_path(pid,name))
+                    for _,stages in decoded for item in stages
+                    if item.get('operation')!='import_results' and not item.get('provided')
+                    and not item.get('configuration',{}).get('provided_results')
+                    for name in item.get('artifacts',[])}
+                protected={str(self.store.scoped_path(pid,row[0])) for row in
+                    db.execute('SELECT path FROM assets WHERE project_id=?',(pid,)).fetchall()}
+                protected.update(str(self.store.scoped_path(pid,name))
+                    for _,stages in decoded for item in stages
+                    if item.get('operation')=='import_results' or item.get('provided')
+                    or item.get('configuration',{}).get('provided_results')
+                    for name in item.get('artifacts',[]))
+                paths=result_paths-protected
+                backup_dir=self.store.project_dir(pid)/'.history'/'.removed'
+                backup_dir.mkdir(parents=True,exist_ok=True)
+                for filename in sorted(paths):
+                    path=Path(filename)
+                    if path.is_file():
+                        backup=backup_dir/uuid4().hex
+                        path.replace(backup);backups.append((path,backup))
+                for run_id,stages in decoded:
+                    changed=False
+                    for item in stages:
+                        computed=(item.get('operation')!='import_results' and not item.get('provided')
+                            and not item.get('configuration',{}).get('provided_results'))
+                        if computed and result_paths.intersection(item.get('artifacts',[])):
+                            item['artifacts']=[p for p in item['artifacts'] if p not in result_paths]
+                            item['outputs_removed']=True;item['curated_at']=time.time();changed=True
+                    if changed:db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(stages),run_id))
+        except Exception:
+            for path,backup in reversed(backups):
+                if backup.exists():backup.replace(path)
+            raise
+        for _,backup in backups:self._cleanup_backup(backup)
+        return len(backups)
+
     @staticmethod
     def _cleanup_backup(backup):
         if backup is not None:
@@ -237,6 +321,46 @@ class ResultFiles:
             item.update(origins.describe(item['path'],sid,rid))
             item['label']=item['display_name']
         return sorted(result,key=lambda item:(item['name'].endswith('_evaluated.csv'),len(item['name']),item['name']))
+
+    @staticmethod
+    def _admet_source_stem(path):
+        import re
+        from .artifact_naming import publication_metadata
+        stem=Path(publication_metadata(path).get('legacy_name',Path(path).name)).stem
+        return re.sub(r'_(?:evaluated|selected|rejected|alerts|BBB[+-]|HIA[+-]|rules_(?:lipinski-veber|lipinski|veber|fragment))$','',stem)
+
+    def admet_alert_page(self,token,pid,rid,sid,filename,offset=0,limit=25,query=''):
+        """One authorized, bounded review table per ADMET input, including history."""
+        from .admet_config import ALERT_CATALOGS
+        from .artifact_naming import output_role
+        if type(offset) is not int or offset<0 or type(limit) is not int or not 1<=limit<=100:
+            raise ValueError('Página de alertas inválida.')
+        datasets=self.admet_datasets(token,pid,rid,sid)
+        if filename not in {d['path'] for d in datasets}:raise AccessDenied('Tabela ADMET não autorizada.')
+        current=Path(filename);stem=self._admet_source_stem(current)
+        related=[Path(d['path']) for d in datasets if Path(d['path']).parent==current.parent and self._admet_source_stem(d['path'])==stem]
+        def priority(path):
+            role=output_role('admet',path,{})
+            return 0 if role.startswith('alerts') else 1 if role=='evaluated' else 2 if role=='compounds' else 3
+        path=min(related,key=priority)
+        source=io.StringIO(self.store.read_file(token,pid,str(path),MAX_VIEW_BYTES+1).decode('utf-8-sig'))
+        reader=csv.DictReader(source);fields=reader.fieldnames or []
+        catalogs=[name for name in ALERT_CATALOGS if 'Alert_'+name in fields]
+        legacy=not catalogs
+        if legacy:
+            config=self.stage(token,pid,rid,sid).get('configuration',{}).get('parameters',{})
+            catalogs=[name for name in config.get('alert_catalogs',['PAINS','BRENK']) if name in ALERT_CATALOGS]
+        rows=[];total=0;query=query.casefold().strip()
+        for record in reader:
+            identifier=record.get('molecule_chembl_id','');details=record.get('StructuralAlerts','')
+            if query and query not in (identifier+' '+details+' '+record.get('canonical_smiles','')).casefold():continue
+            if offset<=total<offset+limit:
+                flags={name:(name+': ' in details if legacy else str(record.get('Alert_'+name,'')).lower() in ('true','1')) for name in catalogs}
+                rows.append(dict(id=identifier,smiles=record.get('canonical_smiles',''),flags=flags,details=details))
+            total+=1
+        origins=self.origins(token,pid,rid)
+        return dict(rows=rows,catalogs=catalogs,total=total,offset=offset,limit=limit,path=str(path),
+                    label=origins.describe(str(path),sid,rid)['display_name'])
 
     def graph_datasets(self,token,pid,rid,sid):
         stage=self.stage(token,pid,rid,sid)
@@ -352,13 +476,16 @@ class ResultFiles:
         if filename not in {c['path'] for c in self.admet_datasets(token,pid,rid,sid)}:
             raise AccessDenied('Tabela ADMET não autorizada.')
         path=self.store.scoped_path(pid,filename)
-        stems=[path.stem]
-        for suffix in ('_evaluated','_selected','_rejected','_BBB+','_BBB-','_HIA+','_HIA-'):
-            if path.stem.endswith(suffix):stems.append(path.stem[:-len(suffix)])
+        from .artifact_naming import publication_metadata
+        original=publication_metadata(path).get('legacy_name',path.name)
+        stems=[Path(original).stem]
+        for suffix in ('_evaluated','_selected','_rejected','_alerts','_rules_lipinski','_rules_veber','_rules_lipinski-veber','_rules_fragment','_BBB+','_BBB-','_HIA+','_HIA-'):
+            if Path(original).stem.endswith(suffix):stems.append(Path(original).stem[:-len(suffix)])
         for stem in stems:
-            report=path.with_name(stem+'_admet_report.json')
-            if str(report) in stage.get('artifacts',[]) and report.is_file():
-                return json.loads(self.store.read_file(token,pid,str(report),MAX_VIEW_BYTES+1))
+            for candidate in stage.get('artifacts',[]):
+                report=Path(candidate)
+                if report.parent==path.parent and publication_metadata(report).get('legacy_name',report.name)==stem+'_admet_report.json' and report.is_file():
+                    return json.loads(self.store.read_file(token,pid,str(report),MAX_VIEW_BYTES+1))
         return None
 
     def admet_model(self, token, pid, rid, sid, filename, subset='all'):

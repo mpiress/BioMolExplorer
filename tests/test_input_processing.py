@@ -27,7 +27,7 @@ class InputProcessingTests(unittest.TestCase):
         self.assertEqual(form.processing.value,pending['configuration'].get('input_processing','individual'))
         form.processing.value=mode
         for rows in form.rows.values():
-            for check,_ in rows:check.value=True
+            for check,_ in rows:check.value=getattr(check,'available',True)
         return self.wait(service.resume(self.token,run['id'],form.read()))
 
     def test_real_fingerprints_similarity_and_graphs_keep_each_dataset_separate(self):
@@ -48,14 +48,15 @@ class InputProcessingTests(unittest.TestCase):
             self.assertEqual(run['status'],'succeeded',run['error'])
             for item in run['stages'][1:]:self.assertEqual(len(item['batches']),2)
             fingerprints=[Path(p) for p in run['stages'][1]['artifacts'] if p.endswith('.csv')]
-            self.assertEqual({p.name for p in fingerprints},{'morgan_alpha.csv','morgan_beta.csv'})
+            self.assertEqual(len(fingerprints),2)
+            self.assertEqual({p.name for p in fingerprints},{'B02__fingerprint__morgan.csv'})
             datasets=[]
             for path in fingerprints:
                 with path.open() as stream:datasets.append({r['molecule_chembl_id'] for r in csv.DictReader(stream)})
             self.assertEqual(datasets,[{'A','B'},{'C','D'}])
             graph_inputs=[b['input_files']['base_input_path'] for b in run['stages'][3]['batches']]
             self.assertEqual([len(paths) for paths in graph_inputs],[1,1])
-            self.assertEqual({Path(paths[0]).name for paths in graph_inputs},{'morgan_alpha.csv','morgan_beta.csv'})
+            self.assertEqual({paths[0] for paths in graph_inputs},{str(p) for p in fingerprints})
         finally:service.close()
 
     def test_real_fingerprint_merge_creates_one_combined_dataset(self):
@@ -72,6 +73,50 @@ class InputProcessingTests(unittest.TestCase):
             with paths[0].open() as stream:self.assertEqual({r['molecule_chembl_id'] for r in csv.DictReader(stream)},{'A','B'})
             self.assertEqual(run['stages'][1]['configuration']['input_processing'],'merge')
         finally:service.close()
+
+    def test_both_reuses_individual_jobs_and_merges_vectors_without_a_worker(self):
+        assets=[self.upload('alpha.csv','name,smiles\nA,CCO\n'),self.upload('beta.csv','name,smiles\nB,CCC\n')]
+        stage=new_stage('fingerprints');stage['input_processing']='individual'
+        stage['bindings']={'base_input_path':{'sources':[{'asset':a} for a in assets]}}
+        self.save([stage]);service=PipelineService(self.store,worker_python=sys.executable,cpu_workers=1)
+        try:
+            first=self.wait(service.submit(self.token,self.project_id))
+            self.assertEqual(first['status'],'succeeded',first.get('error'))
+            stage['input_processing']='both';self.save([stage])
+            with patch.object(service,'_execute_single',wraps=service._execute_single) as execute:
+                run=self.wait(service.submit(self.token,self.project_id))
+                self.assertEqual(run['status'],'succeeded',run.get('error'))
+                self.assertEqual(execute.call_count,0)
+            item=run['stages'][0];self.assertEqual(len(item['batches']),3)
+            self.assertEqual([b['reused'] for b in item['batches']],[True,True,False])
+            combined=item['batches'][-1]
+            self.assertTrue(combined['configuration']['_combined_input'])
+            path=next(Path(p) for p in combined['artifacts'] if p.endswith('.csv'))
+            with path.open() as stream:self.assertEqual({r['molecule_chembl_id'] for r in csv.DictReader(stream)},{'A','B'})
+            from biomolexplorer.artifacts import records
+            from biomolexplorer.artifact_naming import human_name
+            record=next(r for r in records(item) if r['path']==str(path))
+            self.assertIn('ALL',human_name(record))
+            again=self.wait(service.submit(self.token,self.project_id))
+            self.assertEqual(again['status'],'succeeded',again.get('error'))
+            self.assertTrue(again['stages'][0]['reused'])
+        finally:service.close()
+
+    def test_old_full_selector_requests_current_files_without_rerunning_retrieval(self):
+        source=new_stage('retrieve_compounds');stage=new_stage('fingerprints')
+        stage['bindings']={'base_input_path':{'stage':source['id'],'selector':'old_FULL.csv'}}
+        self.save([source,stage]);manager,calls=self.immediate_manager()
+        with patch('biomolexplorer.pipeline.JobManager',manager):
+            service=PipelineService(self.store)
+            try:
+                run=self.wait(service.submit(self.token,self.project_id))
+                self.assertEqual(run['status'],'awaiting_input',run.get('error'))
+                self.assertIn('selection_notice',run['stages'][1])
+                self.assertEqual(len(calls),1)
+                finished=self.confirm_all(service,run,'merge')
+                self.assertEqual(finished['status'],'succeeded',finished.get('error'))
+                self.assertEqual([op for op,_ in calls],['retrieve_compounds','fingerprints'])
+            finally:service.close()
 
     def test_duplicate_names_remain_selectable_cache_reuses_individual_batches_and_mode_change_recalculates(self):
         source,stage=new_stage('retrieve_compounds'),new_stage('fingerprints')
@@ -108,6 +153,26 @@ class InputProcessingTests(unittest.TestCase):
                 self.assertEqual(merged['status'],'succeeded',merged['error'])
                 self.assertEqual(len(calls),4)
                 self.assertFalse(merged['stages'][1].get('reused',False))
+            finally:service.close()
+
+    def test_adding_one_explicit_source_reuses_old_batches_and_computes_only_the_new_one(self):
+        assets=[self.upload(name+'.csv',f'name,smiles\n{name},CCO\n') for name in ('A','B','C')]
+        stage=new_stage('fingerprints');stage['input_processing']='individual';stage['bindings']['base_input_path']={
+            'sources':[{'asset':asset} for asset in assets[:2]]}
+        self.save([stage])
+        manager,calls=self.immediate_manager()
+        with patch('biomolexplorer.pipeline.JobManager',manager):
+            service=PipelineService(self.store)
+            try:
+                first=self.wait(service.submit(self.token,self.project_id))
+                self.assertEqual(first['status'],'succeeded',first['error'])
+                self.assertEqual(len(first['stages'][0]['batches']),2)
+                stage['bindings']['base_input_path']['sources'].append({'asset':assets[2]})
+                self.save([stage])
+                second=self.wait(service.submit(self.token,self.project_id))
+                self.assertEqual(second['status'],'succeeded',second['error'])
+                self.assertEqual([b['reused'] for b in second['stages'][0]['batches']],[True,True,False])
+                self.assertEqual([op for op,_ in calls],['fingerprints','fingerprints','fingerprints'])
             finally:service.close()
 
     def test_multiple_input_ports_create_file_combinations_and_invalid_modes_are_rejected(self):
@@ -172,6 +237,26 @@ class InputProcessingTests(unittest.TestCase):
                 params=service._resolve(self.project_id,self.store.user(self.token)['id'],variant,{source['id']:paths})
                 self.assertEqual(params['pdb_codes'],[[code,'LIG',1,'A']])
                 self.assertEqual(set(params['preparation_pairs']),{f'{code}|LIG|1|A'})
+        finally:service.close()
+
+    def test_redocking_curated_pair_repairs_stale_retrieval_metadata(self):
+        source,stage=new_stage('retrieve_structures'),new_stage('redocking')
+        root=self.store.project_dir(self.project_id)/'structures';root.mkdir()
+        pdb=root/'1ABC.pdb'
+        pdb.write_text('ATOM      1  C   ALA A   2       0.000   0.000   0.000  1.00  0.00           C\n'
+                       'HETATM    2  C   NEW A   7       0.000   0.000   0.000  1.00  0.00           C\n')
+        metadata=root/'pdb_codes.csv'
+        metadata.write_text('PDB_CODE,LIGAND,RESNUM,CHAIN,RESOLUTION\n2ABC,OLD,1,A,2.0\n')
+        stage['parameters']['pdb_codes']=[['1ABC','NEW',7,'A',1.8]]
+        stage['bindings']['base_input_path']={'stage':source['id'],'selector':'1ABC.pdb'}
+        service=PipelineService(self.store)
+        try:
+            params=service._resolve(self.project_id,self.store.user(self.token)['id'],stage,
+                                    {source['id']:[str(pdb),str(metadata)]})
+            with (Path(params['base_input_path'])/'MeuAlvo'/'pdb_codes.csv').open() as stream:
+                rows=list(csv.DictReader(stream))
+            self.assertEqual([(r['PDB_CODE'],r['LIGAND'],r['RESNUM'],r['CHAIN']) for r in rows],
+                             [('1ABC','NEW','7','A')])
         finally:service.close()
 
     def test_merge_prepared_outputs_combines_their_metadata_and_centers(self):

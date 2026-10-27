@@ -120,6 +120,7 @@
         @media(max-width:480px){.site-wordmark{width:64px;height:64px}}
 
         .hero-buttons a:last-child { margin-left: auto; }
+        .hero-buttons a { justify-content: center; text-align: center; }
         @media (min-width: 1024px) {
             .hero-copy { display: flex; flex-direction: column; }
             .hero-copy .hero-badge { align-self: flex-start; }
@@ -176,6 +177,9 @@
             section h2.text-4xl { font-size: 1.875rem; line-height: 1.2; }
             .hero-gradient .hero-heading { font-size: clamp(2rem, 9vw, 3rem); }
             .hero-gradient .hero-badge { letter-spacing: .08em; font-size: 10px; }
+            .hero-buttons { flex-direction: column; align-items: stretch; }
+            .hero-buttons a { width: 100%; min-height: 48px; }
+            .hero-buttons a:last-child { margin-left: 0; }
             .hero-gradient .hero-panel, #workflow .p-10 { padding: 24px; }
             main .text-justify { text-align: left; }
             .grid.gap-16, .grid.gap-14 { gap: 32px; }
@@ -255,7 +259,7 @@
                     </h1>
 
                     <p class="mt-8 text-lg text-slate-400 leading-relaxed max-w-3xl text-justify">
-                        Retrieve molecular data, build the pipeline your study needs, and keep its inputs, settings and results together. BioMolExplorer combines a Flet workspace with Python services for similarity analysis, graph selection, ADMET screening, preparation, redocking and docking.
+                        Retrieve molecular data, build the pipeline your study needs, and keep its inputs, settings and results together. BioMolExplorer combines a Flet workspace with Python services for similarity analysis, indexed graph exploration, ADMET screening, preparation, redocking, docking and molecular dynamics.
                     </p>
 
                     <div class="hero-buttons flex flex-wrap justify-between items-center gap-3 mt-7 mb-8">
@@ -509,10 +513,10 @@
                 </p>
             </div>
 
-            <div class="grid md:grid-cols-2 xl:grid-cols-4 gap-6 mt-16">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-16">
 
                 <div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-card card-hover">
-                    <div class="w-16 h-20 rounded-2xl bg-emerald-100 text-brand-primary flex items-center justify-center text-2xl mb-6">
+                    <div class="w-16 h-16 rounded-2xl bg-emerald-100 text-brand-primary flex items-center justify-center text-2xl mb-6">
                         <i class="fa-solid fa-cloud-arrow-down"></i>
                     </div>
 
@@ -588,7 +592,18 @@
 
                     <h3 class="text-xl font-bold text-slate-900 mb-4">Consensus Docking</h3>
                     <p class="text-slate-600 text-sm leading-relaxed text-justify">
-                        Independent AutoDock Vina and DOCK6 docking from retrieved or imported compounds, with pose exchange in both directions. Consensus ranks common compound/receptor pairs with sortable normalized scores.
+                        Independent Vina and DOCK6 docking with native structure selection, trusted crystal-ligand chemistry, ff14SB/GAFF preparation and AmberTools/sander minimization. Meeko exports Vina inputs; direct Antechamber charges are retained for DOCK6. Verified caches avoid repeated work. Chimera is an explicit legacy option.
+                    </p>
+                </div>
+
+                <div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-card card-hover">
+                    <div class="w-16 h-16 rounded-2xl bg-fuchsia-100 text-fuchsia-700 flex items-center justify-center text-2xl mb-6">
+                        <i class="fa-solid fa-wave-square"></i>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-slate-900 mb-4">Molecular Dynamics</h3>
+                    <p class="text-slate-600 text-sm leading-relaxed text-justify">
+                        Explicitly select receptor–ligand pairs for DOCK6 AMBER Score and optional AmberTools sander trajectories. Indexed preparation reuse and per-pair panels provide separate protein/ligand RMSD, RMSF and interface analyses for short implicit-solvent refinement—not binding free energy.
                     </p>
                 </div>
 
@@ -625,7 +640,7 @@
             <p class="text-slate-600 mt-6">Prepared receptors must include the metadata and files expected by the docking protocol. See the <a href="docs/en/frontend.html#using-your-own-files" class="text-emerald-700 underline font-semibold">input format guide</a>.</p>
             <div class="mt-8 border border-slate-200 bg-white rounded-2xl p-6">
                 <h3 class="font-bold text-slate-900">Keep large experiments moving</h3>
-                <p class="text-slate-600 mt-2 leading-relaxed">Prepared receptors are reused; Vina affinity maps are shared within compatible batches, and DOCK6 grids within each receptor/site. Scientific commands have no implicit duration limit. Compounds that fail preparation or individual DOCK6 calculations are listed separately while the remaining candidates continue.</p>
+                <p class="text-slate-600 mt-2 leading-relaxed">Redocking and docking use a project-scoped indexed cache with verified per-item checkpoints. Adding compounds or PDB pairs runs only missing calculations; compatible preparations, Vina poses and DOCK6 sites, grids, minimizations and footprints are reused. Completed items survive interrupted batches. Input, scientific parameter and tool changes invalidate affected calculations, while the existing reuse choice controls recovery. Vina maps remain shared within compatible batches. Individual failures are reported without discarding completed candidates.</p>
                 <p class="text-slate-600 mt-3 leading-relaxed">Completed runs bring stage summaries, tables, visual results and logs together. Remove obsolete stage results with confirmation and restore files through project history.</p>
             </div>
             <div class="workspace-links flex flex-wrap items-center gap-3 mt-6">
@@ -792,8 +807,8 @@
             <h2 class="text-4xl font-black mt-3">Run the workspace in your scientific environment</h2>
             <p class="text-slate-300 mt-6 max-w-3xl leading-relaxed">Download the <a href="https://github.com/mpiress/BioMolExplorer" class="text-emerald-300 underline">GitHub project</a> using Git or Code → Download ZIP, then open a terminal in the source code folder. The Python package requires Python 3.12 or newer.</p>
             <div class="mt-6 rounded-2xl border border-amber-400/40 bg-amber-400/10 p-6">
-                <p class="font-bold text-amber-200">Before starting: install UCSF Chimera 1.17 and DOCK6 6.11.</p>
-                <p class="text-slate-300 mt-3">These tools must be installed and configured on the computer running calculations. Installing the Python package or Conda environment does not install them. The interface may open without them, but dependent preparation, redocking and docking stages will fail.</p>
+                <p class="font-bold text-amber-200">Standard preparation: configure AmberTools. DOCK6 is required for its docking protocols.</p>
+                <p class="text-slate-300 mt-3">Python/Gemmi selects structures; ff14SB/GAFF and AmberTools prepare and minimize receptors and ligands. Vina uses Meeko and DOCK6 receives assigned MOL2 charges. Chimera 1.17 is optional, used only for explicitly selected legacy or special-system protocols. <a href="docs/en/chimera_migration.html" class="text-emerald-300 underline">Scientific changes and validation limits</a>.</p>
                 <p class="mt-3"><a href="docs/en/installation.html" class="text-emerald-300 underline">Installation and executable checks (English)</a> · <a href="docs/pt/installation.html" class="text-emerald-300 underline">Instalação e verificação (Português)</a></p>
             </div>
             <div class="grid lg:grid-cols-2 gap-8 mt-10">
@@ -813,7 +828,7 @@ biomolexplorer-ui --web --dock6-path /path/to/dock6-6.11</code></pre>
   --data-dir ./workspace-data \
   --worker-python /path/to/python \
   --dock6-path /path/to/dock6-6.11</code></pre>
-                    <p class="text-slate-300 mt-5">Check Chimera 1.17, DOCK6 6.11 and the DOCK6 accessory programs on PATH before starting. Molecular surfaces are generated by the native Python SES implementation; a standalone DMS executable is not required. Open Babel and Vina are also required by their protocols. Pass the complete DOCK6 installation root, containing bin/ and parameters/, to --dock6-path.</p>
+                    <p class="text-slate-300 mt-5">Create the isolated <code>requirements-ambertools.yml</code> environment and configure its root in preparation settings or <code>BIOMOL_AMBERTOOLS_PATH</code>. Standard preparation needs antechamber, parmchk2 and tleap; minimization also needs sander. Do not inject that environment's libraries into the main Python process. Vina and DOCK6 are required by their respective protocols; pass the complete DOCK6 root, containing bin/ and parameters/, to --dock6-path. Molecular surfaces use native Python SES, without standalone DMS. Chimera is only needed for explicit legacy execution.</p>
                 </div>
             </div>
             <p class="text-slate-300 mt-8">Use the <a href="docs/en/frontend.html" class="text-emerald-300 underline">workspace guide</a> for accounts and pipelines, or the <a href="docs/en/backend_usage.html" class="text-emerald-300 underline">backend guide</a> for CLI usage and parameters. The current executor uses a local Linux backend, SQLite and a bounded queue; see <a href="docs/en/architecture.html#limitations-and-evolution" class="text-emerald-300 underline">deployment and scientific limitations</a>.</p>
@@ -1138,7 +1153,7 @@ biomolexplorer-ui --web --dock6-path /path/to/dock6-6.11</code></pre>
             title: 'Filter by graphs',
             description: 'Explore the network and its largest connected component (MCC), then pass its selected molecules to screening.',
             fields: [['Input', 'Similarity CSV from the previous block'], ['Selection', 'Largest connected component (MCC)'], ['Common fragment search limit', 'No time limit (0 s)']],
-            result: 'Interactive networks, common-fragment figures and selected compound tables. Choose the relevant analysis table as the ADMET input.'
+            result: 'An indexed full-graph table, interactive network, common-fragment figures and an MCC compatibility table. Components are filtered or exported on demand.'
         },
         admet: {
             title: 'ADMET profiling',

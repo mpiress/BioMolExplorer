@@ -138,7 +138,7 @@ class ProjectPortabilityTests(unittest.TestCase):
         item=run['stages'][0]
         self.assertEqual(len(item['input_files']['base_input_path']),2)
         import pandas as pd
-        file=next(p for p in item['artifacts'] if p.endswith('selected_compounds.csv'))
+        file=next(p for p in item['artifacts'] if p.endswith('__admet__alerts.csv'))
         self.assertEqual(set(pd.read_csv(file).molecule_chembl_id),{'MOL1','MOL2','MOL3'})
 
     def test_mouse_connections_can_have_multiple_origins(self):

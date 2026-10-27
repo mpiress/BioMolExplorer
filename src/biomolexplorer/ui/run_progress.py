@@ -1,6 +1,7 @@
 """Accessible run feedback, independent of the pipeline editor's redraws."""
 import time
 import flet as ft
+from .branding import processing_emblem
 from .localization import verbatim, stage_control, Translator, default_stage_names
 from .feedback import readable_error
 
@@ -26,18 +27,20 @@ class RunProgress:
         self.reopen_requested = False
         self.cancel_pending = False
         self.heading = ft.Text(size=22, weight=ft.FontWeight.W_600)
+        self.emblem=processing_emblem(64)
         self.message = ft.Text(size=15, selectable=True)
         self.message_semantics = ft.Semantics(container=True, exclude_semantics=True, content=self.message)
         self.timing = ft.Text(size=13, color='#64748B')
         self.count = ft.Text(size=13, color='#64748B')
-        self.bar = ft.ProgressBar(color='#2563EB')
+        self.bar = self.emblem._processing_ring
         self.rows = ft.Column(spacing=12)
         self.error = ft.Text(color='#B91C1C', selectable=True)
         self.error_semantics = ft.Semantics(container=True, exclude_semantics=True, content=self.error)
         self.hint = ft.Text(size=13, color='#64748B')
         self.badge_text = ft.Text(size=14, weight=ft.FontWeight.W_600)
+        self.badge_emblem=processing_emblem(28)
         self.badge = ft.Container(bgcolor='#EAF1FF', padding=14, border_radius=12,
-            content=ft.Row([ft.Icon(ft.Icons.TIMELAPSE, color='#2563EB'),
+            content=ft.Row([self.badge_emblem,
                 ft.Container(self.badge_text, expand=True),
                 ft.TextButton('Acompanhar execução', on_click=lambda e: self.show())]))
         self.minimize = ft.TextButton('Minimizar', on_click=self.dismiss)
@@ -45,9 +48,9 @@ class RunProgress:
         self.log = ft.TextButton('Ver log da etapa', on_click=self.open_log)
         self.results = ft.TextButton('Ver resultados', on_click=self.open_results)
         self.configure = ft.TextButton('Configurar entradas e continuar', on_click=self.configure_pending)
-        self.dialog = ft.AlertDialog(modal=True, title=self.heading,
+        self.dialog = ft.AlertDialog(modal=True, title=ft.Row([self.emblem,ft.Container(self.heading,expand=True)],spacing=16),
             content=ft.Container(width=600, height=max(220, min(420, 260 + len(run['stages']) * 34, (ui.page.height or 900) - 260)),
-                content=ft.Column([self.message_semantics, self.bar, self.timing, self.count, self.rows,
+                content=ft.Column([self.message_semantics, self.timing, self.count, self.rows,
                                    self.error_semantics, self.hint], spacing=18, scroll=ft.ScrollMode.AUTO)),
             actions=[self.configure, self.log, self.cancel, self.minimize, self.results],
             on_dismiss=self.dismissed)
@@ -119,6 +122,8 @@ class RunProgress:
     def update(self, run, now=None):
         self.run = run
         active = run['status'] in ACTIVE
+        self.emblem.visible=run['status'] in ('queued','running')
+        self.badge_emblem.visible=self.emblem.visible
         waiting = run['status']=='awaiting_input'
         current = next((s for s in run['stages'] if s['status'] == 'running'), None) if active else None
         self.heading.value = {'queued': 'Pipeline na fila', 'running': 'Seu pipeline está em execução',
@@ -126,9 +131,13 @@ class RunProgress:
             'succeeded': 'Pipeline concluído', 'failed': 'A execução encontrou um erro',
             'cancelled': 'Execução cancelada', 'interrupted': 'Execução interrompida'}.get(run['status'], 'Acompanhamento do pipeline')
         phase = (current or {}).get('progress') or {}
+        computed=[s for s in run['stages'] if s.get('operation')!='import_results' and not s.get('provided')]
+        removed=not active and any(s.get('outputs_removed') for s in computed) and not any(s.get('artifacts') for s in computed)
+        if removed:self.heading.value='Resultados excluídos'
         self.message.value = (run.get('error') or 'Configure as entradas do próximo bloco.' if waiting else
             f"Etapa atual: {current['name']}\n{phase.get('message') or 'Processando os dados…'}" if current else
             'Aguardando um executor disponível…' if active else
+            'Resultados excluídos. Execute os blocos para gerar novamente.' if removed else
             'Os arquivos gerados estão disponíveis na aba Execuções.' if run['status'] == 'succeeded' else
             'Consulte o log da etapa para entender o ocorrido antes de executar novamente.')
         if active and isinstance(phase.get('completed'), int) and isinstance(phase.get('total'), int):
@@ -151,10 +160,11 @@ class RunProgress:
             'Consultas externas podem demorar e repetir tentativas automaticamente. Você pode minimizar esta janela; a execução continua.' if current and current['operation'] in ('retrieve_compounds', 'retrieve_pubchem', 'expand_similar_compounds', 'retrieve_complex', 'retrieve_zinc') else
             'Você pode minimizar esta janela e continuar usando o projeto.' if active else
             'Os detalhes técnicos e os resultados ficam na aba Execuções.')
-        self.rows.controls = [ft.Row([ft.Icon(ft.Icons.CHECK_CIRCLE if s['status'] == 'succeeded' else
+        from .run_presentation import result_state
+        self.rows.controls = [ft.Row([ft.Icon(ft.Icons.DELETE_OUTLINE if result_state(s)[0]=='removed' else ft.Icons.CHECK_CIRCLE if s['status'] == 'succeeded' else
                 ft.Icons.ERROR_OUTLINE if s['status'] == 'failed' else ft.Icons.TIMELAPSE,
-                color='#15803D' if s['status'] == 'succeeded' else '#B91C1C' if s['status'] == 'failed' else '#64748B', size=19),
-            stage_control(ft.Text(s['name'], expand=True),s), ft.Text('Reaproveitado' if s.get('reused') else 'Resultados fornecidos' if s.get('provided') else LABELS[s['status']], size=12)], spacing=10) for s in run['stages']]
+                color='#64748B' if result_state(s)[0]=='removed' else '#15803D' if s['status'] == 'succeeded' else '#B91C1C' if s['status'] == 'failed' else '#64748B', size=19),
+            stage_control(ft.Text(s['name'], expand=True),s), ft.Text(result_state(s)[1], size=12)], spacing=10) for s in run['stages']]
         self.log.visible = any(s.get('log_path') for s in run['stages'])
         self.cancel.visible = active and self.ui.current is not None and self.ui.current['role'] != 'viewer'
         self.cancel.disabled = self.cancel_pending

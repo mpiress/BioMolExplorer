@@ -1,6 +1,7 @@
 """Lazy, inline stage results: compound tables, ADMET explorer and file tables."""
 from pathlib import Path
 import flet as ft
+from .processing import save_file
 from biomolexplorer.compound_tables import CompoundTables
 from biomolexplorer.result_files import ResultFiles,FILTERS
 from .compound_table import CompoundTableViewer
@@ -17,7 +18,7 @@ class StageResults:
         self.writable=writable;self.child=None
         self.service=ResultFiles(ui.store)
         self.root=ft.Column([ft.Text('Expanda para consultar os resultados.',size=13,color='#64748B')],spacing=20)
-        self.loading=ft.ProgressBar(visible=False)
+        self.loading=ft.Container(visible=False)
         self.graph=ft.Column(spacing=16)
 
     def valid(self):
@@ -39,10 +40,23 @@ class StageResults:
     async def load(self):
         if not self.valid() or self.loaded or self.loading_results:return
         self.loading_results=True
-        self.root.controls=[ft.ProgressBar(),ft.Text('Carregando resultados…',size=13)]
+        self.root.controls=[ft.Text('Carregando resultados…',size=13)]
         self.ui.page.update()
         try:
             operation=self.stage['operation']
+            if self.stage.get('outputs_removed') and not self.stage.get('artifacts'):
+                self.root.controls=[ft.Text('Resultados excluídos. Execute o bloco para gerar novamente. O histórico e os logs foram preservados.')]
+                self.loaded=True;self.ui.page.update();return
+            if self.stage.get('results_stale'):
+                self.root.controls=[ft.Text('As entradas destes resultados foram removidas ou alteradas. Execute o bloco para atualizar a seleção.')]
+                self.loaded=True;self.ui.page.update();return
+            if operation=='dynamics_dock6':
+                from biomolexplorer.md_results import MDResults
+                from .md_results import MDResultsTable
+                rows=await self.ui.call(MDResults(self.ui.store).pairs,self.token,self.project_id,self.run_id,self.stage['id'])
+                if not self.valid():return
+                self.child=MDResultsTable(self,rows)
+                self.root.controls=[self.child.build()];self.loaded=True;self.ui.page.update();return
             if operation in ('docking_vina','docking_dock6','consensus'):
                 if self.stage.get('skip_reason'):
                     self.root.controls=[ft.Text(self.stage['skip_reason'])]
@@ -157,18 +171,25 @@ class StageResults:
                     if not self.valid() or sequence!=self.sequence:return
                     data=await self.ui.call(self.service.admet_png if kind=='png' else self.service.admet_csv,
                         self.token,self.project_id,self.run_id,self.stage['id'],filename,subset)
-                    name=Path(filename).stem+('' if subset=='all' else '_'+subset)+('_egg.png' if kind=='png' else '.csv')
-                    if self.valid() and sequence==self.sequence:await self.ui.picker.save_file(file_name=name,src_bytes=data)
+                    source_name=Path((model.get('admet_report') or {}).get('source_input','')).stem
+                    prefix=source_name+'__' if source_name else ''
+                    name=prefix+Path(filename).stem+('' if subset=='all' else '_'+subset)+('_egg.png' if kind=='png' else '.csv')
+                    if self.valid() and sequence==self.sequence:await save_file(self.ui,file_name=name,src_bytes=data)
                 await self.ui.guard(save)
             async def png(e):await download('png')
             async def csv(e):await download('csv')
+            async def alerts(e):
+                from .admet_alerts import ADMETAlertTable
+                await self.ui.guard(ADMETAlertTable(self,filename).open)
             buttons=[ft.Button('Baixar gráfico EGG',icon=ft.Icons.DOWNLOAD,on_click=png),
-                     ft.Button('Baixar arquivo selecionado',icon=ft.Icons.DOWNLOAD,on_click=csv)]
+                     ft.Button('Baixar arquivo selecionado',icon=ft.Icons.DOWNLOAD,on_click=csv),
+                     ft.Button('Ver alertas químicos',icon=ft.Icons.TABLE_CHART_OUTLINED,on_click=alerts,
+                        disabled=(model.get('admet_report') or {}).get('configuration',self.stage.get('configuration',{}).get('parameters',{})).get('alert_catalogs')==[])]
             if model.get('admet_report'):
                 async def report(e):
                     import json
                     data=json.dumps(model['admet_report'],ensure_ascii=False,indent=2).encode()
-                    await self.ui.guard(lambda:self.ui.picker.save_file(file_name=Path(filename).stem+'_admet_report.json',src_bytes=data))
+                    await self.ui.guard(lambda:save_file(self.ui,file_name=Path(filename).stem+'_admet_report.json',src_bytes=data))
                 buttons.append(ft.Button('Baixar critérios e métodos ADMET',icon=ft.Icons.DOWNLOAD,on_click=report))
             self.child=ResultsViewer(self.ui,self.project_id,model,popup=True,actions=buttons)
             self.graph.controls=[self.child.build()];self.ui.page.update()
@@ -198,7 +219,7 @@ class StageResults:
                     data=await self.ui.call(self.service.graph_png if kind=='png' else self.service.graph_mcc_csv,
                         self.token,self.project_id,self.run_id,self.stage['id'],filename)
                     name=Path(filename).name.removesuffix('.biomol-view.json')+('_mcc_apresentacao.png' if kind=='png' else '_mcc.csv')
-                    if self.valid() and sequence==self.sequence:await self.ui.picker.save_file(file_name=name,src_bytes=data)
+                    if self.valid() and sequence==self.sequence:await save_file(self.ui,file_name=name,src_bytes=data)
                 await self.ui.guard(save)
             async def png(e):await download('png')
             async def csv(e):await download('csv')

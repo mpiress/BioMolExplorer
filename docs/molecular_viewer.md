@@ -8,6 +8,12 @@ permanecem na aplicação; a visualização não envia estruturas a serviços ex
 
 ## Abrir a estrutura ou o resultado
 
+No navegador, o botão **3D** dos resultados abre uma nova aba diretamente no
+clique, evitando o bloqueio de popups após processamento no servidor. O
+visualizador mostra o carregamento enquanto prepara a cena. A autorização e a
+disponibilidade dos arquivos são verificadas novamente antes de entregar os dados.
+Na aplicação desktop, a abertura continua pelo navegador externo.
+
 | Origem | Ação e conteúdo |
 | --- | --- |
 | PDB recuperado ou arquivo molecular | **Visualizar estrutura 3D** abre o arquivo selecionado |

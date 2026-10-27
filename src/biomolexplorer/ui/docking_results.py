@@ -45,7 +45,9 @@ class DockingResultsTable(CompoundTableViewer):
             actions=[]
             for column,label in (('vina_pose','3D Vina'),('dock6_pose','3D DOCK6')) if 'vina_pose' in fields else (('conformer_file','3D'),):
                 async def preview(e,row=row,column=column):await self.ui.guard(lambda:self.pose_preview(row,column))
-                actions.append(ft.TextButton(label,on_click=preview,disabled=not bool(fields.get(column))))
+                url=self.view_url(row,column) if fields.get(column) else None
+                actions.append(ft.TextButton(label,on_click=None if url else preview,disabled=not bool(fields.get(column)),
+                    url=ft.Url(url,target=ft.UrlTarget.BLANK) if url else None))
             async def contacts(e,row=row):await self.ui.guard(lambda:self.contacts(row))
             actions.append(ft.TextButton('Resíduos',icon=ft.Icons.SCIENCE_OUTLINED,on_click=contacts,
                 disabled=not bool(fields.get('vina_pose') or fields.get('conformer_file'))))
@@ -57,6 +59,11 @@ class DockingResultsTable(CompoundTableViewer):
             rows.append(ft.DataRow(cells=[ft.DataCell(verbatim(ft.Text(str(v),selectable=True))) for v in values]+
                                      [ft.DataCell(ft.Row(actions,spacing=2))]))
         self.table.rows=rows;self.ui.page.update()
+
+    def view_url(self,row,column):
+        if not getattr(self.ui.page,'web',False):return None
+        selection=dict(table=self.selector.value,index=row['index'],version=self.data['version'],column=column)
+        return self.ui.docking_view_url(self.project_id,self.run_id,self.stage_id,'docking',selection,self.token,name=str(row['id'])+' · Docking')
 
     async def pose_preview(self,row,column):
         if not self.valid():return
@@ -72,7 +79,8 @@ class DockingResultsTable(CompoundTableViewer):
             column='vina_pose' if row['properties'].get('vina_pose') else 'conformer_file')
         await residue_dialog(self.ui,self.project_id,
             lambda:self.service.scene(self.token,self.project_id,self.run_id,self.stage_id,**selection),
-            lambda:self.valid() and sequence==self.sequence,lambda:self.pose_preview(row,selection['column']))
+            lambda:self.valid() and sequence==self.sequence,lambda:self.pose_preview(row,selection['column']),
+            open_3d_url=self.view_url(row,selection['column']))
 
     async def footprint(self,row):
         if not self.valid():return

@@ -38,11 +38,15 @@ def sync_curated_pairs(pipeline, producer_id, path, artifacts, previous, curated
         params = stage['parameters']
         original = params.get('pdb_codes') or []
         settings = deepcopy(params.get('preparation_pairs') or {})
+        # Newly curated receptors join the same general preparation policy.
+        first=next((settings[pair_key(row)] for row in original if pair_key(row) in settings),{})
+        general={key:deepcopy(first[key]) for key in
+            ('receptor','ligand','preparation_backend','ambertools_path','ambertools_env','vina_charge_policy') if key in first}
         receptors = {}
         for row in original:
             config = settings.get(pair_key(row), {})
             receptors.setdefault((str(row[0]).upper(), row[3]),
-                {key: deepcopy(config[key]) for key in ('cofactors', 'receptor') if key in config})
+                {key: deepcopy(config[key]) for key in ('cofactors','receptor','ligand','preparation_backend','ambertools_path','ambertools_env','vina_charge_policy') if key in config})
         records = [row for row in original if pair_key(row) not in removed]
         keys = {pair_key(row) for row in records}
         for row in selected:
@@ -50,7 +54,7 @@ def sync_curated_pairs(pipeline, producer_id, path, artifacts, previous, curated
             if key in keys:
                 continue
             records.append(row); keys.add(key); added += 1
-            config = receptors.get((code, row[3]))
+            config = dict(deepcopy(general),**deepcopy(receptors.get((code,row[3]),{})))
             if config:
                 settings[key] = deepcopy(config)
         settings = {key: value for key, value in settings.items() if key in keys}

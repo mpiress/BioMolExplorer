@@ -294,7 +294,8 @@ class WorkspaceTests(unittest.TestCase):
         service=PipelineService(self.store)
         try:
             params=service._resolve(self.pid,self.store.user(self.owner)['id'],downstream,results)
-            self.assertEqual(params['input_file'],'selected_compounds.csv')
+            self.assertEqual(params['input_file'],'molecules_BBB+.csv')
+            self.assertEqual(Path(params['base_input_path']),root)
             self.assertTrue((Path(params['base_input_path'])/params['input_file']).is_file())
             original=root/'ChEMBL'/'molecules'/'CHEMBL220'/'original.csv'
             original.parent.mkdir(parents=True)

@@ -22,8 +22,10 @@ TITLES = {
  'docking_vina': ('Docking com Vina', 'Execute a seleção de compostos contra receptores preparados.', 'Docking'),
  'docking_dock6': ('Docking com DOCK6', 'Refine conformações e obtenha scores e footprints.', 'Docking'),
  'consensus': ('Consenso de docking', 'Combine resultados Vina e DOCK6.', 'Docking'),
+ 'dynamics_dock6': ('Dinâmica com Dock6','Refine pares receptor–ligante com AMBER Score e gere trajetórias com AmberTools.','Dinâmica Molecular'),
 }
 LABELS = {
+ 'redocking_engine':'Motor de redocking',
  'preparation_options': 'Preparação do receptor e ligante',
  'reference_source':'Origem das referências PubChem','reference_type':'Tipo da referência PubChem',
  'reference':'Referência PubChem','selection_mode':'Referências para buscar similares','compound_id':'Composto de referência',
@@ -64,6 +66,7 @@ PATH_FIELDS = {'base_input_path','base_selected_mols','base_vina_path','base_doc
 from .retrieval import MODES
 
 ENUMS = {
+ 'redocking_engine':['vina','dock6'],
  'ligand_selection':['recommended','all'],
  'docking_engines':['vina','dock6','both'],
  'reference_source':['compounds','manual'],'reference_type':['smiles','cid','name'],'selection_mode':['all','single'],
@@ -96,6 +99,7 @@ def operation_fields(operation):
     defaults = dict(zip([a.arg for a in node.args.args][-len(node.args.defaults):], node.args.defaults)) if node.args.defaults else {}
     fields = []
     for key in spec.required + spec.optional:
+        if operation=='dynamics_dock6' and key in ('md_inputs','md_seed_path','selected_pairs','excluded_pairs'):continue
         if key=='verbose':continue
         if operation=='docking_dock6' and key=='base_vina_path':continue
         if operation=='retrieve_compounds' and key in ('include_pubchem','pubchem_threshold','pubchem_max_records'):continue
@@ -114,6 +118,11 @@ def operation_fields(operation):
 
 
 def field_label(operation, key):
+    if operation=='dynamics_dock6':
+        if key=='base_input_path':return 'Receptores PDB para dinâmica'
+        if key=='base_selected_mols':return 'Compostos para dinâmica'
+        if key=='ambertools_path':return 'Instalação AmberTools (opcional; pasta com bin/)'
+        if key=='ambertools_env':return 'Ambiente Conda AmberTools (padrão: BioMolExplorer-AmberTools)'
     if operation=='retrieve_zinc' and key=='download_workers':return 'Downloads simultâneos'
     if operation=='retrieve_zinc' and key=='base_input_path':return 'Lista de downloads das tranches ZINC'
     if operation=='prepare_structures':
@@ -133,7 +142,7 @@ def template_names(operation):
         names += [f'chimera/{p.name}' for p in sorted((SOURCE_ROOT / 'biomolexplorer/resources/chimera').glob('*.template'))]
     if operation in ('redocking','docking_vina'):
         names += ['vina/config.template']
-    if operation == 'docking_dock6':
+    if operation in ('redocking','docking_dock6'):
         names += [f'dock6/{p.name}' for p in sorted((SOURCE_ROOT / 'biomolexplorer/resources/dock6').glob('*.template'))]
     return names
 
@@ -153,6 +162,9 @@ def new_stage(operation):
             parameters['target'] = 'MeuAlvo'
         if 'mol_filename' in OPERATIONS[operation].required:
             parameters['mol_filename'] = 'molecules'
+    if operation in ('prepare_structures','docking_vina','docking_dock6'):
+        from .redocking_config import chimera_preparation
+        parameters['preparation_options']=chimera_preparation(parameters.get('preparation_options'))
     stage = {'id': uuid4().hex, 'operation': operation, 'name': TITLES[operation][0],
             'enabled': True, 'parameters': parameters, 'bindings': {}, 'depends_on': [], 'templates': {}}
     if operation in ('retrieve_compounds', 'retrieve_structures', 'retrieve_zinc'):

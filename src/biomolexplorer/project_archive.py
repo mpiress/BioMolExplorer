@@ -207,7 +207,7 @@ def import_project(store, token, archive_path, directory):
             with store.connect() as db:
                 imported = db.execute("SELECT 1 FROM project_history WHERE project_id=? AND action='import'", (project['id'],)).fetchone()
                 if not imported:
-                    for table in ('project_history', 'members', 'assets', 'runs', 'uploads', 'project_locations', 'projects'):
+                    for table in ('project_history', 'members', 'assets', 'runs', 'uploads', 'project_locations','block_ids', 'projects'):
                         column = 'id' if table == 'projects' else 'project_id'
                         db.execute(f'DELETE FROM {table} WHERE {column}=?', (project['id'],))
                     shutil.rmtree(Path(project['directory']), ignore_errors=True)

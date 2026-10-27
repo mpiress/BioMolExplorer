@@ -1,6 +1,7 @@
 """Reusable paginated file lists with actions aligned on the right."""
 from pathlib import Path
 import flet as ft
+from .processing import save_file
 from .removal import RemovalProgress
 from .feedback import close_dialog
 from .localization import verbatim
@@ -50,7 +51,7 @@ class FileTable:
                     if not self.valid():return
                     if self.download_action:return await self.download_action(item)
                     data=await self.ui.call(self.ui.store.read_file,self.token,self.project_id,item['path'])
-                    if self.valid():await self.ui.picker.save_file(file_name=item['name'],src_bytes=data)
+                    if self.valid():await save_file(self.ui,file_name=item['name'],src_bytes=data)
                 await self.ui.guard(action)
             actions=[ft.IconButton(ft.Icons.DOWNLOAD,tooltip='Baixar '+item['name'],on_click=download)]
             if self.preview_action and (str(item.get('path','')).endswith('.biomol-view.json') or Path(item['name']).suffix.lower() in ('.png','.jpg','.jpeg')):
@@ -93,7 +94,7 @@ class FileTable:
         dialog=ft.AlertDialog(modal=True,title=ft.Text('Remover arquivo?',size=22),
             content=ft.Column([verbatim(ft.Text(item['name'])),ft.Text('O arquivo deixará de estar disponível. A próxima execução recalculará a etapa se necessário. O histórico permite restaurar o estado anterior.')],tight=True,spacing=16),
             actions=[ft.TextButton('Manter arquivo',on_click=lambda e:close_dialog(self.ui.page,dialog)),ft.TextButton('Remover arquivo',on_click=remove)])
-        progress=RemovalProgress(self.ui,dialog)
+        progress=RemovalProgress(self.ui,dialog,'Excluindo arquivo…')
         self.ui.page.show_dialog(dialog)
 
     def build(self):

@@ -33,6 +33,13 @@ OPTIONS = {
     'alert_policy':['annotate','exclude'],
 }
 PARAMETERS=set(OPTIONS)|{'max_rule_violations','alert_catalogs','property_limits'}
+ALERT_CATALOGS = {
+    'PAINS':'Subestruturas associadas a interferência promíscua em ensaios (pan-assay interference); são sinais para revisão, não prova de toxicidade.',
+    'BRENK':'Grupos estruturalmente indesejáveis ou reativos descritos para triagem medicinal, incluindo motivos com risco farmacocinético.',
+    'NIH':'Funcionalidades reativas e exclusões de química medicinal compiladas pelos filtros NIH.',
+    'ZINC':'Padrões de reatividade e grupos indesejáveis usados na filtragem de compostos da biblioteca ZINC.',
+    'CHEMBL':'Conjunto agregado de filtros de química medicinal ChEMBL (BMS, Dundee, Glaxo, Inpharmatica, LINT, MLSMR e SureChEMBL).',
+}
 DEFAULTS=dict(admet_profile='legacy',admet_mode='filter',prediction_backend='rdkit',
               bbb_target='any',hia_target='any',rule_set='none',max_rule_violations=0,
               alert_policy='annotate',alert_catalogs=['PAINS','BRENK'],property_limits={})
@@ -49,8 +56,8 @@ def resolve_config(parameters):
     count=result['max_rule_violations']
     if type(count) is not int or not 0<=count<=6:raise ValueError('O número de violações permitidas deve ser um inteiro entre 0 e 6.')
     catalogs=result['alert_catalogs']
-    if not isinstance(catalogs,list) or any(v not in ('PAINS','BRENK','NIH') for v in catalogs):
-        raise ValueError('Escolha catálogos PAINS, BRENK ou NIH.')
+    if not isinstance(catalogs,list) or any(v not in ALERT_CATALOGS for v in catalogs):
+        raise ValueError('Escolha catálogos estruturais suportados pelo RDKit.')
     limits=result['property_limits']
     if not isinstance(limits,dict):raise ValueError('Os limites ADMET devem ser um mapa de intervalos.')
     for key,interval in limits.items():

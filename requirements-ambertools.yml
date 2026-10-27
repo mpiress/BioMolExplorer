@@ -1,0 +1,10 @@
+# Native receptor/ligand ff14SB/GAFF preparation, sander minimization and optional MD.
+# Keep this separate from requirements.yml: current AmberTools and the main
+# Open Babel/PyMOL stack require incompatible libxml2/ICU builds on conda-forge.
+name: BioMolExplorer-AmberTools
+channels:
+  - conda-forge
+  - nodefaults
+dependencies:
+  - python>=3.12,<3.13
+  - ambertools>=25,<27

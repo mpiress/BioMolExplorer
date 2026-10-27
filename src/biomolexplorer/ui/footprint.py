@@ -2,6 +2,7 @@
 import inspect
 import io
 import flet as ft
+from .processing import save_file,with_processing
 
 from biomolexplorer.docking_results import DockingResults
 from biomolexplorer.pdf_preview import pdf_preview
@@ -10,6 +11,7 @@ from .localization import verbatim
 from .zoom import zoomable_view
 
 
+@with_processing('Preparando gráfico footprint…','Lendo as energias e preparando o gráfico para visualização. Aguarde um instante.')
 async def footprint_dialog(ui,pid,rid,sid,selection,name,valid,origin=None,receptor=None):
     if not valid():return
     token=ui.token
@@ -23,7 +25,7 @@ async def footprint_dialog(ui,pid,rid,sid,selection,name,valid,origin=None,recep
     previous_resize=getattr(ui.page,'on_resize',None)
     chart=ft.Container(bgcolor='#FFFFFF',border_radius=12,alignment=ft.Alignment.CENTER,
         border=ft.Border.all(1,'#E2E8F0'),clip_behavior=ft.ClipBehavior.HARD_EDGE,
-        content=ft.Column([ft.ProgressRing(width=32,height=32),ft.Text('Carregando gráfico…',color='#64748B')],
+        content=ft.Column([ft.Text('Carregando gráfico…',color='#64748B')],
             alignment=ft.MainAxisAlignment.CENTER,horizontal_alignment=ft.CrossAxisAlignment.CENTER))
     viewer=zoomable_view(content=ft.Image(src=b'',fit=ft.BoxFit.CONTAIN,
         semantics_label='Gráfico footprint de '+name),expand=True)
@@ -77,7 +79,7 @@ async def footprint_dialog(ui,pid,rid,sid,selection,name,valid,origin=None,recep
     async def save():
         if not active or not valid():return
         pdf=await read()
-        if active and valid():await ui.picker.save_file(file_name=name+'_footprint.pdf',src_bytes=pdf)
+        if active and valid():await save_file(ui,file_name=name+'_footprint.pdf',src_bytes=pdf)
     async def download(e):await ui.guard(save)
     dialog=ft.AlertDialog(title=ft.Row([ft.Icon(ft.Icons.BAR_CHART,color='#0F766E'),ft.Text('Footprint',size=22)],spacing=10),
         content=content,inset_padding=16,content_padding=ft.Padding.symmetric(horizontal=24,vertical=12),

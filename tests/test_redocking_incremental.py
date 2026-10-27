@@ -2,6 +2,7 @@
 import csv
 import copy
 import json
+import os
 from pathlib import Path
 import shutil
 import sqlite3
@@ -60,6 +61,9 @@ class IncrementalRedockingTests(unittest.TestCase):
         started[-1].return_value.redocking.side_effect=lambda **kw:vina(started[-1])
 
     def run_pairs(self, records, status='succeeded', reuse=True, only_selected_inputs=False, **params):
+        # This suite deliberately simulates the historical script backend.
+        selected=params.setdefault('preparation_pairs',{})
+        for record in records:selected.setdefault('|'.join(map(str,record[:4])),{})['preparation_backend']='legacy_chimera'
         self.index+=1
         input_root=self.root/f'inputs-{self.index}';shutil.copytree(self.source,input_root/'Target')
         if only_selected_inputs:
@@ -80,7 +84,7 @@ class IncrementalRedockingTests(unittest.TestCase):
         first,_,_,_=self.run_pairs([['1ABC','LIG',1,'A']])
         self.assertEqual(len(json.loads((first/NAME).read_text())['entries']),1)
         with patch('biomolexplorer.redocking_preparation.prepare_pairs', wraps=__import__('biomolexplorer.redocking_preparation',fromlist=['prepare_pairs']).prepare_pairs) as prepare:
-            output,_,rows,docked=self.run_pairs([['1ABC','BAD',3,'A']])
+            output,_,rows,docked=self.run_pairs([['1ABC','LIG',1,'A'],['1ABC','BAD',3,'A']])
         self.assertEqual(prepare.call_args.kwargs['ready'],{('1ABC','A')})
         self.assertEqual(docked,[('1ABC','BAD')])
         self.assertEqual(self.last_scripts,['prepare_ligand_1ABC_BAD_3A.com'])
@@ -96,13 +100,13 @@ class IncrementalRedockingTests(unittest.TestCase):
         self.assertEqual(docked,[('2ABC','LIG')]);self.assertEqual(len(rows),2)
         self.assertEqual(self.last_scripts,['prepare_complex_2ABC_A.com','prepare_receptor_2ABC_A.com','prepare_ligand_2ABC_LIG_1A.com'])
 
-    def test_new_receptor_selection_keeps_previous_receptors_in_final_table(self):
+    def test_new_receptor_selection_excludes_previous_receptors_from_final_table(self):
         self.run_pairs([['1ABC','LIG',1,'A']])
         output,_,rows,docked=self.run_pairs([['2ABC','LIG',1,'A']],only_selected_inputs=True)
         self.assertEqual(docked,[('2ABC','LIG')])
-        self.assertEqual({r['PDB_CODE'] for r in rows},{'1ABC','2ABC'})
-        self.assertTrue((output/'structures/Target/1ABC.pdb').exists())
-        self.assertTrue((output/'Target/1ABC_LIG_1A.lig.pdbqt').exists())
+        self.assertEqual({r['PDB_CODE'] for r in rows},{'2ABC'})
+        self.assertFalse((output/'structures/Target/1ABC.pdb').exists())
+        self.assertFalse((output/'Target/1ABC_LIG_1A.lig.pdbqt').exists())
 
     def test_removed_original_is_not_resurrected_by_accumulation(self):
         self.run_pairs([['1ABC','LIG',1,'A']])
@@ -172,7 +176,25 @@ class IncrementalRedockingTests(unittest.TestCase):
         (output/NAME).unlink()
         self.store.db.execute('UPDATE runs SET stages=?',(json.dumps([stage]),))
         _,_,rows,docked=self.run_pairs([['1ABC','BAD',3,'A']])
-        self.assertEqual(docked,[('1ABC','BAD')]);self.assertEqual(len(rows),2)
+        self.assertEqual(docked,[('1ABC','BAD')]);self.assertEqual(len(rows),1)
+
+    def test_project_index_recovers_valid_pair_from_failed_run_without_history_seed(self):
+        with patch.dict(os.environ,{'BIOMOL_PREPARATION_CACHE':str(self.root/'shared/ligands'),
+                                   'BIOMOL_REUSE_PREPARATIONS':'1'}):
+            self.run_pairs([['1ABC','LIG',1,'A']],status='failed')
+            _,_,rows,docked=self.run_pairs([['1ABC','LIG',1,'A'],['2ABC','LIG',1,'A']])
+            self.assertEqual(docked,[('2ABC','LIG')])
+            self.assertEqual(len(rows),2)
+            self.assertEqual(self.last_scripts,['prepare_complex_2ABC_A.com','prepare_receptor_2ABC_A.com',
+                                                 'prepare_ligand_2ABC_LIG_1A.com'])
+
+    def test_changed_docking_parameters_do_not_repeat_reference_preparation(self):
+        with patch.dict(os.environ,{'BIOMOL_PREPARATION_CACHE':str(self.root/'shared/ligands'),
+                                   'BIOMOL_REUSE_PREPARATIONS':'1'}):
+            self.run_pairs([['1ABC','LIG',1,'A']])
+            _,_,_,docked=self.run_pairs([['1ABC','LIG',1,'A']],exhaustiveness=40)
+            self.assertEqual(docked,[('1ABC','LIG')])
+            self.assertEqual(self.last_scripts,[])
 
 
 class SchedulerIncrementalTests(unittest.TestCase):
@@ -188,7 +210,8 @@ class SchedulerIncrementalTests(unittest.TestCase):
         source=fixture.store.project_dir(fixture.project_id)/'input'/'Target'
         shutil.copytree(science.source,source)
         stage=new_stage('redocking')
-        stage['parameters'].update(base_input_path=str(source.parent),target='Target',pdb_codes=[['1ABC','LIG',1,'A']])
+        stage['parameters'].update(base_input_path=str(source.parent),target='Target',pdb_codes=[['1ABC','LIG',1,'A']],
+                                   preparation_pairs={'1ABC|LIG|1|A':{'preparation_backend':'legacy_chimera'}})
         fixture.save([stage]);submitted=[]
         class Manager:
             def __init__(self,config):self.config=config
@@ -205,7 +228,9 @@ class SchedulerIncrementalTests(unittest.TestCase):
             service=PipelineService(fixture.store);self.addCleanup(service.close)
             first=fixture.finish_selected(service,service.submit(fixture.token,fixture.project_id))
             self.assertEqual(first['status'],'succeeded',first.get('error'))
-            stage['parameters']['pdb_codes']=[['1ABC','BAD',3,'A']];fixture.save([stage])
+            stage['parameters']['pdb_codes']=[['1ABC','LIG',1,'A'],['1ABC','BAD',3,'A']]
+            stage['parameters']['preparation_pairs']['1ABC|BAD|3|A']={'preparation_backend':'legacy_chimera'}
+            fixture.save([stage])
             second=fixture.finish_selected(service,service.submit(fixture.token,fixture.project_id))
         self.assertEqual(second['status'],'succeeded',second.get('error'))
         self.assertIn('redocking-inputs',submitted[-1]['base_input_path'])
@@ -222,15 +247,14 @@ class SchedulerIncrementalTests(unittest.TestCase):
         self.assertEqual(third['status'],'succeeded',third.get('error'))
         self.assertEqual(science.docked,[('1ABC','LIG'),('1ABC','BAD'),('1ABC','BAD')])
         self.assertFalse(third['stages'][0].get('reused'))
-        # Returning to the first selection must keep later accumulated results,
-        # rather than returning the first run's smaller, whole-stage table.
+        # Removing the later pair must restore only the currently selected pair.
         stage['parameters']['pdb_codes']=[['1ABC','LIG',1,'A']];fixture.save([stage])
         with patch('biomolexplorer.pipeline.JobManager',Manager):
             fourth=fixture.finish_selected(service,service.submit(fixture.token,fixture.project_id))
         self.assertEqual(fourth['status'],'succeeded',fourth.get('error'))
         self.assertEqual(science.docked,[('1ABC','LIG'),('1ABC','BAD'),('1ABC','BAD')])
         rows=RedockingResults(fixture.store).simulations(fixture.token,fixture.project_id,fourth['id'],stage['id'])
-        self.assertEqual({r['ligand'] for r in rows},{'LIG','BAD'})
+        self.assertEqual({r['ligand'] for r in rows},{'LIG'})
 
 
 if __name__=='__main__':unittest.main()

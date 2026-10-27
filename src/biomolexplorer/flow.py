@@ -17,14 +17,16 @@ PORT_LABELS = {'base_input_path':'Dados de entrada','base_selected_mols':'Compos
                'similarity_path':'Similaridades',
                'base_vina_path':'Resultados Vina','base_dock6_path':'Resultados DOCK6'}
 OUTPUTS = {
+    'dynamics_dock6': {'dynamics','molecular_poses','receptor_pdb'},
     'retrieve_pubchem': {'compounds'},
     'retrieve_compounds': {'compounds','chembl'}, 'expand_similar_compounds': {'compounds'},
     'retrieve_zinc': {'compounds'}, 'retrieve_structures': {'structures'},
-    'prepare_structures': {'prepared_structures','compounds'}, 'redocking': {'structures','prepared_structures','redocking'},
+    'prepare_structures': {'prepared_structures','compounds','receptor_pdb','molecular_poses'}, 'redocking': {'structures','prepared_structures','redocking','receptor_pdb','molecular_poses'},
     'admet': {'compounds'}, 'fingerprints': {'fingerprints','compounds'}, 'similarity': {'similarity'},
-    'graphs': {'compounds'}, 'docking_vina': {'vina','compounds'}, 'docking_dock6': {'dock6','compounds'}, 'consensus': {'scores','compounds'},
+    'graphs': {'compounds'}, 'docking_vina': {'vina','compounds'}, 'docking_dock6': {'dock6','compounds','molecular_poses','receptor_pdb'}, 'consensus': {'scores','compounds'},
 }
 INPUTS = {
+    'dynamics_dock6': {'base_input_path':{'structures','receptor_pdb'},'base_selected_mols':{'compounds','molecular_poses','vina','dock6'}},
     'retrieve_pubchem': {'base_input_path':{'compounds'}},
     'expand_similar_compounds': {'base_input_path':{'chembl'}},
     'retrieve_zinc': {'base_input_path':{'zinc_urls','other'}},
@@ -97,6 +99,8 @@ def connect(stages, source_id, target_id, field):
     validate_pipeline(candidate)
     target['bindings']=proposed['bindings']
     target['parameters']=proposed['parameters']
+    if len(sources(target['bindings'][field]))>1 and 'input_processing' not in target:
+        target['input_processing']='individual'
     target['parameters'].pop(field,None)
     if field=='base_input_path' and 'target' in target['parameters'] and 'target' in source['parameters']:
         target['parameters']['target']=source['parameters']['target']
@@ -105,18 +109,34 @@ def connect(stages, source_id, target_id, field):
     if target['operation']=='retrieve_pubchem':target['parameters']['reference_source']='compounds'
 
 
+def reset_input_configuration(stage,field):
+    """Drop selections derived from inputs that are no longer connected."""
+    operation=stage['operation']
+    if operation in ('prepare_structures','redocking','docking_vina','docking_dock6','dynamics_dock6'):
+        from .catalog import new_stage
+        defaults=new_stage(operation)
+        stage['parameters']=defaults['parameters']
+        stage['templates']=defaults['templates']
+        stage.pop('provided_results',None)
+    elif operation=='retrieve_pubchem' and field=='base_input_path':
+        stage['parameters'].pop('compound_id',None)
+
+
 def disconnect(stage,field):
     stage.get('bindings',{}).pop(field,None)
     if stage['operation']=='consensus' and field=='base_vina_path':
         stage.get('bindings',{}).pop('base_input_path',None)
+    reset_input_configuration(stage,field)
 
 
 def remove(stages, stage_id):
     for stage in stages:
         for field,binding in list(stage.get('bindings',{}).items()):
             remaining=[b for b in sources(binding) if b.get('stage')!=stage_id]
+            removed=len(remaining)!=len(sources(binding))
             if remaining:
                 stage['bindings'][field]=pack(remaining)
+                if removed:reset_input_configuration(stage,field)
             else:
                 disconnect(stage,field)
         stage['depends_on']=[s for s in stage.get('depends_on',[]) if s!=stage_id]

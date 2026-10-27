@@ -92,3 +92,22 @@ Ao finalizar, a interface informa a quantidade de falhas. Em **Resultados**, os 
 Um arquivo PDB pode servir a vários ligantes. Excluir o arquivo remove todos os seus pares da próxima execução desse bloco, mas preserva os resultados históricos já concluídos e seus arquivos preparados. A confirmação explica esse efeito. Para recuperações PDB, o código entra em **PDBs excluídos de novas recuperações** (`excluded_pdb_ids`), impedindo que a mesma recuperação o baixe novamente. Essa lista pode ser editada no bloco de recuperação para permitir uma nova tentativa intencional. Para arquivos importados, o arquivo e sua referência no bloco de importação são removidos.
 
 A ação exige proprietário/editor e execução encerrada. As alterações de arquivos, configuração e integridade dos resultados são auditadas no histórico; uma falha durante a operação restaura o estado anterior. As cópias históricas para restauração não são entradas ativas do redocking. Nenhuma exclusão é executada automaticamente ao ocorrer uma falha de preparação.
+
+## Motor de redocking e preparação Chimera
+
+Escolha **Motor de redocking**: AutoDock Vina (padrão) ou DOCK6. Os campos de
+busca acompanham o motor escolhido. Projetos antigos continuam usando Vina
+quando não informam `redocking_engine`; a preparação permanece no Chimera para
+os dois motores. A instalação DOCK6 é fornecida pela configuração administrativa.
+
+O DOCK6 usa o ligante de referência do par, prepara sítio/grade e busca flexível
+ou rígida. A pose é disponibilizada no mesmo contrato de resultados do redocking.
+Seu RMSD usa átomos pesados, considera simetrias e mantém o sistema de coordenadas
+do receptor, sem superpor a pose à referência.
+
+A limpeza estrutural precede hidrogênios, cargas e minimização. Conformações
+alternativas são resolvidas também no ligante. Definições químicas locais e
+ordens de ligação corrigidas participam da rastreabilidade e do cache. Consulte
+[preparação molecular](molecular_preparation.md) para os detalhes de tipagem e
+exportação. Os logs mantêm a saída completa do Chimera; relatórios de falhas
+anteriores são removidos quando a nova execução termina sem essas falhas.

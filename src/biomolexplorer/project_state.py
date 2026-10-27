@@ -71,6 +71,8 @@ def snapshot(store, db, project_id):
     edits=[dict(r) for r in db.execute('SELECT * FROM compound_edits WHERE project_id=?',(project_id,))] if db.execute("SELECT 1 FROM sqlite_master WHERE name='compound_edits'").fetchone() else []
     state = translate({'project': project, 'assets': assets, 'runs': runs, 'members': members, 'edits':edits}, str(root), '@project')
     state.update(files=files, directories=directories)
+    state['block_registry']=[dict(id=row[0],block_id=row[1]) for row in db.execute(
+        'SELECT stage_id,block_id FROM block_ids WHERE project_id=?',(project_id,))]
     return state
 
 
@@ -104,15 +106,20 @@ def record(store, db, project_id, user_id, action, summary, before=None):
     return event_id
 
 
-def read_snapshot(store, project_id, event_id, side='before'):
-    path = store.project_dir(project_id) / '.history' / 'snapshots' / f'{event_id}-{side}.json'
+def read_snapshot(store, project_id, event_id, side='before', db=None):
+    # A terminal run update may already hold SQLite's exclusive spill lock.
+    # Resolve its project location through that same transaction.
+    path = store.project_dir(project_id,db) / '.history' / 'snapshots' / f'{event_id}-{side}.json'
     return json.loads(path.read_text(encoding='utf-8'))
 
 
 def restore_database(store, db, project_id, state, owner=None):
-    root = store.project_dir(project_id)
+    root = store.project_dir(project_id,db)
     state = translate(state, '@project', str(root))
     project = state['project']
+    for item in state.get('block_registry',project['pipeline']):
+        if item.get('block_id'):
+            db.execute('INSERT OR IGNORE INTO block_ids VALUES (?,?,?)',(project_id,item['id'],item['block_id']))
     db.execute('UPDATE projects SET name=?,description=?,color=?,tags=?,pipeline=?,archived=?,deleted=?,revision=revision+1,updated=? WHERE id=?',
                (project['name'], project['description'], project['color'], json.dumps(project['tags']),
                 json.dumps(project['pipeline']), project['archived'], 0, time.time(), project_id))
@@ -148,7 +155,7 @@ def rollback(store, token, project_id, event_id):
         if db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running','awaiting_input')", (project_id,)).fetchone():
             raise ValueError('Aguarde ou cancele a execução antes de restaurar uma versão.')
         before = snapshot(store, db, project_id)
-        target = read_snapshot(store, project_id, event_id)
+        target = read_snapshot(store, project_id, event_id, db=db)
         recovery = root / '.history' / ('restore-' + uuid4().hex)
         staged, backup = recovery / 'staged', recovery / 'backup'
         staged.mkdir(parents=True)

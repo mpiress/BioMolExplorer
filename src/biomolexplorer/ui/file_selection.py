@@ -7,7 +7,7 @@ import flet as ft
 
 from biomolexplorer.artifacts import records as artifact_records, reference as artifact_reference
 from .artifact_picker import ArtifactPicker
-from biomolexplorer.artifact_choices import matches_selector, selector_for
+from biomolexplorer.artifact_choices import matches_selector, selector_for, produced_files
 from biomolexplorer.bindings import sources, pack
 from biomolexplorer.catalog import field_label
 from biomolexplorer.docking_inputs import target_input, prepared_receptor, ligand_input_file
@@ -22,10 +22,13 @@ def compatible_file(path, kinds):
                 'fingerprints': {'fingerprint', 'molecule_chembl_id'},
                 'similarity': {'source', 'target', 'value'}}
     for kind in kinds:
+        if kind=='receptor_pdb' and path.suffix.lower()=='.pdb':return True
+        if kind=='molecular_poses' and path.suffix.lower()=='.mol2' and ligand_input_file(path):return True
+        if kind=='dynamics' and path.suffix.lower() in ('.nc','.prmtop','.rst7','.json','.csv'):return True
         if kind in required and path.suffix.lower() == '.csv' and required[kind] <= columns(path):
             return True
         if kind in ('vina','dock6') and path.suffix=='.csv' and {'engine','score','conformer_file'}<=columns(path):return True
-        if kind == 'structures' and path.suffix.lower() == '.pdb' and path.name.count('.') == 1:
+        if kind == 'structures' and path.suffix.lower() in ('.pdb','.cif','.mmcif') and path.name.count('.') == 1:
             return True
         if kind == 'prepared_structures' and prepared_receptor(path):
             return True
@@ -44,6 +47,13 @@ def file_selector(path, files):
     return selector_for(path,files)
 
 
+def selection_dialog_size(page,redocking=False):
+    width=page.width or 1160;height=page.height or 900
+    reserve=260 if redocking and width<700 else 220 if redocking else 250
+    return dict(width=max(220,min(1180 if redocking else 860,width-100)),
+                height=max(140,min(760 if redocking else 580,height-reserve)))
+
+
 class FileSelection:
     def __init__(self, run, pending, assets=(), state=None, file_actions=None, compound_references=None, page=None, writable=True):
         self.stage = pending['configuration']
@@ -53,14 +63,21 @@ class FileSelection:
         self.pickers = {}
         self.extras = {}
         self.reference_records={}
+        self.pdb_reviews={}
+        self.redocking_metadata={}
         self.compound_fields={}
         bindings=self.stage.get('bindings',{})
         self.derived_consensus=(self.stage['operation']=='consensus' and 'base_vina_path' in bindings
             and bindings.get('base_input_path')==bindings['base_vina_path'])
         self.processing=ft.Dropdown(label='Como processar os arquivos selecionados?',
-            value=(state or {}).get('input_processing',self.stage.get('input_processing','individual')),options=[
+            disabled=not writable,value=(state or {}).get('input_processing',self.stage.get('input_processing','individual')),options=[
                 ft.DropdownOption(key='individual',text='Processar individualmente'),
-                ft.DropdownOption(key='merge',text='Mesclar arquivos (merge)')])
+                ft.DropdownOption(key='merge',text='Mesclar arquivos (merge)'),
+                ft.DropdownOption(key='both',text='Individual + conjunto completo (ALL)')])
+        if self.stage['operation'] in ('consensus','dynamics_dock6'):
+            self.processing.value='merge'
+            self.processing.disabled=True
+            self.processing.options=[ft.DropdownOption(key='merge',text='Reunir as entradas selecionadas')]
         asset_names={a['id']:a['name'] for a in assets}
         completed = {s['id']: s for s in run['stages'] if s['status'] == 'succeeded'}
         controls = [ft.Text('Selecione os arquivos que serão usados em “' + pending['name'] + '”. '
@@ -68,6 +85,7 @@ class FileSelection:
                     self.processing,
                     ft.Text('Individual: cada arquivo gera resultados separados. Merge: as entradas são reunidas. '
                             'Com várias entradas, o modo individual processa cada combinação de arquivos. '
+                            'Individual + ALL acrescenta a análise do conjunto completo e reaproveita lotes já calculados. '
                             'Metadados necessários acompanham as estruturas escolhidas.',
                             size=12, color='#64748B')]
         if self.stage['operation'] in ('similarity','graphs'):
@@ -102,8 +120,15 @@ class FileSelection:
                 item = completed.get(ref['stage'])
                 if item is None:continue
                 files = list(dict.fromkeys(Path(p) for p in item['artifacts']))
+                if self.stage['operation']=='redocking':
+                    from biomolexplorer.redocking_config import metadata_records
+                    self.redocking_metadata[item['id']]=metadata_records(files)
                 catalog={r['path']:r for r in artifact_records(item,run.get('id'))}
-                matching = [p for p in files if compatible_file(p, kinds)]
+                matching = [p for p in produced_files(item) if compatible_file(p, kinds)]
+                if item.get('operation') in ('retrieve_compounds','expand_similar_compounds') and not item.get('configuration',{}).get('provided_results'):
+                    from biomolexplorer.artifact_choices import choices
+                    allowed=choices(item)
+                    if allowed:matching=[p for p in matching if any(matches_selector(p,s) for s in allowed)]
                 if self.stage['operation'] in ('prepare_structures','docking_vina','docking_dock6') and field=='base_input_path' and any(prepared_receptor(p) for p in files):
                     matching=[p for p in matching if prepared_receptor(p)]
                 if self.stage['operation'] in ('docking_vina','docking_dock6') and field=='base_selected_mols':
@@ -115,12 +140,15 @@ class FileSelection:
                         from biomolexplorer.docking_data import result_tables
                         matching=result_tables(tables)
                 if item.get('operation')=='retrieve_pubchem' and not item.get('configuration',{}).get('provided_results'):
-                    matching=[p for p in matching if p.name=='compounds.csv' and p.parent.parent.name=='compounds']
+                    matching=[p for p in matching if (p.name=='compounds.csv' or '__pubchem__compounds' in p.stem) and p.parent.parent.name=='compounds']
                 if 'prepared_structures' in kinds and any(p.parent.name == 'Prepared' for p in matching):
                     matching = [p for p in matching if p.parent.name == 'Prepared']
                 if item.get('operation')=='graphs' and not item.get('configuration',{}).get('provided_results'):
                     from biomolexplorer.graph_exports import molecular_files
                     matching=molecular_files(matching)
+                if item.get('operation')=='admet':
+                    allowed=set(produced_files(item))
+                    matching=[p for p in matching if p in allowed]
                 for path in sorted(matching):
                     selector = catalog[str(path)]['selector']
                     # Preserve explicit choices from the popup or block settings.
@@ -136,8 +164,16 @@ class FileSelection:
                     if item.get('operation')=='graphs':
                         from biomolexplorer.graph_exports import subset_label
                         scope=subset_label(path,getattr(page,'translator',None))
-                    check = SimpleNamespace(label=selector,display_label=description['origin']+' — '+(scope+' — ' if scope else '')+selector,
-                        value=chosen,on_change=None,available=path.is_file())
+                    from biomolexplorer.artifact_naming import human_name
+                    title=scope or human_name(record)
+                    if item.get('operation')=='admet' and not title.startswith('ADMET ·'):title='ADMET · '+title
+                    count=record.get('record_count')
+                    display=title+' · '+description['origin']+(f' · {count:,} registros' if count is not None else '')
+                    check = SimpleNamespace(label=selector,display_label=display,physical_file=str(path),
+                        value=chosen,on_change=None,available=path.is_file(),
+                        target_label=record.get('context',{}).get('target') or record.get('context',{}).get('search_term') or
+                            item.get('configuration',{}).get('parameters',{}).get('target') or item.get('name',item['id']),
+                        origin_label=(record.get('block_id') or item['id'][:8])+' · '+item.get('name',item['id']))
                     reference=artifact_reference(record)
                     previous=next((r for r in configured if r.get('stage')==item['id'] and
                         (r.get('artifact_id')==record['artifact_id'] if r.get('artifact_id') else matches_selector(path,r.get('selector','auto')))),{})
@@ -146,7 +182,9 @@ class FileSelection:
                     if self.stage['operation']=='retrieve_pubchem':
                         from biomolexplorer.pubchem_retrieval import reference_choices
                         self.reference_records[(item['id'],selector)]=(compound_references or {}).get(str(path),{}) if compound_references is not None else reference_choices([path])
-                    actions=file_actions(item,path) if file_actions else []
+                    if file_actions and self.stage['operation']=='redocking' and field=='base_input_path':
+                        actions=lambda item=item,path=path:file_actions(item,path)
+                    else:actions=file_actions(item,path) if file_actions else []
                     self.extras[id(check)]=actions
                     records={}
                     if self.stage['operation'] in ('docking_vina','docking_dock6') and field=='base_selected_mols':
@@ -166,7 +204,11 @@ class FileSelection:
                     origin=next((s for s in run['stages'] if s['id']==ref['stage']),{})
                     origins['stage:'+ref['stage']]=origin.get('name',ref['stage'])
                 elif 'asset' in ref:origins['asset:'+ref['asset']]=asset_names.get(ref['asset'],'Arquivo enviado')
-            self.pickers[field]=ArtifactPicker(rows,origins,page,self.extras,writable=writable)
+            picker_class=ArtifactPicker
+            if self.stage['operation']=='redocking' and field=='base_input_path':
+                from .redocking_files import RedockingFilePicker
+                picker_class=RedockingFilePicker
+            self.pickers[field]=picker_class(rows,origins,page,self.extras,writable=writable)
             controls.append(self.pickers[field].control)
         if self.stage['operation']=='retrieve_pubchem':
             from biomolexplorer.catalog import CHOICE_LABELS
@@ -195,6 +237,18 @@ class FileSelection:
                 for check,_ in rows:check.on_change=refresh
             refresh();controls.extend([self.selection_mode,self.compound_id])
         self.control = ft.Column(controls, spacing=12, scroll=ft.ScrollMode.AUTO)
+        if self.stage['operation']=='redocking':
+            self.processing.content_padding=ft.Padding.symmetric(horizontal=16,vertical=18)
+            self.control.spacing=20
+            self.control.horizontal_alignment=ft.CrossAxisAlignment.STRETCH
+        for field,view in (state or {}).get('picker_views',{}).items():
+            picker=self.pickers.get(field)
+            if picker and hasattr(picker,'restore_view'):picker.restore_view(view)
+
+    def apply_pdb_reviews(self,statuses):
+        self.pdb_reviews.update(copy.deepcopy(statuses))
+        for picker in self.pickers.values():
+            if hasattr(picker,'apply_reviews'):picker.apply_reviews(statuses)
 
     def add_docking_choice(self,field,check,ref,records,controls,page):
         if self.stage['operation'] not in ('docking_vina','docking_dock6') or field!='base_selected_mols':return
@@ -231,6 +285,8 @@ class FileSelection:
                             for field,rows in self.rows.items()}}
         if hasattr(self,'selection_mode'):result.update(selection_mode=self.selection_mode.value,compound_id=self.compound_id.value)
         if hasattr(self,'follow_inputs'):result['follow_inputs']=bool(self.follow_inputs.value)
+        views={field:picker.view_state() for field,picker in self.pickers.items() if hasattr(picker,'view_state')}
+        if views:result['picker_views']=views
         return result
 
     def read(self, require_selection=True):
@@ -257,6 +313,30 @@ class FileSelection:
             group = pack(refs)
             if group:stage['bindings'][field] = group
             else:stage['bindings'].pop(field,None)
+        if stage['operation']=='redocking':
+            from biomolexplorer.redocking_config import pair_key
+            existing=stage['parameters'].get('pdb_codes') or []
+            records=[]
+            for check,ref in self.rows.get('base_input_path',[]):
+                if not check.value:continue
+                filename=getattr(check,'physical_file',ref.get('selector',check.label))
+                code=Path(filename).name.split('.',1)[0].upper()
+                review=self.pdb_reviews.get(filename)
+                if review is not None:
+                    chosen=[[review.get('pdb_id',code),r['LIGAND'],int(r['RESNUM']),r['CHAIN']]
+                            + ([float(r.get('RESOLUTION') or review.get('resolution'))] if r.get('RESOLUTION') or review.get('resolution') else [])
+                            for r in review.get('ligands',[]) if r.get('LIGAND') and r.get('RESNUM') and r.get('CHAIN')]
+                else:
+                    chosen=[r for r in existing if str(r[0]).upper()==code or f'{r[0]}_{r[3]}'.upper()==code]
+                    if not chosen:
+                        chosen=[r for r in self.redocking_metadata.get(ref.get('stage'),[])
+                                if str(r[0]).upper()==code or f'{r[0]}_{r[3]}'.upper()==code]
+                for record in chosen:
+                    if pair_key(record) not in {pair_key(r) for r in records}:records.append(copy.deepcopy(record))
+            stage['parameters']['pdb_codes']=records
+            keys={pair_key(r) for r in records}
+            stage['parameters']['preparation_pairs']={k:v for k,v in
+                (stage['parameters'].get('preparation_pairs') or {}).items() if k in keys}
         if self.derived_consensus:
             if 'base_vina_path' in stage['bindings']:stage['bindings']['base_input_path']=copy.deepcopy(stage['bindings']['base_vina_path'])
             else:stage['bindings'].pop('base_input_path',None)

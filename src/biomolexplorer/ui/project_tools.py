@@ -6,6 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
 import flet as ft
+from .processing import background,with_processing,pick_files,save_file
 from .localization import verbatim
 
 from .feedback import close_dialog
@@ -40,6 +41,7 @@ class ProjectTools:
             ft.Text('No navegador, as pastas são do computador onde o BioMolExplorer está em execução.',size=12,color='#64748B') if self.page.web else
             ft.Container()],spacing=12,horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
 
+    @with_processing('Exportando projeto…')
     async def export_project_dialog(self, project_id):
         token=self.token
         archive=await self.call(self.store.export_project,token,project_id)
@@ -51,14 +53,14 @@ class ProjectTools:
                 return
             data=await self.call(archive.read_bytes)
             if self.token!=token:return
-            await self.picker.save_file(file_name=archive.name,src_bytes=data)
+            await save_file(self,file_name=archive.name,src_bytes=data)
         else:
-            destination=await self.picker.save_file(file_name=archive.name,dialog_title=self.tr('Exportar projeto'))
+            destination=await save_file(self,file_name=archive.name,dialog_title=self.tr('Exportar projeto'))
             if destination:await self.call(shutil.copyfile,archive,destination)
         self.notify('Projeto exportado com configuração, entradas, resultados e histórico. Contas e senhas ficam neste workspace.')
 
     async def pick_uploads(self, kind, project_id=None, archive=False):
-        files=await self.picker.pick_files(allow_multiple=not archive)
+        files=await pick_files(self,allow_multiple=not archive)
         results=[]
         token=self.token
         for file in files or []:
@@ -115,6 +117,7 @@ class ProjectTools:
             actions=[ft.TextButton('Cancelar',on_click=lambda e:close_dialog(self.page,dialog)),run_button])
         self.page.show_dialog(dialog)
 
+    @with_processing('Carregando histórico…')
     async def history_dialog(self,project_id):
         token=self.token
         project=await self.call(self.store.project,token,project_id)
@@ -151,6 +154,7 @@ class ProjectTools:
         task=getattr(self,'_save_task',None)
         if task and not task.done():task.cancel()
         token,project=self.token,self.current
+        @background
         async def deferred():
             await asyncio.sleep(.6)
             # Only the debounce timer may be cancelled. Cancelling to_thread
@@ -160,6 +164,7 @@ class ProjectTools:
                 await self.guard(lambda:self.save_draft(silent=True))
         self._save_task=self.page.run_task(deferred)
 
+    @background
     async def poll_project(self,project_id):
         token=self.token
         while self.token==token and self.current and self.current['id']==project_id:

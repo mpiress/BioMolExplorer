@@ -3,6 +3,7 @@ import csv
 import io
 import json
 import flet as ft
+from .processing import save_file
 from .localization import verbatim
 
 
@@ -77,7 +78,7 @@ class GraphTable:
             if not view.active or view.ui.token!=view.token:return
             data=await view.ui.call(self.csv)
             if view.active and view.ui.token==view.token:
-                await view.ui.picker.save_file(file_name=f'network_{view.mode}_{self.kind.value}.csv',src_bytes=data)
+                await save_file(view.ui,file_name=f'network_{view.mode}_{self.kind.value}.csv',src_bytes=data)
         await self.explorer.view.ui.guard(action)
 
     def build(self):

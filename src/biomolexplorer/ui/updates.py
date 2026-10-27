@@ -2,6 +2,7 @@
 import asyncio
 import flet as ft
 from .feedback import close_dialog
+from .processing import background
 from .localization import verbatim
 from biomolexplorer.workspace import AccessDenied
 
@@ -33,6 +34,7 @@ class UpdateNotice:
             self.control.icon = ft.Icons.NEW_RELEASES_OUTLINED if available else ft.Icons.SYSTEM_UPDATE_ALT
             self.control.tooltip = label
 
+    @background
     async def poll(self):
         while True:
             await self.ui.call(self.checker.check)

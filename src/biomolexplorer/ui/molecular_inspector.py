@@ -2,6 +2,7 @@
 import base64
 import threading
 import flet as ft
+from .processing import processing
 from biomolexplorer.molecular_network import numeric_properties
 from biomolexplorer.network_scaffolds import individual,common
 from biomolexplorer.network_analysis import METRICS
@@ -29,7 +30,7 @@ class MolecularInspector:
         self.compute_button=ft.TextButton('Calcular MCS do conjunto',on_click=self.calculate)
         self.cancel_button=ft.TextButton('Interromper MCS',on_click=self.cancel,disabled=True)
         self.notice=ft.Text(size=12,color='#64748B')
-        self.progress=ft.ProgressBar(visible=False)
+        self.progress=ft.Container(visible=False)
         self.context=ft.Text(size=12,color='#334155')
         self.scope_ids=None
         self.describe_scope()
@@ -356,7 +357,9 @@ class MolecularInspector:
                 if self.cancelled is cancelled and view.active:self.compute_button.disabled=False;self.cancel_button.disabled=True;view.ui.page.update()
         async def execute():
             try:
-                await action()
+                async with processing(self.view.ui,'Calculando fragmento comum…',
+                        'Analisando o conjunto de moléculas selecionado. Aguarde um instante.',on_cancel=self.cancel):
+                    await action()
             except Exception as error:
                 if request==self.request and self.view.active and self.view.ui.token==self.view.token:
                     self.notice.value='Falha ao calcular MCS: '+readable_error(error)

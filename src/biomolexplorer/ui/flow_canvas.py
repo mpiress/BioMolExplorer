@@ -3,6 +3,7 @@ import copy
 import math
 from uuid import uuid4
 import flet as ft
+from .processing import save_file
 from .localization import verbatim, stage_control
 import flet.canvas as canvas
 from biomolexplorer import flow
@@ -14,7 +15,7 @@ def icon_button(**kwargs):
     label=kwargs.get('tooltip','Ação')
     return ft.Semantics(container=True,label=label,button=True,on_tap=None if kwargs.get('disabled') else kwargs.get('on_click'),disabled=kwargs.get('disabled',False),exclude_semantics=True,content=ft.IconButton(**kwargs))
 
-COLORS={'Entradas':'#2563EB','Recuperação':'#0D9488','Análise':'#7C3AED','Docking':'#D97706'}
+COLORS={'Entradas':'#2563EB','Recuperação':'#0D9488','Análise':'#7C3AED','Docking':'#D97706','Dinâmica Molecular':'#BE185D'}
 
 class FlowCanvas:
     def __init__(self,ui,writable):
@@ -24,15 +25,42 @@ class FlowCanvas:
         self.edges=canvas.Canvas(shapes=[])
         self.nodes={}
         self._node_states={}; self._option_labels=None
+        self.viewport_scale=1.0;self.viewport_offset=ft.Offset(0,0)
+        self.viewport_width=max(320,(getattr(ui.page,'width',None) or 1160)-64)
+        self.viewport_height=max(240,(getattr(ui.page,'height',None) or 900)-260)
+        self._gesture=None
         self.stack=ft.Stack(width=flow.CANVAS_WIDTH,height=flow.CANVAS_HEIGHT)
         self.viewer=zoomable_view(content=ft.DragTarget(group='stage-library',content=self.stack,on_accept=self.drop),
-            constrained=False,alignment=ft.Alignment.TOP_LEFT,expand=True)
+            constrained=False,alignment=ft.Alignment.TOP_LEFT,expand=True,
+            on_interaction_start=self.viewport_started,on_interaction_update=self.viewport_updated,
+            on_interaction_end=self.viewport_ended,on_size_change=self.viewport_resized)
         self.selection=ft.Dropdown(label='Bloco selecionado',width=260,options=[],on_select=self.select_from_menu)
         self.status=ft.Text('Arraste um bloco. Conecte a saída à entrada. Duplo clique para configurar.',size=12,color='#64748B')
         self.refresh(False)
 
     @property
     def stages(self): return self.ui.current['pipeline']
+    def viewport_resized(self,e):
+        if getattr(e,'width',0)>0:self.viewport_width=e.width
+        if getattr(e,'height',0)>0:self.viewport_height=e.height
+    def viewport_started(self,e):
+        self._gesture=(self.viewport_scale,self.viewport_offset.x,self.viewport_offset.y,
+            e.local_focal_point.x,e.local_focal_point.y)
+    def viewport_updated(self,e):
+        if self._gesture is None:self.viewport_started(e)
+        scale,x,y,start_x,start_y=self._gesture
+        new_scale=max(self.viewer.min_scale,min(self.viewer.max_scale,scale*e.scale))
+        content_x=(start_x-x)/scale;content_y=(start_y-y)/scale
+        self.viewport_scale=new_scale
+        self.viewport_offset=ft.Offset(e.local_focal_point.x-content_x*new_scale,
+                                       e.local_focal_point.y-content_y*new_scale)
+    def viewport_ended(self,e):self._gesture=None
+    def visible_position(self,stage):
+        """Return a free point near the center of the currently visible canvas."""
+        scale=max(self.viewer.min_scale,self.viewport_scale)
+        x=(self.viewport_width*.5-self.viewport_offset.x)/scale-flow.NODE_WIDTH*.5
+        y=(self.viewport_height*.45-self.viewport_offset.y)/scale-flow.node_height(stage)*.5
+        return flow.available_position(self.stages,stage,x,y)
     def drag_started(self,e):
         source=e.control
         self.active_drag=(source._i,source.group,source.data)
@@ -231,7 +259,7 @@ class FlowCanvas:
         self.remember(); stage=new_stage(operation)
         if hasattr(self.ui,'tr'):stage['name']=self.ui.tr(stage['name'])
         if operation=='docking_dock6' and self.ui.service.dock6_path: stage['parameters']['dock6_app_path']=str(self.ui.service.dock6_path)
-        stage['position']=flow.available_position(self.stages,stage,x,y)
+        stage['position']=self.visible_position(stage) if x is None or y is None else flow.available_position(self.stages,stage,x,y)
         self.stages.append(stage); self.ui.selected=stage['id']; self.changed()
     async def undo(self,e):
         if self.writable and self.history:
@@ -247,6 +275,7 @@ class FlowCanvas:
             if len(self.stages)>=100:
                 self.ui.notify('Um pipeline pode conter até 100 blocos.'); return
             self.remember(); clone=copy.deepcopy(stage); clone['id']=uuid4().hex; clone['name']+=' (cópia)'; pos=flow.position(stage); clone['position']=flow.available_position(self.stages,clone,pos['x']+flow.COLUMN_SPACING,pos['y'])
+            clone.pop('block_id',None)
             self.stages.append(clone); self.ui.selected=clone['id']; self.changed()
     async def arrange(self,e):
         if self.writable: self.remember(); flow.arrange(self.stages); self.changed()
@@ -262,7 +291,7 @@ class FlowCanvas:
             current=self.ui.current
             same_project=current and (current.get('id')==project['id'] if project.get('id') else current is project)
             if self.ui.token==token and same_project:
-                await self.ui.picker.save_file(file_name='pipeline.png',src_bytes=data)
+                await save_file(self.ui,file_name='pipeline.png',src_bytes=data)
         await self.ui.guard(action)
     def build(self,include_library=True):
         if not hasattr(self.ui,'sidebar_expanded'):self.ui.sidebar_expanded={}

@@ -116,7 +116,7 @@ class AnalyticalViewerTests(unittest.TestCase):
         async def call(function,*args,**kwargs):return function(*args,**kwargs)
         async def guard(action):return await action()
         async def noop(*args,**kwargs):pass
-        self.ui=SimpleNamespace(token='token',current={'id':'project'},page=SimpleNamespace(update=Mock(),show_dialog=Mock()),
+        self.ui=SimpleNamespace(token='token',current={'id':'project'},page=SimpleNamespace(width=1440,height=900,update=Mock(),show_dialog=Mock()),
             store=SimpleNamespace(project=lambda *args:None),call=call,guard=guard,notify=Mock(),picker=SimpleNamespace(save_file=noop))
         view=ResultsViewer(self.ui,'project',model(graph));view.build()
         view.viewer.reset=noop;view.viewer.pan=noop

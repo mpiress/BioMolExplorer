@@ -3,6 +3,7 @@ import copy
 import re
 import flet as ft
 from biomolexplorer.redocking_config import DEFAULTS
+from .settings_layout import section
 
 
 def preparation_values(stage, config, role):
@@ -28,7 +29,18 @@ def preparation_values(stage, config, role):
 class PreparationSettings:
     def __init__(self,form,config=None):
         self.form=form;config=copy.deepcopy(config or {})
+        self.extra={key:value for key,value in config.items() if key not in ('receptor','ligand','cofactors','preparation_backend','ambertools_path','ambertools_env','vina_charge_policy')}
         self.settings={};self.groups={}
+        self.backend=ft.Dropdown(label='Ferramenta de preparação molecular',value='legacy_chimera',
+            tooltip='Chimera aplica hidrogênios, cargas gas/am1 e minimização para Vina e DOCK6.',
+            options=[ft.DropdownOption(key='legacy_chimera',text='UCSF Chimera')],disabled=True)
+        self.ambertools=ft.TextField(label='Instalação AmberTools/Antechamber',value=config.get('ambertools_path',''),disabled=not form.writable)
+        self.ambertools_env=ft.TextField(label='Ambiente Conda AmberTools',
+            value=config.get('ambertools_env','BioMolExplorer-AmberTools'),disabled=not form.writable)
+        self.vina_policy=ft.Dropdown(label='Política de cargas no Vina padrão',value=config.get('vina_charge_policy','fast'),
+            tooltip='Rápido: Gasteiger/RDKit para vina/vinardo. Preservar método: respeita a seleção de cargas, incluindo AM1-BCC.',
+            options=[ft.DropdownOption(key='fast',text='Rápido · Gasteiger/RDKit'),
+                ft.DropdownOption(key='preserve',text='Preservar método selecionado')],disabled=not form.writable)
         self.receptor_inactive=False
         self.has_cofactors=ft.Switch(label='Considerar cofatores como parte do receptor',value=bool(config.get('cofactors')),disabled=not form.writable)
         self.cofactors=ft.TextField(label='Cofatores do receptor (códigos separados por vírgula)',value=', '.join(config.get('cofactors',[])))
@@ -42,22 +54,25 @@ class PreparationSettings:
                 ('remove_solvent','Remover solvente'),('remove_hydrogens','Remover hidrogênios existentes'),
                 ('add_hydrogens','Adicionar hidrogênios'),('minimize','Minimizar energia'))}
             options['charge_type']=ft.Dropdown(label='Método de cargas do receptor' if role=='receptor' else 'Método de cargas do ligante',
-                value=values['charge_type'],options=[ft.DropdownOption(key=v,text=v) for v in ('gas','am1')],disabled=not form.writable)
+                tooltip='gas: cargas Gasteiger, geralmente mais rápidas. am1: cargas AM1-BCC, com custo maior de preparação. A minimização também pode aumentar esse tempo.',
+                value={'gasteiger':'gas','am1bcc':'am1'}.get(values['charge_type'],values['charge_type']),options=[ft.DropdownOption(key=v,text=label) for v,label in [('gas','Gasteiger'),('am1','AM1-BCC')]],disabled=not form.writable)
             self.settings[role]=options
             if role=='ligand' and form.stage['operation'] in ('prepare_structures','docking_vina','docking_dock6'):
                 notice='Prepare os compostos selecionados de ChEMBL, PubChem, ZINC ou arquivos próprios. Todas as fontes usam estas opções.'
             controls=[ft.Text(notice,size=12)]
+            if role=='ligand':
+                controls += [self.backend,ft.Text('Chimera prepara receptores e ligantes. Open Babel converte os formatos para Vina e DOCK6, sem substituir o método de cargas selecionado.',size=12)]
+            if role=='receptor':controls.append(ft.Text('Resíduos proteicos padrão usam templates AMBER. O método de cargas selecionado controla cofatores e resíduos não padrão, não a proteína inteira.',size=12))
             if role=='receptor':controls += [self.has_cofactors,self.cofactors]
-            controls += list(options.values())[:-1]
-            controls.append(ft.Container(options['charge_type'],padding=ft.Padding.only(top=32,bottom=20)))
-            groups.append(ft.ExpansionTile(title=ft.Text(title),controls=controls,expanded=True,
-                expanded_cross_axis_alignment=ft.CrossAxisAlignment.STRETCH,controls_padding=24,tile_padding=16))
+            controls += list(options.values())
+            groups.append(section(title,controls,expanded=True))
             self.groups[role]=groups[-1]
         self.control=ft.Column(groups,spacing=20,data='input')
         self.sync()
 
     def sync(self,inactive=False):
         inactive=inactive or not self.form.writable
+        self.backend.disabled=True;self.ambertools.disabled=inactive;self.ambertools_env.disabled=inactive;self.vina_policy.disabled=inactive
         receptor_inactive=inactive or self.receptor_inactive
         self.groups['receptor'].visible=not self.receptor_inactive
         self.has_cofactors.disabled=receptor_inactive
@@ -71,5 +86,8 @@ class PreparationSettings:
     def read(self):
         result={role:{key:control.value for key,control in options.items()} for role,options in self.settings.items()}
         result['cofactors']=[v.strip().upper() for v in self.cofactors.value.split(',') if v.strip()] if self.has_cofactors.value else []
+        result.update(self.extra)
+        result['preparation_backend']=self.backend.value
+        result['preparation_backend']='legacy_chimera'
         if self.has_cofactors.value and not result['cofactors'] and not self.receptor_inactive:raise ValueError('Informe quais cofatores devem ser mantidos no receptor.')
         return result

@@ -210,6 +210,8 @@ class LocalizedPage:
         return self._page.add(*controls)
 
     def show_dialog(self, dialog):
+        from .settings_layout import fit_dialog
+        fit_dialog(dialog,self._page)
         self.localize(dialog)
         result = self._page.show_dialog(dialog)
         if not any(item is dialog for item in self._dialogs):
@@ -222,6 +224,8 @@ class LocalizedPage:
         return dialog
 
     def update(self, *controls):
+        from .settings_layout import fit_dialog
+        for dialog in self._dialogs:fit_dialog(dialog,self._page)
         seen = set()
         self.localize(controls or getattr(self._page, 'controls', []), seen)
         self.localize(self._dialogs, seen)

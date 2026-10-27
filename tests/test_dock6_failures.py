@@ -20,6 +20,10 @@ class Dock6FailureTests(unittest.TestCase):
     def setUp(self):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         self.root=Path(self.tmp.name)
+        # External commands are mocked below; the cache still fingerprints the
+        # installation directories before collecting per-compound failures.
+        (self.root/'tools/bin').mkdir(parents=True)
+        (self.root/'tools/parameters').mkdir()
         ligands=self.root/'input';ligands.mkdir()
         receptor=self.root/'rec';receptor.mkdir()
         (receptor/'1ABC_A.dockprep.mol2').write_text(MOL2)

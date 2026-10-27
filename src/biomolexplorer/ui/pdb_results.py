@@ -4,11 +4,13 @@ import flet as ft
 from biomolexplorer.pdb_ligands import REASONS
 from .feedback import close_dialog
 from .localization import verbatim
+from .processing import processing,with_processing
 
 
 class PDBActions:
-    def __init__(self,results,editable):
+    def __init__(self,results,editable,on_saved=None):
         self.results=results;self.ui=results.ui;self.editable=editable
+        self.on_saved=on_saved
 
     async def refresh_pipeline(self):
         """Adopt the audited plan without overwriting pending local canvas edits."""
@@ -39,6 +41,7 @@ class PDBActions:
                 ft.IconButton(ft.Icons.VISIBILITY_OUTLINED,tooltip='Visualizar estrutura 3D',url=ft.Url(url,target=ft.UrlTarget.BLANK) if url else None,on_click=None if url else structure),
                 ft.IconButton(ft.Icons.OPEN_IN_NEW,tooltip='Abrir no RCSB PDB',url='https://www.rcsb.org/structure/'+code)]
 
+    @with_processing('Analisando ligantes PDB…','Identificando os resíduos disponíveis na estrutura. Aguarde um instante.')
     async def open_ligands(self,item):
         result=self.results
         args=(result.token,result.project_id,result.run_id,result.stage['id'],item['path'])
@@ -96,20 +99,35 @@ class PDBActions:
             rows.clear();listing.controls.clear()
             for record in recommended:append(record)
             self.ui.page.update()
+        saving=False;saved_once=False
         async def save(e):
+            nonlocal saving,saved_once
+            if saving or saved_once or not self.editable:return
+            saving=True
+            disabled=[control.disabled for control in dialog.actions]
+            for control in dialog.actions:control.disabled=True
             async def action():
-                if not result.valid():return
-                records=[{'LIGAND':name.value,'RESNUM':number.value,'CHAIN':chain.value} for _,name,number,chain in rows]
-                if hasattr(self.ui,'save_draft'):await self.ui.save_draft(silent=True)
-                if not result.valid():return
-                saved=await self.ui.call(result.service.set_pdb_ligands,*args,records,context['revision'])
-                await self.refresh_pipeline()
-                if not result.valid():return
-                finish()
-                if saved.get('updated_redocking_stages'):
-                    self.ui.notify('Ligantes e pares de redocking atualizados no histórico do projeto. Execute o pipeline para processar as novas combinações.')
-                else:self.ui.notify('Ligantes atualizados. A alteração foi registrada no histórico do projeto.')
-            await self.ui.guard(action)
+                nonlocal saved_once
+                async with processing(self.ui,'Salvando ligantes PDB…',
+                        'Validando os ligantes e atualizando os pares de redocking. Aguarde um instante.'):
+                    if not result.valid():return
+                    records=[{'LIGAND':name.value,'RESNUM':number.value,'CHAIN':chain.value} for _,name,number,chain in rows]
+                    if hasattr(self.ui,'save_draft'):await self.ui.save_draft(silent=True)
+                    if not result.valid():return
+                    saved=await self.ui.call(result.service.set_pdb_ligands,*args,records,context['revision'])
+                    await self.refresh_pipeline()
+                    if not result.valid():return
+                    saved_once=True
+                    finish()
+                    if self.on_saved:self.on_saved(item,saved)
+                    if saved.get('updated_redocking_stages'):
+                        self.ui.notify('Ligantes e pares de redocking atualizados no histórico do projeto. Execute o pipeline para processar as novas combinações.')
+                    else:self.ui.notify('Ligantes atualizados. A alteração foi registrada no histórico do projeto.')
+            try:await self.ui.guard(action)
+            finally:
+                saving=False
+                for control,previous in zip(dialog.actions,disabled):control.disabled=previous
+                self.ui.page.update()
         dialog=ft.AlertDialog(modal=True,title=ft.Text('Ligantes · '+context['pdb_id']),on_dismiss=dismissed,
             content=ft.Container(width=640,height=380,content=ft.Column([
                 ft.Text('Mantenha os ligantes de interesse. Para adicionar, informe o código, resíduo e cadeia presentes na estrutura.',size=12),

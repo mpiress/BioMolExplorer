@@ -1,5 +1,6 @@
 """RMSD table with a simulation-specific file and molecular preview dialog."""
 import flet as ft
+from .processing import save_file
 from biomolexplorer.redocking_results import RedockingResults
 from .removal import RemovalProgress
 from .feedback import close_dialog
@@ -37,7 +38,7 @@ class RedockingResultsTable:
     def redraw(self):
         rows = []
         for simulation in self.simulations[self.offset:self.offset+self.limit]:
-            failed=simulation.get('status')=='preparation_failed'
+            status=simulation.get('status');failed=status!='succeeded';unsupported=status=='UNSUPPORTED'
             async def view(e, key=simulation['id']):
                 if self.valid():
                     await self.ui.guard(lambda: self.open(key))
@@ -49,13 +50,14 @@ class RedockingResultsTable:
                 if self.valid():self.confirm_remove(key)
             values = [simulation[k] for k in ('pdb', 'ligand', 'residue', 'chain')]
             action=ft.TextButton('Ver simulação', icon=ft.Icons.VISIBILITY, on_click=view)
-            if failed:action=ft.Row([ft.TextButton('Ver erro',on_click=view),
+            if unsupported:action=ft.TextButton('Ver classificação',on_click=view)
+            elif failed:action=ft.Row([ft.TextButton('Ver erro',on_click=view),
                 ft.IconButton(ft.Icons.DELETE_OUTLINE,tooltip='Excluir falha e complexo de origem',on_click=remove,disabled=not self.results.writable)])
             rows.append(ft.DataRow(color='#FEF2F2' if failed else None,cells=[ft.DataCell(verbatim(ft.Text(value))) for value in values] + [
-                ft.DataCell(ft.Text('Falha na preparação' if failed else 'Concluído',
-                    color='#B91C1C' if failed else '#15803D',tooltip=simulation.get('error') or None)),
+                ft.DataCell(ft.Text('Não suportado neste backend' if unsupported else 'Falha na preparação' if failed else 'Concluído',
+                    color='#B45309' if unsupported else '#B91C1C' if failed else '#15803D',tooltip=simulation.get('error') or None)),
                 ft.DataCell(ft.Text('—' if failed else f"{simulation['rmsd']:.3f}")),
-                ft.DataCell(ft.TextButton('3D',icon=ft.Icons.VIEW_IN_AR,on_click=overlay,disabled=failed)),
+                ft.DataCell(self.view_button(simulation,overlay,failed)),
                 ft.DataCell(ft.TextButton('Resíduos',icon=ft.Icons.SCIENCE_OUTLINED,on_click=contacts,disabled=failed)),
                 ft.DataCell(action)]))
         self.table.rows = rows
@@ -63,9 +65,22 @@ class RedockingResultsTable:
         self.previous.disabled = self.offset == 0
         self.next.disabled = self.offset+self.limit >= len(self.simulations)
         failures=sum(s.get('status')=='preparation_failed' for s in self.simulations)
-        if failures:self.count.value=f'{len(self.simulations)} pares de redocking · Página {self.offset//self.limit+1}'
-        self.warning.visible=bool(failures)
-        self.warning.value=f'{failures} complexos ignorados por falha de preparação. Consulte as linhas destacadas.'
+        unsupported=sum(s.get('status')=='UNSUPPORTED' for s in self.simulations)
+        if failures or unsupported:self.count.value=f'{len(self.simulations)} pares de redocking · Página {self.offset//self.limit+1}'
+        self.warning.visible=bool(failures or unsupported)
+        self.warning.value=f'{failures} falhas de preparação; {unsupported} complexos não aplicáveis ao backend de docking selecionado.'
+
+    def view_url(self,key,name=None):
+        if not getattr(self.ui.page,'web',False):return None
+        r=self.results
+        return self.ui.docking_view_url(r.project_id,r.run_id,r.stage['id'],'redocking',key,r.token,name=name)
+
+    def view_button(self,simulation,callback,failed=False):
+        url=None if failed else self.view_url(simulation['id'],
+            f"{simulation['pdb']} / {simulation['ligand']} · Redocking")
+        return ft.TextButton('3D',icon=ft.Icons.VIEW_IN_AR,disabled=failed,
+            url=ft.Url(url,target=ft.UrlTarget.BLANK) if url else None,
+            on_click=None if url else callback)
 
     def move(self, direction):
         if not self.valid():
@@ -103,7 +118,7 @@ class RedockingResultsTable:
                 ft.Text('O PDB de origem será apagado e seus pares removidos da próxima execução deste redocking. Outros pares do mesmo PDB perderão essa entrada. Resultados já concluídos serão preservados. A recuperação original deixará de baixar esse PDB enquanto ele estiver na lista de exclusões.')],tight=True),
             actions=[ft.TextButton('Cancelar',on_click=finish),
                 ft.TextButton('Excluir complexo',on_click=remove)])
-        progress=RemovalProgress(self.ui,dialog)
+        progress=RemovalProgress(self.ui,dialog,'Removendo complexo…')
         self.ui.page.show_dialog(dialog)
 
     async def overlay(self,key):
@@ -116,7 +131,7 @@ class RedockingResultsTable:
         r=self.results
         await residue_dialog(self.ui,r.project_id,
             lambda:self.service.scene(r.token,r.project_id,r.run_id,r.stage['id'],key),
-            self.valid,lambda:self.overlay(key))
+            self.valid,lambda:self.overlay(key),open_3d_url=self.view_url(key))
 
     async def open(self, key):
         results = self.results
@@ -130,7 +145,9 @@ class RedockingResultsTable:
             async def preview(e):
                 if self.valid() and files.valid():
                     await self.ui.guard(lambda: self.ui.preview_artifact(results.project_id, item['path']))
-            return [ft.IconButton(ft.Icons.VIEW_IN_AR, tooltip='Visualizar estrutura 3D', on_click=preview)]
+            url=self.ui.pdb_view_url(results.project_id,item['path']) if getattr(self.ui.page,'web',False) else None
+            return [ft.IconButton(ft.Icons.VIEW_IN_AR, tooltip='Visualizar estrutura 3D',
+                url=ft.Url(url,target=ft.UrlTarget.BLANK) if url else None,on_click=None if url else preview)]
         files = FileTable(self.ui, results.project_id, simulation['files'], extra_actions=preview_actions)
         self.file_tables.append(files)
         previous_editing = getattr(self.ui, 'editing_stage', False)
@@ -150,10 +167,10 @@ class RedockingResultsTable:
                 data = await self.ui.call(self.service.archive, *args)
                 if self.valid() and files.valid():
                     name = f"{simulation['pdb']}_{simulation['ligand']}_{simulation['residue']}{simulation['chain']}_redocking.zip"
-                    await self.ui.picker.save_file(file_name=name, src_bytes=data)
+                    await save_file(self.ui,file_name=name, src_bytes=data)
             await self.ui.guard(action)
-        failed=simulation.get('status')=='preparation_failed'
-        failure_label=self.ui.tr('Falha na preparação') if hasattr(self.ui,'tr') else 'Falha na preparação'
+        failed=simulation.get('status')!='succeeded';unsupported=simulation.get('status')=='UNSUPPORTED'
+        failure_label='Não suportado neste backend' if unsupported else self.ui.tr('Falha na preparação') if hasattr(self.ui,'tr') else 'Falha na preparação'
         suffix=failure_label if failed else f"RMSD {simulation['rmsd']:.3f} Å"
         title = f"{simulation['pdb']} / {simulation['ligand']} / {simulation['residue']} / {simulation['chain']} · {suffix}"
         dialog = ft.AlertDialog(title=verbatim(ft.Text(title, size=20)), on_dismiss=dismissed,

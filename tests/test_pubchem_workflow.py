@@ -43,6 +43,20 @@ class PubChemRetrievalTests(unittest.TestCase):
                 retrieve_pubchem(str(root/'missing'),base_input_path=str(root),input_file='mine.csv',selection_mode='single',compound_id='MISSING')
             with self.assertRaises(ValueError):retrieve_pubchem(str(root/'bad'),base_input_path=str(root),input_file='../mine.csv')
 
+    def test_similarity_threshold_is_forwarded_as_the_inclusive_integer_cutoff(self):
+        with tempfile.TemporaryDirectory() as folder:
+            crawler=PubChemSimilarMols(folder,threshold=83,max_records=25)
+            props={'CID':2,'SMILES':'CCC','MolecularWeight':44.1}
+            crawler._request=Mock(side_effect=[
+                {'IdentifierList':{'CID':[1]}},
+                {'IdentifierList':{'CID':[1,2]}},
+                {'PropertyTable':{'Properties':[props]}},
+            ])
+            result=crawler.search(pd.DataFrame([{'molecule_chembl_id':'Q','canonical_smiles':'CCO'}]))
+            similarity=crawler._request.call_args_list[1]
+            self.assertEqual(similarity.args[2],{'Threshold':83,'MaxRecords':25})
+            self.assertEqual(result['PubChem_CID'].tolist(),[2])
+
     def test_manual_smiles_needs_no_upstream_block(self):
         with tempfile.TemporaryDirectory() as folder,patch.object(PubChemSimilarMols,'search',return_value=self.extra()) as search:
             result=retrieve_pubchem(folder,reference_source='manual',reference='OCC')
@@ -158,7 +172,7 @@ class PubChemPipelineTests(unittest.TestCase):
             try:
                 run=self.wait(service.submit(self.token,self.project_id))
                 self.assertEqual(run['status'],'succeeded',run['error'])
-                report=next(Path(p) for p in run['stages'][0]['artifacts'] if p.endswith('retrieval_report.json'))
+                report=next(Path(p) for p in run['stages'][0]['artifacts'] if p.endswith('__pubchem__report.json'))
                 self.assertEqual([r['molecule_chembl_id'] for r in json.loads(report.read_text())['references']],['B'])
             finally:service.close()
 
@@ -178,7 +192,7 @@ class PubChemPipelineTests(unittest.TestCase):
                     self.assertEqual(run['status'],'awaiting_input',run['error'])
                     run=self.confirm(service,run,compound_id='B')
                     self.assertEqual(run['status'],'awaiting_input',run['error'])
-                    report=next(Path(p) for p in run['stages'][1]['artifacts'] if p.endswith('retrieval_report.json'))
+                    report=next(Path(p) for p in run['stages'][1]['artifacts'] if p.endswith('__pubchem__report.json'))
                     self.assertEqual([r['molecule_chembl_id'] for r in json.loads(report.read_text())['references']],['B'])
                     run=self.confirm(service,run,processing=processing)
                     self.assertEqual(run['status'],'succeeded',run['error'])

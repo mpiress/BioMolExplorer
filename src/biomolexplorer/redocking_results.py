@@ -42,7 +42,7 @@ class RedockingResults:
                     code, ligand, chain = (record[k].strip() for k in ('PDB_CODE', 'LIGAND', 'CHAIN'))
                     number = record['RESNUM'].strip()
                     int(number)
-                    failed=record.get('STATUS')=='preparation_failed'
+                    status=record.get('STATUS') or 'succeeded';failed=status!='succeeded'
                     rmsd = None if failed else float(record['RMSD'])
                     if not all(re.fullmatch(r'[A-Za-z0-9_+-]{1,40}', value) for value in (code, ligand, chain)) or (not failed and (not math.isfinite(rmsd) or rmsd < 0)):
                         continue
@@ -55,7 +55,7 @@ class RedockingResults:
                 key = hashlib.sha256((str(metadata)+'\0'+'|'.join(identity)).encode()).hexdigest()
                 simulations.append(dict(id=key, pdb=code, ligand=ligand, residue=number,
                     chain=chain, rmsd=rmsd, metadata=str(metadata),
-                    status='preparation_failed' if failed else 'succeeded',error=record.get('ERROR',''),
+                    status=status if failed else 'succeeded',error=record.get('ERROR',''),
                     failed_step=record.get('FAILED_STEP','')))
         return simulations
 

@@ -143,6 +143,27 @@ class Docking():
             from biomolexplorer.templates import quiet_template
             template_content=quiet_template('vina/config.template' if input_template.endswith('vina/config.template') else input_template,template_content)
             config_content = template_content.format(**kwargs)
+            if 'runscript biomol_ligand_cleanup.py' in config_content:
+                (Path(output_script).parent/'biomol_ligand_cleanup.py').write_text(
+                    'import chimera\nimport DockPrep\n'
+                    'DockPrep.prep(chimera.openModels.list(modelTypes=[chimera.Molecule]), '
+                    'addHFunc=None, addCharges=False, delSolvent=False, delIons=False, '
+                    'delLigands=False, delAltLocs=True, incompleteSideChains=False, '
+                    'mutateMSE=False, mutate5BU=False, mutateUMS=False, mutateCSL=False, nogui=True)\n')
+            if 'runscript biomol_receptor_cleanup.py' in config_content:
+                helper=Path(output_script).parent/'biomol_receptor_cleanup.py'
+                helper.write_text('import chimera\nimport DockPrep\n'
+                    'from chimera.resCode import protein3to1\n'
+                    'for model in chimera.openModels.list(modelTypes=[chimera.Molecule]):\n'
+                    '    for residue in list(model.residues):\n'
+                    '        if not residue.isHet or residue.type not in protein3to1 or residue.type in arguments: continue\n'
+                    '        linked = any(n.residue != residue and n.residue.type in protein3to1 for a in residue.atoms for n in a.neighbors)\n'
+                    '        if not linked:\n'
+                    '            chimera.replyobj.info("Excluded non-polymer amino-acid additive: %s\\n" % residue.oslIdent())\n'
+                    '            model.deleteResidue(residue)\n'
+                    'DockPrep.prep(chimera.openModels.list(modelTypes=[chimera.Molecule]), '
+                    'addHFunc=None, addCharges=False, delSolvent=False, delIons=False, '
+                    'delLigands=False, delAltLocs=True, nogui=True)\n')
             # Classic Chimera's open/write parsers consume the remaining path
             # verbatim, including spaces. Shell quoting becomes part of its filename.
 
@@ -186,10 +207,30 @@ class Docking():
         try:
             import re
             script = Path(directory(self.outputpath), filename)
+            entry=getattr(self,'_chimera_ligand_settings',{}).get(filename)
+            if entry is not None and '\naddh\n' in script.read_text():
+                from biomolexplorer.chimera_charge_repair import local_definition,charge_commands
+                record,settings=entry
+                if any(local_definition(self.complexpath,record[1],settings).values()):
+                    source=script.read_text()
+                    repairs=[line for line in charge_commands(self.complexpath,record,settings) if line not in source]
+                    if repairs:script.write_text(source.replace('\naddh\n','\n'+'\n'.join(repairs)+'\naddh\n',1))
             outputs = re.findall(r'^write format (pdb|mol2) #0 (.+)$', script.read_text(), re.M)
-            command = ['chimera', '--nogui', '--silent', filename]
+            command = ['chimera', '--nogui', filename]
             with log_context(pair=Path(filename).stem.removeprefix('prepare_ligand_').removeprefix('prepare_receptor_').removeprefix('prepare_complex_')):
-                self.perform_subprocess(command, self.outputpath)
+                try:
+                    self.perform_subprocess(command, self.outputpath)
+                except RuntimeError as error:
+                    entry=getattr(self,'_chimera_ligand_settings',{}).get(filename)
+                    if entry is None or 'Failure running ANTECHAMBER' not in str(error):raise
+                    from biomolexplorer.chimera_charge_repair import charge_commands
+                    record,settings=entry
+                    repairs=charge_commands(self.complexpath,record,settings)
+                    source=script.read_text()
+                    if not repairs or '\naddh\n' not in source or all(line in source for line in repairs):raise
+                    script.write_text(source.replace('\naddh\n','\n'+'\n'.join(repairs)+'\naddh\n',1))
+                    event(self.logger,'ligand.typing.repaired','Retrying Chimera with CCD-confirmed atom types.',pair=filename)
+                    self.perform_subprocess(command,self.outputpath)
             for file_format, output in outputs:
                 self.validate_prepared_file(Path(directory(self.outputpath), output.strip()), file_format)
             script.unlink(missing_ok=True)
@@ -250,6 +291,24 @@ class Docking():
         try:
 
             input_file = directory(self.outputpath) + inputfile
+            if input_format=='mol2':
+                from biomolexplorer.chimera_mol2 import normalize_carboxylates
+                normalize_carboxylates(input_file)
+                if inputfile.endswith('.lig.mol2'):
+                    entry=next((value for name,value in getattr(self,'_chimera_ligand_settings',{}).items()
+                        if name.removeprefix('prepare_ligand_').removesuffix('.com')==inputfile.removesuffix('.lig.mol2')),None)
+                    if entry:
+                        from biomolexplorer.dock6_validation import validate_mol2
+                        from biomolexplorer.chimera_charge_repair import local_definition
+                        if any(local_definition(self.complexpath,entry[0][1],entry[1]).values()):
+                            from biomolexplorer.chimera_mol2 import canonicalize_component
+                            canonicalize_component(input_file,self.complexpath,*entry)
+                        else:
+                            try:validate_mol2(input_file)
+                            except ValueError:
+                                from biomolexplorer.chimera_mol2 import canonicalize_component
+                                canonicalize_component(input_file,self.complexpath,*entry)
+                        validate_mol2(input_file)
             if input_format != 'smi':
                 self.validate_prepared_file(input_file, input_format)
 
@@ -398,11 +457,14 @@ class Docking():
         try:
 
             from biomolexplorer.redocking_config import pair_key, DEFAULTS
+            from biomolexplorer.redocking_config import chimera_pairs
+            preparation_pairs=chimera_pairs(pdb_codes,preparation_pairs)
             event(self.logger, 'preparation.started', 'Preparing selected receptor/ligand complexes')
             centers   = {}
             complexes = []
             receptors = []
             ligands   = []
+            self._chimera_ligand_settings={}
 
 
             for pdb in pdb_codes:
@@ -445,6 +507,7 @@ class Docking():
                                              input_ligand=directory(self.outputpath) + f'{extention}',
                                              output_ligand=directory(self.outputpath) + f'{extention}', _preparation=preparation if preparation_pairs is not None else None)
                 ligands.append(f'prepare_ligand_{extention}.com')
+                self._chimera_ligand_settings[f'prepare_ligand_{extention}.com']=(pdb,preparation)
 
 
 
@@ -469,6 +532,8 @@ class Docking():
                 self.prepare_on_obabel(f'{pdb[0]}_{chain}.dockprep.mol2', f'{pdb[0]}_{chain}.dockprep.pdbqt', ([('p',str(pH))] if options['add_hydrogens'] else []) + [('xr','')], input_format='mol2', output_format='pdbqt')
                 converted_receptors.add(receptor_key)
                 if _prepared_receptors is not None:_prepared_receptors.add(receptor_key)
+                checkpoint=getattr(self,'receptor_checkpoint',None)
+                if checkpoint:checkpoint(pdb)
 
             args = [(file,) for file in ligands]
             if _prepared_receptors is None:self.process_in_parallel(method_name='prepare_on_chimera', args_list=args)
@@ -656,10 +721,8 @@ class DockVina(Docking):
 
         files_to_perform = [f for f in os.listdir(directory(self.outputpath)) if f.endswith('.vina')]
 
-        for file in files_to_perform:
-            command = ['vina', '--config', file]
-            with log_context(pair=Path(file).stem):
-                self.perform_subprocess(command, self.outputpath)
+        from biomolexplorer.vina_batch import run_resilient
+        return run_resilient([Path(self.outputpath)/name for name in files_to_perform],self.outputpath)
 
 
 
@@ -717,6 +780,8 @@ class DockVina(Docking):
                 if not math.isfinite(float(rmsd_value)):
                     raise ValueError(f'RMSD inválido no redocking: {composite}')
                 results.append((f'{receptor}', f'{ligand}', f'{resnum}', f'{chain}', rmsd_value))
+                callback=getattr(self,'pair_checkpoint',None)
+                if callback:callback([receptor,ligand,resnum,chain],rmsd_value)
 
 
             rmsd = DataFrame(results, columns=['PDB_CODE', 'LIGAND', 'RESNUM', 'CHAIN', 'RMSD'])
@@ -748,9 +813,12 @@ class DockVina(Docking):
 
         try:
 
-            from biomolexplorer.vina_session import VinaSessions
-            sessions = VinaSessions()
             molecules = [f.rsplit('.lig.pdbqt')[0] for f in os.listdir(directory(self.ligandpath)) if f.endswith('.lig.pdbqt')]
+            selected=getattr(self,'selected_ligand_files',None)
+            if selected is not None:
+                allowed={Path(p).name.removesuffix('.lig.pdbqt') for p in selected}
+                molecules=[code for code in molecules if code in allowed]
+            configurations=[]
 
             self.__pdb_codes   = [(pdb[0], pdb[1], pdb[2], pdb[3]) for pdb in self.__pdb_codes]
 
@@ -759,10 +827,9 @@ class DockVina(Docking):
                 if center is None:raise ValueError(f'Docking center is missing for {receptor}_{ligand}_{resnum}{chain}.')
                 reference=f'{receptor}_{ligand}_{resnum}{chain}'
                 prefix=reference+'_'
-                completed={f.removesuffix('.lig.pdbqt').removeprefix(prefix) for f in os.listdir(directory(self.outputpath))
-                    if f.startswith(prefix) and f.endswith('.lig.pdbqt')}
-
-                for mol in sorted(set(molecules)-completed):
+                # File existence alone is not proof of a compatible experiment.
+                # The per-calculation content index decides what can be reused.
+                for mol in sorted(set(molecules)):
                      self.generate_docking_script(input_template='src/scripts/vina/config.template',
                                             output_script=directory(self.outputpath) + f'{reference}_{mol}.vina',
                                             receptor=directory(self.receptorpath) + f'{receptor}_{chain}' + '.dockprep.pdbqt',
@@ -779,19 +846,14 @@ class DockVina(Docking):
 
                      sync_directory(directory(self.outputpath))
 
-                     command = ['vina', '--config', f'{reference}_{mol}.vina']
                      configuration = Path(self.outputpath) / f'{reference}_{mol}.vina'
-                     # The configuration also preserves customized templates.
-                     validate = sessions.run(configuration, self.outputpath) if configuration.is_file() else False
-                     if not validate:
-                         validate = self.perform_subprocess(command, self.outputpath)
+                     configurations.append(configuration)
 
-                     if not validate:
-                         f1 = fileHandling(input_path=base_selected_mols, output_path=base_selected_mols)
-                         df = f1.csv_to_dataframe(self.mol_filename)
-                         df = df[df['molecule_chembl_id'] != mol]
-                         f1.dataframe_to_csv(self.mol_filename, df)
-                         os.remove(directory(self.ligandpath) + mol + '.lig.pdbqt') if os.path.isfile(directory(self.ligandpath) + mol + '.lig.pdbqt') else None
+            # The Vina Python extension may terminate the interpreter for a
+            # malformed ligand.  A checkpointed child retains map reuse in the
+            # common case and lets this worker resume after such native aborts.
+            from biomolexplorer.vina_batch import run_resilient
+            return run_resilient(configurations,self.outputpath)
 
 
         except Exception as e:
@@ -827,6 +889,9 @@ class Dock6(Docking):
         runtime=Path(self.runtime_path)
         shutil.copytree(ligand_input_path,runtime/'lig')
         shutil.copytree(receptor_input_path,runtime/'rec')
+        from biomolexplorer.chimera_mol2 import normalize_carboxylates
+        for folder in ('lig','rec'):
+            for mol2 in (runtime/folder).glob('*.mol2'):normalize_carboxylates(mol2)
         super().__init__(ligand_input_path=str(runtime/'lig'),
                          receptor_input_path=str(runtime/'rec'),
                          output_path=str(runtime/'out'),
@@ -876,8 +941,29 @@ class Dock6(Docking):
         from biomolexplorer.footprints import footprint_rows
         from biomolexplorer.progress import report_progress
         self._ensure_compounds()
+        checkpoints=self._checkpoints() if hasattr(self,'runtime_path') else None
+        pending=[];keys={}
+        for code,args,output in jobs:
+            if checkpoints:
+                key=checkpoints.compound_key(method,code);keys[code]=key
+                def validate(role,path):
+                    if output.suffix=='.mol2':validate_mol2(path,scored=True)
+                    else:footprint_rows(path)
+                if checkpoints.cache.restore(key,{'result':output},validate) is not None:continue
+            pending.append((code,args,output))
+        def execute_compound(code,args,output):
+            if not checkpoints:return getattr(self,method)(*args)
+            def validate(role,path):
+                if output.suffix=='.mol2':validate_mol2(path,scored=True)
+                else:footprint_rows(path)
+            with checkpoints.cache.locked(keys[code]):
+                if checkpoints.cache.restore(keys[code],{'result':output},validate) is not None:return
+                getattr(self,method)(*args)
+                validate('result',output)
+                checkpoints.cache.remember(keys[code],{'result':output},dict(compound=code,step=step,
+                    receptor_identifier=checkpoints.receptor_identifier))
         with ThreadPoolExecutor(max_workers=self.nprocess) as executor:
-            futures={executor.submit(getattr(self,method),*args):(code,output) for code,args,output in jobs}
+            futures={executor.submit(execute_compound,code,args,output):(code,output) for code,args,output in pending}
             for completed,future in enumerate(as_completed(futures),1):
                 code,output=futures[future];success=False
                 with self._compound_guard(code,step):
@@ -888,6 +974,21 @@ class Dock6(Docking):
                 if not success:self.excluded_compounds.add(code)
                 report_progress(step+': '+code,completed,len(jobs))
         self.failure_report.write(self.export_path)
+
+    def _checkpoints(self):
+        if not hasattr(self,'calculation_checkpoints'):
+            from biomolexplorer.dock6_cache import Dock6Checkpoints
+            self.calculation_checkpoints=Dock6Checkpoints(self,self.__dock6_path,self.__pdb_code,
+                dict(density=self.__density,radius=self.__radius,distance=self.__distance,
+                     center=self.binding_site_center),self.__base_output_path)
+        return self.calculation_checkpoints
+
+    def prepare_site(self):
+        checkpoints=self._checkpoints()
+        with checkpoints.cache.locked(checkpoints.site_key()):
+            if checkpoints.restore_site():return
+            self.prepare_surface();self.prepare_showbox();self.prepare_gridbox()
+            checkpoints.remember_site()
 
     def validate_setup(self):
         from biomolexplorer.processes import ScientificToolError
@@ -1389,8 +1490,17 @@ class Dock6(Docking):
                 code=filename.removesuffix('_footprint_scored.txt');success=False
                 with self._compound_guard(code,'Gráfico do footprint DOCK6'):
                     footprint_rows(Path(self.outputpath)/filename)
+                    checkpoints=self._checkpoints() if hasattr(self,'runtime_path') else None
+                    plot=Path(self.outputpath)/'plots'/(code+'.pdf')
+                    if checkpoints:
+                        from biomolexplorer.calculation_cache import identity
+                        from biomolexplorer.stage_cache import file_digest
+                        key=identity(dict(footprint=file_digest(Path(self.outputpath)/filename),
+                                          max_residues=self.__max_residues,adapter=checkpoints.adapter,kind='plot'))
+                        if checkpoints.cache.restore(key,{'plot':plot}) is not None:continue
                     resindex_selected, resindex_remainder = self.__identify_residues(filename, self.__max_residues)
                     self.__plot_footprints(code, resindex_selected, resindex_remainder)
+                    if checkpoints:checkpoints.cache.remember(key,{'plot':plot},dict(compound=code,step='footprint-plot'))
                     success=True
                 if not success:self.excluded_compounds.add(code)
             self.failure_report.write(self.export_path)

@@ -56,6 +56,8 @@ class WorkspaceStore:
                     user_id TEXT, actor_name TEXT NOT NULL, actor_email TEXT NOT NULL, action TEXT NOT NULL,
                     summary TEXT NOT NULL, created REAL NOT NULL, has_before INTEGER NOT NULL);
                 CREATE INDEX IF NOT EXISTS history_project ON project_history(project_id,created);
+                CREATE TABLE IF NOT EXISTS block_ids(project_id TEXT REFERENCES projects(id),stage_id TEXT,block_id TEXT,
+                    PRIMARY KEY(project_id,stage_id),UNIQUE(project_id,block_id));
             ''')
 
         from .project_folders import finish
@@ -258,8 +260,23 @@ class WorkspaceStore:
                 from .graph_contract import normalize_legacy_graphs
                 stages = merge_pipeline(base_pipeline, stages, normalize_legacy_graphs(json.loads(current['pipeline'])))
                 validate_pipeline(stages)
+            from .artifact_naming import assign_block_ids
+            registered=[dict(id=r[0],block_id=r[1]) for r in db.execute(
+                'SELECT stage_id,block_id FROM block_ids WHERE project_id=?',(project_id,))]
+            registered.extend(s for s in json.loads(current['pipeline']) if s.get('block_id') and
+                s['id'] not in {r['id'] for r in registered})
+            assign_block_ids(stages,registered)
+            for stage in stages:
+                db.execute('INSERT OR IGNORE INTO block_ids VALUES (?,?,?)',(project_id,stage['id'],stage['block_id']))
             db.execute('UPDATE projects SET pipeline=?,revision=revision+1,updated=? WHERE id=?',
                 (json.dumps(stages, allow_nan=False), time.time(), project_id))
+            removed={s['id'] for s in json.loads(current['pipeline'])}-{s['id'] for s in stages}
+            if removed:
+                for row in db.execute('SELECT id,stages FROM runs WHERE project_id=?',(project_id,)).fetchall():
+                    saved=json.loads(row['stages'])
+                    for item in saved:
+                        if item['id'] in removed:item['selection_removed']=True
+                    db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(saved),row['id']))
         return self.project(token, project_id)
 
     def invite(self, token, project_id, email, role='viewer'):
@@ -326,7 +343,8 @@ class WorkspaceStore:
         self._require_user(user['id'], project_id, 'editor')
         if Path(name).name != name or not name or '\\' in name or len(name) > 180 or any(c in name for c in '\r\n\x00'):
             raise ValueError('Nome de arquivo inválido.')
-        if kind not in ('compounds', 'structures', 'prepared_structures', 'fingerprints', 'similarity', 'vina', 'dock6', 'scores', 'visualization', 'other','zinc_urls'):
+        from .import_inputs import KINDS
+        if kind not in KINDS:
             raise ValueError('Tipo de arquivo inválido.')
         ticket = uuid4().hex
         with self.connect() as db:
@@ -401,9 +419,10 @@ class WorkspaceStore:
             return stream.read(max_bytes) if max_bytes else stream.read()
 
     def list_runs(self, token, project_id):
-        self.project(token, project_id)
+        project=self.project(token, project_id)
+        from .result_visibility import project_run
         with self.connect() as db:
-            return [self._run_row(row) for row in db.execute('SELECT * FROM runs WHERE project_id=? ORDER BY created DESC LIMIT 100', (project_id,))]
+            return [project_run(self._run_row(row),project['pipeline']) for row in db.execute('SELECT * FROM runs WHERE project_id=? ORDER BY created DESC LIMIT 100', (project_id,))]
 
     @staticmethod
     def _run_row(row):
@@ -416,5 +435,6 @@ class WorkspaceStore:
             row = db.execute('SELECT * FROM runs WHERE id=?', (run_id,)).fetchone()
         if row is None:
             raise AccessDenied('Execução não encontrada.')
-        self.project(token, row['project_id'])
-        return self._run_row(row)
+        project=self.project(token, row['project_id'])
+        from .result_visibility import project_run
+        return project_run(self._run_row(row),project['pipeline'])

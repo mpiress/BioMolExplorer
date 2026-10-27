@@ -8,6 +8,7 @@ from pathlib import Path
 import time
 
 from .diagnostics import event, get_logger
+from .ligand_cache import validate_prepared_ligand
 from .progress import report_progress
 
 
@@ -51,6 +52,12 @@ class VinaSessions:
         def path(name):
             return (directory / options[name]).resolve()
         receptor = path('receptor')
+        ligand = path('ligand')
+        compound_identifier = ligand.name.removesuffix('.lig.pdbqt').removesuffix('.pdbqt')
+        # Invalid floating-point geometry can make the native Vina library call
+        # abort(3), bypassing Python exception handling.  Validate at the last
+        # safe boundary as well as when the preparation/cache is produced.
+        validate_prepared_ligand(ligand, 'pdbqt')
         center = [float(options['center_' + axis]) for axis in 'xyz']
         size = [float(options['size_' + axis]) for axis in 'xyz']
         spacing = float(options.get('spacing', .375))
@@ -80,18 +87,19 @@ class VinaSessions:
         else:
             event(self.logger, 'vina.maps.reused', 'Reutilizando receptor e mapas do sítio.')
         started = time.monotonic()
-        event(self.logger, 'vina.ligand.started', 'Docking do composto iniciado.', ligand_file=str(path('ligand')))
-        report_progress('Vina: docking de '+path('ligand').name+' com receptor e mapas reutilizados.')
+        fields = {'configuration': configuration.name, 'compound_identifier': compound_identifier}
+        event(self.logger, 'vina.ligand.started', 'Docking do composto iniciado.', **fields)
+        report_progress('Vina: docking de '+ligand.name+' com receptor e mapas reutilizados.')
         try:
-            self.session.set_ligand_from_file(str(path('ligand')))
+            self.session.set_ligand_from_file(str(ligand))
             self.session.dock(exhaustiveness=int(options.get('exhaustiveness', 8)),
                               n_poses=int(options.get('num_modes', 9)),
                               min_rmsd=initialization[4], max_evals=int(options.get('max_evals', 0)))
             self.session.write_poses(str(path('out')), n_poses=int(options.get('num_modes', 9)),
                                      energy_range=float(options.get('energy_range', 3)), overwrite=True)
         except Exception:
-            self.logger.exception('Falha no docking do composto.', extra={'event': 'vina.ligand.failed'})
+            self.logger.exception('Falha no docking do composto.', extra={'event': 'vina.ligand.failed', **fields})
             raise
         event(self.logger, 'vina.ligand.completed', 'Docking do composto concluído.',
-              duration_ms=round((time.monotonic() - started) * 1000))
+              duration_ms=round((time.monotonic() - started) * 1000), **fields)
         return True

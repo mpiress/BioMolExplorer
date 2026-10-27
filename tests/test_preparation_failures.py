@@ -12,6 +12,9 @@ from biomolexplorer.preparation_failures import REPORT_NAME
 from biomolexplorer.operations import execute_operation
 from wrappers.docking import perform_docking_vina,perform_docking_dock6
 
+PDBQT='ROOT\nATOM      1  C   UNL A   1       0.000   0.000   0.000  1.00  0.00     0.000 C\nENDROOT\nTORSDOF 0\n'
+MOL2='@<TRIPOS>MOLECULE\nligand\n1 0 1 0 0\nSMALL\nUSER_CHARGES\n@<TRIPOS>ATOM\n1 C 0.0 0.0 0.0 C.3 1 LIG 0.0\n@<TRIPOS>BOND\n@<TRIPOS>SUBSTRUCTURE\n1 LIG 1\n'
+
 class PreparationFailureTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
@@ -19,12 +22,17 @@ class PreparationFailureTests(unittest.TestCase):
         write_csv(self.input,[dict(molecule_chembl_id='FIRST',canonical_smiles='CCO'),
             dict(molecule_chembl_id='BAD',canonical_smiles='CCN'),dict(molecule_chembl_id='LAST',canonical_smiles='CCC')])
 
+    @staticmethod
+    def chimera(command,**options):
+        (Path(options['cwd'])/'prepared.mol2').write_text(MOL2)
+        return SimpleNamespace(returncode=0,stdout='',stderr='')
+
     def test_failed_conversion_continues_and_removes_partial_or_stale_pose(self):
         output=self.root/'out';output.mkdir();(output/'BAD.lig.pdbqt').write_text('stale pose')
         def convert(source,destination,**options):
-            destination=Path(destination);destination.write_text('partial pose')
+            destination=Path(destination);destination.write_text(PDBQT if destination.suffix=='.pdbqt' else MOL2)
             if destination.stem.startswith('BAD'):raise ValueError('cannot convert this compound')
-        with patch('biomolexplorer.docking_data.convert_structure',side_effect=convert):
+        with patch('biomolexplorer.docking_preparation.convert_structure',side_effect=convert),patch('biomolexplorer.docking_preparation.subprocess.run',side_effect=self.chimera):
             outputs=prepare_ligands(self.input,output,'pdbqt')
         self.assertEqual([p.name for p in outputs],['FIRST.lig.pdbqt','LAST.lig.pdbqt'])
         self.assertFalse((output/'BAD.lig.pdbqt').exists())
@@ -34,14 +42,14 @@ class PreparationFailureTests(unittest.TestCase):
         self.assertEqual(len(read_compounds(self.input)),3)
 
     def test_chimera_error_with_zero_exit_is_excluded_and_both_exports_are_cleaned(self):
-        count=0
-        def convert(source,destination,**options):Path(destination).write_text('converted')
+        def convert(source,destination,**options):
+            Path(destination).write_text(PDBQT if Path(destination).suffix=='.pdbqt' else Path(source).read_text())
         def chimera(command,**options):
-            nonlocal count
-            count+=1;work=Path(options['cwd']);(work/'prepared.mol2').write_text('prepared')
-            return SimpleNamespace(returncode=0,stdout='Error while sourcing: bad molecule' if count==2 else '',stderr='')
-        with patch('biomolexplorer.docking_preparation.convert_structure',side_effect=convert),patch('biomolexplorer.docking_preparation.subprocess.run',side_effect=chimera):
-            result=prepare_candidates(self.input,self.root/'both',engines='both')
+            work=Path(options['cwd']);(work/'prepared.mol2').write_text(MOL2)
+            bad=(work/'input.mol2').read_text()=='CCN'
+            return SimpleNamespace(returncode=0,stdout='Error while sourcing: bad molecule' if bad else '',stderr='')
+        with patch('biomolexplorer.docking_preparation.molecule_sdf',side_effect=lambda smiles:smiles),patch('biomolexplorer.docking_preparation.convert_structure',side_effect=convert),patch('biomolexplorer.docking_preparation.subprocess.run',side_effect=chimera):
+            result=prepare_candidates(self.input,self.root/'both',{'preparation_backend':'legacy_chimera'},engines='both')
         self.assertEqual([r['molecule_chembl_id'] for r in read_compounds(result)],['FIRST','LAST'])
         self.assertFalse((result.parent/'BAD.lig.mol2').exists())
         self.assertEqual(read_compounds(result.parent/REPORT_NAME)[0]['compound_identifier'],'BAD')
@@ -50,25 +58,25 @@ class PreparationFailureTests(unittest.TestCase):
         count=0
         def convert(source,destination,**options):
             nonlocal count
-            Path(destination).write_text('converted')
+            Path(destination).write_text(PDBQT if Path(destination).suffix=='.pdbqt' else MOL2)
             if Path(destination).name=='BAD.lig.pdbqt':raise ValueError('export failed')
         def chimera(command,**options):
-            (Path(options['cwd'])/'prepared.mol2').write_text('prepared');return SimpleNamespace(returncode=0)
+            (Path(options['cwd'])/'prepared.mol2').write_text(MOL2);return SimpleNamespace(returncode=0,stdout='',stderr='')
         with patch('biomolexplorer.docking_preparation.convert_structure',side_effect=convert),patch('biomolexplorer.docking_preparation.subprocess.run',side_effect=chimera):
-            result=prepare_candidates(self.input,self.root/'exports',engines='both')
+            result=prepare_candidates(self.input,self.root/'exports',{'preparation_backend':'legacy_chimera'},engines='both')
         self.assertEqual(len(read_compounds(result)),2)
         self.assertFalse((result.parent/'BAD.lig.mol2').exists());self.assertFalse((result.parent/'BAD.lig.pdbqt').exists())
 
     def test_all_failed_preparation_writes_empty_table_with_headers(self):
         with patch('biomolexplorer.docking_preparation.convert_structure',side_effect=ValueError('bad compound')):
-            result=prepare_candidates(self.input,self.root/'empty',engines='vina')
+            result=prepare_candidates(self.input,self.root/'empty',{'preparation_backend':'legacy_chimera'},engines='vina')
         self.assertEqual(read_compounds(result),[])
         self.assertIn('canonical_smiles',result.read_text())
         self.assertEqual(len(read_compounds(result.parent/REPORT_NAME)),3)
 
     def test_missing_engine_and_disk_errors_are_not_silently_skipped(self):
         for error in (FileNotFoundError(2,'engine missing','obabel'),OSError(28,'disk full')):
-            with self.subTest(error=error),patch('biomolexplorer.docking_data.convert_structure',side_effect=error):
+            with self.subTest(error=error),patch('biomolexplorer.docking_preparation.convert_structure',side_effect=error):
                 with self.assertRaises(type(error)):prepare_ligands(self.input,self.root/'infrastructure','pdbqt')
 
     def test_operation_registers_separate_report_and_quality_exclusions(self):
@@ -76,8 +84,8 @@ class PreparationFailureTests(unittest.TestCase):
             output=Path(options['base_output_path']);prepare_ligands(self.input,output/'Molecules','pdbqt')
         def convert(source,destination,**options):
             if Path(destination).name.startswith('BAD'):raise ValueError('bad conversion')
-            Path(destination).write_text('prepared')
-        with patch('wrappers.docking.perform_docking_vina',side_effect=execute),patch('biomolexplorer.docking_data.convert_structure',side_effect=convert):
+            Path(destination).write_text(PDBQT if Path(destination).suffix=='.pdbqt' else MOL2)
+        with patch('wrappers.docking.perform_docking_vina',side_effect=execute),patch('biomolexplorer.docking_preparation.convert_structure',side_effect=convert),patch('biomolexplorer.docking_preparation.subprocess.run',side_effect=self.chimera):
             result=execute_operation('docking_vina',dict(base_input_path=str(self.root),target='Target',base_selected_mols=str(self.root),mol_filename='compounds'),self.root/'worker')
         self.assertEqual(result.details['preparation_failures'],1)
         self.assertEqual(result.details['excluded_records'],1)
@@ -94,6 +102,15 @@ class PreparationFailureTests(unittest.TestCase):
                 self.assertEqual(read_compounds(output/'docking_results.csv'),[])
 
     def test_mixed_batch_docks_only_successful_compounds_with_each_engine(self):
+        def prepare_one(original,dataset,destination,options,ph,engines,formats,cache,owned):
+            if original['molecule_chembl_id']=='BAD':raise ValueError('bad preparation')
+            row=dict(original)
+            for fmt in formats:
+                path=destination/(row['molecule_chembl_id']+'.lig.'+fmt)
+                path.write_text(PDBQT if fmt=='pdbqt' else MOL2)
+                row['prepared_'+fmt]=str(path)
+            row['docking_engines']=engines
+            return row,False
         for engine in ('vina','dock6'):
             output=self.root/('mixed-'+engine)
             def convert(source,destination,**options):
@@ -103,15 +120,17 @@ class PreparationFailureTests(unittest.TestCase):
                 poses=output/'Target/Vina';poses.mkdir(parents=True)
                 for ligand in (output/'Molecules').glob('*.lig.pdbqt'):
                     (poses/ligand.name).write_text('REMARK VINA RESULT: -7 0 0\n')
+                return dict(completed=[dict(configuration=p.name.removesuffix('.lig.pdbqt')+'.vina')
+                                       for p in poses.glob('*.pdbqt')],failed=[],attempts=[{}])
             def run_dock6(*args):
                 poses=output/'Target/1ABC_A/Dock6/flex';poses.mkdir(parents=True)
                 for ligand in (output/'Target/1ABC_A/Molecules').glob('*.lig.mol2'):
                     (poses/(ligand.name.removesuffix('.lig.mol2')+'_scored.mol2')).write_text('Grid_Score: -5\n')
-            with self.subTest(engine=engine),patch('wrappers.docking.prepare_docking_receptor',return_value=str(self.root)),patch('biomolexplorer.docking_data.convert_structure',side_effect=convert),patch('biomolexplorer.docking_data.binding_center',return_value=[0,0,0]),patch('wrappers.docking.DockVina') as vina,patch('wrappers.docking.Dock6') as dock6:
+            with self.subTest(engine=engine),patch('wrappers.docking.prepare_docking_receptor',return_value=str(self.root)),patch('biomolexplorer.docking_preparation._prepare_one',side_effect=prepare_one),patch('biomolexplorer.docking_data.convert_structure',side_effect=convert),patch('biomolexplorer.docking_data.binding_center',return_value=[0,0,0]),patch('wrappers.docking.DockVina') as vina,patch('wrappers.docking.Dock6') as dock6:
                 vina.return_value.docking.side_effect=run_vina
                 dock6.return_value.perform_dock6_evaluation.side_effect=run_dock6
-                if engine=='vina':perform_docking_vina(str(self.root),'Target',str(output),str(self.root),'compounds',pdb_code=['1ABC','LIG',1,'A'])
-                else:perform_docking_dock6(str(self.root),'Target',str(output),str(self.root),'/dock6','gas','compounds',pdb_code=['1ABC','LIG',1,'A'])
+                if engine=='vina':perform_docking_vina(str(self.root),'Target',str(output),str(self.root),'compounds',pdb_code=['1ABC','LIG',1,'A'],preparation_options={'ligand':{'minimize':False}})
+                else:perform_docking_dock6(str(self.root),'Target',str(output),str(self.root),'/dock6','gas','compounds',pdb_code=['1ABC','LIG',1,'A'],preparation_options={'ligand':{'minimize':False}})
             self.assertEqual({r['molecule_chembl_id'] for r in read_compounds(output/'docking_results.csv')},{'FIRST','LAST'})
             reports=list(output.rglob(REPORT_NAME));self.assertTrue(reports)
             self.assertEqual(read_compounds(reports[0])[0]['compound_identifier'],'BAD')

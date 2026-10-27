@@ -13,6 +13,33 @@ from test_frontend_navigation import walk
 class ConfigurationLoadingTests(unittest.TestCase):
     setUp = fixtures.PipelineEditorRegressionTests.setUp
 
+    def test_apply_feedback_is_above_editor_until_save_finishes(self):
+        async def scenario(fail):
+            self.stage['parameters']['pdb_ids']='1ABC'
+            await self.ui.open_stage_dialog(self.stage['id'])
+            editor=self.page.dialogs[-1]
+            entered=asyncio.Event();release=asyncio.Event()
+            async def save(*args,**kwargs):
+                entered.set();await release.wait()
+                if fail:raise ValueError('Save failed')
+            self.ui.save_draft=save
+            pending=asyncio.create_task(editor.actions[-1].on_click(None))
+            await asyncio.wait_for(entered.wait(),1)
+            feedback=self.page.dialogs[-1]
+            self.assertIsNot(feedback,editor)
+            self.assertTrue(feedback.open)
+            self.assertTrue(feedback.modal)
+            self.assertTrue(editor.open)
+            controls=list(walk(feedback))
+            self.assertTrue(any(isinstance(c,ft.ProgressRing) and c.value is None for c in controls))
+            self.assertIn('Aplicando configuração…',[c.value for c in controls if isinstance(c,ft.Text)])
+            release.set();await pending
+            self.assertFalse(feedback.open)
+            self.assertEqual(editor.open,fail)
+            self.assertEqual(self.ui._configuration_loading.requests,set())
+        asyncio.run(scenario(False))
+        asyncio.run(scenario(True))
+
     def test_branded_spinner_is_published_before_reads_and_removed_on_success(self):
         async def scenario():
             entered=asyncio.Event();release=asyncio.Event()

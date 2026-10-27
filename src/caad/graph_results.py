@@ -248,12 +248,13 @@ def export_analysis(dataset,edges,output,identifier,title,origin=None,mcs_timeou
         exports.append(dict(file=relative.as_posix(),scope=scope,component=component,
             nodes=len(frame),edges=graph.subgraph(frame['molecule_chembl_id']).number_of_edges()))
     export_subset(full,identifier+'__full_graph.csv','full_graph')
-    for component,frame in full.groupby('graph_component',sort=True):
-        component=int(component)
-        suffix='_mcc' if component==1 else ''
-        export_subset(frame,
-            f'{identifier}__component_{component:04d}{suffix}.csv',
-            'mcc' if component==1 else 'component',component)
+    # The full table is the indexed source of truth. Component membership is a
+    # column, so generating one physical CSV per component only multiplies I/O
+    # and storage. The viewer filters this table/model in memory and exports a
+    # subset on demand when the user explicitly requests one.
+    model['component_index']=[dict(component=int(component),scope='mcc' if int(component)==1 else 'component',
+        nodes=len(frame),edges=graph.subgraph(frame['molecule_chembl_id']).number_of_edges())
+        for component,frame in full.groupby('graph_component',sort=True)]
     model['compound_exports']=exports
     write_view(output/'plots'/(identifier+SUFFIX),model)
     selected.to_csv(output/'Molecules'/(identifier+'.csv'),index=False)

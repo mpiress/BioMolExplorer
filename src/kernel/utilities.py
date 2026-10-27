@@ -253,10 +253,12 @@ class fileHandling(MyUtilities):
             for mol in molecules:
                 tmp = self.csv_to_dataframe(mol)
                 tmp['canonical_smiles'] = self.convert_str_to_dict(tmp, 'molecule_structures', 'canonical_smiles')
-                tmp = tmp[['molecule_chembl_id', 'canonical_smiles', 'molecule_properties']]
                 df = concat([df, tmp], ignore_index=True)
 
             mols = explorer.remove_duplicates_and_clean(df)
+            if mols is not None:
+                from biomolexplorer.compound_properties import compound_frame
+                mols=compound_frame(mols,source='ChEMBL')
 
             return mols
 
@@ -280,11 +282,11 @@ class fileHandling(MyUtilities):
                 ids_mols = set(mols['molecule_chembl_id'])
                 ids_sims = set(sims['molecule_chembl_id'])
                 ids_sims = ids_sims - ids_mols
-                sims = sims[sims['molecule_chembl_id'].isin(ids_sims)]
+                sims = sims[sims['molecule_chembl_id'].isin(ids_sims)
+                    & ~sims['canonical_smiles'].isin(set(mols['canonical_smiles']))]
                 self.dataframe_to_csv(target+'_MOLS', mols)
                 self.dataframe_to_csv(target+'_SIMS', sims)
-                merged = concat([mols, sims], ignore_index=True)
-                self.dataframe_to_csv(target+'_FULL', merged)
+                # The union is materialized only when a consumer requests merge.
 
 
             elif isinstance(mols, DataFrame):

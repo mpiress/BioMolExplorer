@@ -23,16 +23,16 @@ A pasta do código é diferente da pasta de cada projeto de pesquisa. Você esco
 
 | Ferramenta | Versão exigida neste guia | Uso no BioMolExplorer | Obtenção e instalação |
 | --- | --- | --- | --- |
-| UCSF Chimera | 1.17 | Preparação de estruturas e ligantes, incluindo etapas de redocking | [Downloads de versões anteriores da UCSF](https://www.cgl.ucsf.edu/chimera/olddownload.html) e [instruções de instalação](https://www.cgl.ucsf.edu/chimera/docs/UsersGuide/installation.html) |
+| UCSF Chimera | 1.17, opcional | Fallback legado escolhido explicitamente | [Downloads de versões anteriores da UCSF](https://www.cgl.ucsf.edu/chimera/olddownload.html) e [instruções de instalação](https://www.cgl.ucsf.edu/chimera/docs/UsersGuide/installation.html) |
 | DOCK6 | 6.11 | Docking, refinamento e cálculo de scores, com seus programas auxiliares | [Página oficial DOCK 6](https://dock.compbio.ucsf.edu/DOCK_6/index.htm), [notas da versão 6.11](https://dock.compbio.ucsf.edu/DOCK_6/new_in_6.11.txt) e manual incluído na distribuição |
 
-Baixe explicitamente **Chimera 1.17** e **DOCK6 6.11**, mesmo quando a página oficial destacar uma versão mais recente. Os scripts atuais usam UCSF Chimera; ChimeraX não é um substituto direto para esses scripts.
+Instale UCSF Chimera 1.17, Open Babel e Vina para a preparação/redocking; instale DOCK6 6.11 para seus blocos de docking. AmberTools separado é opcional para protocolos de dinâmica, não para preparar docking. ChimeraX não interpreta os scripts Chimera.
 
 Instale o Chimera com o instalador adequado ao sistema. Para DOCK6, siga as instruções da distribuição 6.11, compile também os programas auxiliares e mantenha a instalação completa, incluindo `bin/` e `parameters/`. Execute os testes fornecidos pelo DOCK6 conforme seu manual.
 
 A superfície molecular é calculada nativamente em Python com NumPy e SciPy. Não é necessário instalar DMS; consulte o [porte e sua validação](dms_migration.md).
 
-Conclua as duas instalações antes de prosseguir. Em uma implantação web, elas ficam no computador que executa o BioMolExplorer e os workers, não apenas no computador onde o usuário abre o navegador.
+As ferramentas exigidas pelo protocolo devem estar disponíveis no computador dos workers, inclusive em implantação web. Não instale Chimera apenas para satisfazer o caminho padrão: ele é opcional.
 
 ## 3. Criar o ambiente científico e instalar a interface
 
@@ -44,7 +44,7 @@ conda activate BioMolExplorer
 python -m pip install -e '.[ui]'
 ```
 
-Se o ambiente já existe, atualize-o com `conda env update -f requirements.yml` e depois ative-o. O ambiente inclui as dependências científicas declaradas, como Open Babel e Vina; ele não substitui a instalação separada do Chimera e DOCK6. O pacote requer Python 3.12 ou superior.
+Se o ambiente já existe, atualize-o com `conda env update -f requirements.yml --prune` e depois ative-o. O ambiente inclui Open Babel, Vina e a interface; ele não substitui Chimera e DOCK6, que continuam instalações externas. O arquivo mantém faixas compatíveis — em especial NumPy 1.x e pandas 2.x — para impedir que extras de aprendizado de máquina alterem silenciosamente o worker científico. O pacote requer Python 3.12.
 
 ## 4. Configurar caminhos e conferir a instalação
 
@@ -60,7 +60,7 @@ export PATH="/caminho/para/chimera-1.17/bin:$BIOMOL_DOCK6_ROOT/bin:$PATH"
 Confira os executáveis antes de iniciar:
 
 ```bash
-for ferramenta in chimera dock6 sphgen showbox grid obabel vina; do
+for ferramenta in dock6 sphgen showbox grid obabel vina; do
     if command -v "$ferramenta"; then
         printf 'OK: %s disponível\n' "$ferramenta"
     else
@@ -74,7 +74,7 @@ else
 fi
 ```
 
-**Não inicie a aplicação enquanto houver uma mensagem FALTA ou o diretório `parameters/` estiver ausente.** Confirme que os caminhos encontrados apontam para Chimera 1.17 e DOCK6 6.11, especialmente se houver várias versões instaladas. A localização de um executável confirma sua presença no `PATH`, mas não valida sua versão nem o funcionamento do protocolo. Confira as versões nas ferramentas/distribuições e faça uma execução com um caso de referência antes de iniciar seu estudo.
+**Não inicie a aplicação enquanto houver uma mensagem FALTA ou o diretório `parameters/` estiver ausente.** Confirme os caminhos das ferramentas realmente usadas; Chimera 1.17 é opcional e DOCK6 6.11 é exigido apenas por seus protocolos, especialmente se houver várias versões instaladas. A localização de um executável confirma sua presença no `PATH`, mas não valida sua versão nem o funcionamento do protocolo. Confira as versões nas ferramentas/distribuições e faça uma execução com um caso de referência antes de iniciar seu estudo.
 
 ## 5. Iniciar a aplicação configurada
 
@@ -90,15 +90,23 @@ Continue no [manual do usuário](user_manual.md) para criar uma conta, seleciona
 
 ## Verificações antes da execução
 
-Para redocking com preparação, o worker verifica `chimera`, `obabel` e `vina`; com complexos já preparados, verifica somente `vina`. O diretório do interpretador científico integra o `PATH` dos subprocessos, mas instalações externas, como Chimera, também precisam estar acessíveis nesse ambiente. DOCK6 é necessário para etapas que usam esse motor.
+O redocking com preparação verifica Chimera, Open Babel e Vina. Com entradas já preparadas, somente Vina é exigido. Configurações antigas automáticas/Python passam a utilizar Chimera.
 
-**Preparar para docking** usa Chimera e Open Babel para os candidatos mesmo quando reutiliza um receptor já preparado no redocking. A escolha Vina, DOCK6 ou ambos define os formatos exportados; os motores são executados nos blocos de docking conectados à saída.
+**Preparar para docking** usa Chimera para receptores, ligantes, cargas `gas`/`am1` e minimização. Open Babel converte os formatos de Vina e DOCK6. Não é necessário configurar um ambiente AmberTools nesses blocos. Consulte [preparação molecular](molecular_preparation.md).
+
+**Dinâmica com DOCK6** usa o AMBER Score e os utilitários AMBER incluídos na instalação completa do DOCK6. O protocolo `DOCK6 + sander` requer também `sander`; a análise opcional da trajetória requer `cpptraj`. Instale-os em ambiente isolado, pois o AmberTools atual conflita com as bibliotecas nativas de Open Babel/PyMOL do worker principal:
+
+```bash
+conda env create -f requirements-ambertools.yml
+```
+
+Nenhuma ativação adicional é necessária. O bloco usa **Ambiente Conda AmberTools** = `BioMolExplorer-AmberTools` por padrão. Informe **Instalação AmberTools** apenas para substituir o ambiente por uma raiz explícita.
 
 Consulte [Configuração do redocking](redocking_configuration.md) para seleção de pares, cofatores, entradas preparadas, diagnóstico e resultados.
 
 ## Preditor ADMET-AI opcional
 
-O backend **RDKit local** funciona com o ambiente científico principal. Para escolher **ADMET-AI**, instale também o preditor no computador do worker. A instalação da interface, por si só, não disponibiliza esse modelo.
+O backend **RDKit local** funciona com o ambiente científico principal. Para escolher **ADMET-AI**, instale também o preditor no computador do worker. Ele permanece deliberadamente em um ambiente isolado para não substituir pandas, RDKit, NumPy ou outras dependências do docking.
 
 Na raiz do repositório, usando Python 3.12 compatível:
 
@@ -118,3 +126,12 @@ Inicie a aplicação no terminal que contém esse export, para o worker herdar a
 Se aparecer **ADMET-AI is not installed in the worker environment**, confira o estado mostrado na configuração ADMET, o caminho, a instalação e o acesso do worker aos modelos. Reinicie a aplicação após configurar o ambiente. Como alternativa, selecione explicitamente **RDKit local**; isso fornece descritores, estimativas e regras locais, sem os endpoints `ML_`. Não há substituição silenciosa de modelos. Outra opção é `python -m pip install -e '.[admet-ml]'` em um worker dedicado, respeitando as dependências desse ambiente.
 
 Consulte [ADMET por hipótese](admet_research.md) para unidades, perfis, alertas, arquivos e limites dos modelos.
+
+### AmberTools para protocolos de dinâmica
+
+Crie também o ambiente isolado, sem ativá-lo como worker principal:
+
+    conda env create -f requirements-ambertools.yml
+    export BIOMOL_AMBERTOOLS_ENV=BioMolExplorer-AmberTools
+
+Confira nessa raiz bin/antechamber, bin/parmchk2, bin/tleap e bin/sander. cpptraj é necessário somente para análise de trajetória. O backend inicia cada executável com ambiente próprio; não exporte LD_LIBRARY_PATH do AmberTools para o Python principal.

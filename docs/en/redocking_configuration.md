@@ -90,3 +90,21 @@ The new result table combines new pairs with compatible previous results from th
 Compatibility uses PDB contents, chain, cofactors, preparation options, pH, charges, templates, Vina parameters and scientific implementation. Changing the structure or receptor preparation invalidates receptor reuse; changing docking parameters requires a new pose calculation. SHA-256 hashes verify reused files. Older native results can also be adopted when their configuration, prepared files, pose, RMSD and integrity manifest are available.
 
 Only successfully completed pipeline runs supply reusable data. Cancelled, interrupted, failed or awaiting-input runs never supply incremental results, even if an individual stage finished. Partial files may remain in history for diagnostics but are discarded as sources for subsequent calculations. Preparation failures and removed outputs are also excluded. **No, run again** bypasses reuse.
+
+## Redocking engine and Chimera preparation
+
+Choose **Redocking engine**: AutoDock Vina (default) or DOCK6. Search controls
+follow the selected engine. Older projects default to Vina when
+`redocking_engine` is absent. Both engines use Chimera preparation and the
+administrator supplies the DOCK6 installation.
+
+DOCK6 redocks the pair's reference ligand with a shared site/grid and flexible
+or rigid search. Poses follow the existing redocking result contract. Its RMSD
+uses heavy atoms and molecular symmetry in the receptor coordinate frame;
+it does not align the pose onto the reference.
+
+Structural cleanup precedes hydrogens, charges and minimization, including
+ligand alternate locations. Local chemical definitions and repaired export
+bond orders participate in traceability and caching. See
+[molecular preparation](molecular_preparation.md). Complete Chimera output is
+retained in logs. Obsolete failure reports are removed after a successful retry.

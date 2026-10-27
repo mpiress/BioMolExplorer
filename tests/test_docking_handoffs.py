@@ -116,6 +116,23 @@ class DockingHandoffTests(unittest.TestCase):
         try:self.assertEqual(len(list(service._variants(self.project_id,stage,{source['id']:structures}))),2)
         finally:service.close()
 
+    def test_docking_skips_only_receptors_explicitly_failed_by_redocking(self):
+        source,stage=new_stage('redocking'),new_stage('docking_vina')
+        root=self.store.project_dir(self.project_id);failure=root/'redocking_failures.csv'
+        failure.write_text('PDB_CODE,LIGAND,RESNUM,CHAIN,STATUS,ERROR\n2ABC,LIG,1,A,preparation_failed,covalent\n')
+        prepared=root/'1ABC_A.dockprep.pdbqt';prepared.write_text(ATOM)
+        stale=root/'3ABC_A.dockprep.pdbqt'
+        refs=[{'stage':source['id'],'selector':f'{code}_A.dockprep.pdbqt','artifact_id':code.lower()}
+              for code in ('1ABC','2ABC','3ABC')]
+        stage['bindings']={'base_input_path':{'sources':refs},
+                           'base_selected_mols':{'asset':self.upload('compounds.csv','molecule_chembl_id,canonical_smiles\nM1,CCO\n')}}
+        service=PipelineService(self.store)
+        try:
+            variants=list(service._variants(self.project_id,stage,{source['id']:[str(prepared),str(failure)]}))
+            chosen=[variant['bindings']['base_input_path']['selector'] for variant,_ in variants]
+            self.assertEqual(chosen,['1ABC_A.dockprep.pdbqt','3ABC_A.dockprep.pdbqt'])
+        finally:service.close()
+
     def test_ambiguous_filename_is_rejected(self):
         with self.assertRaisesRegex(ValueError,'mais de um resultado'):
             select_input(['/some/a/file.csv','/some/b/file.csv'],'base_input_path','file.csv')
@@ -156,9 +173,13 @@ class DockingHandoffTests(unittest.TestCase):
         obj._DockVina__exhaustiveness=20;obj._DockVina__num_modes=10
         obj.retrieve_centerofmass_dataset=MagicMock(return_value=[1,2,3])
         obj.generate_docking_script=MagicMock();obj.perform_subprocess=MagicMock(return_value=True)
-        obj.docking(str(root))
+        with patch('biomolexplorer.vina_batch.run_resilient',return_value={'completed':[],'failed':[],'attempts':[]}):
+            obj.docking(str(root))
         names=[c.kwargs['out'] for c in obj.generate_docking_script.call_args_list]
-        self.assertEqual(set(names),{'1ABC_LIG_1A_M2.lig.pdbqt','1ABC_LIG_2B_M1.lig.pdbqt','1ABC_LIG_2B_M2.lig.pdbqt'})
+        # Even an existing pose needs its scientific identity verified by the
+        # indexed batch; a filename alone must not bypass changed parameters.
+        self.assertEqual(set(names),{'1ABC_LIG_1A_M1.lig.pdbqt','1ABC_LIG_1A_M2.lig.pdbqt',
+                                     '1ABC_LIG_2B_M1.lig.pdbqt','1ABC_LIG_2B_M2.lig.pdbqt'})
 
     def test_prepared_redocking_normalizes_manual_four_column_records(self):
         root=self.store.project_dir(self.project_id);source=new_stage('prepare_structures');files=self.prepared(source)

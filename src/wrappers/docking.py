@@ -177,8 +177,9 @@ def generate_consensus(base_input_path:str, base_output_path:str, target:str, re
 
 def prepare_docking_receptor(base_input_path, target, output, pdb_code, ph, options, prepared, engine='vina'):
     """Reuse prepared receptors; raw PDBs use the shared preparation workflow."""
-    from biomolexplorer.redocking_config import validate_preparation_settings
-    if options is not None:validate_preparation_settings(options)
+    from biomolexplorer.redocking_config import validate_preparation_settings,chimera_preparation
+    options=chimera_preparation(options)
+    validate_preparation_settings(options)
     from biomolexplorer.diagnostics import event
     if prepared:
         from biomolexplorer.docking_preparation import validate_receptor_outputs
@@ -228,10 +229,6 @@ def perform_docking_vina(base_input_path:str, target:str, base_output_path:str, 
             pdb_code = [pdb_code]
 
 
-        if os.path.exists(f'{directory(base_output_path)}/Vina/'):
-            print(f'[INFO] The path {base_output_path}/Vina/ already exists!')
-            return
-
         vina = DockVina(ligand_input_path=base_selected_mols, receptor_input_path=base_prepared_complexes,
                         output_path=base_input_mols, complex_input_path=base_prepared_complexes,
                         pdb_codes=pdb_code, centerofmasspath=base_prepared_complexes, sizeof_box=sizeof_box,
@@ -240,18 +237,28 @@ def perform_docking_vina(base_input_path:str, target:str, base_output_path:str, 
 
         from biomolexplorer.docking_data import prepare_ligands, write_results
         ligands=prepare_ligands(dataset,base_input_mols,'pdbqt',ph=pH,
-                        **({'preparation_options':preparation_options} if preparation_options is not None else {}))
+                        preparation_options=preparation_options or {})
         if not ligands:
             from biomolexplorer.docking_data import write_csv
             write_csv(output_root/'docking_results.csv',[],['molecule_chembl_id','canonical_smiles','receptor_id','engine','score','conformer_file'])
             return dict(skipped_reason='Nenhum composto pôde ser preparado para docking. Consulte a lista de falhas na preparação.')
 
         vina.set_ligandpath(base_input_mols)
+        vina.selected_ligand_files=ligands
         vina.set_outputpath(f'{base_output_path}/Vina/')
-        vina.docking(base_selected_mols)
+        vina_summary=vina.docking(base_selected_mols)
         records=list(pdb_code)
-        write_results('vina',Path(base_output_path,'Vina').glob('*.pdbqt'),dataset,records,output_root,prepared=base_prepared_complexes)
+        # A reused output directory can contain historical poses from removed
+        # references. Only this request's completed calculations enter its table.
+        poses=[Path(base_output_path,'Vina',Path(entry['configuration']).stem+'.lig.pdbqt')
+               for entry in vina_summary.get('completed',[])]
+        write_results('vina',poses,dataset,records,output_root,prepared=base_prepared_complexes)
         del vina
+        return dict(vina_completed=len(vina_summary.get('completed',[])),
+                    docking_failures=len(vina_summary.get('failed',[])),
+                    vina_reused=sum(bool(row.get('reused')) for row in vina_summary.get('completed',[])),
+                    vina_failures=len(vina_summary.get('failed',[])),
+                    vina_attempts=len(vina_summary.get('attempts',[])))
 
     except Exception as e:
         logger.error(f'Error during to perform the {target} in perform_docking wrapper function', exc_info=True)
@@ -304,7 +311,7 @@ def perform_docking_dock6(base_input_path:str, target:str, base_output_path:str,
         token=CURRENT_REPORT.set(failures)
         try:
             ligands=prepare_ligands(prepared_dataset,root/'Molecules','mol2',charge_type=charge_type,center=center,ph=pH,
-                            **({'preparation_options':preparation_options} if preparation_options is not None else {}))
+                            preparation_options=preparation_options or {})
         finally:CURRENT_REPORT.reset(token)
         if not ligands:continue
         dock6=Dock6(dock6_path=dock6_app_path,ligand_input_path=str(root/'Molecules'),
@@ -316,7 +323,7 @@ def perform_docking_dock6(base_input_path:str, target:str, base_output_path:str,
         try:
             dock6.validate_setup()
             if not dock6._ligand_files(dock6.ligandpath):continue
-            dock6.prepare_surface();dock6.prepare_showbox();dock6.prepare_gridbox()
+            dock6.prepare_site()
             dock6.prepare_minimization();dock6.perform_dock6_evaluation()
             if dock6._ligand_files(dock6.ligandpath):
                 dock6.prepare_footprint(docked=True);dock6.plot_footprint_results()
@@ -335,6 +342,7 @@ def perform_docking_dock6(base_input_path:str, target:str, base_output_path:str,
     write_csv(output/'docking_results.csv',rows,fields)
     failures.write(output)
     if not rows:return dict(skipped_reason='Nenhum composto produziu resultado utilizável no DOCK6. Consulte a lista de compostos não utilizados.')
+    return dict(docking_failures=len(failures.records))
 
 
 def perform_consensus(base_input_path:str, target:str, base_output_path:str, base_selected_mols:str,  dock6_app_path:str,

@@ -22,12 +22,13 @@ class ScientificToolError(RuntimeError):
         return type(self), (str(self), self.error_code, self.action)
 
 
-def run_command(command, cwd=None, check=True, timeout=None):
+def run_command(command, cwd=None, check=True, timeout=None, *, env=None,
+                tool_name=None, tool_environment=None):
     arguments = shlex.split(command) if isinstance(command, str) else list(command)
     if not arguments:
         raise ValueError('Command cannot be empty')
     logger = get_logger('scientific_tools')
-    tool = os.path.basename(str(arguments[0]))
+    tool = tool_name or os.path.basename(str(arguments[0]))
     working_dir = str(resolve_path(cwd or '.'))
     configuration = next((str(a) for a in arguments[1:] if str(a).endswith(('.com', '.vina', '.in'))), None)
     with log_context(command_id=uuid4().hex[:12]), ExitStack() as stack:
@@ -41,29 +42,33 @@ def run_command(command, cwd=None, check=True, timeout=None):
             arguments = arguments[:index]
         started = time.monotonic()
         # Do not serialize the complete command: arguments can contain credentials/SMILES.
-        event(logger, 'tool.started', 'Scientific command started', tool=tool, cwd=working_dir, configuration=configuration)
+        event(logger, 'tool.started', 'Scientific command started', tool=tool,
+              environment=tool_environment, executable=str(arguments[0]),
+              cwd=working_dir, configuration=configuration)
         try:
             result = subprocess.run(arguments, cwd=resolve_path(cwd) if cwd else None,
                 stdin=stdin, capture_output=True, text=True, check=False,
-                timeout=timeout)
+                timeout=timeout, **({'env':env} if env is not None else {}))
         except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
             elapsed = round((time.monotonic()-started)*1000)
             if isinstance(exc, FileNotFoundError):
-                error = ScientificToolError(f'Ferramenta científica não encontrada: {arguments[0]}. Configure a instalação antes de executar.',
+                error = ScientificToolError(f'Ferramenta científica não encontrada: {tool}. Configure a instalação antes de executar.',
                     'TOOL_NOT_FOUND', 'Install the executable and verify PATH in the scientific worker environment.')
             elif isinstance(exc, subprocess.TimeoutExpired):
                 error = exc
                 error.error_code = 'TOOL_TIMEOUT'
                 error.action = 'Review the last tool output, input size and command timeout before retrying.'
             else:
-                error = ScientificToolError(f'Não foi possível iniciar a ferramenta {arguments[0]}: {exc}',
+                error = ScientificToolError(f'Não foi possível iniciar a ferramenta {tool}: {exc}',
                     'TOOL_START_FAILED', 'Verify executable permissions and the working directory.')
             for channel in ('stdout', 'stderr'):
                 output = getattr(exc, channel, None)
                 if output:
                     if isinstance(output, bytes): output = output.decode('utf-8', errors='replace')
                     event(logger, 'tool.output', f'{tool} {channel}:\n{redact(output[-8000:])}', tool=tool, channel=channel)
-            logger.error(str(error), extra={'event': 'tool.failed', 'tool': tool, 'cwd': working_dir, 'configuration': configuration,
+            logger.error(str(error), extra={'event': 'tool.failed', 'tool': tool,
+                         'environment': tool_environment, 'executable': str(arguments[0]),
+                         'cwd': working_dir, 'configuration': configuration,
                          'duration_ms': elapsed, **diagnose_exception(error)})
             if error is exc:
                 raise
@@ -76,14 +81,16 @@ def run_command(command, cwd=None, check=True, timeout=None):
         hidden_failure = tool == 'chimera' and re.search(
             r'Error while sourcing|Traceback \(most recent call last\)|^Error(?:\s|:)', details, re.M)
         if result.returncode != 0 or hidden_failure:
-            error = ScientificToolError(f'Falha na ferramenta {arguments[0]} (código {result.returncode}): {details[-2000:]}',
+            error = ScientificToolError(f'Falha na ferramenta {tool} (código {result.returncode}): {details[-2000:]}',
                 'TOOL_REPORTED_ERROR' if hidden_failure else 'TOOL_EXIT_FAILED',
                 'Inspect tool.output for the original cause, then verify input files and the generated configuration.')
-            event(logger, 'tool.failed', str(error), level=logging.ERROR, tool=tool, cwd=working_dir,
+            event(logger, 'tool.failed', str(error), level=logging.ERROR, tool=tool,
+                  environment=tool_environment, executable=str(arguments[0]), cwd=working_dir,
                   configuration=configuration, returncode=result.returncode, duration_ms=elapsed, **diagnose_exception(error))
             if check or hidden_failure:
                 raise error
             return False
-        event(logger, 'tool.succeeded', 'Scientific command completed', tool=tool, cwd=working_dir,
+        event(logger, 'tool.succeeded', 'Scientific command completed', tool=tool,
+              environment=tool_environment, executable=str(arguments[0]), cwd=working_dir,
               configuration=configuration, returncode=result.returncode, duration_ms=elapsed)
         return True

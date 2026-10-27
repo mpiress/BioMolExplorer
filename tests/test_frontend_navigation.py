@@ -88,7 +88,7 @@ class FrontendNavigationTests(unittest.TestCase):
         sidebar=self.sidebar()
         groups=[c for c in walk(sidebar) if isinstance(c,ft.ExpansionTile)]
         self.assertEqual([g.title.value for g in groups[:2]],['Navegação do projeto','Pipeline e execução'])
-        self.assertEqual(len(groups),6)
+        self.assertEqual(len(groups),7)
         groups[1].on_change(SimpleNamespace(data='false'))
         asyncio.run(self.ui.draw_project())
         sidebar=self.sidebar()

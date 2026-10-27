@@ -3,6 +3,9 @@ from biomolexplorer.catalog import TITLES,field_label
 from biomolexplorer.flow import INPUTS,EXTERNAL_INPUTS,input_types,output_types
 
 TYPE_DESCRIPTIONS={
+    'receptor_pdb':'Receptores PDB com coordenadas para preparação AMBER.',
+    'molecular_poses':'Poses de ligantes MOL2 com coordenadas, tipos e cargas.',
+    'dynamics':'Dinâmica: energias, estruturas finais, topologias e trajetórias quando solicitadas.',
     'compounds':'Compostos: CSV com identificador e SMILES; estruturas moleculares quando disponíveis.',
     'chembl':'Dados ChEMBL: compostos e bioatividades recuperados.',
     'structures':'Estruturas PDB brutas do receptor/complexo.',

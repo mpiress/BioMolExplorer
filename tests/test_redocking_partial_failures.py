@@ -56,7 +56,8 @@ class PartialPreparationTests(unittest.TestCase):
              patch.object(Docking,'calculate_ligand_centerofmass',return_value=[0,0,0]), \
              patch('biomolexplorer.redocking_config.validate_redocking_tools'),patch('wrappers.redocking.DockVina') as vina:
             vina.return_value.redocking.side_effect=lambda **kwargs:vina_run(vina)
-            result=perform_redocking(str(root/'input'),'Target',str(root/'output'),records)
+            result=perform_redocking(str(root/'input'),'Target',str(root/'output'),records,
+                                    preparation_pairs={'|'.join(map(str,r[:4])):{'preparation_backend':'legacy_chimera'} for r in records})
             self.vina_called=vina.called
         self.source=source;self.output=root/'output'
         return result

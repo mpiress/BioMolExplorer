@@ -59,7 +59,11 @@ class AnalysisOriginsIntegrationTests(unittest.TestCase):
             def get(self,job):return self.job
             def cancel(self,job):self.job['status']='cancelled'
             def close(self):pass
-        with patch('biomolexplorer.pipeline.JobManager',Manager):
+        # This fixture represents outputs saved before canonical publication.
+        # Keep those historical engine filenames while exercising selection
+        # expansion and exact lineage against the real analytical workers.
+        with patch('biomolexplorer.pipeline.JobManager',Manager),patch(
+                'biomolexplorer.artifact_naming.publish',side_effect=lambda stage,files,root:files):
             service=PipelineService(self.store);self.addCleanup(service.close)
             first=self.finish_selected(service,service.submit(self.token,self.project_id))
             self.assertEqual(first['status'],'succeeded',first.get('error'))

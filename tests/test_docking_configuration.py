@@ -76,13 +76,15 @@ class DockingConfigurationTests(unittest.TestCase):
 
     def test_ligand_settings_reach_preparation_and_prepared_inputs_are_reused(self):
         with TemporaryDirectory() as folder:
-            root=Path(folder);source=root/'M1.pdbqt';source.write_text('prepared ligand')
+            root=Path(folder);source=root/'M1.pdbqt'
+            prepared='ROOT\nATOM      1  C   UNL A   1       0.000   0.000   0.000  1.00  0.00     0.000 C\nENDROOT\nTORSDOF 0\n'
+            source.write_text(prepared)
             dataset=root/'input.csv';write_csv(dataset,[dict(molecule_chembl_id='M1',canonical_smiles='CCO',prepared_pdbqt=str(source))])
             options={'ligand':{'charge_type':'am1','minimize':False}}
             with patch('biomolexplorer.docking_preparation.subprocess.run') as runner:
                 paths=prepare_ligands(dataset,root/'out','pdbqt',preparation_options=options)
                 runner.assert_not_called()
-                self.assertEqual(paths[0].read_text(),'prepared ligand')
+                self.assertEqual(paths[0].read_text(),prepared)
 
 import test_pipeline_execution as execution
 from biomolexplorer.pipeline import PipelineService

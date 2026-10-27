@@ -21,7 +21,7 @@ from .operations import OPERATIONS, validate_operation
 from .templates import validate_templates, materialize_templates
 from .workspace import AccessDenied
 from .diagnostics import get_logger, log_context, event, diagnose_exception
-from .stage_cache import artifact_manifest, manifest_matches, implementation_digest, input_manifests, stage_key, path_manifest
+from .stage_cache import artifact_manifest, manifest_matches, implementation_digest, input_manifests, stage_key, path_manifest,file_digest
 from .bindings import sources as input_sources, dependencies as stage_dependencies, asset_references
 
 ACTIVE_RUNS = ('queued', 'running', 'awaiting_input')
@@ -40,6 +40,21 @@ def execution_modes(stages):
 def execution_stage(stage, mode):
     effective = copy.deepcopy(stage)
     effective.pop('_process_all_inputs',None)
+    if effective.get('operation') in ('prepare_structures','docking_vina','docking_dock6'):
+        from .redocking_config import chimera_preparation
+        params=effective['parameters']
+        params['preparation_options']=chimera_preparation(params.get('preparation_options'))
+    if effective.get('operation')=='redocking':
+        from .redocking_config import pair_key
+        params=effective['parameters']
+        settings=params.get('preparation_pairs')
+        records=params.get('pdb_codes')
+        if records:
+            from .redocking_config import chimera_pairs
+            params['preparation_pairs']=settings=chimera_pairs(records,settings)
+        if isinstance(settings,dict) and isinstance(records,(list,tuple)):
+            keys={pair_key(r) for r in records if isinstance(r,(list,tuple)) and len(r)>=4}
+            params['preparation_pairs']={key:value for key,value in settings.items() if key in keys}
     return effective
 
 
@@ -59,6 +74,31 @@ def configured_inputs(stage):
             else:refs.append(ref)
         stage['bindings']['base_input_path']=pack(refs)
     return stage
+
+
+def failed_redocking_receptor(reference, results):
+    """True only when the producer explicitly reported this receptor failed.
+
+    A partial redocking stage is successful by design.  Downstream docking may
+    therefore retain a curated reference whose receptor was not published.  We
+    may omit that exact receptor, but must never replace it with an older or
+    similarly named artifact.
+    """
+    if 'stage' not in reference:return False
+    name=Path(reference.get('selector','')).name
+    if not name.endswith('.dockprep.pdbqt'):return False
+    identity=name.removesuffix('.dockprep.pdbqt')
+    for value in results.get(reference['stage'],[]):
+        path=Path(value)
+        if path.name!='redocking_failures.csv' or not path.is_file():continue
+        try:
+            with path.open(encoding='utf-8-sig',newline='') as stream:
+                for row in csv.DictReader(stream):
+                    if (f"{row.get('PDB_CODE','')}_{row.get('CHAIN','')}"==identity and
+                            row.get('STATUS') not in ('succeeded','SUCCESS')):
+                        return True
+        except (OSError,csv.Error):continue
+    return False
 
 
 def requires_curation(stage):
@@ -89,7 +129,7 @@ def validate_pipeline(stages):
             validate_types(stage['parameters'])
         if type(stage.get('enabled',True)) is not bool:
             raise ValueError('Estado da etapa inválido.')
-        if stage.get('input_processing','merge') not in ('merge','individual'):
+        if stage.get('input_processing','merge') not in ('merge','individual','both'):
             raise ValueError('Escolha mesclar arquivos ou processar individualmente.')
         if 'follow_inputs' in stage and (type(stage['follow_inputs']) is not bool or stage['operation'] not in ('similarity','graphs')):
             raise ValueError('A opção de acompanhar entradas exige um bloco de similaridade ou grafos.')
@@ -201,7 +241,7 @@ def select_input(artifacts, field, selector='auto'):
         if metadata:
             metadata.sort(key=lambda p: (not (p.parent / 'Prepared').is_dir(),len(p.parts)))
             return metadata[0].parent.parent
-        pdbs = [p for p in files if p.suffix in ('.pdb','.pdbqt')]
+        pdbs = [p for p in files if p.suffix in ('.pdb','.cif','.mmcif','.pdbqt')]
         if pdbs:
             return pdbs[0].parent.parent
     if field == 'similarity_path':
@@ -262,7 +302,7 @@ class PipelineService:
             raise ValueError('A opção de reaproveitamento deve ser verdadeira ou falsa.')
         project = self.store.project(token, project_id, 'editor')
         user = self.store.user(token)
-        stages = project['pipeline']
+        stages = [execution_stage(stage,'curated') for stage in project['pipeline']]
         order = validate_pipeline(stages)
         by_id = {stage['id']:stage for stage in stages}
         if not stages:
@@ -321,7 +361,7 @@ class PipelineService:
                     if not self.store.asset_path(token,project_id,binding['asset']).is_file():
                         raise ValueError(f'A entrada do bloco “{stage["name"]}” está indisponível. Envie o arquivo novamente.')
         run_id = uuid4().hex
-        snapshot = [{'id':stage['id'],'name':stage['name'],'operation':stage['operation'],
+        snapshot = [{'id':stage['id'],'name':stage['name'],'operation':stage['operation'],'project_stage':True,
                      'status':'queued' if stage.get('enabled',True) else 'skipped','configuration':stage,'artifacts':[],
                      'input_mode':'curated', 'reuse_results':reuse_results, 'requires_curation':
                          requires_curation(stage)}
@@ -352,13 +392,16 @@ class PipelineService:
 
     def _runtime_parameters(self, stage):
         params=dict(stage['parameters'])
-        if stage['operation']=='docking_dock6':
+        if stage['operation']=='dynamics_dock6':
+            for internal in ('md_inputs','md_seed_path'):params.pop(internal,None)
+        if stage['operation'] in ('docking_dock6','dynamics_dock6') or stage['operation']=='redocking' and params.get('redocking_engine','vina')=='dock6':
             if self.dock6_path is not None:
                 params['dock6_app_path']=str(self.dock6_path)
             elif not params.get('dock6_app_path'):
                 raise ValueError('Instalação DOCK6 não encontrada. Configure --dock6-path ou BIOMOL_DOCK6_ROOT com a pasta que contém bin/ e parameters/.')
-            ligand=(params.get('preparation_options') or {}).get('ligand',{})
-            params['charge_type']=ligand.get('charge_type',params.get('charge_type') or 'gas')
+            if stage['operation']=='docking_dock6':
+                ligand=(params.get('preparation_options') or {}).get('ligand',{})
+                params['charge_type']=ligand.get('charge_type',params.get('charge_type') or 'gas')
         return params
 
     def _validate_parameters(self, project_id, stage, partial=False, cache_only=False):
@@ -413,7 +456,7 @@ class PipelineService:
             if field in PATH_FIELDS and value:
                 path = Path(value)
                 path = self.store.scoped_path(project_id,path if path.is_absolute() else self.store.project_dir(project_id) / path)
-                if not path.is_dir():
+                if not path.is_dir() and not (operation=='dynamics_dock6' and path.is_file()):
                     raise ValueError('A pasta de ' + LABELS.get(field,field).lower() + ' não está disponível. Escolha uma entrada do projeto.')
             if field == 'dock6_app_path' and value:
                 if partial or cache_only:
@@ -448,7 +491,7 @@ class PipelineService:
             if prior and prior['status'] in ACTIVE_RUNS and status not in ACTIVE_RUNS:
                 from .project_state import read_snapshot,record
                 last=db.execute('SELECT id FROM project_history WHERE project_id=? ORDER BY created DESC LIMIT 1',(prior['project_id'],)).fetchone()
-                before=read_snapshot(self.store,prior['project_id'],last['id'],'after') if last else None
+                before=read_snapshot(self.store,prior['project_id'],last['id'],'after',db=db) if last else None
                 record(self.store,db,prior['project_id'],prior['user_id'],'execution',f'Execução {run_id[:8]}: {status}',before)
 
     def _docking_sources(self, project_id, refs, results, engine=None):
@@ -581,7 +624,7 @@ class PipelineService:
                 selected.extend(matching if stage.get('_process_all_inputs') else matching[:1])
             else:
                 from .zinc_retrieval import LIST_SUFFIXES
-                allowed={'structures':{'.pdb'},'prepared_structures':{'.pdb','.pdbqt'},
+                allowed={'structures':{'.pdb','.cif','.mmcif'},'prepared_structures':{'.pdb','.pdbqt'},
                          'vina':{'.pdbqt'},'dock6':{'.mol2'},'other':LIST_SUFFIXES}[kind]
                 candidates=[Path(p) for p in upstream if Path(p).suffix.lower() in allowed]
                 if receptor_only:candidates=[p for p in candidates if prepared_receptor(p)]
@@ -626,6 +669,11 @@ class PipelineService:
                 quality=QualityReport(operation)
                 merge_clean_csv(selected,merged,kind,quality)
                 quality.write(destination)
+            if len(selected)==1 and file_digest(merged)==file_digest(selected[0]):
+                # A read-only handoff references the original artifact. Only a
+                # merge, cleanup or normalization warrants new molecular data.
+                merged.unlink()
+                return selected[0].parent,selected[0].name,selected
         elif kind=='other':
             filename='selected_urls.txt'
             from .zinc_retrieval import read_download_list
@@ -669,10 +717,22 @@ class PipelineService:
             metadata=data/'pdb_codes.csv'
             if kind in ('structures','prepared_structures') and metadata.exists():
                 with metadata.open(encoding='utf-8-sig',newline='') as stream:
-                    reader=csv.DictReader(stream);fields=reader.fieldnames;rows=list(reader)
+                    reader=csv.DictReader(stream);fields=list(reader.fieldnames or []);rows=list(reader)
                 filenames={p.name for p in selected}
-                if kind=='structures':rows=[r for r in rows if r['PDB_CODE']+'.pdb' in filenames]
-                else:rows=[r for r in rows if r.get('STATUS')!='preparation_failed' and f'{r["PDB_CODE"]}_{r["CHAIN"]}.dockprep.pdbqt' in filenames]
+                if kind=='structures':
+                    selected_codes={Path(name).stem.upper() for name in filenames if Path(name).suffix.lower() in ('.pdb','.cif','.mmcif')}
+                    rows=[r for r in rows if str(r.get('PDB_CODE','')).upper() in selected_codes]
+                else:rows=[r for r in rows if r.get('STATUS','succeeded') in ('succeeded','SUCCESS') and f'{r["PDB_CODE"]}_{r["CHAIN"]}.dockprep.pdbqt' in filenames]
+                if not rows and operation=='redocking' and kind=='structures':
+                    # A curated redocking plan is authoritative. Retrieval
+                    # metadata may legitimately omit a ligand that the user
+                    # selected later, but the raw PDB is still a valid input.
+                    configured=stage.get('parameters',{}).get('pdb_codes') or []
+                    rows=[dict(zip(('PDB_CODE','LIGAND','RESNUM','CHAIN','RESOLUTION'),
+                                   list(record[:4])+[record[4] if len(record)>4 else '']))
+                          for record in configured if str(record[0]).upper() in selected_codes]
+                    for name in ('PDB_CODE','LIGAND','RESNUM','CHAIN','RESOLUTION'):
+                        if name not in fields:fields.append(name)
                 if not rows:raise ValueError('Os arquivos selecionados não possuem registros PDB compatíveis nos metadados.')
                 with metadata.open('w',encoding='utf-8',newline='') as stream:
                     writer=csv.DictWriter(stream,fieldnames=fields);writer.writeheader();writer.writerows(rows)
@@ -692,6 +752,11 @@ class PipelineService:
 
     def _resolve(self, project_id, user_id, stage, results, input_directory=None, item=None, cache_only=False, pipeline=None):
         from .artifacts import validate_reference
+        from .artifact_choices import produced_files
+        results=dict(results)
+        for producer in pipeline or []:
+            if producer.get('operation')=='admet' and producer['id'] in results:
+                results[producer['id']]=[str(p) for p in produced_files(dict(producer,artifacts=results[producer['id']]))]
         stage=copy.deepcopy(stage)
         for group in stage.get('bindings',{}).values():
             for ref in input_sources(group):
@@ -700,6 +765,9 @@ class PipelineService:
                     chosen=validate_reference(ref,files)
                     if ref.get('artifact_id'):ref['selector']=selector_for(chosen,files)
         params = self._runtime_parameters(stage)
+        if stage['operation']=='dynamics_dock6':
+            from .md_inputs import MDInputs
+            return MDInputs(self.store,project_id,results).resolve(dict(stage,parameters=params),item)
         if stage['operation'] in ('prepare_structures','docking_vina','docking_dock6'):
             from .docking_inputs import prepared_receptor
             modes=[]
@@ -751,7 +819,7 @@ class PipelineService:
                 pipeline=json.loads(row[0])
             kind,_=generated_kind(stage,pipeline,results)
             if kind:params['fingerprint']=kind
-        if stage['operation']=='docking_dock6' and self.dock6_path is not None:
+        if stage['operation'] in ('docking_dock6','redocking') and self.dock6_path is not None:
             params['dock6_app_path']=str(self.dock6_path)
         bindings = dict(stage.get('bindings',{}))
         if stage['operation'] == 'consensus' and not params.get('base_input_path') and 'base_input_path' not in bindings:
@@ -769,7 +837,7 @@ class PipelineService:
                 path,filename,selected=self._materialize_inputs(project_id,stage,field,refs,results,input_directory)
                 params[field]=str(path)
                 if stage.get('_individual_input') and field=='base_input_path' and stage['operation'] in ('prepare_structures','redocking','docking_vina','docking_dock6'):
-                    raw={p.stem for p in selected if p.suffix.lower()=='.pdb' and p.name.count('.')==1}
+                    raw={p.stem for p in selected if p.suffix.lower() in ('.pdb','.cif','.mmcif') and p.name.count('.')==1}
                     receptors={p.name.split('.',1)[0] for p in selected if '.dockprep.' in p.name}
                     def matches(record):return str(record[0]) in raw or f'{record[0]}_{record[3]}' in receptors
                     metadata=path/params['target'].replace(' ','')/'pdb_codes.csv'
@@ -875,6 +943,7 @@ class PipelineService:
             selected.append((asset_id,self.store.scoped_path(project_id,asset['path'])))
         validate_import_files(selected,params)
         names = set()
+        references=[]
         for asset_id,source in selected:
             kind=file_kind(params,asset_id)
             destination=output/target if kind in ('structures','prepared_structures') else output
@@ -883,13 +952,18 @@ class PipelineService:
             if source.name in names:
                 raise ValueError('Há dois arquivos com o mesmo nome na importação.')
             names.add(source.name)
+            if kind not in ('compounds','structures','prepared_structures'):
+                references.append(str(source))
+                continue
             file = destination / source.name
             if source.name == 'pdb_codes.csv' and kind == 'prepared_structures':
                 file = destination.parent / source.name
             shutil.copyfile(source,file)
             if kind == 'compounds' and file.suffix.lower() == '.csv':
                 self._normalize_compounds(file)
-        return [str(p) for p in output.rglob('*') if p.is_file()]
+                if file_digest(file)==file_digest(source):
+                    file.unlink();references.append(str(source))
+        return references+[str(p) for p in output.rglob('*') if p.is_file()]
 
     @staticmethod
     def _normalize_compounds(path):
@@ -927,6 +1001,17 @@ class PipelineService:
                 temporary.unlink(missing_ok=True)
 
     def _variants(self, project_id, stage, results=None):
+        count=0
+        for variant,label in self._individual_variants(project_id,stage,results):
+            count+=1
+            yield variant,label
+        if stage.get('input_processing')=='both' and count>1:
+            combined=copy.deepcopy(stage)
+            combined['input_processing']='merge'
+            combined['_combined_input']=True
+            yield combined,'ALL · Conjunto completo'
+
+    def _individual_variants(self, project_id, stage, results=None):
         """One job per selected file; distinct input ports form combinations."""
         if stage['operation']=='consensus':
             variant=copy.deepcopy(stage);variant['input_processing']='merge'
@@ -938,7 +1023,7 @@ class PipelineService:
             refs=[]
             prepared=not stage['parameters'].get('prepare_complex',True)
             records=stage['parameters'].get('pdb_codes') or []
-            identities={f'{r[0]}_{r[3]}.dockprep.pdbqt' if prepared else f'{r[0]}.pdb' for r in records}
+            identities={f'{r[0]}_{r[3]}.dockprep.pdbqt' for r in records} if prepared else {f'{r[0]}{suffix}' for r in records for suffix in ('.pdb','.cif','.mmcif')}
             for ref in input_sources(stage.get('bindings',{}).get('base_input_path',{})):
                 if 'stage' not in ref or ref.get('selector','auto')!='auto':
                     refs.append(ref);continue
@@ -954,6 +1039,9 @@ class PipelineService:
         for field,group in bindings.items():
             if stage['operation']=='consensus' and field=='base_input_path' and group==bindings.get('base_vina_path'):continue
             refs=input_sources(group)
+            if (results is not None and field=='base_input_path' and
+                    stage['operation'] in ('docking_vina','docking_dock6')):
+                refs=[ref for ref in refs if not failed_redocking_receptor(ref,results)]
             primary=[];metadata=[]
             for ref in refs:
                 name=Path(ref.get('selector','')).name
@@ -973,7 +1061,7 @@ class PipelineService:
                 filename=asset_names.get(ref.get('asset'),Path(ref.get('selector','')).name)
                 if filename not in ('','auto'):
                     records=stage['parameters'].get('pdb_codes') or []
-                    identities={str(r[0]) if filename.endswith('.pdb') else f'{r[0]}_{r[3]}' for r in records}
+                    identities={str(r[0]) if Path(filename).suffix.lower() in ('.pdb','.cif','.mmcif') else f'{r[0]}_{r[3]}' for r in records}
                     if filename.split('.',1)[0] not in identities:continue
             if stage['operation']=='docking_dock6' and results is not None and {'base_input_path','base_selected_mols','base_vina_path'}<=set(fields):
                 from .docking_inputs import dock6_variant_matches
@@ -1004,10 +1092,10 @@ class PipelineService:
 
     def _execute_stage(self, run_id, project_id, user_id, item, stages, run_dir, results, state):
         stage=execution_stage(item['configuration'],item.get('input_mode'))
-        if stage['operation']=='consensus':stage['input_processing']='merge'
-        if stage.get('input_processing')!='individual' or stage.get('provided_results') or stage['operation']=='import_results':
+        if stage['operation'] in ('consensus','dynamics_dock6'):stage['input_processing']='merge'
+        if stage.get('input_processing') not in ('individual','both') or stage.get('provided_results') or stage['operation']=='import_results':
             return self._execute_single(run_id,project_id,user_id,item,stages,run_dir,results,state)
-        artifacts=[];inputs={};excluded=0;redocking_failures=0;redocking_reused=0
+        artifacts=[];inputs={};excluded=0;redocking_failures=0;redocking_reused=0;docking_failures=0
         item['batches']=[]
         for index,(variant,label) in enumerate(self._variants(project_id,stage,results),1):
             if state['event'].is_set():raise InterruptedError('Execução cancelada.')
@@ -1016,26 +1104,93 @@ class PipelineService:
             item['input_files']={}
             item['current_batch']={'index':index,'label':label}
             item['progress']=None
+            software=state.get('cache_software') or implementation_digest()+':'+str(self.worker_python or os.sys.executable)
+            key=self._cache_key(project_id,user_id,variant,results,software,pipeline=execution_context(stages))
+            cached=self._cached_batch(project_id,stage['id'],key) if state.get('reuse_results',True) else None
             try:
-                produced=self._execute_single(run_id,project_id,user_id,item,stages,run_dir,results,state,variant,directory)
+                if cached:
+                    produced=cached['artifacts']
+                    item.update(input_files=copy.deepcopy(cached.get('input_files',{})),
+                        artifact_context=copy.deepcopy(cached.get('artifact_context',{})),
+                        excluded_records=cached.get('excluded_records',0),redocking_failures=0,redocking_reused=cached.get('redocking_reused',0),docking_failures=0)
+                elif variant.get('_combined_input') and stage['operation']=='fingerprints':
+                    produced=self._merge_fingerprint_batches(variant,item,directory)
+                else:produced=self._execute_single(run_id,project_id,user_id,item,stages,run_dir,results,state,variant,directory)
             except (AccessDenied,InterruptedError):raise
             except Exception as exc:raise RuntimeError(f'Arquivo {index} ({label}): {exc}') from exc
             batch=dict(label=label,artifacts=produced,input_files=copy.deepcopy(item.get('input_files',{})),
                        artifact_context=copy.deepcopy(item.get('artifact_context',{})),
-                       log_path=item.get('log_path'),job_id=item.get('job_id'),configuration=variant)
+                       log_path=cached.get('log_path') if cached else item.get('log_path'),job_id=None if cached else item.get('job_id'),configuration=variant,
+                       cache_key=key,artifact_manifest=artifact_manifest(produced),reused=bool(cached),
+                       excluded_records=item.get('excluded_records',0),redocking_failures=item.get('redocking_failures',0),
+                       redocking_reused=item.get('redocking_reused',0))
+            batch['docking_failures']=item.get('docking_failures',0)
+            if cached:batch['reused_from_run']=cached['reused_from_run']
             item['batches'].append(batch)
             for field,paths in batch['input_files'].items():inputs.setdefault(field,[]).extend(paths)
             excluded+=item.get('excluded_records',0)
             redocking_failures+=item.get('redocking_failures',0)
             redocking_reused+=item.get('redocking_reused',0)
+            docking_failures+=item.get('docking_failures',0)
             artifacts.extend(produced)
             item['artifacts']=list(artifacts)
         item['input_files']={f:list(dict.fromkeys(paths)) for f,paths in inputs.items()}
         item['excluded_records']=excluded
         item['redocking_failures']=redocking_failures
         item['redocking_reused']=redocking_reused
+        item['docking_failures']=docking_failures
         item.pop('current_batch',None)
         return artifacts
+
+    @staticmethod
+    def _merge_fingerprint_batches(stage,item,directory):
+        """Fingerprints are per molecule: ALL can reuse the calculated vectors."""
+        from .fingerprint_selection import filename_kind
+        from .molecule_quality import merge_clean_csv,QualityReport
+        from .artifact_naming import publish
+        directory.mkdir(parents=True)
+        groups={};inputs={}
+        for batch in item['batches']:
+            for field,paths in batch.get('input_files',{}).items():
+                inputs.setdefault(field,[]).extend(paths)
+            for path in batch['artifacts']:
+                kind=filename_kind(path)
+                if kind and Path(path).suffix=='.csv':groups.setdefault(kind,[]).append(path)
+        if not groups:raise ValueError('Nenhum fingerprint calculado disponível para o conjunto completo.')
+        report=QualityReport('fingerprints');files=[]
+        try:
+            for kind,paths in groups.items():
+                output=directory/(kind+'_all.csv')
+                merge_clean_csv(paths,output,'fingerprints',report)
+                files.append(str(output))
+        finally:
+            import shutil
+            shutil.rmtree(directory/'.quality-inputs',ignore_errors=True)
+        quality=report.write(directory)
+        if quality:files.append(str(quality))
+        item['input_files']={field:list(dict.fromkeys(paths)) for field,paths in inputs.items()}
+        item['excluded_records']=len(report.records)
+        item['artifact_context']={}
+        item['job_id']=None
+        item['log_path']=None
+        return publish(stage,files,directory)
+
+    def _cached_batch(self,project_id,stage_id,key):
+        with self.store.connect() as db:
+            previous=db.execute('SELECT id,stages,status FROM runs WHERE project_id=? ORDER BY created DESC',(project_id,)).fetchall()
+        for run_id,encoded,run_status in previous:
+            if run_status!='succeeded':continue
+            for item in json.loads(encoded):
+                if item['id']!=stage_id or item.get('outputs_removed'):continue
+                for batch in item.get('batches',[]):
+                    if batch.get('cache_key')!=key or batch.get('redocking_failures') or batch.get('docking_failures'):continue
+                    manifest=batch.get('artifact_manifest')
+                    try:
+                        for path in batch['artifacts']:self.store.scoped_path(project_id,path)
+                        if manifest and set(manifest)=={str(Path(p).resolve()) for p in batch['artifacts']} and manifest_matches(manifest):
+                            return dict(batch,reused_from_run=run_id)
+                    except (OSError,ValueError,KeyError):continue
+        return None
 
     def _execute_single(self, run_id, project_id, user_id, item, stages, run_dir, results, state, stage=None, stage_dir=None):
         stage = stage or execution_stage(item['configuration'],item.get('input_mode'))
@@ -1045,6 +1200,9 @@ class PipelineService:
             params=stage.get('provided_results') or stage['parameters']
             item['provided']=bool(stage.get('provided_results'))
             artifacts=self._import(project_id,params,stage_dir / 'artifacts')
+            with self.store.connect() as db:
+                item['input_files']={'assets':[row[0] for asset_id in params.get('asset_ids',[])
+                    for row in db.execute('SELECT path FROM assets WHERE project_id=? AND id=?',(project_id,asset_id))]}
             if stage['operation']=='admet':
                 from .visualizations import egg_view,write_view
                 import pandas as pd
@@ -1061,8 +1219,12 @@ class PipelineService:
             import sys
             from .redocking_config import validate_redocking_tools
             tool_path=str(Path(self.worker_python or sys.executable).parent)+os.pathsep+os.environ.get('PATH','')
-            validate_redocking_tools(params.get('prepare_complex',True),tool_path)
+            validate_redocking_tools(params.get('prepare_complex',True),tool_path,params.get('preparation_pairs'))
         resource = materialize_templates(stage_dir / 'resources',stage.get('templates',{}))
+        if stage['operation']=='dynamics_dock6' and state.get('reuse_results',True):
+            from .md_cache import seed_runs
+            seeds=stage_dir/'md-inputs'
+            if seed_runs(self.store,project_id,stage['id'],seeds):params['md_seed_path']=str(seeds)
         if stage['operation']=='redocking' and state.get('reuse_results',True):
             from .redocking_cache import stage_sources
             seed=stage_dir/'redocking-inputs'
@@ -1070,10 +1232,10 @@ class PipelineService:
             batch=item.get('current_batch')
             codes={str(r[0]) for r in params.get('pdb_codes',[])}
             requested={str(r[0]) for r in item['configuration']['parameters'].get('pdb_codes',[])}
-            # Other selected receptors have their own individual batch. Retain
-            # unselected historical receptors in the first batch only.
-            only_codes=codes if batch and batch['index']>1 else None
-            exclude_codes=requested-codes if batch and batch['index']==1 else set()
+            # Historical inputs remain available in the cache, while current
+            # outputs contain only this batch's requested receptors and pairs.
+            only_codes=codes
+            exclude_codes=set()
             if stage_sources(self.store,project_id,stage['id'],seed/target,
                     source=Path(params['base_input_path'])/target,configuration=stage,
                     only_codes=only_codes,exclude_codes=exclude_codes):
@@ -1082,7 +1244,9 @@ class PipelineService:
                     dirs_exist_ok=True,ignore=shutil.ignore_patterns('cache'))
                 params['base_input_path']=str(seed)
         manager = JobManager(AppConfig(workspace=stage_dir, cpu_workers=self.cpu_workers,
-            worker_python=self.worker_python, job_timeout=self.job_timeout, resource_dir=resource))
+            worker_python=self.worker_python, job_timeout=self.job_timeout, resource_dir=resource,
+            preparation_cache=self.store.project_dir(project_id)/'.biomolexplorer'/'cache'/'ligand-preparation',
+            reuse_preparations=state.get('reuse_results',True)))
         try:
             with self._lock:
                 state['manager'] = manager
@@ -1117,27 +1281,41 @@ class PipelineService:
             from .molecule_quality import REPORT_NAME
             item['redocking_failures']=job['result'].get('details',{}).get('redocking_failures',0)
             item['redocking_reused']=job['result'].get('details',{}).get('redocking_reused',0)
+            item['docking_failures']=job['result'].get('details',{}).get('docking_failures',0)
+            for name in ('md_pairs','md_failures','md_reused'):
+                if name in job['result'].get('details',{}):item[name]=job['result']['details'][name]
             if job['result'].get('details',{}).get('skipped_reason'):
                 item['skip_reason']=job['result']['details']['skipped_reason']
             reports=list((stage_dir/'inputs').rglob(REPORT_NAME))
             item['excluded_records']=job['result'].get('details',{}).get('excluded_records',0)+sum(
                 json.loads(path.read_text()).get('excluded_records',0) for path in reports)
-            return job['result']['artifacts']+[str(p) for p in reports]
+            from .artifact_naming import publish
+            return publish(stage,job['result']['artifacts']+[str(p) for p in reports],stage_dir)
         finally:
             manager.close()
             if stage['operation']=='redocking':
                 import shutil
                 shutil.rmtree(stage_dir/'redocking-inputs',ignore_errors=True)
+            if stage['operation']=='dynamics_dock6':
+                import shutil
+                shutil.rmtree(stage_dir/'md-inputs',ignore_errors=True)
             with self._lock:
                 state['manager'] = None
                 state['job_id'] = None
 
     def _cache_key(self,project_id,user_id,stage,results,software,pipeline=None):
-        if stage.get('input_processing')=='individual' and not stage.get('provided_results') and stage['operation']!='import_results':
+        if stage.get('input_processing') in ('individual','both') and not stage.get('provided_results') and stage['operation'] not in ('import_results','dynamics_dock6'):
             keys=[self._cache_key(project_id,user_id,variant,results,software,pipeline) for variant,_ in self._variants(project_id,stage,results)]
             return stage_key(stage,{'individual_keys':keys},{},software)
         parameters=stage.get('provided_results') or (stage['parameters'] if stage['operation']=='import_results' else self._resolve(project_id,user_id,stage,results,cache_only=True,pipeline=pipeline))
-        inputs=input_manifests(stage,results)
+        if stage.get('_individual_input'):
+            # Hash the materialized batch, including its required companions,
+            # rather than every output of every connected producer.
+            bound={ref.get('stage') for group in stage.get('bindings',{}).values() for ref in input_sources(group)}
+            remaining=dict(stage,bindings={},depends_on=list(stage_dependencies(stage)-bound))
+            inputs={**input_manifests(remaining,results),
+                **{'bound:'+field:path_manifest(parameters[field]) for field in stage.get('bindings',{}) if parameters.get(field)}}
+        else:inputs=input_manifests(stage,results)
         asset_ids=asset_references(stage)
         for asset_id in sorted(asset_ids):
             with self.store.connect() as db:
@@ -1145,6 +1323,11 @@ class PipelineService:
             if asset is None:
                 raise AccessDenied('Arquivo não autorizado.')
             inputs['asset:'+asset_id]=path_manifest(self.store.scoped_path(project_id,asset['path']))
+        if not stage.get('provided_results') and stage['operation'] in ('redocking','prepare_structures','docking_vina','docking_dock6'):
+            from .stage_cache import runtime_manifest
+            inputs['scientific_runtime']=runtime_manifest(stage['operation'],parameters,self.worker_python)
+            inputs.update({'bound:'+field:path_manifest(parameters[field])
+                for field in stage.get('bindings',{}) if parameters.get(field)})
         return stage_key(stage,parameters,inputs,software)
 
     def _cached_stage(self,project_id,user_id,stage,key,software):
@@ -1155,10 +1338,14 @@ class PipelineService:
             if stage['operation']=='redocking' and run_status!='succeeded':
                 continue
             snapshot=json.loads(encoded)
-            old=next((s for s in snapshot if s['id']==stage['id'] and s['status']=='succeeded'
+            old=next((s for s in snapshot if (s['id']==stage['id'] or
+                      s.get('operation')==stage['operation'] and s.get('cache_key')==key)
+                      and s['status']=='succeeded'
                       and (s.get('artifacts') or stage['operation']=='redocking')),None)
             if old is None:
                 continue
+            if stage['operation']=='dynamics_dock6' and old.get('md_failures'):continue
+            if stage['operation'] in ('docking_vina','docking_dock6') and old.get('docking_failures'):continue
             if stage['operation']=='redocking':
                 # An older exact request may lack pairs accumulated by a newer
                 # run. Reconcile per pair instead of returning that stale table.
@@ -1254,7 +1441,11 @@ class PipelineService:
             identities=lambda values:{(r.get('stage'),r.get('asset')) for r in values}
             if identities(refs)!=identities(old_refs):return None
             if all('stage' in r and r.get('selector','auto')=='auto' for r in refs):
-                configuration['bindings'][field]=copy.deepcopy(old_bindings[field])
+                # Docking's automatic input means the current source selection,
+                # including newly produced compounds/PDBs. Restoring yesterday's
+                # explicit file list here can conceal those additions entirely.
+                if stage['operation'] not in ('redocking','docking_vina','docking_dock6','prepare_structures'):
+                    configuration['bindings'][field]=copy.deepcopy(old_bindings[field])
             elif refs!=old_refs:return None
         if 'input_processing' not in configuration and 'input_processing' in previous:
             configuration['input_processing']=previous['input_processing']
@@ -1299,6 +1490,7 @@ class PipelineService:
         results = {s['id']:s['artifacts'] for s in stages if s['status']=='succeeded'}
         try:
             software=implementation_digest() + ':' + str(self.worker_python or os.sys.executable)
+            state['cache_software']=software
             run_dir = self.store.project_dir(project_id) / 'runs' / run_id
             run_dir.mkdir(parents=True,exist_ok=True)
             self._update(run_id,'running',stages)
@@ -1330,7 +1522,21 @@ class PipelineService:
                         self._save_expanded_inputs(project_id,user_id,stage,expanded)
                         stage=expanded;item.update(configuration=stage,input_expansions=changes,
                             requires_curation=requires_curation(stage))
-                reusable=self._reuse_stage(project_id,user_id,stage,results,software,stages) if state.get('reuse_results',True) else None
+                # A saved filename may disappear after regenerating MOL/SIM
+                # instead of an old FULL export. Ask for a new explicit choice
+                # without discarding or rerunning the completed producers.
+                from .artifacts import validate_reference
+                missing_selection=False
+                for group in stage.get('bindings',{}).values():
+                    for ref in input_sources(group):
+                        if 'stage' not in ref or ref.get('selector','auto')=='auto':continue
+                        try:validate_reference(ref,results.get(ref['stage'],[]))
+                        except (ValueError,FileNotFoundError):missing_selection=True
+                if missing_selection:
+                    item.update(requires_curation=True,curation_confirmed=False,
+                        selection_notice='Os arquivos selecionados anteriormente não estão disponíveis. Revise as entradas usando os conjuntos atuais.')
+                else:item.pop('selection_notice',None)
+                reusable=self._reuse_stage(project_id,user_id,stage,results,software,stages) if state.get('reuse_results',True) and not missing_selection else None
                 if reusable:
                     stage,key,cached=reusable
                     item.update(configuration=stage,curation_confirmed=True)
@@ -1368,7 +1574,11 @@ class PipelineService:
                     if cached and cached.get('excluded_records'):item['excluded_records']=cached['excluded_records']
                     if cached and cached.get('redocking_failures'):item['redocking_failures']=cached['redocking_failures']
                     if cached and cached.get('redocking_reused'):item['redocking_reused']=cached['redocking_reused']
+                    if cached:
+                        for name in ('md_pairs','md_failures','md_reused'):
+                            if name in cached:item[name]=cached[name]
                     if cached and cached.get('batches'):item['batches']=cached['batches']
+                    if cached and cached.get('pdb_reviews'):item['pdb_reviews']=copy.deepcopy(cached['pdb_reviews'])
                     if state['event'].is_set():
                         raise InterruptedError('Execução cancelada.')
                     self.store._require_user(user_id,project_id,'editor')
@@ -1433,14 +1643,14 @@ class PipelineService:
                 validate_file(self.store.scoped_path(project_id, path), kind, validate_rows=False)
         if stage['operation'] == 'similarity':
             from .fingerprint_selection import generated_kind
-            if stage.get('input_processing') == 'individual':
+            if stage.get('input_processing') in ('individual','both'):
                 for variant, _ in self._variants(project_id, stage, results):
                     generated_kind(variant, pipeline, results)
             else:generated_kind(stage, pipeline, results)
         elif stage['operation'] == 'graphs':
             from .graph_inputs import GraphInputs
             entries = GraphInputs(self.store, project_id, pipeline, results).resolve(stage)['graph_inputs']
-            if stage.get('input_processing') == 'merge' and len({
+            if stage.get('input_processing') in ('merge','both') and len({
                     (entry.get('metric', 'pronta'), entry.get('fingerprint', 'morgan')) for entry in entries}) > 1:
                 raise ValueError('Mescle apenas similaridades com a mesma métrica e fingerprint.')
 
@@ -1476,7 +1686,7 @@ class PipelineService:
             results={s['id']:s['artifacts'] for s in stages if s['status']=='succeeded'}
             if configuration['operation'] in ('fingerprints', 'similarity', 'graphs'):
                 self._validate_analysis_selection(run['project_id'],configuration,results,context)
-            elif configuration.get('input_processing')=='individual':
+            elif configuration.get('input_processing') in ('individual','both'):
                 for variant,_ in self._variants(run['project_id'],configuration,results):
                     self._resolve(run['project_id'],user['id'],variant,results,cache_only=True,pipeline=context)
             else:self._resolve(run['project_id'],user['id'],configuration,results,cache_only=True,pipeline=context)

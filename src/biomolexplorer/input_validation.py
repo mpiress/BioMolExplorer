@@ -9,6 +9,9 @@ from pathlib import Path
 
 ALIASES={'smiles':'canonical_smiles','smile':'canonical_smiles','Canonical_SMILES':'canonical_smiles','name':'molecule_chembl_id','zinc_id':'molecule_chembl_id'}
 EXPECTED={
+    'receptor_pdb':'Receptor .pdb com registros ATOM/HETATM e coordenadas válidas.',
+    'molecular_poses':'Pose .mol2 com um ligante por arquivo, coordenadas, tipos atômicos e cargas finitas.',
+    'dynamics':'Arquivos de dinâmica: .nc, .prmtop, .inpcrd, .rst7, .pdb, .mol2, .csv ou .json.',
     'compounds':'CSV UTF-8 com canonical_smiles e molecule_chembl_id. Também aceitamos smiles e name; códigos ausentes são gerados. Exemplo: molecule_chembl_id,canonical_smiles\nMOL1,CCO',
     'graph_compounds':'CSV UTF-8 com molecule_chembl_id e canonical_smiles preenchidos. Também aceitamos name e smiles. Use os mesmos códigos de source/target; nós isolados podem ter códigos adicionais. Exemplo: molecule_chembl_id,canonical_smiles\nMOL1,CCO',
     'admet':'CSV de resultados com molecule_chembl_id, canonical_smiles, TPSA e WLOGP. Os dois últimos campos devem ser números finitos.',
@@ -26,6 +29,7 @@ EXPECTED={
 
 
 def output_kind(operation):
+    if operation=='dynamics_dock6':return 'dynamics'
     return {'retrieve_structures':'structures','prepare_structures':'prepared_structures','redocking':'prepared_structures',
             'fingerprints':'fingerprints','similarity':'similarity','docking_vina':'vina','docking_dock6':'dock6',
             'consensus':'scores'}.get(operation,'compounds')
@@ -54,6 +58,14 @@ def validate_file(path,kind,operation=None,validate_rows=True):
         if not path.is_file() or path.is_symlink():
             raise ValueError('O arquivo está indisponível.')
         if kind=='other':
+            return
+        if kind in ('receptor_pdb','molecular_poses'):
+            from .md_inputs import validate_structure
+            validate_structure(path,'receptor' if kind=='receptor_pdb' else 'ligand')
+            return
+        if kind=='dynamics':
+            from .md_cache import SUFFIXES
+            if path.suffix not in SUFFIXES or not path.stat().st_size:raise ValueError('Arquivo de dinâmica vazio ou incompatível.')
             return
         if kind=='zinc_urls':
             from .zinc_retrieval import read_download_list
@@ -136,8 +148,13 @@ def validate_file(path,kind,operation=None,validate_rows=True):
                 raise ValueError('Coordenadas MOL2 inválidas.')
             return
         if kind in ('structures','prepared_structures','vina'):
-            allowed={'.pdb'} if kind=='structures' else {'.pdb','.pdbqt'} if kind=='prepared_structures' else {'.pdbqt'}
+            allowed={'.pdb','.cif','.mmcif'} if kind=='structures' else {'.pdb','.pdbqt'} if kind=='prepared_structures' else {'.pdbqt'}
             if path.suffix.lower() not in allowed:raise ValueError('Extensão de estrutura inválida.')
+            if kind=='structures' and path.suffix.lower() in ('.cif','.mmcif'):
+                from .structure_selection import read_selected
+                structure,atoms=read_selected(path)
+                if not atoms:raise ValueError('Não foram encontrados átomos com coordenadas.')
+                return
             count=0;score=False
             with path.open(encoding='utf-8') as stream:
                 for line in stream:

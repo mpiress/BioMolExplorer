@@ -68,7 +68,29 @@ class InputEditor:
         compound_references={path:values for mapping in catalog.values() for path,values in mapping.items()}
         for origin,mapping in catalog.items():
             if origin.startswith('asset:'):compound_references[origin]={code:label for values in mapping.values() for code,label in values.items()}
-        self.selection=FileSelection({'stages':completed},pending,self.assets,page=self.ui.page,writable=self.writable,compound_references=compound_references)
+        def file_actions(item,path):
+            if self.stage['operation']!='redocking' or item.get('operation')!='retrieve_structures' or not item.get('run_id'):return []
+            from .stage_results import StageResults
+            from .pdb_results import PDBActions
+            results=StageResults(self.ui,self.ui.current['id'],item['run_id'],item,self.writable)
+            def saved(file,review):
+                if self.selection:
+                    self.selection.apply_pdb_reviews({file['path']:review})
+                getattr(self.ui,'pdb_review_states',{}).update({file['path']:review})
+                code=review['pdb_id']
+                records=getattr(self.ui,'redocking_records',{})
+                for producer in getattr(self.ui,'artifact_items',{}).values():
+                    if file['path'] not in producer.get('artifacts',[]):continue
+                    origin='stage:'+producer['id']
+                    current=[r for r in records.get(origin,[]) if r[0].upper()!=code.upper()]
+                    current.extend([code,r['LIGAND'],int(r['RESNUM']),r['CHAIN'],review.get('resolution')]
+                        for r in review['ligands'])
+                    records[origin]=current
+                if self.on_change:self.on_change()
+            return PDBActions(results,self.writable,on_saved=saved).actions({'name':path.name,'path':str(path)})
+        self.selection=FileSelection({'stages':completed},pending,self.assets,page=self.ui.page,writable=self.writable,
+            compound_references=compound_references,file_actions=file_actions)
+        self.selection.apply_pdb_reviews(getattr(self.ui,'pdb_review_states',{}))
         self.selection.pickers[self.field['name']].on_change=lambda:self.on_change() if self.on_change else None
         self.selection_box.controls=[self.selection.pickers[self.field['name']].control]
         for _,selector,_ in self.rows:selector.visible=False
@@ -132,12 +154,17 @@ class InputEditor:
         if self.stage['operation'] in ('prepare_structures','docking_vina','docking_dock6') and self.field['name']=='base_input_path' and not is_target:
             names={n for n in names if n.endswith('.pdb') and n.rsplit('/',1)[-1].count('.')==1}
         origin=next((s for s in self.ui.current['pipeline'] if value=='stage:'+s['id']),None)
+        item=getattr(self.ui,'artifact_items',{}).get(origin['id']) if origin else None
+        from biomolexplorer.artifacts import records
+        from biomolexplorer.artifact_naming import human_name
+        catalog=records(item) if item else []
         def label(name):
             if origin and origin['operation']=='graphs':
                 from biomolexplorer.graph_exports import subset_label
                 scope=subset_label(name,getattr(self.ui,'tr',None))
                 if scope:return scope+' — '+name
-            return name
+            record=next((r for r in catalog if matches_selector(r['path'],name)),None)
+            return human_name(record)+' — '+name if record else name
         return [ft.DropdownOption(key='auto',text='Identificar automaticamente')]+[verbatim(ft.DropdownOption(key=n,text=label(n))) for n in sorted(names)]
 
     def add(self,reference=None):
@@ -155,8 +182,8 @@ class InputEditor:
         source.on_select=change
         selector.on_select=lambda e:self.changed()
         source.expand=selector.expand=True
-        input_controls=[ft.ResponsiveRow([ft.Container(ft.Row([source]),col={'xs':12,'lg':6}),
-            ft.Container(ft.Row([selector]),col={'xs':12,'lg':6})],spacing=20,run_spacing=20)] if self.stage['operation']=='admet' else [ft.Row([source]),ft.Row([selector])]
+        from .settings_layout import grid
+        input_controls=[grid([source,selector])]
         row=ft.Column(input_controls,spacing=20,horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
         if self.stage['operation'] in ('docking_vina','docking_dock6') and self.is_ligand:
             compound=ft.Dropdown(label='Composto para docking (opcional)',value=ref.get('compound_id',''),
@@ -210,6 +237,9 @@ class InputEditor:
         async def action():
             token,project_id=self.ui.token,self.ui.current['id']
             kind='other' if self.stage['operation'] in ('docking_vina','docking_dock6') and self.field['name']=='base_input_path' else 'zinc_urls' if self.stage['operation']=='retrieve_zinc' else next(iter(sorted(self.expected-{'chembl'})), 'other')
+            # MD accepts pose formats as well as compound tables. Scientific
+            # validation and coordinate-preserving conversion run per pair.
+            if self.stage['operation']=='dynamics_dock6':kind='receptor_pdb' if self.field['name']=='base_input_path' else 'other'
             ids=await self.ui.pick_uploads(kind,project_id)
             if self.ui.token!=token or not self.ui.current or self.ui.current['id']!=project_id:return
             fresh=await self.ui.call(self.ui.store.assets,token,project_id)
@@ -263,8 +293,9 @@ class ProvidedResults:
         self.kind=output_kind(stage['operation'])
         previous=stage.get('provided_results') or {}
         self.mode=ft.Dropdown(label='Como usar este bloco?',value='provided' if previous else 'execute',disabled=not writable,
-            options=[ft.DropdownOption(key='execute',text='Executar a etapa com as entradas configuradas'),
-                     ft.DropdownOption(key='provided',text='Usar meus resultados prontos · etapa concluída')])
+            tooltip='Execute com as entradas configuradas ou encaminhe resultados prontos sem executar novamente este bloco.',
+            options=[ft.DropdownOption(key='execute',text='Executar com entradas'),
+                     ft.DropdownOption(key='provided',text='Usar resultados prontos')])
         self.checks={}
         self.box=ft.Column(spacing=8)
         self.populate(previous.get('asset_ids',[]))

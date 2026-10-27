@@ -42,11 +42,26 @@ def convert_structure(source, destination, *, ph=None, charges=None, index=1):
 
 
 def structure_smiles(path):
-    result = subprocess.run(['obabel', '-i'+Path(path).suffix[1:], str(path), '-ocan', '-f', '1', '-l', '1'],
-                            capture_output=True, text=True)
-    if result.returncode or not result.stdout.strip():
-        raise ValueError('Não foi possível obter o SMILES da conformação molecular.')
-    return result.stdout.split()[0]
+    """Read a pose identity without making result browsing depend on the CLI.
+
+    Open Babel remains the preferred parser because it covers all accepted
+    formats.  RDKit is already a runtime dependency and provides a safe
+    fallback for result inspection when only the Python bindings are present.
+    """
+    path=Path(path)
+    executable=shutil.which('obabel')
+    if executable:
+        result = subprocess.run([executable, '-i'+path.suffix[1:], str(path), '-ocan', '-f', '1', '-l', '1'],
+                                capture_output=True, text=True)
+        if not result.returncode and result.stdout.strip():return result.stdout.split()[0]
+    from rdkit import Chem
+    suffix=path.suffix.lower();text=path.read_text(errors='replace')
+    if suffix=='.mol2':molecule=Chem.MolFromMol2Block(text,sanitize=False,removeHs=False)
+    elif suffix in ('.pdb','.pdbqt'):molecule=Chem.MolFromPDBBlock(text,sanitize=False,removeHs=False)
+    elif suffix in ('.sdf','.mol'):molecule=Chem.MolFromMolBlock(text,sanitize=False,removeHs=False)
+    else:molecule=None
+    if molecule is None:raise ValueError('Não foi possível obter o SMILES da conformação molecular.')
+    return Chem.MolToSmiles(molecule,canonical=True)
 
 
 def binding_center(prepared, record):
@@ -75,59 +90,42 @@ def center_mol2(path, center):
 
 
 def prepare_ligands(dataset, destination, format, ph=7.4, charge_type='gas', center=None, preparation_options=None):
-    """Convert an existing pose, or generate 3D only when the input is SMILES."""
-    from .visualizations import molecule_sdf
-    dataset, destination = Path(dataset), Path(destination)
-    destination.mkdir(parents=True, exist_ok=True)
+    """Prepare through Chimera, then place/export that same conformation."""
+    from copy import deepcopy
+    from .docking_preparation import prepare_candidates
+    from .calculation_cache import copy_artifact
+    from .ligand_cache import validate_prepared_ligand
     from .preparation_failures import CURRENT_REPORT,PreparationFailures
+    dataset,destination=Path(dataset),Path(destination)
+    destination.mkdir(parents=True,exist_ok=True)
+    config=deepcopy(preparation_options or {})
+    config.setdefault('ligand',{}).setdefault('charge_type',charge_type)
+    from .redocking_config import chimera_preparation
+    config=chimera_preparation(config)
     report=CURRENT_REPORT.get() or PreparationFailures()
-    if preparation_options is not None:
-        from .docking_preparation import prepare_candidates
-        token=CURRENT_REPORT.set(report)
-        try:
-            dataset=prepare_candidates(dataset,destination/'Prepared',preparation_options,ph,
-                                       'vina' if format=='pdbqt' else 'dock6')
-        finally:CURRENT_REPORT.reset(token)
+    input_codes={row['molecule_chembl_id'] for row in read_compounds(dataset)}
+    token=CURRENT_REPORT.set(report)
+    try:dataset=prepare_candidates(dataset,destination/'Prepared',config,ph,'vina' if format=='pdbqt' else 'dock6')
+    finally:CURRENT_REPORT.reset(token)
+    ready_codes={row['molecule_chembl_id'] for row in read_compounds(dataset)}
+    for code in input_codes-ready_codes:
+        if re.fullmatch(r'[A-Za-z0-9_.+-]{1,100}',code) and '..' not in code:
+            (destination/(code+'.lig.'+format)).unlink(missing_ok=True)
     outputs=[]
     for row_number,row in enumerate(read_compounds(dataset),2):
         owned=[]
         with report.compound(dataset,row_number,row,destination,owned):
-
             code=row['molecule_chembl_id']
-            if not re.fullmatch(r'[A-Za-z0-9_.+-]{1,100}', code) or '..' in code:
+            if not re.fullmatch(r'[A-Za-z0-9_.+-]{1,100}',code) or '..' in code:
                 raise ValueError('Código molecular inválido para o docking.')
-            owned.append(destination/(code+'.lig.'+format))
             prepared=row.get('prepared_'+format)
-            if row.get('docking_engines') and not prepared:
-                raise ValueError('A saída de preparação não inclui o formato solicitado pelo docking.')
-            if prepared:
-                source=Path(prepared)
-                if not source.is_absolute():source=dataset.parent/source
-                if not source.is_file() or not source.stat().st_size:raise ValueError('Arquivo preparado ausente ou vazio: '+source.name)
-                output=destination/(code+'.lig.'+format);owned.append(output)
-                shutil.copy2(source,output)
-                if format=='mol2' and center is not None and row.get('prepared_origin') in ('smiles','library'):center_mol2(output,center)
-                outputs.append(output)
-                continue
-            pose=row.get('conformer_file') or row.get('pose_file')
-            if pose:
-                source=Path(pose)
-                if not source.is_absolute():source=dataset.parent/source
-                if not source.is_file():raise ValueError('A conformação selecionada não está disponível: '+code)
-            else:
-                source=destination/(code+'.sdf');owned.append(source)
-                source.write_text(molecule_sdf(row['canonical_smiles']),encoding='utf-8')
+            if not prepared:raise ValueError('A saída de preparação não inclui o formato solicitado pelo docking.')
+            source=Path(prepared)
+            if not source.is_absolute():source=dataset.parent/source
+            validate_prepared_ligand(source,format)
             output=destination/(code+'.lig.'+format);owned.append(output)
-            convert_structure(source,output,ph=ph,charges='gasteiger' if format=='mol2' and charge_type=='gas' else None,
-                              index=int(row.get('conformer_index') or 1))
-            if (not pose or row.get('conformer_origin')=='library') and format=='mol2' and center is not None:center_mol2(output,center)
-            if format=='mol2' and charge_type=='am1':
-                script=destination/(code+'.charges.com')
-                script.write_text(f'open {output.name}\naddcharge all spec #0 chargeModel 14sb method am1\nwrite format mol2 #0 {output.name}\nclose all\n',encoding='utf-8')
-                result=subprocess.run(['chimera','--nogui','--silent',script.name],cwd=destination,capture_output=True,text=True)
-                details='\n'.join((getattr(result,'stdout','') or '',getattr(result,'stderr','') or ''))
-                if result.returncode or re.search(r'Error while sourcing|Traceback \(most recent call last\)|^Error(?:\s|:)',details,re.M):
-                    raise ValueError('Não foi possível atribuir cargas AM1: '+details[-2000:])
+            if source.resolve()!=output.resolve():copy_artifact(source,output)
+            if format=='mol2' and center is not None and row.get('prepared_origin') in ('smiles','library'):center_mol2(output,center)
             outputs.append(output)
     report.write(destination)
     return outputs

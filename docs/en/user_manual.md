@@ -15,7 +15,7 @@ cd BioMolExplorer
 
 Without Git, use **Code → Download ZIP**, extract the archive and open a terminal inside the extracted folder. The [installation and configuration guide](installation.md) explains downloading, external tools and paths.
 
-**Install UCSF Chimera 1.17 and DOCK6 6.11 before starting the application.** They must be available on the computer running calculations, including in web mode. Installing the interface and Conda environment does not install these tools; stages requiring them will fail without them. Complete the installation guide's checks before running the startup commands.
+**Configure UCSF Chimera, Open Babel and Vina in the main scientific environment.** DOCK6 is required for its stages. Separate AmberTools is used only by dynamics protocols requiring it; follow the installation guide.
 
 1. Create the scientific environment from the downloaded source code root.
 2. Activate the environment and install the interface.
@@ -279,6 +279,22 @@ The DOCK6 **Footprint** button opens an integrated popup showing per-residue Van
 
 After connecting Vina and DOCK6 results, consensus runs automatically in the pipeline without file confirmation or additional parameters. The table shows compound code, Vina score, DOCK6 score and normalized score (0 to 1). Click a column header to toggle ascending and descending order across the complete table before pagination. The normalized score averages the two engines’ min-max normalizations; higher values rank better. The CSV also retains z-score and min-max. Each row has **3D Vina**, **3D DOCK6** and **Remove** buttons per row. Consensus uses the original scores from both engines without requiring receptor, reference ligand or pose files. Available structural files are optional visualization attachments; missing files do not block computation. Singleton or constant scores normalize to zero. Removal requires editing permission, is audited and affects subsequent inputs; completed analyses are not recalculated. Each batch summary is authoritative, preventing deleted rows from returning from auxiliary tables.
 
+### Molecular dynamics with DOCK6 and AmberTools
+
+Candidate preparation now supports automatic backend selection and distinct Vina/DOCK6 charge policies, preserving Antechamber methodology for DOCK6. See [molecular preparation and backends](molecular_preparation.md) for native paths, minimization fallback, caching and special systems.
+
+**Dynamics with DOCK6** receives PDB receptors and MOL2 poses and builds explicit pairs. **AMBER Score (DOCK6)** performs preparation and implicit-solvent refinement; **AMBER Score + sander trajectory** adds minimization, a NetCDF trajectory and, when enabled, `cpptraj` RMSD, RMSF, radius-of-gyration and hydrogen-bond analyses. The movable region, cycles, temperature, time step, output stride and seed are part of the run's scientific identity.
+
+Pairs must now be explicitly selected; no Cartesian product runs by default. Compatible compound stages, Vina/DOCK6 poses, SDF, PDBQT and CSV are accepted. CSV rows must reference a 3D pose through `pose_file`, `conformer_file`, `prepared_mol2` or `prepared_pdbqt`; SMILES alone cannot define a bound pose and fails only that pair. Open Babel converts coordinate-bearing poses. Review chemistry and receptor correspondence before interpreting a result.
+
+The per-pair responsive panel separates protein-backbone RMSD and ligand-heavy-atom RMSD after protein fitting (no ligand refitting), aligned C-alpha RMSF, mass-weighted gyration radius, interface-only hydrogen-bond counts and occupancy, LCPO SASA, ligand/site COM distance and residue contact occupancy (4 Å). The static site comprises protein residues within 5 Å of the ligand in the first saved frame. RMSD uses that saved frame as reference. `analysis.json` consolidates series, masks and definitions; `protocol.json` records parameters, input/tool hashes and force fields. At least two frames are required. The default sander mask `:1` moves only the first residue; check multi-residue ligands and do not interpret a frozen protein's RMSF as flexibility.
+
+The tested DOCK6 helpers use **ff94 and GAFF**, not ff14SB/GAFF2. Parameterization errors involving cofactors, waters or metals require review; nothing should be silently removed. This short implicit-solvent refinement has no validated equilibration stage and is neither production MD nor a binding-free-energy estimate. Compare equivalent receptors and protocols without definitive affinity ranking. Separate receptor, ligand and complex preparation checkpoints use the shared content-addressed SQLite index, independently of temperature/duration; disabling reuse forces computation. Native topology/coordinate/trajectory formats remain necessary. Method references: [RMSD](https://amberhub.chpc.utah.edu/rmsd/), [RMSF](https://amberhub.chpc.utah.edu/atomicfluct-rmsf/), [hydrogen bonds](https://amberhub.chpc.utah.edu/hbond/), [LCPO SASA](https://amberhub.chpc.utah.edu/surf/).
+
+Each pair has a stable identifier derived from receptor and ligand identity. `dynamics_results.json` is the primary index, `dynamics_results.csv` is its summary, and `pairs/<id>/` contains that calculation's files. Complete, intact pairs are reused; changed, corrupt or failed pairs are recalculated independently. One failed pair does not discard the others. Check DOCK6, `sander` and `cpptraj` in the installation guide before using trajectories.
+
+The comparison action provides a descriptive table grouped by receptor-content hash, protocol and tools, without affinity ranking. Compare only rows within the same group. Failures retain a `failed_stage` and Amber helper logs with missing-parameter details. Successful runs remove local helper-script copies and the transient charge file; set `BIOMOL_MD_DEBUG=1` to preserve these. Native topology, scientific inputs, logs, trajectory and analysis outputs are retained.
+
 ## 12. Explore results and navigate graphs
 
 1. Open **Runs** and expand the stage, or use **Results** on the block.
@@ -288,6 +304,8 @@ After connecting Vina and DOCK6 results, consensus runs automatically in the pip
 5. Download the file to preserve the complete analysis data.
 
 In the graph viewer, choose **Full graph** to see all components. Components occupy separate areas and vertices are spaced apart. Use the component selector to focus a region; click a vertex to inspect its details, neighbors and relationship weights. Searching a code locates the node and navigates to its component. Use dragging and zoom; **Fit to view** and **Recenter** restore an overview.
+
+Each analysis writes one indexed full-graph CSV with `graph_analysis_id`, `graph_component` and `graph_is_mcc`. Components are filters over that file and the interactive artifact, rather than physical copies. Export CSV, SVG, PNG or metrics on demand. Older results with one CSV per component remain readable; new runs avoid that file multiplication.
 
 Choosing **MCC** restricts exploration to the largest connected component. The panel shows **Fragment SMILES**, its structure and the common-fragment search status when available. The SMILES is extracted from a reference molecule for the MCS pattern; shared connectivity does not establish stereochemical identity across all compounds. Interpret time-limited searches according to their reported status. Without corresponding SMILES, topology remains explorable but no molecular fragment structure can be displayed.
 
@@ -359,7 +377,7 @@ Use the [retrieval guide](retrieval.md) to search PDB by text, IDs, UniProt or l
 
 Pair selection is mandatory and uses one **Chain** for both receptor and ligand. A configured redocking stage reuses its selected pairs; the pipeline requests selection only when it is missing. Resolution comes from metadata and has no editable field. Cofactors and solvent, hydrogen, minimization and charge options are configured per pair. Ligand preparation and conformation share those options.
 
-Before calculations, the system checks residues, chain and cofactors in the PDB files. Prepared inputs require PDBQT files and three finite coordinates in `Prepared/centers.csv`. The scientific environment must provide Chimera, Open Babel (`obabel`) and Vina; without preparation, only Vina is required. The scientific interpreter's directory is also included in subprocess PATH.
+Before calculations, the system checks residues, chain and cofactors in the PDB files. Prepared inputs require PDBQT files and three finite coordinates in `Prepared/centers.csv`. Preparation uses Chimera, Open Babel and Vina; prepared inputs require only Vina. The scientific interpreter's directory is also included in subprocess PATH.
 
 Tool failures report the executable, exit code and process message. Failed Chimera scripts remain available for diagnosis. Correct the reported input or installation and retry. There is no verbose control: Vina verbosity stays at zero.
 
@@ -414,3 +432,29 @@ Adding the three direct ADMET BBB+ datasets alongside three PubChem datasets pro
 **Follow new datasets from the source** includes compatible outputs from connected producers. Disable it to use only explicitly selected files. Older partial selections are not automatically expanded. Use **Process individually** to keep the six datasets separate; merge deliberately combines selected inputs.
 
 Source labels are reconstructed from actual file inputs and execution history, including earlier runs that produced reused files. They are not guessed from filename patterns. Existing results receive the improved labels when opened.
+
+## Incremental redocking and docking
+
+Choose result reuse to recover validated artifacts from an unchanged stage.
+When adding compounds or PDB/ligand pairs, compatible calculations are restored
+individually and only new, incomplete or invalid items are processed. The final
+table includes all currently selected items; removed selections remain in
+history without reappearing in the current selection.
+
+Receptor preparation, ligand preparation, Vina docking, DOCK6 site/grids,
+minimization, docking and footprints have independent checkpoints. Changing
+the Vina box or exhaustiveness recalculates docking while preserving compatible
+preparations. Changing only DOCK6 flex/rigid mode retains the site and
+minimization. Missing or modified files invalidate the affected checkpoint.
+Reuse never relies on a filename alone.
+
+Validated results are committed after each item, allowing recovery after
+cancellation or batch failure. Vina lists completed, reused and failed items in
+`vina_execution.json`; per-compound failure reports remain available. Choosing
+**No, run again** disables checkpoint reads for the requested execution.
+
+The project's relational index is stored at
+`.biomolexplorer/cache/calculations/index.sqlite3`. Content-addressed objects
+are shared by multiple calculations without duplication inside the cache.
+Outputs retain their usual formats and can be edited independently of stored
+objects. Do not manually edit the index.

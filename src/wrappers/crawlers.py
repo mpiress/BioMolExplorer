@@ -144,11 +144,12 @@ def retrieve_compounds(search_term:str, base_output_path:str, include_pubchem:bo
         if include_pubchem:
             report_progress('Buscando compostos similares no PubChem…')
             return expand_similar_compounds(search_term, base_output_path, pubchem_threshold, pubchem_max_records)
-        chembl = PubChemSimilarMols.read_chembl([
-            resolve_path(molecule_output_path), resolve_path(similar_output_path)])
+        chembl = PubChemSimilarMols.read_chembl([resolve_path(drugbank_output_path)])
         if chembl.empty:
             raise ValueError('No ChEMBL molecules matched the configured filters')
-        return _save_compound_dataset(chembl, None, resolve_path(base_output_path), search_term)
+        # MOL and SIM already contain the normalized handoff. A third union
+        # duplicated their contents and obscured the choice in the next block.
+        return chembl
 
     except Exception as e:
         logger.error(f'Error during to perform {search_term} in retrieve_compounds wrapper function', exc_info=True)

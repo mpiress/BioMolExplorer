@@ -58,6 +58,12 @@ LABELS = {
            'footer':'Documentação gerada a partir dos arquivos Markdown do projeto. Licença MIT.'},
 }
 
+GUIDES += ('molecular_preparation',)
+LABELS['pt']['titles'].append('Preparação molecular e backends')
+LABELS['pt']['summaries'].append('Representação independente de formato, cargas, Meeko, Antechamber, cache e fallback científico.')
+LABELS['en']['titles'].append('Molecular preparation and backends')
+LABELS['en']['summaries'].append('Format-independent graphs, charges, Meeko, Antechamber, caching and scientific fallback.')
+
 CSS = '''
 :root{color-scheme:light;--ink:#172b4d;--muted:#526580;--teal:#087f74;--line:#dce5ef;--bg:#f4f7fb}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,sans-serif}

@@ -55,16 +55,18 @@ class ReceptorOutputTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder);dataset=root/'compounds.csv'
             write_csv(dataset,[dict(molecule_chembl_id='CID1',canonical_smiles='CCO')])
+            pdbqt='ROOT\nATOM      1  C   UNL     1       0.000   1.000   2.000  0.00  0.00     0.000 C\nENDROOT\nTORSDOF 0\n'
+            mol2='@<TRIPOS>MOLECULE\nCID1\n1 0 0 0 0\nSMALL\nUSER_CHARGES\n\n@<TRIPOS>ATOM\n1 C 0.0 1.0 2.0 C.3 1 LIG 0.0\n@<TRIPOS>BOND\n'
             def convert(source,destination,**options):
-                Path(destination).write_text('converted candidate')
+                Path(destination).write_text(pdbqt if Path(destination).suffix=='.pdbqt' else mol2)
             def prepare(command,**options):
                 work=Path(options['cwd'])
                 commands=(work/'prepare.com').read_text()
                 self.assertIn('method am1',commands)
                 self.assertNotIn('minimize spec #0',commands)
-                (work/'prepared.mol2').write_text('one prepared conformation')
-                return SimpleNamespace(returncode=0)
-            settings={'ligand':{'charge_type':'am1','minimize':False}}
+                (work/'prepared.mol2').write_text(mol2)
+                return SimpleNamespace(returncode=0,stdout='',stderr='')
+            settings={'preparation_backend':'legacy_chimera','ligand':{'charge_type':'am1','minimize':False}}
             for engine,formats in (('vina',{'pdbqt'}),('dock6',{'mol2'}),('both',{'pdbqt','mol2'})):
                 with self.subTest(engine=engine),patch('biomolexplorer.docking_preparation.convert_structure',side_effect=convert),patch('biomolexplorer.docking_preparation.subprocess.run',side_effect=prepare) as runner:
                     output=prepare_candidates(dataset,root/engine,settings,engines=engine)
