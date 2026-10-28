@@ -99,14 +99,14 @@ def retrieve_compounds(search_term:str, base_output_path:str, include_pubchem:bo
         filters = _clean_filters((chembl_filters or {}).get('target', read_filters(script_path)))
         effective_filters['target'] = dict(filters)
         target.set_outputpath(target_output_path)
-        report_progress(f'Consultando o alvo {search_term} no ChEMBL…')
+        report_progress(key='chembl.target',arguments={'target':search_term})
         target.search(search_term, filters, search_mode=search_mode, max_targets=max_targets)
 
         script_path = '/src/scripts/crawlers/bioactivity.json'
         filters = _clean_filters((chembl_filters or {}).get('bioactivity', read_filters(script_path)))
         bioact.set_outputpath(bioactivity_output_path)
         bioact.set_targetpath(target_output_path)
-        report_progress(f'Baixando as bioatividades de {search_term} e aplicando os filtros…')
+        report_progress(key='chembl.activities',arguments={'target':search_term})
         filters.setdefault("max_records", max_records)
         effective_filters['bioactivity'] = dict(filters)
         bioact.search(search_term, filters)
@@ -124,7 +124,7 @@ def retrieve_compounds(search_term:str, base_output_path:str, include_pubchem:bo
         sims.set_bioactivitypath(bioactivity_output_path)
         if expand_chembl:
             filters.setdefault('max_records', max_records)
-            report_progress('Buscando compostos similares no ChEMBL…')
+            report_progress('chembl.similars')
             effective_filters['similars'] = dict(filters)
             sims.search(filters)
 
@@ -132,7 +132,7 @@ def retrieve_compounds(search_term:str, base_output_path:str, include_pubchem:bo
         drugbank_output_path = f'{base_output_path}/ChEMBL/DrugBank/'
         molecules = fileHandling(output_path=drugbank_output_path)
 
-        report_progress('Consolidando os compostos recuperados…')
+        report_progress('chembl.consolidating')
         molecules.prepare_datamols(target=label,
                                    inputpath_mols=molecule_output_path,
                                    inputpath_similars=similar_output_path)
@@ -142,7 +142,7 @@ def retrieve_compounds(search_term:str, base_output_path:str, include_pubchem:bo
                     'filters': effective_filters, 'expand_chembl': expand_chembl},
                    resolve_path(base_output_path)/'retrieval_report.json')
         if include_pubchem:
-            report_progress('Buscando compostos similares no PubChem…')
+            report_progress('pubchem.similars')
             return expand_similar_compounds(search_term, base_output_path, pubchem_threshold, pubchem_max_records)
         chembl = PubChemSimilarMols.read_chembl([
             resolve_path(molecule_output_path), resolve_path(similar_output_path)])
@@ -188,7 +188,7 @@ def _retrieve_direct_compounds(term, output_path, mode, maximum, threshold, filt
         else:
             resource = client.substructure
             parameters['smiles'] = reference
-    report_progress('Consultando compostos diretamente no ChEMBL…')
+    report_progress('chembl.direct')
     records = list(resource.filter(**parameters).take(maximum))
     molecules = _select_molecules(records, Molecule().str_to_dict, natural,
                                  moltype.lower() if moltype else None, float(weight) if weight else None)

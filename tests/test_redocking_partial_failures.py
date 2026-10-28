@@ -200,10 +200,10 @@ class FailedResultDeletionTests(unittest.TestCase):
     def test_failed_row_is_highlighted_with_diagnostics_and_confirmed_removal(self):
         ui=self.ui();result=StageResults(ui,self.pid,self.rid,self.stage,True)
         asyncio.run(result.load());table=result.child
-        failed=table.table.rows[0]
+        failed=next(row for row in table.table.rows if row.color=='#FEF2F2')
         self.assertEqual(failed.color,'#FEF2F2')
-        self.assertEqual(failed.cells[4].content.value,'Falha na preparação')
-        self.assertEqual(failed.cells[5].content.value,'—')
+        self.assertEqual(failed.cells[5].content.value,'Falha na preparação')
+        self.assertEqual(failed.cells[6].content.value,'—')
         self.assertTrue(table.warning.visible)
         self.assertTrue(failed.cells[-3].content.disabled)
         asyncio.run(failed.cells[-1].content.controls[0].on_click(None))

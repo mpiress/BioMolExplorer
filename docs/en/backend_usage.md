@@ -115,7 +115,7 @@ See `biomolexplorer.operations.OPERATIONS` for the complete parameters.
 | `similarity` | Fingerprint `base_input_path`, metric, threshold and `approximate` | Edge CSVs in the `Similarity` subdirectory |
 | `graphs` | `similarity_path`; optional compound `base_input_path`; MCS options | Independent graph/MCC models, fragments and CSVs |
 | `prepare_structures` | Raw or prepared PDB receptor, compounds, `target`, PDB records and role options | Receptors, centers, `pdb_codes.csv` and candidates in selected formats |
-| `redocking` | PDB directory, `target`, preparation parameters | Working copies, Vina results and RMSD |
+| `redocking` | PDB directory, `target`, preparation parameters | Working copies, Vina or DOCK6 6.11 results and RMSD |
 | `docking_vina` | Prepared complexes, selected compounds, `mol_filename` | PDBQT files and Vina results |
 | `docking_dock6` | Prepared complexes, compounds, `base_vina_path`, `pdb_code`, DOCK6 installation | Conformations, scores and footprints |
 | `consensus` | Directory containing `Vina` and `Dock6`, or separate `base_vina_path` and `base_dock6_path` inputs, `target` | Consensus CSV and plot |
@@ -126,7 +126,7 @@ The Vina `pdb_code` parameter follows the existing function: a list of
 `[PDB_CODE, LIGAND, RESNUM, CHAIN]` records; DOCK6 receives one record with those
 four fields. Redocking requires explicitly selected `pdb_codes`: a list of
 `[PDB_CODE, LIGAND, RESNUM, CHAIN]`, with optional resolution as its fifth value,
- supplemented by `pdb_codes.csv` metadata. `preparation_pairs` stores options
+ supplemented by `pdb_codes.csv` metadata. `preparation_options` defines common receptor/ligand preparation and takes precedence. For compatibility, `preparation_pairs` stores options
 under `PDB|LIGAND|RESNUM|CHAIN` keys; receptor and ligand use the same chain.
 Legacy `verbose` arguments are ignored; verbosity stays at zero.
 See [redocking configuration](redocking_configuration.md).
@@ -157,6 +157,8 @@ fragment SMILES extracted from the reference molecule and search status.
 ## Redocking example
 
 The example requires an existing `/tmp/study/PDB/Estruturas/4M0E.pdb` containing residue 1YL / 604 in chain A. Adapt paths and the pair to your collection; this call does not retrieve the PDB.
+
+Choose `redocking_engine="vina"` (default) or `redocking_engine="dock6"`. DOCK6 uses `dock6_app_path` for its 6.11 installation, `conformer_search_type`, `density`, `radius`, `distance`, `max_orientations`, `num_scored_conformers` and `dock6_seed`. Prepared inputs require receptor `.dockprep.mol2` and `.noH.pdb`, ligand `.lig.mol2` and centers. Vina uses PDBQT. The legacy example below remains valid; new clients can replace `preparation_pairs` with one `preparation_options={"receptor": {...}, "ligand": {...}, "cofactors": []}`.
 
 ```python
 from biomolexplorer.operations import execute_operation

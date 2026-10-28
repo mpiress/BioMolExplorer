@@ -214,11 +214,11 @@ Under **Prepare for docking**, connect **PDB receptor (retrieval or redocking)**
 
 Add one or more **ChEMBL**, **PubChem**, **ZINC** or uploaded compound sources under **Selected compounds**. **Ligand preparation and conformation** configures these external candidates and remains available. The PDB reference ligand defines the docking site and is not a candidate. Choose **Prepare output for → Vina, DOCK6 or Vina and DOCK6**. Each candidate is prepared once and selected formats are exported from the same conformation. Connect this block to both the receptor and compound inputs of each selected engine. Use **Merge files (merge)** to combine sources in one execution; individual mode prepares each selected combination separately. Inspect the generated receptors, candidates and centers.
 
-Use a separate block for each receptor mode: do not combine raw PDBs and prepared receptors in the same block. pH remains available for candidate preparation when reusing a receptor. Before preparing compounds, the block checks binding centers (three finite coordinates) and receptor files required by the selected output. Vina requires `.dockprep.pdbqt`; DOCK6 additionally requires `.dockprep.mol2` and `.noH.pdb`. PDBQT remains the receptor selection file for either engine. Missing files stop the process with the required filename, without repeating receptor preparation.
+Use a separate block for each receptor mode: do not combine raw PDBs and prepared receptors in the same block. pH remains available for candidate preparation when reusing a receptor. Before preparing compounds, the block checks binding centers (three finite coordinates) and receptor files required by the selected output. Vina requires `.dockprep.pdbqt`; DOCK6 requires `.dockprep.mol2` and `.noH.pdb`. Selection accepts receptor MOL2 if PDBQT is unavailable, and lists only PDBQT when both formats exist. A Vina consumer can export its rigid format in a working copy without repeating Chimera preparation. Missing files stop the process with the required filename, without repeating receptor preparation.
 
-Under **Run redocking**, keep **Prepare complexes before redocking** enabled for raw PDBs. Disable it only for a prepared dataset. Check records, box dimensions, search effort and pose count. Examine RMSDs and logs; establish the study's protocol acceptance criteria before using its receptors to dock candidates.
+Under **Run redocking**, keep **Prepare complexes before redocking** enabled for raw PDBs. Disable it only for a prepared dataset. Choose Vina or DOCK6 6.11 and check its search, site and pose settings. Examine RMSDs and logs; establish the study's protocol acceptance criteria before using its receptors to dock candidates.
 
-In **Input Data**, select and validate at least one PDB / ligand / residue / **Chain** pair; both structures use that chain. Configure cofactors and receptor/ligand preparation for that selection. Resolution comes from metadata and ligand options also apply to conformation. Configured pairs are reused without another prompt. See [Redocking configuration](redocking_configuration.md) for options, validation and diagnosis.
+In **Input Data**, select and validate at least one PDB / ligand / residue / **Chain** pair; both structures use that chain. Review the table using edit/remove actions. Define common receptor and ligand preparation, with optional cofactors in a collapsed section. Resolution comes from metadata and ligand options also apply to conformation. Configured pairs are reused without another prompt. See [Redocking configuration](redocking_configuration.md) for options, validation and diagnosis.
 
 ### Inspect redocking results
 
@@ -359,9 +359,9 @@ Use the [retrieval guide](retrieval.md) to search PDB by text, IDs, UniProt or l
 
 ## Checks before execution
 
-Pair selection is mandatory and uses one **Chain** for both receptor and ligand. A configured redocking stage reuses its selected pairs; the pipeline requests selection only when it is missing. Resolution comes from metadata and has no editable field. Cofactors and solvent, hydrogen, minimization and charge options are configured per pair. Ligand preparation and conformation share those options.
+Pair selection is mandatory and uses one **Chain** for both receptor and ligand. A configured redocking stage reuses its selected pairs; the pipeline requests selection only when it is missing. Resolution comes from metadata and has no editable field. The table lists pairs with edit/remove actions. Cofactors and solvent, hydrogen, minimization and charge options are defined once for all receptors and once for all ligands. Ligand preparation and conformation share those options.
 
-Before calculations, the system checks residues, chain and cofactors in the PDB files. Prepared inputs require PDBQT files and three finite coordinates in `Prepared/centers.csv`. The scientific environment must provide Chimera, Open Babel (`obabel`) and Vina; without preparation, only Vina is required. The scientific interpreter's directory is also included in subprocess PATH.
+Before calculations, the system checks residues, chain and cofactors in the PDB files. Choose **AutoDock Vina** or **DOCK6 6.11** and fill in its displayed settings. Prepared inputs require PDBQT for Vina or MOL2 and hydrogen-free receptor PDB for DOCK6, plus valid centers. Chimera and Open Babel are needed for preparation; the selected engine and its tools must be installed. The scientific interpreter's directory is also included in subprocess PATH.
 
 Tool failures report the executable, exit code and process message. Failed Chimera scripts remain available for diagnosis. Correct the reported input or installation and retry. There is no verbose control: Vina verbosity stays at zero.
 
@@ -526,7 +526,7 @@ Select the analysis compound table for ADMET or docking.
 ```text
 Connect PDBs and select receptor/ligand/residue/chain pairs.
 Validate curation and review cofactors and Chimera preparation.
-Review box, effort and poses; confirm and run with Vina.
+Choose Vina or DOCK6 6.11, review its options and run.
 Inspect RMSD, logs, Residues and the 3D button for completed pairs.
 ```
 
@@ -595,6 +595,11 @@ Open Residues to inspect geometric contacts.
 
 ### Results, cleanup and history
 
+**Clear All**, beside **Refresh Results**, removes generated results across all
+runs and resets file and pair selections. Block connections, scientific settings,
+imported files and logs are preserved. Confirm the action to start over; buttons
+are disabled while cleanup runs. Finish or cancel any active run before clearing.
+
 ```text
 Finish or cancel the run before removing its data.
 Open Results by stage and choose Remove all results.
@@ -610,3 +615,28 @@ Download tables, figures or the simulation ZIP from Results.
 Export the project from its card to preserve configuration and data.
 Import the package in the destination workspace and check its tools.
 ```
+
+
+## Identify ADMET output collections
+
+New ADMET outputs include their collection origin before the result type:
+
+| Tag | Origin |
+| --- | --- |
+| `MOL` | Reference molecules from ChEMBL selection or a file identified as molecules |
+| `SIM` | Similar molecules from ChEMBL selection or a file identified as similars |
+| `PUBCHEM` | Compounds retrieved from PubChem |
+| `ZINC` | Compounds retrieved from ZINC |
+| `MIX` | Merged categories or a consolidated collection |
+| `INPUT` | A file whose category cannot be determined safely |
+
+Examples: `ACHE_molecules_MOL_BBB+.csv`, `ACHE_similars_SIM_HIA-.csv` and
+`ACHE_molecules_MOL_egg.png`. The same identification accompanies evaluated,
+selected/rejected tables, interactive plots, method reports and exclusion reports
+when produced. Pipeline lineage supplies the target name; standalone files use
+conservative filename-based identification. Unsafe characters and long names are
+normalized with a short identifier when needed.
+
+Readers and downstream blocks still recognize `_evaluated`, `_BBB+`, `_HIA-`,
+`_egg` and `_admet_report` endings. Naming applies to new outputs; historical files
+are neither renamed nor required to be recalculated to remain readable.

@@ -118,3 +118,30 @@ Inicie a aplicação no terminal que contém esse export, para o worker herdar a
 Se aparecer **ADMET-AI is not installed in the worker environment**, confira o estado mostrado na configuração ADMET, o caminho, a instalação e o acesso do worker aos modelos. Reinicie a aplicação após configurar o ambiente. Como alternativa, selecione explicitamente **RDKit local**; isso fornece descritores, estimativas e regras locais, sem os endpoints `ML_`. Não há substituição silenciosa de modelos. Outra opção é `python -m pip install -e '.[admet-ml]'` em um worker dedicado, respeitando as dependências desse ambiente.
 
 Consulte [ADMET por hipótese](admet_research.md) para unidades, perfis, alertas, arquivos e limites dos modelos.
+
+
+## Ambiente auditado e instalação reproduzível
+
+`requirements.yml` declara os imports científicos e da interface, além dos
+executáveis Open Babel e Poppler e da infraestrutura de instalação/build.
+`scripts/audit_dependencies.py` compara os imports Python com esses manifestos,
+incluindo imports dinâmicos literais e o preditor opcional isolado.
+
+Para criar um ambiente novo em Linux x86_64 com os builds Conda e artefatos pip
+fixados na auditoria, use o lock correspondente:
+
+```bash
+conda env create -f requirements-linux-64.lock.yml
+conda activate BioMolExplorer
+python -m pip check
+```
+
+O lock inclui hashes dos wheels pip para Python 3.12. Atualize-o ao alterar o
+manifesto principal; ele não é um lock para outras plataformas. A auditoria e as
+resoluções simuladas não substituem uma instalação limpa e testes dos protocolos.
+A edição do manifesto não desinstala pacotes de um ambiente já existente.
+
+ADMET-AI 2 requer uma versão de RDKit mais recente que a fixada no ambiente
+científico. Use `python scripts/setup_admet_ai.py` para o venv CPU local ou crie o
+ambiente opcional de `requirements-admet.yml` e configure `BIOMOL_ADMET_PYTHON`
+com o caminho absoluto do Python desse ambiente. Mantenha os ambientes separados.

@@ -95,3 +95,18 @@ O JSONL usa `schema_version=1`, horário UTC com milissegundos, nível, componen
 `receptor.reused` indica receptor preparado reutilizado. `ligand.preparation.started` e `prepare.com` identificam preparação de um candidato; não demonstram preparação repetida do receptor. `vina.maps.started` e `vina.maps.reused` distinguem cálculo/reutilização dentro do lote. Quando a API não suporta o template, a alternativa CLI fica registrada.
 
 No DOCK6, configurações e logs de superfície/esferas/caixa/grid e de cada candidato acompanham os resultados. Código -11 indica SIGSEGV do processo nativo. Uma falha individual pode produzir uma linha em `preparation_failures.csv` sem interromper os demais candidatos; confira **Compostos não utilizados** e o campo de etapa/contexto para localizar o problema. Erros globais continuam falhando a etapa. Um tempo decorrido longo, sozinho, não provoca encerramento automático. Veja [fluxo DOCK6](user_manual.md#validacao-e-exclusoes-no-dock6).
+
+
+## Idioma durante o processamento
+
+O acompanhamento da execução usa `resources/i18n/runtime_pt.json` ou
+`runtime_en.json`, conforme a sessão. Os workers publicam chaves e argumentos;
+cada interface renderiza o mesmo progresso em seu próprio idioma. O título,
+estados, tempos, contadores e avisos são carregados do catálogo. A troca de
+idioma fica indisponível durante uma execução, inclusive enquanto aguarda configuração.
+
+Em **Ver log da etapa**, mensagens internas reconhecidas são apresentadas no
+idioma da sessão. Saídas nativas das ferramentas, caminhos, identificadores e
+tracebacks continuam como dados técnicos originais. **Baixar log original**
+conserva os bytes do arquivo, independentemente do idioma de quem o consulta.
+O catálogo `pt.json` é explícito; não é reconstruído invertendo o inglês em execução.

@@ -81,7 +81,7 @@ class MoleculeQualityTests(unittest.TestCase):
         result=execute_operation('admet',{'base_input_path':str(path.parent),'input_file':path.name},self.root/'admet')
         report=json.loads(Path(result.details['exclusion_report']).read_text())
         self.assertEqual(report['excluded_records'],1)
-        dataset=pd.read_csv(next(p for p in result.artifacts if Path(p).name=='compounds.csv'))
+        dataset=pd.read_csv(next(p for p in result.artifacts if Path(p).name=='compounds_INPUT.csv'))
         self.assertNotIn('BAD',set(dataset['molecule_chembl_id']))
 
     def test_orphan_edges_and_invalid_smiles_are_removed_together(self):

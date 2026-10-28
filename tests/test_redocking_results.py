@@ -106,13 +106,13 @@ class RedockingResultsTests(unittest.TestCase):
         count=len(ui.saved);asyncio.run(dialog.actions[0].on_click(None));self.assertEqual(len(ui.saved),count)
 
     def test_ui_localizes_summary_and_dialog_without_changing_identifiers(self):
-        stage=self.stage();ui=self.ui();result=StageResults(ui,self.pid,self.rid,stage,True)
+        stage=self.stage();ui=self.ui();ui.page=LocalizedPage(ui.page,'en');result=StageResults(ui,self.pid,self.rid,stage,True)
         asyncio.run(result.load());page=LocalizedPage(SimpleNamespace(), 'en');page.localize(result.root)
         table=result.child
-        self.assertEqual(table.table.columns[1].label.value,'Ligand')
-        self.assertEqual(table.table.rows[0].cells[0].content.value,'1ABC')
+        self.assertEqual(table.table.columns[2].label.value,'Ligand')
+        self.assertEqual(table.table.rows[0].cells[1].content.value,'1ABC')
         self.assertEqual(table.table.rows[0].cells[-1].content.content,'View simulation')
-        self.assertIn('simulations',table.count.value)
+        self.assertIn('pairs',table.count.value)
         asyncio.run(table.open(table.simulations[0]['id']));page.localize(ui.dialogs[-1])
         self.assertEqual(ui.dialogs[-1].actions[0].content,'Download all (ZIP)')
 

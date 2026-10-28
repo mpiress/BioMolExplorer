@@ -1,0 +1,14 @@
+[18:28:31] BUA: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[18:28:31] S6Q: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+................[18:28:38] 92H: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[18:28:38] 92H: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+.[18:28:39] Explicit valence for atom # 10 C, 6, is greater than permitted
+[18:28:39] sanitize [18:28:39] 5NN0_92H_627A.lig.pdb: .................[18:28:40] ligand: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[18:28:40] ligand: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[18:28:40] ligand: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[18:28:40] ligand: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+.......................................................................................................
+----------------------------------------------------------------------
+Ran 137 tests in 82.103s
+
+OK

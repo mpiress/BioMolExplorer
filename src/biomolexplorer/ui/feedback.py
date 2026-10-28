@@ -8,11 +8,12 @@ def close_dialog(page,dialog):
     page.update()
 
 
-def readable_error(error):
+def readable_error(error,language='pt'):
     message = str(error or '').strip()
     # Older jobs can contain the EBI error page in the exception message.
     message = re.split(r'<!doctype\b|<html\b', message, maxsplit=1, flags=re.I)[0].strip()
     message = re.sub(r'^(?:RuntimeError|ValueError|Exception):\s*', '', message)
     if len(message) > 500:
-        message = message[:500].rstrip() + '… Consulte o log da etapa para os detalhes.'
+        from biomolexplorer.i18n import RuntimeMessages
+        message = message[:500].rstrip() + RuntimeMessages(language)('log.details')
     return message

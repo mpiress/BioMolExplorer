@@ -226,7 +226,7 @@ class PDBComplex():
             futures = {executor.submit(download, code): code for code in pdb_codes}
             for completed, future in enumerate(as_completed(futures), 1):
                 outcomes[futures[future]] = future.result()
-                report_progress('Baixando estruturas PDB…', completed, len(pdb_codes))
+                report_progress('pdb.downloading', completed, len(pdb_codes))
         records = [];candidates=[]
         for code in pdb_codes:
             info, ligands = outcomes[code]
@@ -246,8 +246,8 @@ class PDBComplex():
             structures_without_recommendation=[code for code in pdb_codes
                 if outcomes[code][0]['status']=='downloaded' and not any(r['RECOMMENDED'] for r in outcomes[code][1])])
         write_json(report, root/'retrieval_report.json')
-        report_progress(f"PDB: {report['downloaded']} estruturas baixadas; {report['failed']} falhas de download.")
-        report_progress(f"Ligantes PDB: {len(records)} selecionados de {len(candidates)} resíduos; consulte ligand_candidates.csv para a triagem completa.")
+        report_progress(key='pdb.downloaded',arguments={'downloaded':report['downloaded'],'failed':report['failed']})
+        report_progress(key='pdb.ligands',arguments={'selected':len(records),'total':len(candidates)})
         if not any(info['status']=='downloaded' for info, _ in outcomes.values()):
             raise RuntimeError('Nenhum PDB foi baixado. Consulte retrieval_report.json para os erros individuais.')
         return report

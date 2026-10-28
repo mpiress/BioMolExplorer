@@ -25,6 +25,8 @@ TITLES = {
 }
 LABELS = {
  'preparation_options': 'Preparação do receptor e ligante',
+ 'redocking_engine':'Método de redocking','max_orientations':'Máximo de orientações DOCK6',
+ 'num_scored_conformers':'Poses salvas DOCK6','dock6_seed':'Semente aleatória DOCK6',
  'reference_source':'Origem das referências PubChem','reference_type':'Tipo da referência PubChem',
  'reference':'Referência PubChem','selection_mode':'Referências para buscar similares','compound_id':'Composto de referência',
  'search_term': 'Consulta ChEMBL (nome, identificador ou SMILES)', 'target': 'Nome do alvo / pasta das estruturas',
@@ -64,6 +66,7 @@ PATH_FIELDS = {'base_input_path','base_selected_mols','base_vina_path','base_doc
 from .retrieval import MODES
 
 ENUMS = {
+ 'redocking_engine':['vina','dock6'],
  'ligand_selection':['recommended','all'],
  'docking_engines':['vina','dock6','both'],
  'reference_source':['compounds','manual'],'reference_type':['smiles','cid','name'],'selection_mode':['all','single'],
@@ -72,7 +75,7 @@ ENUMS = {
  'fingerprint': ['morgan','maccs','pharmacophore'], 'charge_type': ['gas','am1'], 'conformer_search_type': ['flex','rigid'],
 }
 ENUM_DEFAULTS = {'metric': 'Tanimoto', 'fingerprint': 'morgan'}
-CHOICE_LABELS={'ligand_selection':{'recommended':'Priorizar candidatos para redocking','all':'Manter todos os ligantes'},'docking_engines':{'vina':'Vina','dock6':'DOCK6','both':'Vina e DOCK6'},'reference_source':{'compounds':'Arquivos ou compostos de outros blocos','manual':'Informar minha referência'},
+CHOICE_LABELS={'conformer_search_type':{'flex':'Flexível','rigid':'Rígida'},'redocking_engine':{'vina':'AutoDock Vina','dock6':'DOCK6 6.11'},'ligand_selection':{'recommended':'Priorizar candidatos para redocking','all':'Manter todos os ligantes'},'docking_engines':{'vina':'Vina','dock6':'DOCK6','both':'Vina e DOCK6'},'reference_source':{'compounds':'Arquivos ou compostos de outros blocos','manual':'Informar minha referência'},
               'reference_type':{'smiles':'SMILES','cid':'CID PubChem','name':'Nome do composto'},
               'selection_mode':{'all':'Todos os compostos de entrada','single':'Um composto específico'}}
 PRESETS = {
@@ -96,6 +99,7 @@ def operation_fields(operation):
     defaults = dict(zip([a.arg for a in node.args.args][-len(node.args.defaults):], node.args.defaults)) if node.args.defaults else {}
     fields = []
     for key in spec.required + spec.optional:
+        if operation=='admet' and key=='dataset_origin':continue
         if key=='verbose':continue
         if operation=='docking_dock6' and key=='base_vina_path':continue
         if operation=='retrieve_compounds' and key in ('include_pubchem','pubchem_threshold','pubchem_max_records'):continue
@@ -133,6 +137,8 @@ def template_names(operation):
         names += [f'chimera/{p.name}' for p in sorted((SOURCE_ROOT / 'biomolexplorer/resources/chimera').glob('*.template'))]
     if operation in ('redocking','docking_vina'):
         names += ['vina/config.template']
+    if operation=='redocking':
+        names += ['dock6/'+name+'.template' for name in ('redocking','grid','showbox','INSPH')]
     if operation == 'docking_dock6':
         names += [f'dock6/{p.name}' for p in sorted((SOURCE_ROOT / 'biomolexplorer/resources/dock6').glob('*.template'))]
     return names

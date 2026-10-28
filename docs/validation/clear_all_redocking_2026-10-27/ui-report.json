@@ -1,0 +1,19 @@
+{
+  "sessions": [
+    {
+      "language": "en",
+      "width": 1200,
+      "cancel_preserved_outputs": true,
+      "clear_removed_outputs": true,
+      "import_and_edges_preserved": true
+    },
+    {
+      "language": "pt",
+      "width": 600,
+      "cancel_preserved_outputs": true,
+      "clear_removed_outputs": true,
+      "import_and_edges_preserved": true
+    }
+  ],
+  "javascript_errors": []
+}

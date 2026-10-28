@@ -1,0 +1,14 @@
+[
+  {
+    "pair": "1P0I_BUA_606A",
+    "result": {
+      "redocking_failures": 0,
+      "redocking_succeeded": 1
+    },
+    "seconds": 6.0655821730033495,
+    "rmsd": 1.779010258542654,
+    "error": NaN,
+    "atoms": 14,
+    "radicals": 0
+  }
+]

@@ -90,6 +90,22 @@ class IncrementalRedockingTests(unittest.TestCase):
         _,_,rows,docked=self.run_pairs([['1ABC','LIG',1,'A'],['1ABC','BAD',3,'A']])
         self.assertEqual(docked,[]);self.assertEqual(len(rows),2)
 
+    def test_native_preparation_provenance_survives_pair_reuse(self):
+        prepare=Docking.prepare_on_chimera
+        metadata={'net_charge':1,'charge_method':'am1','validated_graph_preserved':True}
+        def annotated(dock,filename):
+            prepare(dock,filename)
+            if filename.startswith('prepare_ligand_'):
+                name=filename[15:-4]+'.lig.preparation.json'
+                (Path(dock.outputpath)/name).write_text(json.dumps(metadata))
+        with patch.object(Docking,'prepare_on_chimera',annotated):
+            first,_,_,_=self.run_pairs([['1ABC','LIG',1,'A']])
+        entry=json.loads((first/NAME).read_text())['entries'][0]
+        self.assertTrue(any(name.endswith('.lig.preparation.json') for name in entry['files']))
+        output,_,_,docked=self.run_pairs([['1ABC','LIG',1,'A']])
+        self.assertEqual(docked,[])
+        self.assertEqual(json.loads((output/'structures/Target/Prepared/1ABC_LIG_1A.lig.preparation.json').read_text()),metadata)
+
     def test_new_receptor_prepares_and_docks_only_new_pair(self):
         self.run_pairs([['1ABC','LIG',1,'A']])
         _,_,rows,docked=self.run_pairs([['1ABC','LIG',1,'A'],['2ABC','LIG',1,'A']])

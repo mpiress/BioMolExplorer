@@ -3,11 +3,9 @@ import time
 import flet as ft
 from .localization import verbatim, stage_control, Translator, default_stage_names
 from .feedback import readable_error
+from biomolexplorer.i18n import RuntimeMessages
 
 ACTIVE = {'queued', 'running', 'awaiting_input'}
-LABELS = {'queued': 'Aguardando', 'running': 'Executando', 'succeeded': 'Concluído',
-          'failed': 'Falhou', 'cancelled': 'Cancelado', 'interrupted': 'Interrompido', 'skipped': 'Não executado',
-          'awaiting_input': 'Aguardando seleção de arquivos'}
 
 
 def elapsed(start, end):
@@ -20,6 +18,9 @@ def elapsed(start, end):
 class RunProgress:
     def __init__(self, ui, run):
         self.ui, self.run = ui, run
+        self.language = getattr(getattr(ui.page, 'translator', None), 'language', getattr(ui, 'language', 'pt'))
+        self.messages = RuntimeMessages(self.language)
+        self.translate = Translator(self.language)
         self.token, self.project_id = ui.token, run['project_id']
         self.is_open = False
         self.closing = False
@@ -39,12 +40,12 @@ class RunProgress:
         self.badge = ft.Container(bgcolor='#EAF1FF', padding=14, border_radius=12,
             content=ft.Row([ft.Icon(ft.Icons.TIMELAPSE, color='#2563EB'),
                 ft.Container(self.badge_text, expand=True),
-                ft.TextButton('Acompanhar execução', on_click=lambda e: self.show())]))
-        self.minimize = ft.TextButton('Minimizar', on_click=self.dismiss)
-        self.cancel = ft.TextButton('Cancelar execução', on_click=self.request_cancel)
-        self.log = ft.TextButton('Ver log da etapa', on_click=self.open_log)
-        self.results = ft.TextButton('Ver resultados', on_click=self.open_results)
-        self.configure = ft.TextButton('Configurar entradas e continuar', on_click=self.configure_pending)
+                ft.TextButton(self.messages('run.action.follow'), on_click=lambda e: self.show())]))
+        self.minimize = ft.TextButton(self.messages('run.action.minimize'), on_click=self.dismiss)
+        self.cancel = ft.TextButton(self.messages('run.action.cancel'), on_click=self.request_cancel)
+        self.log = ft.TextButton(self.messages('run.action.log'), on_click=self.open_log)
+        self.results = ft.TextButton(self.messages('run.action.results'), on_click=self.open_results)
+        self.configure = ft.TextButton(self.messages('run.action.configure'), on_click=self.configure_pending)
         self.dialog = ft.AlertDialog(modal=True, title=self.heading,
             content=ft.Container(width=600, height=max(220, min(420, 260 + len(run['stages']) * 34, (ui.page.height or 900) - 260)),
                 content=ft.Column([self.message_semantics, self.bar, self.timing, self.count, self.rows,
@@ -118,52 +119,62 @@ class RunProgress:
 
     def update(self, run, now=None):
         self.run = run
+        m = self.messages
         active = run['status'] in ACTIVE
-        waiting = run['status']=='awaiting_input'
+        waiting = run['status'] == 'awaiting_input'
         current = next((s for s in run['stages'] if s['status'] == 'running'), None) if active else None
-        self.heading.value = {'queued': 'Pipeline na fila', 'running': 'Seu pipeline está em execução',
-            'awaiting_input': 'Escolha os arquivos para continuar',
-            'succeeded': 'Pipeline concluído', 'failed': 'A execução encontrou um erro',
-            'cancelled': 'Execução cancelada', 'interrupted': 'Execução interrompida'}.get(run['status'], 'Acompanhamento do pipeline')
+        heading_key = 'run.heading.' + run['status']
+        self.heading.value = m(heading_key if heading_key in m.catalog else 'run.heading.default')
         phase = (current or {}).get('progress') or {}
-        self.message.value = (run.get('error') or 'Configure as entradas do próximo bloco.' if waiting else
-            f"Etapa atual: {current['name']}\n{phase.get('message') or 'Processando os dados…'}" if current else
-            'Aguardando um executor disponível…' if active else
-            'Os arquivos gerados estão disponíveis na aba Execuções.' if run['status'] == 'succeeded' else
-            'Consulte o log da etapa para entender o ocorrido antes de executar novamente.')
+        key = phase.get('message_key')
+        if key in m.catalog:
+            arguments = dict(phase.get('message_args') or {})
+            if key == 'preparation.step' and 'step' in arguments:
+                arguments['step'] = self.translate(arguments['step'])
+            phase_message = m(key, **arguments)
+        else:
+            phase_message = self.translate(phase.get('message') or '')
+        name = (current or {}).get('name', '')
+        if name in default_stage_names():name = self.translate(name)
+        self.message.value = (self.translate(run.get('error')) or m('run.message.configure') if waiting else
+            m('run.message.current', stage=name, message=phase_message or m('run.message.processing')) if current else
+            m('run.message.queued') if active else
+            m('run.message.ready') if run['status'] == 'succeeded' else m('run.message.error'))
         if active and isinstance(phase.get('completed'), int) and isinstance(phase.get('total'), int):
-            self.message.value += f"\nRegistros processados: {phase['completed']} de {phase['total']}"
+            self.message.value += m('run.message.records', completed=phase['completed'], total=phase['total'])
         self.message_semantics.label = self.message.value
         end = (now if now is not None else time.time()) if active else run['updated']
-        self.timing.value = 'Tempo decorrido: ' + elapsed(run['created'], end)
+        self.timing.value = m('run.time.elapsed', time=elapsed(run['created'], end))
         if current and current.get('started_at'):
-            self.timing.value += ' · Etapa: ' + elapsed(current['started_at'], end)
+            self.timing.value += m('run.time.stage', time=elapsed(current['started_at'], end))
         completed = sum(s['status'] == 'succeeded' for s in run['stages'])
         total = sum(s.get('configuration', {}).get('enabled', True) for s in run['stages'])
-        self.count.value = f'{completed} de {total} etapas concluídas · Execução {run["id"][:8]}'
+        self.count.value = m('run.count', completed=completed, total=total, run=run['id'][:8])
         self.bar.visible = active and not waiting
-        self.error.value = '' if waiting else readable_error(run.get('error'))
+        self.error.value = '' if waiting else self.translate(readable_error(run.get('error'),self.language))
         self.error.visible = bool(self.error.value)
         self.error_semantics.label = self.error.value
         self.error_semantics.visible = self.error.visible
-        self.hint.value = ('Cancelamento solicitado. Aguardando a interrupção do processo…' if self.cancel_pending and active else
-            'O pipeline está pausado. Selecione os arquivos do bloco indicado e aplique a configuração para continuar.' if waiting else
-            'Consultas externas podem demorar e repetir tentativas automaticamente. Você pode minimizar esta janela; a execução continua.' if current and current['operation'] in ('retrieve_compounds', 'retrieve_pubchem', 'expand_similar_compounds', 'retrieve_complex', 'retrieve_zinc') else
-            'Você pode minimizar esta janela e continuar usando o projeto.' if active else
-            'Os detalhes técnicos e os resultados ficam na aba Execuções.')
+        hint = ('cancelling' if self.cancel_pending and active else 'waiting' if waiting else
+            'external' if current and current['operation'] in ('retrieve_compounds', 'retrieve_pubchem',
+                'expand_similar_compounds', 'retrieve_structures', 'retrieve_zinc') else
+            'active' if active else 'done')
+        self.hint.value = m('run.hint.' + hint)
         self.rows.controls = [ft.Row([ft.Icon(ft.Icons.CHECK_CIRCLE if s['status'] == 'succeeded' else
                 ft.Icons.ERROR_OUTLINE if s['status'] == 'failed' else ft.Icons.TIMELAPSE,
                 color='#15803D' if s['status'] == 'succeeded' else '#B91C1C' if s['status'] == 'failed' else '#64748B', size=19),
-            stage_control(ft.Text(s['name'], expand=True),s), ft.Text('Reaproveitado' if s.get('reused') else 'Resultados fornecidos' if s.get('provided') else LABELS[s['status']], size=12)], spacing=10) for s in run['stages']]
+            stage_control(ft.Text(s['name'], expand=True), s),
+            verbatim(ft.Text(m('run.status.' + ('reused' if s.get('reused') else 'provided' if s.get('provided') else s['status'])), size=12))], spacing=10) for s in run['stages']]
         self.log.visible = any(s.get('log_path') for s in run['stages'])
         self.cancel.visible = active and self.ui.current is not None and self.ui.current['role'] != 'viewer'
         self.cancel.disabled = self.cancel_pending
-        self.configure.visible = waiting and self.ui.current is not None and self.ui.current['role']!='viewer'
-        self.minimize.content = 'Minimizar' if active else 'Fechar'
+        self.configure.visible = waiting and self.ui.current is not None and self.ui.current['role'] != 'viewer'
+        self.minimize.content = m('run.action.minimize' if active else 'run.action.close')
         self.results.visible = not active
-        translate = Translator(getattr(self.ui, 'language', 'pt'))
-        name = current['name'] if current else translate(self.count.value)
-        if current and name in default_stage_names():
-            name = translate(name)
-        self.badge_text.value = f"{translate(LABELS[run['status']])} · {name} · {elapsed(run['created'], end)}"
-        verbatim(self.badge_text)
+        self.badge_text.value = f"{m('run.status.' + run['status'])} · {name if current else self.count.value} · {elapsed(run['created'], end)}"
+        # Already rendered from this run's session catalog: never reverse-translate
+        # the composite strings, their filenames or user-selected stage names.
+        for control in (self.heading, self.message, self.message_semantics, self.timing, self.count,
+                self.error, self.error_semantics, self.hint, self.badge_text, self.minimize,
+                self.cancel, self.log, self.results, self.configure):
+            verbatim(control)

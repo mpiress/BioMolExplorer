@@ -160,6 +160,8 @@ class RunFeedbackTests(unittest.TestCase):
 
     def test_english_badge_translates_status_and_preserves_custom_stage_name(self):
         self.ui.language = 'en'
+        self.progress = RunProgress(self.ui, self.run)
+        self.ui.run_progress = self.progress
         self.run['status'] = 'running'
         self.run['stages'][0]['status'] = 'running'
         self.progress.update(self.run, now=130)

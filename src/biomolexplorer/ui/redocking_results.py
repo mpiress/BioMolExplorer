@@ -1,6 +1,9 @@
 """RMSD table with a simulation-specific file and molecular preview dialog."""
 import flet as ft
-from biomolexplorer.redocking_results import RedockingResults
+import math
+from biomolexplorer.i18n import RuntimeMessages
+from .runtime_messages import session_language
+from biomolexplorer.redocking_results import RedockingResults, best_rmsd_by_target
 from .removal import RemovalProgress
 from .feedback import close_dialog
 from .file_table import FileTable
@@ -17,13 +20,29 @@ class RedockingResultsTable:
         self.file_tables = []
         self.offset = 0
         self.limit = 25
+        self.sort_key = 'target'
+        self.ascending = True
+        self.messages = RuntimeMessages(session_language(self.ui))
+        targets=sorted({t for row in simulations for t in row.get('targets',[])},key=str.casefold)
+        self.target_filter=ft.Dropdown(label=self.messages('redocking.filter.target'),value='all',
+            options=[ft.DropdownOption(key='all',text=self.messages('redocking.filter.all'))]+
+                [verbatim(ft.DropdownOption(key='target:'+t,text=t)) for t in targets],on_select=lambda e:self.filter_changed(),
+            width=280)
+        self.search=ft.TextField(label=self.messages('redocking.filter.search'),on_change=lambda e:self.filter_changed(),width=280)
+        self.highlight=ft.Checkbox(label=self.messages('redocking.highlight'),value=True,on_change=lambda e:self.filter_changed())
         self.table = ft.DataTable(columns=[ft.DataColumn(ft.Text(title), numeric=title == 'RMSD (Å)')
-            for title in ('PDB', 'Ligante', 'Resíduo', 'Cadeia', 'Estado', 'RMSD (Å)', '3D', 'Resíduos', 'Ações')], rows=[],
+            for title in ('Target', 'PDB', 'Ligante', 'Resíduo', 'Cadeia', 'Estado', 'RMSD (Å)', '3D', 'Resíduos', 'Ações')], rows=[],
             column_spacing=28, heading_row_color='#F1F5F9')
+        self.table.columns[0]=verbatim(ft.DataColumn('Target'))
+        self.table.columns[0].on_sort=lambda e:self.sort('target')
+        self.table.columns[6].on_sort=lambda e:self.sort('rmsd')
+        self.table.sort_column_index=0
+        self.table.sort_ascending=True
         self.count = ft.Text(size=13, color='#64748B')
         self.warning = ft.Text(size=13,color='#B91C1C')
         self.previous = ft.TextButton('Página anterior', on_click=lambda e: self.move(-1))
         self.next = ft.TextButton('Próxima página', on_click=lambda e: self.move(1))
+        self.export = ft.TextButton(self.messages('redocking.export'),icon=ft.Icons.DOWNLOAD,on_click=self.download_summary)
         self.redraw()
 
     def valid(self):
@@ -34,9 +53,37 @@ class RedockingResultsTable:
         for table in self.file_tables:
             table.active = False
 
+    def filtered(self):
+        target=self.target_filter.value
+        query=(self.search.value or '').strip().casefold()
+        rows=[r for r in self.simulations if (target=='all' or target[7:] in r.get('targets',[]))
+            and (not query or query in ' '.join(str(r.get(k,'')) for k in ('target','pdb','ligand','residue','chain')).casefold())]
+        def score(row):
+            value=row.get('rmsd')
+            valid=row.get('status')!='preparation_failed' and isinstance(value,(int,float)) and math.isfinite(value)
+            return (not valid, value if valid and (self.ascending or self.sort_key!='rmsd') else -value if valid else math.inf)
+        if self.sort_key=='rmsd':return sorted(rows,key=lambda r:(*score(r),r.get('target','').casefold(),r['pdb']))
+        rows.sort(key=score)
+        rows.sort(key=lambda r:r.get('target','').casefold(),reverse=not self.ascending)
+        return rows
+
+    def filter_changed(self):
+        if not self.valid():return
+        self.offset=0;self.redraw();self.ui.page.update()
+
+    def sort(self,key):
+        if not self.valid():return
+        self.ascending=not self.ascending if self.sort_key==key else True
+        self.sort_key=key;self.offset=0
+        self.table.sort_column_index=0 if key=='target' else 6
+        self.table.sort_ascending=self.ascending
+        self.redraw();self.ui.page.update()
+
     def redraw(self):
         rows = []
-        for simulation in self.simulations[self.offset:self.offset+self.limit]:
+        filtered=self.filtered()
+        minima=best_rmsd_by_target(self.simulations)
+        for simulation in filtered[self.offset:self.offset+self.limit]:
             failed=simulation.get('status')=='preparation_failed'
             async def view(e, key=simulation['id']):
                 if self.valid():
@@ -47,11 +94,12 @@ class RedockingResultsTable:
                 if self.valid():await self.ui.guard(lambda:self.contacts(key))
             async def remove(e,key=simulation['id']):
                 if self.valid():self.confirm_remove(key)
-            values = [simulation[k] for k in ('pdb', 'ligand', 'residue', 'chain')]
+            values = [simulation.get('target') or '—']+[simulation[k] for k in ('pdb', 'ligand', 'residue', 'chain')]
             action=ft.TextButton('Ver simulação', icon=ft.Icons.VISIBILITY, on_click=view)
             if failed:action=ft.Row([ft.TextButton('Ver erro',on_click=view),
                 ft.IconButton(ft.Icons.DELETE_OUTLINE,tooltip='Excluir falha e complexo de origem',on_click=remove,disabled=not self.results.writable)])
-            rows.append(ft.DataRow(color='#FEF2F2' if failed else None,cells=[ft.DataCell(verbatim(ft.Text(value))) for value in values] + [
+            best=not failed and any(math.isclose(simulation['rmsd'],minima[t],rel_tol=0,abs_tol=1e-9) for t in simulation.get('targets',[]) if t in minima)
+            rows.append(ft.DataRow(color='#FEF2F2' if failed else '#DCFCE7' if self.highlight.value and best else None,cells=[ft.DataCell(verbatim(ft.Text(value))) for value in values] + [
                 ft.DataCell(ft.Text('Falha na preparação' if failed else 'Concluído',
                     color='#B91C1C' if failed else '#15803D',tooltip=simulation.get('error') or None)),
                 ft.DataCell(ft.Text('—' if failed else f"{simulation['rmsd']:.3f}")),
@@ -59,11 +107,10 @@ class RedockingResultsTable:
                 ft.DataCell(ft.TextButton('Resíduos',icon=ft.Icons.SCIENCE_OUTLINED,on_click=contacts,disabled=failed)),
                 ft.DataCell(action)]))
         self.table.rows = rows
-        self.count.value = f'{len(self.simulations)} simulações · Página {self.offset//self.limit+1}'
+        self.count.value = self.messages('redocking.count',shown=len(filtered),total=len(self.simulations),page=self.offset//self.limit+1)
         self.previous.disabled = self.offset == 0
-        self.next.disabled = self.offset+self.limit >= len(self.simulations)
+        self.next.disabled = self.offset+self.limit >= len(filtered)
         failures=sum(s.get('status')=='preparation_failed' for s in self.simulations)
-        if failures:self.count.value=f'{len(self.simulations)} pares de redocking · Página {self.offset//self.limit+1}'
         self.warning.visible=bool(failures)
         self.warning.value=f'{failures} complexos ignorados por falha de preparação. Consulte as linhas destacadas.'
 
@@ -75,8 +122,17 @@ class RedockingResultsTable:
         self.ui.page.update()
 
     def build(self):
-        return ft.Column([self.count,self.warning, ft.Row([self.table], scroll=ft.ScrollMode.AUTO),
+        return ft.Column([ft.Row([self.target_filter,self.search,self.highlight,self.export],wrap=True,spacing=20,run_spacing=16),self.count,self.warning, ft.Row([self.table], scroll=ft.ScrollMode.AUTO),
             ft.Row([self.previous, self.next], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)], spacing=16)
+
+    async def download_summary(self,e):
+        async def action():
+            if not self.valid():return
+            r=self.results
+            data=await self.ui.call(self.service.rmsd_csv,r.token,r.project_id,r.run_id,r.stage['id'],
+                [row['id'] for row in self.filtered()])
+            if self.valid():await self.ui.picker.save_file(file_name='redocking_rmsd_by_target.csv',src_bytes=data)
+        await self.ui.guard(action)
 
     def confirm_remove(self,key):
         if not self.valid() or not self.results.writable:return

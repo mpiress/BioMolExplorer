@@ -65,9 +65,16 @@ def validate_reference(ref, files):
     if ref.get('artifact_id'):
         matching=[p for p in files if slot_id(ref['stage'],locator(ref['stage'],p))==ref['artifact_id']]
         if len(matching)!=1:
+            from .admet_outputs import legacy_reference
+            migrated=legacy_reference(ref,files)
+            if migrated is not None:return migrated
             raise ValueError('A identidade do arquivo selecionado mudou. Revise a seleção da origem.')
     else:
         matching=[p for p in files if matches_selector(p, ref['selector'])]
+        if not matching:
+            from .admet_outputs import legacy_reference
+            migrated=legacy_reference(ref,files)
+            if migrated is not None:return migrated
     if len(matching)!=1 or not Path(matching[0]).is_file():
         raise ValueError('O arquivo escolhido não está nos resultados da etapa (ausente ou ambíguo). Revise a seleção da origem.')
     return matching[0]

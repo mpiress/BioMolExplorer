@@ -1,0 +1,9 @@
+{
+  "result": {
+    "redocking_failures": 0,
+    "redocking_succeeded": 1
+  },
+  "previous_pose_rmsd": null,
+  "reference": "crystal",
+  "seconds": 96.69752834798419
+}

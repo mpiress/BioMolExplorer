@@ -33,7 +33,7 @@ def manifest_matches(manifest):
 def implementation_digest():
     digest = hashlib.sha256()
     digest.update((SOURCE_ROOT/'biomolexplorer/preparation_failures.py').read_bytes())
-    for name in ('docking_preparation.py','docking_data.py','dock6_validation.py','pdb_ligands.py','redocking_preparation.py','redocking_cache.py'):
+    for name in ('docking_preparation.py','docking_data.py','dock6_validation.py','ligand_mol2.py','chimera_preparation.py','admet_outputs.py','molecular_surface.py','pdb_ligands.py','redocking_preparation.py','redocking_cache.py','redocking_dock6.py','redocking_config.py'):
         digest.update((SOURCE_ROOT/'biomolexplorer'/name).read_bytes())
     for folder in ('caad', 'crawlers', 'kernel', 'wrappers'):
         for path in sorted((SOURCE_ROOT / folder).rglob('*.py')):
@@ -60,6 +60,14 @@ def stage_key(stage, parameters, inputs, software):
               'input_processing':stage.get('input_processing','merge')}
     if stage.get('provided_results'):
         config['bindings']={}
+    elif stage['operation']=='admet':
+        # Schema 3 omitted independently selected rules/alerts. These outputs
+        # must be regenerated once, never adopted as a complete schema 4 run.
+        from .admet_outputs import SCHEMA_VERSION
+        config['admet_output_schema']=SCHEMA_VERSION
+    elif stage['operation']=='redocking':
+        from .ligand_mol2 import PREPARATION_SCHEMA_VERSION
+        config['redocking_preparation_schema']=PREPARATION_SCHEMA_VERSION
     if stage['operation']=='graphs' and parameters.get('graph_inputs'):
         # Source run paths must not change an otherwise identical experiment.
         config['parameters']['graph_inputs']=[dict(entry,

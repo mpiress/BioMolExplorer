@@ -12,12 +12,12 @@ from .localization import verbatim
 from .template_labels import TEMPLATE_FIELDS
 from .dependencies import bind_dependencies
 
-TEMPLATE_LABELS={'target':'Filtros do alvo molecular','bioactivity':'Filtros de atividade biológica','molecules':'Filtros das moléculas ChEMBL','similarmols':'Filtros dos similares ChEMBL','config':'Vina · opções do motor','prepare_complex':'Separação do complexo','prepare_ligand':'Preparação do ligante','prepare_receptor':'Preparação do receptor','prepare_better_conform':'Conformação do ligante','prepare_md':'Preparação adicional','docking':'DOCK6 · docking','grid':'DOCK6 · grade','min':'DOCK6 · minimização','footprint':'DOCK6 · footprint','showbox':'DOCK6 · caixa','INSPH':'DOCK6 · esferas'}
+TEMPLATE_LABELS={'target':'Filtros do alvo molecular','bioactivity':'Filtros de atividade biológica','molecules':'Filtros das moléculas ChEMBL','similarmols':'Filtros dos similares ChEMBL','redocking':'DOCK6 · opções do motor','config':'Vina · opções do motor','prepare_complex':'Separação do complexo','prepare_ligand':'Preparação do ligante','prepare_receptor':'Preparação do receptor','prepare_better_conform':'Conformação do ligante','prepare_md':'Preparação adicional','docking':'DOCK6 · docking','grid':'DOCK6 · grade','min':'DOCK6 · minimização','footprint':'DOCK6 · footprint','showbox':'DOCK6 · caixa','INSPH':'DOCK6 · esferas'}
 LISTS={'organism':['Homo sapiens','Mus musculus','Rattus norvegicus'],
  'PolymerEntityTypeID':['Protein','DNA','RNA','NA-hybrid','Other'],
  'ExperimentalMethodID':['X-RAY DIFFRACTION','SOLUTION NMR','ELECTRON MICROSCOPY','ELECTRON CRYSTALLOGRAPHY','EPR','FIBER DIFFRACTION','FLUORESCENCE TRANSFER','INFRARED SPECTROSCOPY','NEUTRON DIFFRACTION','POWDER DIFFRACTION','SOLID-STATE NMR','SOLUTION SCATTERING','THEORETICAL MODEL']}
 FILTER_LABELS={'organism':'Organismo','type__in':'Tipos de alvo','relationship_type':'Relação com o alvo','standard_type__in':'Medidas de atividade (Ki, IC50…)','molecule_type':'Tipo de molécula','max_value_ref':'Atividade máxima','standard_units':'Unidade de atividade','assay_type':'Tipo de ensaio','pchembl_value__isnull':'Ausência de pChEMBL (0 = exigir valor)','natural_product':'Produto natural (1 = sim, 0 = não)','similarity':'Similaridade mínima (%)','molecule_weight':'Massa molecular máxima'}
-NUMERIC={'max_resolution','pH','threshold','pubchem_threshold','pubchem_max_records','max_records','radius','morgan_n_bits','exhaustiveness','num_modes','chunk_size','repulsion_weight','density','distance','plot_max_residues','max_targets','similarity_threshold'}
+NUMERIC={'max_resolution','pH','threshold','pubchem_threshold','pubchem_max_records','max_records','radius','morgan_n_bits','exhaustiveness','num_modes','chunk_size','repulsion_weight','density','distance','plot_max_residues','max_targets','similarity_threshold','max_orientations','num_scored_conformers','dock6_seed'}
 
 class GuidedForm:
     def __init__(self,ui,stage,assets,writable):
@@ -31,7 +31,7 @@ class GuidedForm:
             if legacy_path:stage['parameters']['base_selected_mols']=legacy_path
         self.ui,self.stage,self.assets,self.writable=ui,stage,assets,writable
         self.readers={}; self.binding_readers={}; self.direct_path_readers={}; self.template_readers={}
-        self.input_editors={};self.field_controls={};self.conditional_cells={};self.filter_tiles={};self.filter_cells={};self.template_controls={}
+        self.input_editors={};self.field_controls={};self.conditional_cells={};self.filter_tiles={};self.filter_cells={};self.template_controls={};self.template_tiles={}
         # Consensus uses its Vina input to derive the legacy base_input_path.
         # Do not keep a second, hidden dependency on the previously linked block.
         self.derived_consensus_input=(stage['operation']=='consensus'
@@ -95,7 +95,7 @@ class GuidedForm:
             if key=='graph_inputs':continue
             if stage['operation'] in ('prepare_structures','docking_vina','docking_dock6') and key in ('charge_type','preparation_options','receptor_prepared'):continue
             if stage['operation']=='prepare_structures' and key=='mol_filename':continue
-            if stage['operation']=='redocking' and key in ('pdb_codes','preparation_pairs','charge_type'):continue
+            if stage['operation']=='redocking' and key in ('pdb_codes','preparation_pairs','charge_type','preparation_options'):continue
             if stage['operation']=='fingerprints' and key in ('morgan','maccs','pharmacophore'):continue
             if key=='base_input_path' and self.derived_consensus_input:
                 continue
@@ -119,7 +119,7 @@ class GuidedForm:
                 self.records(key,field['label'],value)
             elif key=='sizeof_box':
                 fields=[ft.TextField(label='Caixa '+axis+' (Å)',value=str(v),disabled=not writable,width=150) for axis,v in zip('XYZ',value or [20,20,20])]
-                self.controls.append(ft.Row(fields,wrap=True,spacing=24,run_spacing=24)); self.readers[key]=lambda f=fields:[float(c.value) for c in f]
+                self.field_controls[key]=ft.Row(fields,wrap=True,spacing=24,run_spacing=24);self.controls.append(self.field_controls[key]); self.readers[key]=lambda f=fields:[float(c.value) for c in f]
             elif key in LISTS or key in ('files','excluded_pdb_ids'):
                 self.list_field(key,field['label'],value,LISTS.get(key,[]))
             elif stage['operation']=='prepare_structures' and key=='pH':self.add(key,'pH de protonação do receptor e ligante',value)
@@ -155,6 +155,11 @@ class GuidedForm:
             self.readers['receptor_prepared']=lambda:bool(self.preparation_settings.receptor_inactive)
             sync_preparation()
         if stage['operation']=='redocking':
+            from .preparation_settings import PreparationSettings
+            from biomolexplorer.redocking_config import shared_preparation
+            common,self.legacy_preparation_conflict=shared_preparation(stage['parameters'])
+            self.preparation_settings=PreparationSettings(self,common)
+            self.readers['preparation_options']=self.preparation_settings.read
             from .redocking_pairs import RedockingPairs
             self.redocking_pairs=RedockingPairs(self)
             self.controls.append(self.redocking_pairs.control)
@@ -191,6 +196,9 @@ class GuidedForm:
         for name in template_names(stage['operation']):
             if stage['operation'] in ('prepare_structures','redocking','docking_vina','docking_dock6') and name.startswith('chimera/'):continue
             self.template(name)
+        if stage['operation']=='redocking':
+            from .redocking_settings import RedockingSettings
+            self.redocking_settings=RedockingSettings(self)
         if stage['operation']=='retrieve_compounds':
             self.field_controls['search_mode'].on_change=self.sync_retrieval
             self.field_controls['search_mode'].on_select=self.sync_retrieval
@@ -202,6 +210,7 @@ class GuidedForm:
             self.sync_pubchem()
     def layout(self):
         """Group fields into roomy cards; expansion content has explicit spacing."""
+        if self.stage['operation']=='redocking':return self.redocking_settings.layout()
         from .branding import BRAND_BLUE
         def fields(controls):
             cells=[]
@@ -257,7 +266,7 @@ class GuidedForm:
             control=ft.TextField(label=label,value='' if value is None else str(value),disabled=not self.writable)
             if key=='download_workers':control.helper='De 1 a 16; padrão: 4. Use 1 para baixar sequencialmente.'
             if key=='dock6_app_path': control.value=str(self.ui.service.dock6_path or ''); control.read_only=True; control.helper='Configuração da instalação feita pelo administrador.'
-            integers={'threshold','pubchem_threshold','pubchem_max_records','max_records','morgan_n_bits','num_modes','exhaustiveness','chunk_size','plot_max_residues','max_targets','similarity_threshold'}
+            integers={'threshold','pubchem_threshold','pubchem_max_records','max_records','morgan_n_bits','num_modes','exhaustiveness','chunk_size','plot_max_residues','max_targets','similarity_threshold','max_orientations','num_scored_conformers','dock6_seed'}
             if key=='radius' and self.stage['operation']=='fingerprints': integers.add('radius')
             kind=int if key in integers else float if key in NUMERIC else int if type(value)is int else float if type(value)is float else str
             getter=lambda:None if not control.value else kind(control.value)
@@ -488,7 +497,7 @@ class GuidedForm:
             self.template_readers[name]=read
         if controls:
             tile=ft.ExpansionTile(title=ft.Text(TEMPLATE_LABELS.get(name.split('/')[-1].split('.')[0],name)),controls=controls)
-            self.controls.append(tile)
+            self.controls.append(tile);self.template_tiles[name]=tile
             if name.startswith('crawlers/'):
                 self.filter_tiles[name.split('/')[-1].split('.')[0]]=tile
     def bind_dock6_dependencies(self,controls):
@@ -532,6 +541,7 @@ class GuidedForm:
         if hasattr(self,'follow_inputs'):result['follow_inputs']=bool(self.follow_inputs.value)
         if result['operation']=='consensus':result['input_processing']='merge'
         for key,getter in self.readers.items():
+            if hasattr(self,'redocking_settings') and not self.redocking_settings.active_field(key):continue
             if result['operation']=='fingerprints' and key in ('radius','morgan_n_bits') and self.fingerprint_choice.value!='morgan':
                 result['parameters'].pop(key,None);continue
             value=getter()
@@ -558,6 +568,7 @@ class GuidedForm:
                 for key in ('base_input_path','input_file','compound_id'):result['parameters'].pop(key,None)
             elif result['parameters'].get('selection_mode')=='single':result['input_processing']='merge'
         for name,getter in self.template_readers.items():
+            if hasattr(self,'redocking_settings') and not self.redocking_settings.active_template(name):continue
             value=getter()
             original=(RESOURCE_ROOT/name).read_text()
             different=json.loads(value)!={k:v for k,v in json.loads(original).items() if v is not None and v!='' and v!=[]} if name.endswith('.json') else value!=original

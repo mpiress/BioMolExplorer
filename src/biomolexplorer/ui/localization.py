@@ -39,11 +39,9 @@ SYSTEM_ARGUMENTS = {
 
 @lru_cache(maxsize=2)
 def catalogs(language='en'):
-    phrases = json.loads(CATALOG.read_text(encoding='utf-8'))
-    mapping=json.loads(PATTERNS.read_text(encoding='utf-8'))
-    if language=='pt':
-        phrases={translated:source for source,translated in phrases.items() if translated!=source}
-        mapping={translated:source for source,translated in mapping.items() if translated!=source or source in SYSTEM_ARGUMENTS}
+    if language not in LANGUAGES:raise ValueError('Language must be en or pt.')
+    phrases = json.loads(CATALOG.with_name(language+'.json').read_text(encoding='utf-8'))
+    mapping=json.loads((PATTERNS if language=='en' else PATTERNS.with_name('patterns_pt.json')).read_text(encoding='utf-8'))
     patterns = []
     for source, translated in mapping.items():
         parts = re.split(r'(\{\d+\})', source)

@@ -1,0 +1,44 @@
+[
+  {
+    "operation": "retrieve_pubchem",
+    "old": "001_B01__chembl__mol/B04__admet__bbb-pos.csv",
+    "new": "ACHE_B01__chembl_f7e9177b_MOL_BBB+.csv",
+    "rows": 168
+  },
+  {
+    "operation": "retrieve_pubchem",
+    "old": "003_B02__chembl__mol/B04__admet__bbb-pos.csv",
+    "new": "BCHE_B02__chembl_bee04b09_MOL_BBB+.csv",
+    "rows": 73
+  },
+  {
+    "operation": "retrieve_pubchem",
+    "old": "005_B03__chembl__mol/B04__admet__bbb-pos.csv",
+    "new": "BACE1_B03__chembl_be165e3b_MOL_BBB+.csv",
+    "rows": 3
+  },
+  {
+    "operation": "fingerprints",
+    "old": "001_B01__chembl__mol/B04__admet__bbb-pos.csv",
+    "new": "ACHE_B01__chembl_f7e9177b_MOL_BBB+.csv",
+    "rows": 168,
+    "artifacts": 1,
+    "seconds": 1.5553114129870664
+  },
+  {
+    "operation": "fingerprints",
+    "old": "001_B01__chembl__mol/B04__admet__rules-lipinski-veber.csv",
+    "new": "ACHE_B01__chembl_f7e9177b_MOL_rules-lipinski-veber.csv",
+    "rows": 210,
+    "artifacts": 1,
+    "seconds": 0.8783790570159908
+  },
+  {
+    "operation": "fingerprints",
+    "old": "002_B01__chembl__sim/B04__admet__bbb-pos.csv",
+    "new": "ACHE_B01__chembl_f7e9177b_SIM_BBB+.csv",
+    "rows": 203,
+    "artifacts": 1,
+    "seconds": 0.8817779530072585
+  }
+]

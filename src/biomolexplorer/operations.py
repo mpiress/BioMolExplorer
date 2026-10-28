@@ -21,7 +21,7 @@ OPERATIONS = {
     'retrieve_zinc': OperationSpec('wrappers.crawlers', 'load_zinc', ('base_input_path',), ('filename','verbose','download_workers')),
     'prepare_structures': OperationSpec('wrappers.redocking', 'prepare_structures', ('base_input_path', 'target'),
         ('pdb_codes', 'pH', 'charge_type', 'preparation_options', 'base_selected_mols', 'mol_filename', 'receptor_prepared', 'docking_engines')),
-    'admet': OperationSpec('wrappers.admet', 'ADMETWrapper', ('base_input_path',), ('input_file', 'verbose','admet_profile','admet_mode','prediction_backend','bbb_target','hia_target','rule_set','max_rule_violations','alert_policy','alert_catalogs','property_limits')),
+    'admet': OperationSpec('wrappers.admet', 'ADMETWrapper', ('base_input_path',), ('input_file', 'verbose','admet_profile','admet_mode','prediction_backend','bbb_target','hia_target','rule_set','max_rule_violations','alert_policy','alert_catalogs','property_limits','dataset_origin')),
     'fingerprints': OperationSpec('wrappers.molecular_analyzer', 'generate_fingerprints',
         ('base_input_path',), ('morgan_n_bits', 'radius', 'files', 'morgan', 'maccs', 'pharmacophore', 'chunk_size')),
     'similarity': OperationSpec('wrappers.molecular_analyzer', 'compute_similarity',
@@ -31,7 +31,7 @@ OPERATIONS = {
         (), ('similarity_path','base_input_path',
              'mcs_timeout','mcs_ring_matches_ring_only','mcs_complete_rings_only','graph_inputs')),
     'redocking': OperationSpec('wrappers.redocking', 'perform_redocking', ('base_input_path', 'target'),
-        ('pdb_codes', 'pH', 'sizeof_box', 'exhaustiveness', 'num_modes', 'prepare_complex', 'charge_type', 'preparation_pairs')),
+        ('pdb_codes', 'pH', 'sizeof_box', 'exhaustiveness', 'num_modes', 'prepare_complex', 'charge_type', 'preparation_pairs','preparation_options','redocking_engine','dock6_app_path','density','radius','distance','conformer_search_type','max_orientations','num_scored_conformers','dock6_seed')),
     'docking_vina': OperationSpec('wrappers.docking', 'perform_docking_vina',
         ('base_input_path', 'target', 'base_selected_mols', 'mol_filename'),
         ('pdb_code', 'pH', 'sizeof_box', 'exhaustiveness', 'num_modes', 'preparation_options', 'receptor_prepared')),
@@ -59,6 +59,11 @@ def validate_operation(operation, parameters, *, defer_redocking_selection=False
     if operation=='admet':
         from .admet_config import resolve_config
         resolve_config(parameters)
+        if parameters.get('dataset_origin') is not None:
+            from .dataset_identity import TAGS
+            origin=parameters['dataset_origin']
+            if not isinstance(origin,dict) or origin.keys()-{'tag','label'} or origin.get('tag') not in TAGS or not isinstance(origin.get('label',''),str):
+                raise ValueError('Tag de conjunto ADMET inválida.')
     if operation=='retrieve_zinc':
         from .zinc_retrieval import validate_download_workers
         validate_download_workers(parameters.get('download_workers',4))
@@ -122,8 +127,11 @@ def validate_operation(operation, parameters, *, defer_redocking_selection=False
             if parameters.get('target', 'Estruturas') in ('Estruturas', 'MeuAlvo'):
                 raise ValueError('Informe texto, identificadores ou filtros para a busca PDB.')
     if operation == 'redocking' and not (defer_redocking_selection and not parameters.get('pdb_codes')):
-        from .redocking_config import validate_pairs
-        validate_pairs(parameters.get('pdb_codes'), parameters.get('preparation_pairs') or {})
+        from .redocking_config import validate_pairs,effective_preparation
+        validate_pairs(parameters.get('pdb_codes'),effective_preparation(parameters))
+    if operation=='redocking':
+        from .redocking_config import validate_redocking_parameters
+        validate_redocking_parameters(parameters)
     if operation=='prepare_structures' and parameters.get('docking_engines','both') not in ('vina','dock6','both'):
         raise ValueError('Selecione Vina, DOCK6 ou ambos para a saída de preparação.')
     if operation in ('prepare_structures','docking_vina','docking_dock6') and 'preparation_options' in parameters:
@@ -175,7 +183,14 @@ def execute_operation(operation, parameters, output_path):
     from .preparation_failures import CURRENT_REPORT as PREPARATION_REPORT,PreparationFailures
     validate_operation(operation,parameters)
     output = Path(output_path).resolve();output.mkdir(parents=True,exist_ok=True)
-    report = QualityReport(operation);token = CURRENT_REPORT.set(report)
+    if operation=='admet':
+        from .dataset_identity import output_stem,admet_origin
+        source=parameters.get('input_file') or 'datasets'
+        sources=[Path(parameters['base_input_path'])/source] if parameters.get('input_file') else list(Path(parameters['base_input_path']).glob('*.csv'))
+        origin=parameters.get('dataset_origin') or admet_origin(sources)
+        report=QualityReport(operation,output_stem(source,origin)+'_molecule_exclusions.json')
+    else:report=QualityReport(operation)
+    token = CURRENT_REPORT.set(report)
     preparation=PreparationFailures();preparation_token=PREPARATION_REPORT.set(preparation)
     try:
         clean = prepare_inputs(operation,parameters,output,report)
@@ -237,6 +252,6 @@ def _execute_operation(operation, parameters, output_path):
     artifacts = [str(p) for p in sorted(output.rglob('*')) if p.is_file()
                  and 'cache' not in p.parts and '.quality-inputs' not in p.parts
                  and (p.suffix in ('.csv', '.png', '.json', '.pdb', '.pdbqt', '.mol2', '.sdf', '.pdf')
-                      or p.name.endswith('_footprint_scored.txt'))]
+                      or p.name.endswith('_footprint_scored.txt') or operation=='redocking' and p.suffix in ('.in','.out'))]
     details = {'rows': len(result)} if hasattr(result, 'columns') else result if isinstance(result,dict) else {}
     return OperationResult(operation, artifacts, details)

@@ -15,9 +15,15 @@ REPORT_NAME = 'molecule_exclusions.json'
 CURRENT_REPORT = ContextVar('molecule_quality_report', default=None)
 
 
+def is_quality_report(path):
+    name=Path(path).name
+    return name==REPORT_NAME or name.endswith('_'+REPORT_NAME)
+
+
 class QualityReport:
-    def __init__(self, operation='analysis'):
+    def __init__(self, operation='analysis',filename=REPORT_NAME):
         self.operation = operation
+        self.filename = filename
         self.records = []
         self.notices = []
         self._seen = set()
@@ -32,7 +38,7 @@ class QualityReport:
 
     def write(self, output):
         if not self.records and not self.notices:return None
-        path = Path(output) / REPORT_NAME
+        path = Path(output) / self.filename
         signature=(len(self.records),len(self.notices))
         if self._written.get(path)==signature and path.exists():return path
         write_json(dict(version=1, operation=self.operation, excluded_records=len(self.records),

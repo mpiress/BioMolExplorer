@@ -1,0 +1,21 @@
+{
+  "sessions": [
+    {
+      "language": "en",
+      "width": 1440
+    },
+    {
+      "language": "en",
+      "width": 900
+    },
+    {
+      "language": "en",
+      "width": 390
+    },
+    {
+      "language": "pt",
+      "width": 1440
+    }
+  ],
+  "javascriptErrors": []
+}

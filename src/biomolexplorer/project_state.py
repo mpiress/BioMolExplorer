@@ -104,8 +104,8 @@ def record(store, db, project_id, user_id, action, summary, before=None):
     return event_id
 
 
-def read_snapshot(store, project_id, event_id, side='before'):
-    path = store.project_dir(project_id) / '.history' / 'snapshots' / f'{event_id}-{side}.json'
+def read_snapshot(store, project_id, event_id, side='before', db=None):
+    path = store.project_dir(project_id,db) / '.history' / 'snapshots' / f'{event_id}-{side}.json'
     return json.loads(path.read_text(encoding='utf-8'))
 
 

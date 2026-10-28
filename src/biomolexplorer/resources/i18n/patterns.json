@@ -246,12 +246,16 @@
   "Betweenness: orçamento de {0} visitas excedido; selecione um componente ou comunidade para reduzir o custo.": "Betweenness: budget of {0} visits exceeded; select a component or community to reduce the cost.",
   "Closeness: custo estimado {0} acima do orçamento {1}; selecione um componente ou comunidade. Nenhuma aproximação foi aplicada.": "Closeness: estimated cost {0} exceeds budget {1}; select a component or community. No approximation was applied.",
   "Clustering / triângulos: custo estimado {0} acima do orçamento {1}; selecione um componente ou comunidade.": "Clustering / triangles: estimated cost {0} exceeds budget {1}; select a component or community.",
-  "Ligantes PDB: {0} selecionados de {1} resíduos; consulte ligand_candidates.csv para a triagem completa.": "PDB ligands: {0} selected from {1} residues; see ligand_candidates.csv for the full triage.",
+  "Ligantes PDB: {0} selecionados de {1} resíduos; consulte ligand_candidates.csv para a triagem completa.": "PDB ligands: {0} selected from {1} residues; see ligand_candidates.csv for full screening.",
   "{0} complexos ignorados por falha de preparação. Consulte as linhas destacadas.": "{0} complexes skipped due to preparation failures. Check the highlighted rows.",
   "Redocking: {0} complexos ignorados por falha na preparação. Consulte os resultados destacados.": "Redocking: {0} complexes skipped due to preparation failures. Check the highlighted results.",
   "Redocking concluído: {0} pares preparados; {1} falhas de preparação.": "Redocking completed: {0} pairs prepared; {1} preparation failures.",
   " · {0} falhas na preparação de complexos": " · {0} complex preparation failures",
   "{0} falhas na preparação de complexos": "{0} complex preparation failures",
   "{0} pares de redocking · Página {1}": "{0} redocking pairs · Page {1}",
-  "Novos conjuntos incluídos: {0}": "New datasets included: {0}"
+  "Novos conjuntos incluídos: {0}": "New datasets included: {0}",
+  "PDB: {0} estruturas baixadas; {1} falhas de download.": "PDB: {0} structures downloaded; {1} download failures.",
+  "Vina: docking de {0} com receptor e mapas reutilizados.": "Vina: docking {0} with reused receptor and maps.",
+  "Preparando ligante {0} ({1}/{2}).": "Preparing ligand {0} ({1}/{2}).",
+  "Não foi possível obter a definição CCD do ligante {0}.": "Could not retrieve the CCD definition for ligand {0}."
 }

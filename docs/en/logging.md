@@ -95,3 +95,18 @@ JSONL uses `schema_version=1`, UTC timestamps with milliseconds, severity, compo
 `receptor.reused` identifies prepared receptor reuse. `ligand.preparation.started` and `prepare.com` concern candidate preparation, not repeated receptor preparation. `vina.maps.started` and `vina.maps.reused` distinguish calculation/reuse within a batch. Unsupported API templates produce a logged CLI fallback.
 
 DOCK6 surface/sphere/box/grid configurations and per-candidate logs accompany results. Exit code -11 means a native SIGSEGV. An individual failure can add a row to `preparation_failures.csv` while other candidates continue; check **Excluded compounds** and step/context to locate it. Global errors still fail the stage. Long elapsed time alone does not cause automatic termination. See the [DOCK6 workflow](user_manual.md#dock6-validation-and-exclusions).
+
+
+## Language during processing
+
+Run progress uses `resources/i18n/runtime_pt.json` or `runtime_en.json` according
+to the session. Workers publish keys and arguments; each interface renders the
+same progress in its own language. Titles, states, times, counters and hints come
+from the catalog. Language switching is unavailable during an active run,
+including while awaiting configuration.
+
+**View stage log** presents recognized internal messages in the session language.
+Native tool output, paths, identifiers and tracebacks remain original technical
+data. **Download original log** preserves file bytes regardless of the viewer's
+language. The explicit `pt.json` catalog is not reconstructed by reversing English
+at runtime.

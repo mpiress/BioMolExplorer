@@ -118,3 +118,30 @@ Start the application from that terminal so workers inherit the setting. This va
 For **ADMET-AI is not installed in the worker environment**, check the availability shown in ADMET settings, the interpreter path, installation and worker access to models. Restart after configuring the environment. Alternatively select **Local RDKit** explicitly: it provides local descriptors, estimates and rules without `ML_` endpoints. There is no silent model substitution. You can also install `python -m pip install -e '.[admet-ml]'` in a dedicated worker, respecting that environment's dependencies.
 
 See [hypothesis-driven ADMET](admet_research.md) for units, profiles, alerts, outputs and model limits.
+
+
+## Audited environment and reproducible installation
+
+`requirements.yml` declares scientific and UI imports, Open Babel and Poppler
+executables, and installation/build infrastructure. `scripts/audit_dependencies.py`
+compares Python imports with these manifests, including literal dynamic imports
+and the optional isolated predictor.
+
+To create a new Linux x86_64 environment with Conda builds and pip artifacts pinned
+by this audit, use the corresponding lock:
+
+```bash
+conda env create -f requirements-linux-64.lock.yml
+conda activate BioMolExplorer
+python -m pip check
+```
+
+The lock includes pip wheel hashes for Python 3.12. Refresh it when changing the
+main manifest; it is not a lock for other platforms. The audit and simulated
+resolutions do not replace a clean installation and protocol tests. Editing the
+manifest does not uninstall packages from an existing environment.
+
+ADMET-AI 2 requires newer RDKit than the scientific environment pins. Use
+`python scripts/setup_admet_ai.py` for the local CPU venv, or create the optional
+`requirements-admet.yml` environment and set `BIOMOL_ADMET_PYTHON` to its absolute
+Python path. Keep these environments separate.

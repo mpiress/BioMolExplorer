@@ -448,7 +448,7 @@ class PipelineService:
             if prior and prior['status'] in ACTIVE_RUNS and status not in ACTIVE_RUNS:
                 from .project_state import read_snapshot,record
                 last=db.execute('SELECT id FROM project_history WHERE project_id=? ORDER BY created DESC LIMIT 1',(prior['project_id'],)).fetchone()
-                before=read_snapshot(self.store,prior['project_id'],last['id'],'after') if last else None
+                before=read_snapshot(self.store,prior['project_id'],last['id'],'after',db=db) if last else None
                 record(self.store,db,prior['project_id'],prior['user_id'],'execution',f'Execução {run_id[:8]}: {status}',before)
 
     def _docking_sources(self, project_id, refs, results, engine=None):
@@ -539,7 +539,7 @@ class PipelineService:
 
     def _materialize_inputs(self, project_id, stage, field, refs, results, directory=None):
         from .input_validation import columns, merge_csv, validate_file
-        from .docking_inputs import target_input, prepared_receptor
+        from .docking_inputs import target_input, prepared_receptor, preferred_receptors
         from .project_state import digest
         import hashlib
         operation=stage['operation']
@@ -581,10 +581,10 @@ class PipelineService:
                 selected.extend(matching if stage.get('_process_all_inputs') else matching[:1])
             else:
                 from .zinc_retrieval import LIST_SUFFIXES
-                allowed={'structures':{'.pdb'},'prepared_structures':{'.pdb','.pdbqt'},
+                allowed={'structures':{'.pdb'},'prepared_structures':{'.pdb','.pdbqt','.mol2'},
                          'vina':{'.pdbqt'},'dock6':{'.mol2'},'other':LIST_SUFFIXES}[kind]
                 candidates=[Path(p) for p in upstream if Path(p).suffix.lower() in allowed]
-                if receptor_only:candidates=[p for p in candidates if prepared_receptor(p)]
+                if receptor_only:candidates=preferred_receptors(p for p in candidates if prepared_receptor(p))
                 if kind=='prepared_structures' and any(p.parent.name=='Prepared' for p in candidates):
                     candidates=[p for p in candidates if p.parent.name=='Prepared']
                 if kind=='structures':
@@ -672,7 +672,7 @@ class PipelineService:
                     reader=csv.DictReader(stream);fields=reader.fieldnames;rows=list(reader)
                 filenames={p.name for p in selected}
                 if kind=='structures':rows=[r for r in rows if r['PDB_CODE']+'.pdb' in filenames]
-                else:rows=[r for r in rows if r.get('STATUS')!='preparation_failed' and f'{r["PDB_CODE"]}_{r["CHAIN"]}.dockprep.pdbqt' in filenames]
+                else:rows=[r for r in rows if r.get('STATUS')!='preparation_failed' and any(f'{r["PDB_CODE"]}_{r["CHAIN"]}.dockprep.'+ext in filenames for ext in ('pdbqt','mol2'))]
                 if not rows:raise ValueError('Os arquivos selecionados não possuem registros PDB compatíveis nos metadados.')
                 with metadata.open('w',encoding='utf-8',newline='') as stream:
                     writer=csv.DictWriter(stream,fieldnames=fields);writer.writeheader();writer.writerows(rows)
@@ -698,7 +698,9 @@ class PipelineService:
                 if 'stage' in ref:
                     files=results.get(ref['stage'],[])
                     chosen=validate_reference(ref,files)
-                    if ref.get('artifact_id'):ref['selector']=selector_for(chosen,files)
+                    if ref.get('artifact_id'):
+                        from .artifacts import slot_id,locator
+                        ref.update(selector=selector_for(chosen,files),artifact_id=slot_id(ref['stage'],locator(ref['stage'],chosen)))
         params = self._runtime_parameters(stage)
         if stage['operation'] in ('prepare_structures','docking_vina','docking_dock6'):
             from .docking_inputs import prepared_receptor
@@ -751,7 +753,7 @@ class PipelineService:
                 pipeline=json.loads(row[0])
             kind,_=generated_kind(stage,pipeline,results)
             if kind:params['fingerprint']=kind
-        if stage['operation']=='docking_dock6' and self.dock6_path is not None:
+        if (stage['operation']=='docking_dock6' or stage['operation']=='redocking' and stage['parameters'].get('redocking_engine','vina')=='dock6') and self.dock6_path is not None:
             params['dock6_app_path']=str(self.dock6_path)
         bindings = dict(stage.get('bindings',{}))
         if stage['operation'] == 'consensus' and not params.get('base_input_path') and 'base_input_path' not in bindings:
@@ -852,9 +854,10 @@ class PipelineService:
                 params[field] = str(self.store.scoped_path(project_id,path if path.is_absolute() else self.store.project_dir(project_id) / path))
         self._validate_parameters(project_id,dict(stage,parameters=params),cache_only=cache_only)
         if stage['operation']=='redocking' and not cache_only:
-            from .redocking_config import validate_structure_pairs
+            from .redocking_config import validate_structure_pairs,effective_preparation
+            params['preparation_pairs']=effective_preparation(params)
             validate_structure_pairs(Path(params['base_input_path'])/params['target'].replace(' ',''),
-                params['pdb_codes'], params.get('preparation_pairs') or {}, prepared=not params.get('prepare_complex',True))
+                params['pdb_codes'],params.get('preparation_pairs') or {},prepared=not params.get('prepare_complex',True),engine=params.get('redocking_engine','vina'))
         if stage['operation']=='retrieve_zinc':
             from .zinc_retrieval import read_download_list
             read_download_list(Path(params['base_input_path'])/params['filename'])
@@ -938,11 +941,12 @@ class PipelineService:
             refs=[]
             prepared=not stage['parameters'].get('prepare_complex',True)
             records=stage['parameters'].get('pdb_codes') or []
-            identities={f'{r[0]}_{r[3]}.dockprep.pdbqt' if prepared else f'{r[0]}.pdb' for r in records}
+            identities={f'{r[0]}_{r[3]}.dockprep.'+ext for r in records for ext in ('pdbqt','mol2')} if prepared else {f'{r[0]}.pdb' for r in records}
             for ref in input_sources(stage.get('bindings',{}).get('base_input_path',{})):
                 if 'stage' not in ref or ref.get('selector','auto')!='auto':
                     refs.append(ref);continue
-                files=[Path(p) for p in results.get(ref['stage'],[])]
+                from .docking_inputs import preferred_receptors
+                files=preferred_receptors(Path(p) for p in results.get(ref['stage'],[]))
                 for path in files:
                     if path.name not in identities:continue
                     selector=selector_for(path,files)
@@ -1056,12 +1060,20 @@ class PipelineService:
                         write_view(destination,view);artifacts.append(str(destination))
             return artifacts
         params = self._resolve(project_id,user_id,stage,results,stage_dir/'inputs',item,pipeline=execution_context(stages))
+        if stage['operation']=='admet':
+            from .result_origins import ResultOrigins
+            from .dataset_identity import admet_origin
+            selected=[p for p in item.get('input_files',{}).get('base_input_path',[]) if Path(p).suffix.lower()=='.csv']
+            matching=[p for p in selected if Path(p).name==params.get('input_file')]
+            if matching and stage.get('input_processing')!='merge':selected=matching
+            if selected:
+                params['dataset_origin']=admet_origin(selected,ResultOrigins(stages,run_id))
         item['artifact_context']={key:params.get(key) for key in ('target','search_term') if params.get(key) is not None}
         if stage['operation']=='redocking':
             import sys
             from .redocking_config import validate_redocking_tools
             tool_path=str(Path(self.worker_python or sys.executable).parent)+os.pathsep+os.environ.get('PATH','')
-            validate_redocking_tools(params.get('prepare_complex',True),tool_path)
+            validate_redocking_tools(params.get('prepare_complex',True),tool_path,engine=params.get('redocking_engine','vina'),dock6_path=params.get('dock6_app_path'))
         resource = materialize_templates(stage_dir / 'resources',stage.get('templates',{}))
         if stage['operation']=='redocking' and state.get('reuse_results',True):
             from .redocking_cache import stage_sources
@@ -1448,8 +1460,8 @@ class PipelineService:
         """Confirm one pending stage without rerunning completed retrievals."""
         configuration=execution_stage(configuration,'curated')
         if configuration.get('operation')=='redocking' and not configuration.get('provided_results'):
-            from .redocking_config import validate_pairs
-            validate_pairs(configuration['parameters'].get('pdb_codes'),configuration['parameters'].get('preparation_pairs') or {})
+            from .redocking_config import validate_pairs,effective_preparation
+            validate_pairs(configuration['parameters'].get('pdb_codes'),effective_preparation(configuration['parameters']))
         run = self.store.get_run(token,run_id)
         self.store.project(token,run['project_id'],'editor')
         user = self.store.user(token)

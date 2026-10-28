@@ -11,6 +11,15 @@ from .result_files import ResultFiles
 from .workspace import AccessDenied
 
 
+def best_rmsd_by_target(rows):
+    best={}
+    for row in rows:
+        value=row.get('rmsd')
+        if row.get('status')=='preparation_failed' or not isinstance(value,(int,float)) or not math.isfinite(value):continue
+        for target in row.get('targets',[]):best[target]=min(best.get(target,math.inf),value)
+    return best
+
+
 class RedockingResults:
     def __init__(self, store):
         self.store = store
@@ -29,6 +38,7 @@ class RedockingResults:
         if stage['status'] != 'succeeded':
             return []
         simulations = []
+        origins = self.results.origins(token,pid,rid)
         metadata_seen = set()
         for item in self.results.files(token, pid, rid, sid):
             metadata = Path(item['path'])
@@ -36,6 +46,7 @@ class RedockingResults:
                 continue
             metadata_seen.add(metadata)
             content = self.store.read_file(token, pid, str(metadata)).decode('utf-8-sig')
+            routes = origins.describe(str(metadata),sid,rid)['source_routes']
             seen = set()
             for record in csv.DictReader(io.StringIO(content)):
                 try:
@@ -53,10 +64,21 @@ class RedockingResults:
                     continue
                 seen.add(identity)
                 key = hashlib.sha256((str(metadata)+'\0'+'|'.join(identity)).encode()).hexdigest()
+                from .dataset_identity import redocking_targets
+                targets=redocking_targets(routes,code)
+                if not targets:
+                    explicit=(record.get('Target') or record.get('TARGET') or '').strip()
+                    targets=[explicit] if explicit else []
                 simulations.append(dict(id=key, pdb=code, ligand=ligand, residue=number,
+                    target=' + '.join(targets),targets=targets,engine=(record.get('ENGINE') or stage.get('configuration',{}).get('parameters',{}).get('redocking_engine','vina')).lower(),
+                    rmsd_method=record.get('RMSD_METHOD') or 'legacy_prepared',rmsd_reference=record.get('RMSD_REFERENCE') or 'prepared',
                     chain=chain, rmsd=rmsd, metadata=str(metadata),
                     status='preparation_failed' if failed else 'succeeded',error=record.get('ERROR',''),
                     failed_step=record.get('FAILED_STEP','')))
+        best=best_rmsd_by_target(simulations)
+        for row in simulations:
+            row['best_rmsd_for']=[t for t in row['targets'] if row['rmsd'] is not None and
+                math.isclose(row['rmsd'],best.get(t,math.inf),rel_tol=0,abs_tol=1e-9)]
         return simulations
 
     def simulation(self, token, pid, rid, sid, key):
@@ -90,6 +112,20 @@ class RedockingResults:
                 molecular=path.suffix.lower() in ('.pdb', '.pdbqt', '.mol2')))
         return dict(row, files=files)
 
+    def rmsd_csv(self,token,pid,rid,sid,keys=None):
+        rows=self.simulations(token,pid,rid,sid)
+        if keys is not None:
+            selected=set(keys)
+            if selected-{row['id'] for row in rows}:raise AccessDenied('Simulação de redocking indisponível nesta etapa.')
+            rows=[r for r in rows if r['id'] in selected]
+        output=io.StringIO(newline='')
+        writer=csv.DictWriter(output,fieldnames=['Target','PDB','Ligand','Residue','Chain','Engine','RMSD','RMSD_method','RMSD_reference','Status','Best_for_target'])
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(dict(Target=row['target'],PDB=row['pdb'],Ligand=row['ligand'],Residue=row['residue'],
+                Chain=row['chain'],Engine=row['engine'],RMSD=row['rmsd'],RMSD_method=row['rmsd_method'],RMSD_reference=row['rmsd_reference'],Status=row['status'],Best_for_target=' + '.join(row['best_rmsd_for'])))
+        return output.getvalue().encode('utf-8')
+
     def archive(self, token, pid, rid, sid, key):
         simulation = self.simulation(token, pid, rid, sid, key)
         output = io.BytesIO()
@@ -108,7 +144,8 @@ class RedockingResults:
         metadata=Path(simulation['metadata']);prepared=metadata.parent/'Prepared'
         identity=f"{simulation['pdb']}_{simulation['ligand']}_{simulation['residue']}{simulation['chain']}"
         receptor_id=f"{simulation['pdb']}_{simulation['chain']}"
-        poses=[p for p in files if p.name==identity+'.lig.pdbqt' and p.parent!=prepared]
+        extension='mol2' if simulation['engine']=='dock6' else 'pdbqt'
+        poses=[p for p in files if p.name==identity+'.lig.'+extension and p.parent!=prepared]
         if len(poses)!=1:raise ValueError('A pose do redocking está ausente ou é ambígua.')
         complex_file=next((p for p in files if p==metadata.parent/(simulation['pdb']+'.pdb')),None)
         if complex_file is None:complex_file=next((p for p in files if p.name==receptor_id+'.complex.pdb'),None)
@@ -117,13 +154,14 @@ class RedockingResults:
         if receptor is None:raise ValueError('O receptor associado a esta pose não está disponível.')
         residue=[simulation['ligand'],simulation['residue'],simulation['chain']]
         layers=[dict(role='receptor',path=str(receptor),format=receptor.suffix[1:]),
-                dict(role='pose',path=str(poses[0]),format='pdbqt')]
+                dict(role='pose',path=str(poses[0]),format=extension)]
         if complex_file:
             if receptor==complex_file:layers[0]['exclude_residue']=residue
             else:layers.append(dict(role='complex',path=str(complex_file),format='pdb',exclude_residue=residue))
             layers.append(dict(role='reference',path=str(complex_file),format='pdb',residue=residue))
         else:
-            reference=next((p for p in files if p.parent==prepared and p.name==identity+'.lig.pdb'),None)
-            if reference:layers.append(dict(role='reference',path=str(reference),format='pdb'))
-        return dict(name=identity+' · Redocking',layers=layers,
+            reference=next((p for p in files if p.name==identity+'.reference.mol2'),None)
+            if reference is None:reference=next((p for p in files if p.parent==prepared and p.name==identity+'.lig.pdb'),None)
+            if reference:layers.append(dict(role='reference',path=str(reference),format=reference.suffix[1:]))
+        return dict(name=identity+' · Redocking · '+simulation['engine'].upper(),layers=layers,
             reference_kind='crystal' if complex_file else 'prepared' if len(layers)>2 else None)

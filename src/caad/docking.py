@@ -186,12 +186,39 @@ class Docking():
         try:
             import re
             script = Path(directory(self.outputpath), filename)
+            if filename.startswith('prepare_ligand_'):
+                from biomolexplorer.ligand_mol2 import prepare_chimera_ligand
+                prepare_chimera_ligand(script)
+            elif filename.startswith('prepare_receptor_'):
+                from biomolexplorer.chimera_preparation import receptor_cleanup
+                receptor_cleanup(script)
             outputs = re.findall(r'^write format (pdb|mol2) #0 (.+)$', script.read_text(), re.M)
-            command = ['chimera', '--nogui', '--silent', filename]
+            from biomolexplorer.chimera_preparation import ligand_hydrogenation,ligand_charging
+            phase=ligand_hydrogenation(script) if filename.startswith('prepare_ligand_') else None
+            def run_preparation(current):
+                command=['chimera','--nogui','--silent',str(current)]
+                try:
+                    self.perform_subprocess(command,self.outputpath)
+                except Exception as error:
+                    from biomolexplorer.chimera_preparation import recover_hydrogen_placement,record_recovery
+                    if not recover_hydrogen_placement(current,error):raise
+                    self.logger.warning('Retrying Chimera with geometric hydrogen placement: %s',current)
+                    self.perform_subprocess(command,self.outputpath)
+                    record_recovery(current)
             with log_context(pair=Path(filename).stem.removeprefix('prepare_ligand_').removeprefix('prepare_receptor_').removeprefix('prepare_complex_')):
-                self.perform_subprocess(command, self.outputpath)
+                if phase:
+                    run_preparation(phase['script'])
+                    ligand_charging(script,phase)
+                run_preparation(script)
             for file_format, output in outputs:
-                self.validate_prepared_file(Path(directory(self.outputpath), output.strip()), file_format)
+                prepared_file=Path(directory(self.outputpath), output.strip())
+                self.validate_prepared_file(prepared_file, file_format)
+                if file_format=='mol2' and prepared_file.name.endswith('.lig.mol2'):
+                    from biomolexplorer.ligand_mol2 import ensure_ligand_mol2
+                    ensure_ligand_mol2(prepared_file)
+            if phase:
+                from biomolexplorer.chimera_preparation import validate_ligand_preparation
+                validate_ligand_preparation(phase)
             script.unlink(missing_ok=True)
             return True
 
@@ -264,8 +291,14 @@ class Docking():
                 if value:
                     command.append(str(value))
 
+            if output_format=='pdbqt' and input_format=='mol2':
+                command.append('-xn')  # RMSD/3D mappings require original atom names.
+
             self.perform_subprocess(command, self.outputpath)
             self.validate_prepared_file(Path(directory(self.outputpath), outputfile), output_format)
+            if output_format=='pdbqt' and input_format=='mol2' and inputfile.endswith('.lig.mol2'):
+                from biomolexplorer.ligand_mol2 import restore_pdbqt_names
+                restore_pdbqt_names(input_file,Path(directory(self.outputpath),outputfile))
             return True
 
         except Exception as e:
@@ -378,7 +411,7 @@ class Docking():
 
 
 
-    def prepare_for_docking(self, pdb_codes:list, charge_type:str, pH:float, redefine_centerofmass:bool, preparation_pairs=None, _prepared_receptors=None) -> bool:
+    def prepare_for_docking(self, pdb_codes:list, charge_type:str, pH:float, redefine_centerofmass:bool, preparation_pairs=None, _prepared_receptors=None, docking_engine='vina') -> bool:
         """
         This function prepares the input files for docking using Chimera and Open Babel software. The input files are prepared in a specific
         format required to perform docking with different docking software. Templates for the input files are available in the src/biomolexplorer/resources folder.
@@ -466,7 +499,8 @@ class Docking():
                 if receptor_key in converted_receptors:
                     continue
                 options = dict(DEFAULTS, **(preparation_pairs or {}).get(pair_key(pdb), {}).get('receptor', {}))
-                self.prepare_on_obabel(f'{pdb[0]}_{chain}.dockprep.mol2', f'{pdb[0]}_{chain}.dockprep.pdbqt', ([('p',str(pH))] if options['add_hydrogens'] else []) + [('xr','')], input_format='mol2', output_format='pdbqt')
+                if docking_engine!='dock6':
+                    self.prepare_on_obabel(f'{pdb[0]}_{chain}.dockprep.mol2', f'{pdb[0]}_{chain}.dockprep.pdbqt', ([('p',str(pH))] if options['add_hydrogens'] else []) + [('xr','')], input_format='mol2', output_format='pdbqt')
                 converted_receptors.add(receptor_key)
                 if _prepared_receptors is not None:_prepared_receptors.add(receptor_key)
 
@@ -480,7 +514,8 @@ class Docking():
                 chain = pdb[3]
                 key = f'{pdb[0]}_{pdb[1]}_{pdb[2]}{chain}'
                 options = dict(DEFAULTS, **(preparation_pairs or {}).get(pair_key(pdb), {}).get('ligand', {}))
-                self.prepare_on_obabel(f'{key}.lig.mol2', f'{key}.lig.pdbqt', [('p',str(pH))] if options['add_hydrogens'] else [], input_format='mol2', output_format='pdbqt')
+                if docking_engine!='dock6':
+                    self.prepare_on_obabel(f'{key}.lig.mol2', f'{key}.lig.pdbqt', [('p',str(pH))] if options['add_hydrogens'] else [], input_format='mol2', output_format='pdbqt')
                 if redefine_centerofmass:
                     center = self.calculate_ligand_centerofmass(f'{key}.lig.pdb', pdb[1])
                     if center is None or len(center)!=3 or not all(math.isfinite(float(v)) for v in center):
@@ -642,7 +677,7 @@ class DockVina(Docking):
 
             sync_directory(directory(self.outputpath))
 
-    def perform_vina_evaluation(self):
+    def perform_vina_evaluation(self, files=None):
         """
         This function performs the AutoDock Vina evaluation for each prepared ligand in the ligand path folder. The assessment
         is performed sequentially. The results are stored in the output path folder in PDBQT files named according to the
@@ -654,7 +689,7 @@ class DockVina(Docking):
 
         """
 
-        files_to_perform = [f for f in os.listdir(directory(self.outputpath)) if f.endswith('.vina')]
+        files_to_perform = files if files is not None else [f for f in os.listdir(directory(self.outputpath)) if f.endswith('.vina')]
 
         for file in files_to_perform:
             command = ['vina', '--config', file]
@@ -705,7 +740,8 @@ class DockVina(Docking):
 
 
 
-            self.perform_vina_evaluation()
+            self.perform_vina_evaluation(files=[f'{receptor}_{ligand}_{resnum}{chain}.vina'
+                for receptor,ligand,resnum,chain in pdb_codes])
 
             for receptor, ligand, resnum, chain in pdb_codes:
                 composite = f'{receptor}_{ligand}_{resnum}{chain}'
@@ -713,13 +749,25 @@ class DockVina(Docking):
                 vina_model = directory(self.outputpath) + f'{composite}' + '.lig.pdbqt'
                 if not os.path.isfile(iligand) or not os.path.isfile(vina_model):
                     raise ValueError(f'Saída de redocking ausente: {composite}. Consulte o log do Vina.')
-                rmsd_value = desc.calcRMSD(iligand, vina_model)
+                prepared_mol2=Path(self.ligandpath)/(composite+'.lig.mol2')
+                method='legacy_prepared';reference_kind='prepared'
+                if prepared_mol2.is_file():
+                    import tempfile
+                    from biomolexplorer.redocking_dock6 import crystal_reference,heavy_atom_rmsd
+                    with tempfile.TemporaryDirectory(prefix='bme-vina-rmsd-') as temporary:
+                        reference=Path(temporary)/'reference.mol2'
+                        reference_kind=crystal_reference(prepared_mol2,Path(self.complexpath)/(receptor+'.pdb'),
+                            [receptor,ligand,resnum,chain],reference)
+                        rmsd_value=heavy_atom_rmsd(reference,vina_model)
+                    method='heavy_atom_symmetry_no_fit'
+                else:
+                    rmsd_value = desc.calcRMSD(iligand, vina_model)
                 if not math.isfinite(float(rmsd_value)):
                     raise ValueError(f'RMSD inválido no redocking: {composite}')
-                results.append((f'{receptor}', f'{ligand}', f'{resnum}', f'{chain}', rmsd_value))
+                results.append((f'{receptor}', f'{ligand}', f'{resnum}', f'{chain}', rmsd_value,method,reference_kind))
 
 
-            rmsd = DataFrame(results, columns=['PDB_CODE', 'LIGAND', 'RESNUM', 'CHAIN', 'RMSD'])
+            rmsd = DataFrame(results, columns=['PDB_CODE', 'LIGAND', 'RESNUM', 'CHAIN', 'RMSD','RMSD_METHOD','RMSD_REFERENCE'])
             pdb_codes = DataFrame(self.__pdb_codes, columns=['PDB_CODE', 'LIGAND', 'RESNUM', 'CHAIN', 'RESOLUTION'])
             pdb_codes['RESNUM'] = pdb_codes['RESNUM'].astype(str)
             pdb_codes = pdb_codes.merge(rmsd, on=['PDB_CODE', 'LIGAND', 'RESNUM', 'CHAIN'], how='left')
@@ -886,7 +934,7 @@ class Dock6(Docking):
                     else:footprint_rows(output)
                     success=True
                 if not success:self.excluded_compounds.add(code)
-                report_progress(step+': '+code,completed,len(jobs))
+                report_progress(None,completed,len(jobs),key='preparation.step',arguments={'step':step,'code':code})
         self.failure_report.write(self.export_path)
 
     def validate_setup(self):
@@ -947,16 +995,21 @@ class Dock6(Docking):
             input = directory(self.receptorpath) + self.__pdb_code
             output = directory(self.outputpath) + self.__pdb_code
 
-            summary = generate_surface(f'{input}.noH.pdb', f'{output}.dms',
-                                       density=self.__density, probe_radius=self.__radius)
-            self.logger.info('Native molecular surface: %s', summary)
+            cached=Path(getattr(self,'precomputed_surface',''))
+            if all((cached/(self.__pdb_code+ext)).is_file() for ext in ('.dms','.sph')):
+                import shutil
+                for ext in ('.dms','.sph'):shutil.copy2(cached/(self.__pdb_code+ext),str(output)+ext)
+            else:
+                summary = generate_surface(f'{input}.noH.pdb', f'{output}.dms',
+                                           density=self.__density, probe_radius=self.__radius)
+                self.logger.info('Native molecular surface: %s', summary)
 
-            self.generate_docking_script(input_template='src/scripts/dock6/INSPH.template',
-                                         output_script=directory(self.outputpath)+'INSPH',
-                                         receptor=self.__pdb_code)
+                self.generate_docking_script(input_template='src/scripts/dock6/INSPH.template',
+                                             output_script=directory(self.outputpath)+'INSPH',
+                                             receptor=self.__pdb_code)
 
-            command = f'sphgen -i INSPH -o OUTSPH'
-            self.perform_subprocess(command, self.outputpath)
+                command = f'sphgen -i INSPH -o OUTSPH'
+                self.perform_subprocess(command, self.outputpath)
 
             #prepare the surface selectors
             self.set_outputpath(f'{self.__base_output_path}/surface/Molecules/')

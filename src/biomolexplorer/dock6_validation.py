@@ -10,7 +10,7 @@ def compound_code(filename):
     raise ValueError('Nome de arquivo MOL2 não reconhecido: '+name)
 
 
-def validate_mol2(path, *, connected=True, scored=False):
+def validate_mol2(path, *, connected=True, scored=False, sanitize=True):
     from rdkit import Chem
     path=Path(path)
     text=path.read_text()
@@ -35,7 +35,7 @@ def validate_mol2(path, *, connected=True, scored=False):
             if int(b[1]) not in identities or int(b[2]) not in identities or b[1]==b[2]:raise ValueError()
     except (IndexError,TypeError,ValueError) as error:
         raise ValueError('MOL2 inválido: contagens, identificadores, ligações, coordenadas ou cargas inconsistentes.') from error
-    mol=Chem.MolFromMol2Block(text,sanitize=True,removeHs=False)
+    mol=Chem.MolFromMol2Block(text,sanitize=sanitize,removeHs=False)
     if mol is None:raise ValueError('Topologia ou tipos atômicos MOL2 inválidos para o docking.')
     if connected and len(Chem.GetMolFrags(mol))!=1:
         raise ValueError('O ligante MOL2 contém fragmentos desconectados; revise a topologia da pose e os contraíons antes do docking flexível.')

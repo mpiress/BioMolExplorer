@@ -19,6 +19,10 @@ class ResultFiles:
     def __init__(self, store):
         self.store = store
 
+    def clear_project_results(self,token,pid):
+        from .clear_results import clear_project_results
+        return clear_project_results(self.store,token,pid)
+
     def origins(self, token, pid, rid):
         from .result_origins import ResultOrigins
         def load(run_id):
@@ -39,6 +43,7 @@ class ResultFiles:
         return stage
 
     def files(self, token, pid, rid, sid):
+        from .molecule_quality import is_quality_report
         stage = self.stage(token, pid, rid, sid)
         from .artifacts import records
         catalog={r['path']:r for r in records(stage,rid)}
@@ -52,7 +57,7 @@ class ResultFiles:
                 for name in stage.get('artifacts', [])
                 if (p := self.store.scoped_path(pid, name)).is_file()
                 and not (stage['operation']=='retrieve_structures' and p.name in ('pdb_codes.csv','retrieval_report.json'))
-                and not (stage['operation'] == 'admet' and p.suffix.lower() == '.json' and p.name!='molecule_exclusions.json' and not p.name.endswith('_admet_report.json'))]
+                and not (stage['operation'] == 'admet' and p.suffix.lower() == '.json' and not is_quality_report(p) and not p.name.endswith('_admet_report.json'))]
 
     def preparation_failures(self,token,pid,rid,sid,filename):
         from .preparation_failures import REPORT_NAME

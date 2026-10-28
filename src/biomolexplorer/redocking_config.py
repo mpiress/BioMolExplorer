@@ -4,6 +4,54 @@ from pathlib import Path
 
 DEFAULTS = {'remove_solvent': True, 'remove_hydrogens': True,
             'add_hydrogens': True, 'minimize': True, 'charge_type': 'gas'}
+ENGINES = ('vina','dock6')
+
+
+def effective_preparation(parameters, records=None):
+    """Common preparation is authoritative; old per-pair projects remain readable."""
+    import copy
+    records=parameters.get('pdb_codes',[]) if records is None else records
+    common=parameters.get('preparation_options')
+    if common is not None:
+        validate_preparation_settings(common)
+        return {pair_key(r):copy.deepcopy(common) for r in records or []}
+    return copy.deepcopy(parameters.get('preparation_pairs') or {})
+
+
+def shared_preparation(parameters):
+    """Return a form seed and report heterogeneous legacy settings explicitly."""
+    import copy
+    if parameters.get('preparation_options') is not None:
+        return copy.deepcopy(parameters['preparation_options']),False
+    configs=list((parameters.get('preparation_pairs') or {}).values())
+    seed=copy.deepcopy(configs[0]) if configs else {}
+    normalize=lambda c:dict(cofactors=sorted(c.get('cofactors',[])),**{
+        role:{**DEFAULTS,'charge_type':parameters.get('charge_type','gas') if role=='ligand' else 'gas',**c.get(role,{})}
+        for role in ('receptor','ligand')})
+    return seed,any(normalize(c)!=normalize(seed) for c in configs[1:])
+
+
+def validate_redocking_parameters(parameters):
+    import math
+    engine=parameters.get('redocking_engine','vina')
+    if engine not in ENGINES:raise ValueError('Método de redocking inválido.')
+    common=parameters.get('preparation_options')
+    if common is not None:validate_preparation_settings(common)
+    if engine=='vina':
+        box=parameters.get('sizeof_box',[24]*3)
+        if not isinstance(box,(list,tuple)) or len(box)!=3 or any(type(v) not in (int,float) or not math.isfinite(v) or v<=0 for v in box):
+            raise ValueError('Informe três dimensões positivas para a caixa Vina.')
+        for key in ('exhaustiveness','num_modes'):
+            value=parameters.get(key,20 if key=='exhaustiveness' else 10)
+            if type(value) is not int or value<1:raise ValueError('Os parâmetros de busca Vina devem ser inteiros positivos.')
+    else:
+        if parameters.get('conformer_search_type','flex') not in ('flex','rigid'):raise ValueError('Escolha busca flexível ou rígida no DOCK6.')
+        for key,default in (('density',.5),('radius',1.4),('distance',10.)):
+            value=parameters.get(key,default)
+            if type(value) not in (int,float) or not math.isfinite(value) or value<=0:raise ValueError('Os parâmetros de superfície e sítio DOCK6 devem ser positivos.')
+        for key,default in (('max_orientations',1000),('num_scored_conformers',1),('dock6_seed',73)):
+            value=parameters.get(key,default)
+            if type(value) is not int or not 1<=value<=2147483647:raise ValueError('Os parâmetros de busca DOCK6 devem ser inteiros positivos de 32 bits.')
 
 
 def pair_key(record):
@@ -112,7 +160,7 @@ def metadata_records(paths):
     return records
 
 
-def validate_structure_pairs(folder, records, settings, prepared=False):
+def validate_structure_pairs(folder, records, settings, prepared=False, engine='vina'):
     """Validate actual selected residues before running any external engine."""
     import csv
     import math
@@ -127,9 +175,16 @@ def validate_structure_pairs(folder, records, settings, prepared=False):
         for record in records:
             code, ligand, number, chain = record[:4]
             identity = f'{code}_{ligand}_{number}{chain}'
-            for filename in (f'{code}_{chain}.dockprep.pdbqt', f'{identity}.lig.pdbqt'):
+            names=(f'{code}_{chain}.dockprep.pdbqt',f'{identity}.lig.pdbqt') if engine=='vina' else (
+                f'{code}_{chain}.dockprep.mol2',f'{code}_{chain}.noH.pdb',f'{identity}.lig.mol2')
+            for filename in names:
                 path = folder / 'Prepared' / filename
-                if not path.is_file() or not any(line.startswith(('ATOM  ', 'HETATM')) for line in path.read_text().splitlines()):
+                if not path.is_file() or not path.stat().st_size:
+                    raise ValueError(f'Arquivo preparado ausente ou sem átomos: {filename}')
+                if path.suffix=='.mol2':
+                    from .dock6_validation import validate_mol2
+                    validate_mol2(path,connected=not filename.endswith('.dockprep.mol2'),sanitize=not filename.endswith('.dockprep.mol2'))
+                elif not any(line.startswith(('ATOM  ','HETATM')) for line in path.read_text().splitlines()):
                     raise ValueError(f'Arquivo preparado ausente ou sem átomos: {filename}')
             column = identity if centers and identity in centers[0] else f'{code}_{ligand}_{number}_{chain}'
             try:
@@ -167,12 +222,26 @@ def validate_structure_pairs(folder, records, settings, prepared=False):
                 raise ValueError(f'Cofator não encontrado no PDB {code}: {cofactor}')
 
 
-def validate_redocking_tools(prepare=True, search_path=None):
+def validate_redocking_tools(prepare=True, search_path=None, engine='vina', dock6_path=None):
     """Use the same executable search path as the scientific worker."""
     import os
     import shutil
     import sys
     search_path = search_path or str(Path(sys.executable).parent) + os.pathsep + os.environ.get('PATH', '')
-    for executable in (('chimera', 'obabel', 'vina') if prepare else ('vina',)):
+    if engine not in ENGINES:raise ValueError('Método de redocking inválido.')
+    tools=(['chimera','obabel'] if prepare else [])+(['vina'] if engine=='vina' else [])
+    for executable in tools:
         if not shutil.which(executable, path=search_path):
             raise ValueError(f'Ferramenta necessária ao redocking não encontrada: {executable}. Configure a instalação antes de executar.')
+    if engine=='dock6':
+        root=Path(dock6_path or '')
+        for executable in ('dock6','sphgen','sphere_selector','showbox','grid'):
+            file=root/'bin'/executable
+            if not file.is_file() or not os.access(file,os.X_OK):
+                raise ValueError(f'Executável DOCK6 ausente ou não executável: {file}')
+        for name in ('vdw_AMBER_parm99.defn','flex.defn','flex_drive.tbl'):
+            if not (root/'parameters'/name).is_file() or not (root/'parameters'/name).stat().st_size:raise ValueError(f'Parâmetro global DOCK6 ausente ou vazio: {root / "parameters" / name}')
+
+        version_file=root/'src/dock/version.h'
+        if version_file.is_file() and not re.search(r'DOCK v6\.11(?:\W|$)',version_file.read_text()):
+            raise ValueError('O redocking requer uma execução validada com DOCK6 6.11.')

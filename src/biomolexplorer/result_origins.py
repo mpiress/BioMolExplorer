@@ -65,7 +65,8 @@ class ResultOrigins:
         step = dict(stage_id=record['stage_id'], stage_name=record['stage_name'],
                     operation=record['operation'], name=record['name'], path=record['path'],
                     run_id=record['run_id'], identifier=params.get('search_term') or
-                    record.get('context', {}).get('search_term') or '')
+                    record.get('context', {}).get('search_term') or '',
+                    target=record.get('context', {}).get('target') or params.get('target') or '')
         parents = self.parents(record, stage)
         paths = []
         for parent in parents:
