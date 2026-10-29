@@ -1,0 +1,62 @@
+{
+  "engine": "DOCK6 6.11",
+  "conformer_search_type": "flex",
+  "max_orientations": 1000,
+  "seed": 73,
+  "results": [
+    {
+      "pair": "1P0I_BUA_606A",
+      "result": {
+        "redocking_failures": 0,
+        "redocking_succeeded": 1
+      },
+      "seconds": 211.40929101599613,
+      "table": {
+        "PDB_CODE": "1P0I",
+        "LIGAND": "BUA",
+        "RESNUM": 606,
+        "CHAIN": "A",
+        "RESOLUTION": 2.0,
+        "ENGINE": "dock6",
+        "RMSD": 10.870730993973371,
+        "STATUS": "succeeded",
+        "FAILED_STEP": null,
+        "ERROR": null,
+        "ENGINE_VERSION": 6.11,
+        "SCORE": -22.416943,
+        "RMSD_REFERENCE": "crystal",
+        "RMSD_METHOD": "heavy_atom_symmetry_no_fit",
+        "POSE_FILE": "1P0I_BUA_606A.lig.mol2",
+        "max_symmetry_matches": 100000,
+        "pose_selection": "{'score': -22.416943, 'model': 1, 'selection': 'lowest_score'}"
+      }
+    },
+    {
+      "pair": "6NTO_L2Y_605A",
+      "result": {
+        "redocking_failures": 0,
+        "redocking_succeeded": 1
+      },
+      "seconds": 412.2809186220111,
+      "table": {
+        "PDB_CODE": "6NTO",
+        "LIGAND": "L2Y",
+        "RESNUM": 605,
+        "CHAIN": "A",
+        "RESOLUTION": 2.05,
+        "ENGINE": "dock6",
+        "RMSD": 4.505757171361182,
+        "STATUS": "succeeded",
+        "FAILED_STEP": null,
+        "ERROR": null,
+        "ENGINE_VERSION": 6.11,
+        "SCORE": -41.664238,
+        "RMSD_REFERENCE": "crystal",
+        "RMSD_METHOD": "heavy_atom_symmetry_no_fit",
+        "POSE_FILE": "6NTO_L2Y_605A.lig.mol2",
+        "max_symmetry_matches": 100000,
+        "pose_selection": "{'score': -41.664238, 'model': 1, 'selection': 'lowest_score'}"
+      }
+    }
+  ]
+}

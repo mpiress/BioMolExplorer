@@ -10,21 +10,39 @@ Ao revisar uma estrutura em **Resultados → Ligantes → Salvar ligantes**, a e
 
 Depois, use **Run pipeline / Executar pipeline** e **Sim, reaproveitar**: os pares novos são processados e incorporados aos resultados acumulados. A curadoria não inicia cálculos por conta própria. Se a escolha foi salva numa versão anterior e não entrou no redocking, abra **Ligantes** e salve a lista novamente para reconciliar a configuração existente.
 
-Cada seleção mostra a cadeia comum ao receptor e ao ligante, os cofatores e as opções de preparação. A resolução acompanha os metadados do par e não precisa ser digitada. Para PDBs próprios sem metadados, use **Informar par manualmente**.
+A tabela **Pares selecionados** exibe apenas PDB, Ligante, Número do resíduo, Cadeia e Ações. Use **Editar par** para abrir o formulário de uma linha; cancelar descarta a edição. **Remover par** retira a linha do conjunto, sem apagar o PDB de origem. A resolução acompanha os metadados e não precisa ser digitada. Para PDBs próprios sem metadados, use **Informar par manualmente**.
 
-Ative **Considerar cofatores como parte do receptor** e informe os códigos, separados por vírgula (por exemplo, `FAD, MG`). Sem cofatores, a seleção do complexo usa `select #0:.{chain}`. Os cofatores declarados também são preservados na preparação do receptor, inclusive fora da cadeia selecionada. O ligante de redocking não pode ser declarado como cofator.
+Expanda **Cofatores do receptor (opcional)** e ative **Considerar cofatores como parte do receptor** e informe os códigos, separados por vírgula (por exemplo, `FAD, MG`). Sem cofatores, a seleção do complexo usa `select #0:.{chain}`. Os cofatores declarados também são preservados na preparação do receptor, inclusive fora da cadeia selecionada. O ligante de redocking não pode ser declarado como cofator.
 
-Configure remoção de solvente, remoção dos hidrogênios existentes, adição de hidrogênios, minimização e método de cargas para receptor e ligante. A configuração do ligante é compartilhada entre preparação e conformação. O pH continua sendo definido uma vez para o bloco.
+Configure remoção de solvente, remoção dos hidrogênios existentes, adição de hidrogênios, minimização e método de cargas para receptor e ligante. A seção **Preparação única do conjunto** oferece um painel comum para todos os receptores e outro para todos os ligantes. A preparação e a conformação do ligante usam essas mesmas opções. O pH da conversão PDBQT aparece nas opções Vina. Os painéis ficam lado a lado em telas largas e empilhados em telas estreitas; o campo de cofatores só aparece quando ativado.
 
-Pares que usam o mesmo PDB e a mesma cadeia compartilham o arquivo de receptor preparado; devem usar os mesmos cofatores e as mesmas opções do receptor. As opções de seus ligantes podem ser diferentes. No processamento individual, cada execução recebe somente os pares e as configurações da estrutura correspondente.
+Pares que usam o mesmo PDB e a mesma cadeia compartilham o arquivo de receptor preparado. A interface aplica uma preparação comum aos receptores e uma aos ligantes. Projetos antigos com opções diferentes por par continuam executáveis no backend; ao salvar pela interface, um aviso informa que a configuração comum substituirá essas diferenças. No processamento individual, cada execução recebe somente os pares e as configurações da estrutura correspondente.
 
-Quando os pares já foram configurados, o pipeline usa essa seleção sem solicitar novamente. Antes dos cálculos, valida a presença do receptor, ligante, resíduo, cadeia e cofatores na estrutura. Complexos preparados devem conter os arquivos PDBQT e centros válidos. Chimera, Open Babel e Vina precisam estar instalados no ambiente de execução; com entradas já preparadas, somente Vina é exigido. Verbosidade permanece desativada.
+Quando os pares já foram configurados, o pipeline usa essa seleção sem solicitar novamente. Antes dos cálculos, valida a presença do receptor, ligante, resíduo, cadeia e cofatores na estrutura. Complexos preparados devem conter centros válidos e os formatos do motor escolhido: PDBQT para Vina; MOL2 do receptor e ligante, mais receptor `.noH.pdb`, para DOCK6. A preparação utiliza Chimera clássico e Open Babel; as entradas já preparadas dispensam essas etapas. O motor selecionado deve estar instalado. DOCK6 exige também sphgen, sphere_selector, showbox, grid e seus arquivos de parâmetros na instalação 6.11. Verbosidade permanece desativada.
+
+## Escolher o método
+
+Em **Método de redocking**, escolha **AutoDock Vina** ou **DOCK6 6.11**. Apenas os campos do motor ativo são exibidos e validados. A troca conserva os valores do outro motor para uma próxima edição.
+
+- **Vina:** caixa X/Y/Z em Å, pH da conversão, esforço de busca e quantidade de poses. O centro vem do ligante de referência. **Vina · opções do motor** reúne semente e função de score.
+- **DOCK6:** instalação administrada, busca flexível/rígida, densidade SES, raio da sonda, distância de seleção das esferas, máximo de orientações, poses salvas e semente. As subseções expansíveis reúnem opções do motor, grade, caixa e esferas. O fluxo usa diretamente o ligante preparado, sem uma minimização adicional da referência cristalográfica.
+
+```text
+Selecione os pares e revise-os na tabela.
+Defina uma preparação para receptores e outra para ligantes.
+Escolha Vina ou DOCK6 6.11 e ajuste seus campos específicos.
+Salve e execute o pipeline; confira RMSD e os diagnósticos.
+```
+
+Novas execuções com MOL2 disponível calculam RMSD de átomos pesados, com correção de simetria e sem sobreposição geométrica. A referência usa as coordenadas do ligante no PDB original; na ausência do PDB, o resultado registra explicitamente `RMSD_REFERENCE=prepared`. Entradas Vina legadas contendo apenas PDBQT mantêm o cálculo legado, identificado por `RMSD_METHOD`. Esses métodos não devem ser comparados como se fossem idênticos. `Engine`, `RMSD_method` e `RMSD_reference` acompanham a exportação CSV. RMSD finito não representa aprovação automática do protocolo.
+
+O preparo usa o grafo CCD do componente antes de adicionar hidrogênios e cargas no Chimera. Tipos IDATM são fixados a partir desse grafo para evitar reinterpretação incorreta pela geometria. O MOL2 é escrito sem reabrir o PDB. Após a conversão PDBQT, nomes são preservados por correspondência de coordenadas antes do docking. O arquivo `.export.json` ou `.input.json` registra a definição e eventuais átomos ausentes; fragmentos observados não são completados com átomos pesados inventados. Falhas recuperáveis de um par no Vina/RMSD são registradas sem interromper os demais.
 
 ## Configuração pelo backend
 
 Consulte o executável e a mensagem no log de execução. Scripts Chimera que falharam ficam preservados. Centro do ligante inválido ou arquivos preparados incompletos impedem o docking; corrija a configuração ou instalação e tente novamente.
 
-Informe, por exemplo, `pdb_codes=[["4M0E", "1YL", 604, "A", 2.0]]`. `preparation_pairs` usa a chave `4M0E|1YL|604|A`, contendo `cofactors`, `receptor` e `ligand`. As opções permitidas são `remove_solvent`, `remove_hydrogens`, `add_hydrogens`, `minimize` e `charge_type` (`gas` ou `am1`). Opções omitidas usam os padrões. O quinto elemento do registro é a resolução. Projetos legados com `ligand_chain` passam a usar a cadeia comum `CHAIN`.
+Informe, por exemplo, `pdb_codes=[["4M0E", "1YL", 604, "A", 2.0]]`. `preparation_options` define a preparação comum (`receptor`, `ligand`, `cofactors`) e tem precedência. Para compatibilidade com clientes antigos, `preparation_pairs` usa a chave `4M0E|1YL|604|A`, contendo `cofactors`, `receptor` e `ligand`. As opções permitidas são `remove_solvent`, `remove_hydrogens`, `add_hydrogens`, `minimize` e `charge_type` (`gas` ou `am1`). Opções omitidas usam os padrões. O quinto elemento do registro é a resolução. Projetos legados com `ligand_chain` passam a usar a cadeia comum `CHAIN`.
 
 Veja [validação do pipeline](pipeline_validation.md) para cobertura e limites da execução nativa.
 
@@ -50,7 +68,7 @@ A tabela resume os valores finitos e não negativos da coluna `RMSD` de `pdb_cod
 
 ## Reutilizar o receptor no docking de candidatos
 
-Conecte o redocking a **Receptor PDB (retrieval ou redocking)** do bloco **Preparar para docking**. Escolha o receptor `.dockprep.pdbqt` no campo **Receptor que deseja utilizar**; arquivos exclusivos do ligante não aparecem nessa seleção. O receptor, os formatos complementares e os centros são reutilizados, com as opções de preparo do receptor desabilitadas. Os candidatos vêm de uma ou mais fontes ChEMBL, PubChem, ZINC ou arquivos próprios e continuam sendo preparados. Escolha Vina, DOCK6 ou ambos como saída e conecte receptor e compostos a cada motor. Consulte o [manual do usuário](user_manual.md#preparacao-e-redocking) para processamento individual e merge.
+Conecte o redocking a **Receptor PDB (retrieval ou redocking)** do bloco **Preparar para docking**. Escolha o receptor `.dockprep.pdbqt` (ou `.dockprep.mol2` quando só houver a preparação DOCK6) no campo **Receptor que deseja utilizar**; arquivos exclusivos do ligante não aparecem nessa seleção. O receptor, os formatos complementares e os centros são reutilizados, com as opções de preparo do receptor desabilitadas. Os candidatos vêm de uma ou mais fontes ChEMBL, PubChem, ZINC ou arquivos próprios e continuam sendo preparados. Escolha Vina, DOCK6 ou ambos como saída e conecte receptor e compostos a cada motor. Consulte o [manual do usuário](user_manual.md#preparacao-e-redocking) para processamento individual e merge.
 
 ## Estilos e interações em 3D
 
@@ -83,7 +101,7 @@ Somente execuções do pipeline concluídas com sucesso fornecem dados reutiliz�
 
 A preparação do redocking isola cada par receptor/ligante. Um receptor preparado é reutilizado pelos outros ligantes da mesma cadeia. Se a preparação desse receptor falhar, os pares que dependem dele são ignorados; falhas de um ligante não excluem os outros ligantes de um receptor válido. Arquivos parciais do par são removidos e os demais complexos continuam. O comportamento estrito das outras funções de preparação permanece disponível.
 
-Mesmo que nenhum par possa ser preparado, o redocking termina com aviso e não inicia o Vina. `pdb_codes.csv` conserva todos os pares selecionados, incluindo os que falharam, com `STATUS`, `FAILED_STEP` e `ERROR`. O estado `preparation_failed` mantém RMSD vazio. `redocking_failures.csv` reúne os motivos. Esses pares não são oferecidos como complexos preparados válidos às etapas seguintes. Falhas globais de instalação, configuração, acesso ou armazenamento continuam interrompendo a operação.
+Mesmo que nenhum par possa ser preparado, o redocking termina com aviso e não inicia o motor escolhido. `pdb_codes.csv` conserva todos os pares selecionados, incluindo os que falharam, com `STATUS`, `FAILED_STEP` e `ERROR`. O estado `preparation_failed` mantém RMSD vazio. `redocking_failures.csv` reúne os motivos. Esses pares não são oferecidos como complexos preparados válidos às etapas seguintes. Falhas globais de instalação, configuração, acesso ou armazenamento continuam interrompendo a operação.
 
 Ao finalizar, a interface informa a quantidade de falhas. Em **Resultados**, os pares com erro aparecem em vermelho com **Falha na preparação**, RMSD **—** e **Ver erro**. As ações de pose 3D e contatos ficam desativadas porque não houve simulação concluída. Pares bem-sucedidos continuam mostrando o RMSD real.
 
@@ -93,21 +111,49 @@ Um arquivo PDB pode servir a vários ligantes. Excluir o arquivo remove todos os
 
 A ação exige proprietário/editor e execução encerrada. As alterações de arquivos, configuração e integridade dos resultados são auditadas no histórico; uma falha durante a operação restaura o estado anterior. As cópias históricas para restauração não são entradas ativas do redocking. Nenhuma exclusão é executada automaticamente ao ocorrer uma falha de preparação.
 
-## Motor de redocking e preparação Chimera
 
-Escolha **Motor de redocking**: AutoDock Vina (padrão) ou DOCK6. Os campos de
-busca acompanham o motor escolhido. Projetos antigos continuam usando Vina
-quando não informam `redocking_engine`; a preparação permanece no Chimera para
-os dois motores. A instalação DOCK6 é fornecida pela configuração administrativa.
+## Target e melhores RMSDs por alvo
 
-O DOCK6 usa o ligante de referência do par, prepara sítio/grade e busca flexível
-ou rígida. A pose é disponibilizada no mesmo contrato de resultados do redocking.
-Seu RMSD usa átomos pesados, considera simetrias e mantém o sistema de coordenadas
-do receptor, sem superpor a pose à referência.
+A tabela de redocking inclui **Target**, obtido do bloco de recuperação que
+forneceu o PDB, usando a proveniência salva dos arquivos. Em entradas mescladas,
+o PDB é associado à sua origem específica. Metadados importados também podem
+informar `Target` ou `TARGET`. Quando a origem não pode ser identificada, a célula
+mostra **—**; o nome do bloco de redocking não é usado para inventar uma associação.
 
-A limpeza estrutural precede hidrogênios, cargas e minimização. Conformações
-alternativas são resolvidas também no ligante. Definições químicas locais e
-ordens de ligação corrigidas participam da rastreabilidade e do cache. Consulte
-[preparação molecular](molecular_preparation.md) para os detalhes de tipagem e
-exportação. Os logs mantêm a saída completa do Chimera; relatórios de falhas
-anteriores são removidos quando a nova execução termina sem essas falhas.
+Use **Alvo terapêutico** para filtrar e a busca para localizar alvo, PDB ou ligante.
+A ordem inicial agrupa por alvo e prioriza os menores RMSDs. Clique em **Target**
+ou **RMSD (Å)** para ordenar. **Destacar melhores RMSDs por alvo** colore em verde
+o mínimo de cada alvo e seus empates (tolerância numérica de 1e-9 Å); falhas continuam
+vermelhas e não participam da comparação. O mínimo considera todos os resultados
+do alvo, inclusive os que estão em outra página ou fora da busca textual.
+
+**Baixar tabela RMSD** exporta os pares correspondentes aos filtros, com `Target`
+e `Best_for_target`, revalidando o acesso. Esses rótulos não alteram poses, RMSDs,
+metadados científicos originais ou cache. Resultados anteriores podem receber a
+coluna ao serem abertos, quando sua proveniência está disponível.
+
+```text
+Abra os resultados e selecione ACHE no filtro de alvo.
+Ative Destacar melhores RMSDs por alvo.
+Compare as linhas verdes e abra a simulação desejada.
+Baixe a tabela RMSD para guardar a seleção com sua origem.
+```
+
+## Integridade do preparo nativo
+
+O preparo de ligantes usa a topologia CCD do componente observado antes de adicionar
+hidrogênios no Chimera. Após a protonação, o grafo é validado e sua carga formal é
+informada explicitamente à rotina nativa de AM1-BCC ou Gasteiger. A minimização usa
+esse conjunto já preparado, sem repetir DockPrep nem substituir as cargas escolhidas.
+O relatório `.lig.preparation.json` registra a carga, o método e as validações.
+
+Se o FindHBond do Chimera apresentar o erro conhecido `accPhiPsi`, apenas a colocação
+de hidrogênios é repetida com o método geométrico nativo; cargas e minimização não
+são desativadas. Aminoácidos livres de cristalização registrados como HETATM não
+são tratados como proteína, salvo se explicitamente incluídos como cofatores;
+aminoácidos ligados por ligações peptídicas permanecem no receptor.
+
+O RMSD usa somente átomos pesados na referência cristalográfica e na melhor pose,
+sem alinhamento que esconda deslocamentos. RMSD alto é um resultado de avaliação,
+não uma falha de execução. Erros de topologia, ferramentas ou configuração continuam
+visíveis, com o passo e o diagnóstico, sem impedir os demais pares de executar.

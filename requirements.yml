@@ -6,30 +6,37 @@ channels:
   - conda-forge
   - nodefaults
 dependencies:
-  - python>=3.12,<3.13
-  - pip>=24
-  - setuptools>=68
-  - openbabel>=3.1.1,<3.2
-  - chembl_webresource_client>=0.10.9,<0.11
-  - numpy>=1.26.4,<2
-  - pandas>=2.1.4,<3
-  - rdkit>=2024.03,<2027
-  - networkx>=3.3,<4
-  - biopython>=1.84,<2
-  - datasketch>=1.6.5,<2
-  - seaborn>=0.13.2,<0.14
-  - pymol-open-source>=3.0,<4
-  - vina>=1.2.5,<1.3
-  - requests>=2.31,<3
-  - matplotlib>=3.8,<4
-  - pillow>=10,<13
-  - poppler
-  - scipy>=1.11,<2
-  - urllib3>=2,<3
+  - python=3.12.3
+  - pip=26.2
+  - openbabel=3.1.1
+  - numpy=1.26.4
+  - pandas=2.1.4
+  - rdkit=2023.09.6
+  - networkx=3.3
+  - biopython=1.84
+  - datasketch=1.6.5
+  - seaborn=0.13.2
+  - pymol-open-source=3.0.0
+  - vina=1.2.5
+  - requests=2.34.2
+  - matplotlib=3.10.9
+  - pillow=12.3.0
+  # pdftoppm is invoked by pdf_preview.py; this is not a Python import.
+  - poppler=24.04.0
+  - scipy=1.17.1
+  - urllib3=2.7.0
+  # Build backend used by setup.py and pyproject.toml.
+  - setuptools=83.0.0
   - pip:
     # Python ligand adapter; Gemmi is imported by Meeko, including ligand APIs.
     - meeko>=0.7.1,<0.8
     - gemmi>=0.7,<0.8
     - rcsbsearchapi==1.6.0
-    - flet==1.0.3
+    - flet[desktop]==1.0.3
     - flet-web==1.0.3
+    - fastapi==0.142.2
+    - uvicorn==0.54.0
+    - websockets==17.2
+# Optional admet_ai imports run in an isolated environment because ADMET-AI 2
+# requires newer RDKit than the scientific protocol above. See requirements-admet.yml
+# and scripts/setup_admet_ai.py (the existing CPU-only installer).

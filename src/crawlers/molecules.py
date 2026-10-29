@@ -189,12 +189,12 @@ class Molecule(CrawlerSettings, MyMolecules):
 
 
         identifiers = list(dict.fromkeys(mol for mol in mols if isinstance(mol, str) and mol))
-        report_progress('Baixando os registros moleculares do ChEMBL…', 0, len(identifiers))
+        report_progress('chembl.molecules', 0, len(identifiers))
         with futures.ThreadPoolExecutor(max_workers=min(2, worker_count())) as executor:
             batches = [identifiers[offset:offset + 25] for offset in range(0, len(identifiers), 25)]
             pool = {executor.submit(self.__search_batch, batch, filter_params, np_filter, mol_filter, mwt_filter): batch
                     for batch in batches}
-            _monitor_queries(pool, 'Baixando os registros moleculares do ChEMBL…',
+            _monitor_queries(pool, 'chembl.molecules',
                              {future: len(batch) for future, batch in pool.items()})
 
     def __search_batch(self, identifiers, filter_params, np_filter, mol_filter, mwt_filter):
@@ -330,10 +330,10 @@ class SimilarMols(CrawlerSettings, MyMolecules):
         mwt_filter = float(mwt_filter) if mwt_filter != None else None
 
         identifiers = list(dict.fromkeys(mol for mol in mols if isinstance(mol, str) and mol))
-        report_progress('Buscando compostos similares no ChEMBL…', 0, len(identifiers))
+        report_progress('chembl.similars', 0, len(identifiers))
         with futures.ThreadPoolExecutor(max_workers=min(2, worker_count())) as executor:
             pool = {executor.submit(self.__search_similar_mols, mol, filter_params, np_filter, mol_filter, mwt_filter): mol for mol in identifiers}
-            _monitor_queries(pool, 'Buscando compostos similares no ChEMBL…')
+            _monitor_queries(pool, 'chembl.similars')
 
 
 

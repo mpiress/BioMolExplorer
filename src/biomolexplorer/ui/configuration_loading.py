@@ -4,15 +4,34 @@ import flet as ft
 from .branding import BRAND_NAVY, processing_emblem
 
 
-class ProcessingSplash:
-    def __init__(self, page):
+class ConfigurationLoading:
+    def __init__(self, page, saving=False, *, title=None, description=None):
         self.page = page
+        self.saving = saving
         self.requests = set()
-        self.messages = {}
-        self.dialog = None
+        title=title or ('Salvando configurações…' if saving else 'Carregando configurações…')
+        description=description or ('Validando e salvando as configurações do bloco. Aguarde a conclusão.' if saving else 'Lendo informações do bloco. Aguarde um instante.')
+        emblem = ft.Stack([
+            ft.ProgressRing(width=112, height=112, stroke_width=4, color=BRAND_BLUE,
+                            semantics_label=title),
+            logo(64),
+        ], width=112, height=112, alignment=ft.Alignment.CENTER)
+        card = ft.Container(width=320, padding=24, border_radius=20, bgcolor='#FFFFFF',
+            content=ft.Column([
+                emblem,
+                ft.Text(title, size=16, weight=ft.FontWeight.W_600,
+                        color=BRAND_NAVY, text_align=ft.TextAlign.CENTER),
+                ft.Text(description, size=13,
+                        color='#64748B', text_align=ft.TextAlign.CENTER),
+            ], tight=True, spacing=16, horizontal_alignment=ft.CrossAxisAlignment.CENTER))
         self.control = ft.Container(left=0, top=0, right=0, bottom=0, padding=24,
             alignment=ft.Alignment.CENTER, bgcolor='#66091D48',
-            on_click=lambda e: None, content=self._card())
+            on_click=lambda e: None, content=card)
+        if saving:
+            # Dialog routes sit above page overlays. Saving must cover the
+            # configuration dialog, rather than animate invisibly behind it.
+            self.control=ft.AlertDialog(modal=True,content=card,content_padding=0,
+                bgcolor=ft.Colors.TRANSPARENT,elevation=0,barrier_color='#66091D48')
 
     def _card(self,title='Carregando configurações…',description='Lendo informações do bloco. Aguarde um instante.'):
         emblem=processing_emblem(label=title)
@@ -30,27 +49,8 @@ class ProcessingSplash:
     def show(self, request, title='Carregando configurações…',
              description='Lendo informações do bloco. Aguarde um instante.', *, modal=False,on_cancel=None):
         self.requests.add(request)
-        self.messages[request]=(title,description,on_cancel)
-        self.title.value=title;self.description.value=description
-        self.ring.semantics_label=title
-        if modal or self.dialog is not None:
-            # Page overlays are painted below native dialogs. Saving from the
-            # settings dialog needs its own modal route above the editor.
-            if self.dialog is None:
-                overlay=getattr(self.page,'overlay',[])
-                if any(control is self.control for control in overlay):
-                    overlay[:]=[control for control in overlay if control is not self.control]
-                    self.page.update()
-                # A previous dialog may still be animating out on the client.
-                # Give the new route its own controls instead of reparenting them.
-                card=self._card(title,description)
-                self.dialog = ft.AlertDialog(modal=True, content=card,
-                    content_padding=0, bgcolor='#FFFFFF')
-                if on_cancel:self.dialog.actions=[ft.TextButton('Interromper processamento',on_click=on_cancel)]
-                self.page.show_dialog(self.dialog)
-            else:
-                self.dialog.actions=[ft.TextButton('Interromper processamento',on_click=on_cancel)] if on_cancel else []
-                self.page.update()
+        if self.saving:
+            self.page.show_dialog(self.control)
             return
         if getattr(self.page, 'overlay', None) is None:
             self.page.overlay = []
@@ -79,11 +79,10 @@ class ProcessingSplash:
 
     def close(self):
         self.requests.clear()
-        self.messages.clear()
-        if self.dialog is not None:
-            from .feedback import close_dialog
-            close_dialog(self.page, self.dialog)
-            self.dialog = None
+        if self.saving:
+            self.control.open=False
+            self.page.update()
+            return
         overlay = getattr(self.page, 'overlay', [])
         retained = [control for control in overlay if control is not self.control]
         if len(retained) != len(overlay):

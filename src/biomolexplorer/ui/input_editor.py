@@ -5,7 +5,7 @@ from biomolexplorer.artifact_choices import logical_path, matches_selector
 from biomolexplorer.bindings import sources, pack
 from biomolexplorer.flow import INPUTS, EXTERNAL_INPUTS, compatible, input_types
 from biomolexplorer.input_validation import contract, output_kind
-from biomolexplorer.docking_inputs import target_input, prepared_receptor, ligand_input_file
+from biomolexplorer.docking_inputs import target_input, prepared_receptor, preferred_receptors, ligand_input_file
 from .localization import verbatim, stage_control
 
 
@@ -150,7 +150,7 @@ class InputEditor:
         elif self.expected & {'compounds','fingerprints','similarity'}:names={n for n in names if n.endswith('.csv')}
         if self.mixed_receptor_source(value):
             names={n for n in names if prepared_receptor(n) or n.endswith('.pdb') and n.rsplit('/',1)[-1].count('.')==1}
-        elif is_target:names={n for n in names if prepared_receptor(n)}
+        elif is_target:names=set(preferred_receptors(n for n in names if prepared_receptor(n)))
         if self.stage['operation'] in ('prepare_structures','docking_vina','docking_dock6') and self.field['name']=='base_input_path' and not is_target:
             names={n for n in names if n.endswith('.pdb') and n.rsplit('/',1)[-1].count('.')==1}
         origin=next((s for s in self.ui.current['pipeline'] if value=='stage:'+s['id']),None)

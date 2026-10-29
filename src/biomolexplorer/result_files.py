@@ -19,6 +19,10 @@ class ResultFiles:
     def __init__(self, store):
         self.store = store
 
+    def clear_project_results(self,token,pid):
+        from .clear_results import clear_project_results
+        return clear_project_results(self.store,token,pid)
+
     def origins(self, token, pid, rid):
         from .result_origins import ResultOrigins
         def load(run_id):
@@ -39,6 +43,7 @@ class ResultFiles:
         return stage
 
     def files(self, token, pid, rid, sid):
+        from .molecule_quality import is_quality_report
         stage = self.stage(token, pid, rid, sid)
         from .artifacts import records
         from .artifact_naming import publication_metadata
@@ -53,8 +58,7 @@ class ResultFiles:
                 for name in stage.get('artifacts', [])
                 if (p := self.store.scoped_path(pid, name)).is_file()
                 and not (stage['operation']=='retrieve_structures' and p.name in ('pdb_codes.csv','retrieval_report.json'))
-                and not (stage['operation'] == 'admet' and p.suffix.lower() == '.json' and p.name!='molecule_exclusions.json'
-                    and not publication_metadata(p).get('legacy_name',p.name).endswith('_admet_report.json'))]
+                and not (stage['operation'] == 'admet' and p.suffix.lower() == '.json' and not is_quality_report(p) and not p.name.endswith('_admet_report.json'))]
 
     def preparation_failures(self,token,pid,rid,sid,filename):
         from .preparation_failures import REPORT_NAME
@@ -189,6 +193,7 @@ class ResultFiles:
     def remove(self, token, pid, rid, sid, filename):
         """Audit deletion, invalidate producer caches and restore bytes on failure."""
         backup = path = None
+        journal = None
         try:
             with self.store.change(token, pid, 'editor', 'remove_file', 'Arquivo removido: '+Path(filename).name) as db:
                 if db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running','awaiting_input')", (pid,)).fetchone():
@@ -199,52 +204,66 @@ class ResultFiles:
                     raise AccessDenied('Arquivo não autorizado para esta etapa.')
                 backup_dir = self.store.project_dir(pid)/'.history'/'.removed'
                 backup_dir.mkdir(parents=True, exist_ok=True)
-                backup = backup_dir/uuid4().hex
-                path.replace(backup)
+                if str(path) not in self._shared_paths(db,pid,sid):
+                    from .result_transactions import ResultTransaction
+                    journal = ResultTransaction(self.store,db,pid)
+                    backup = backup_dir/uuid4().hex
+                    journal.prepare([(path,backup)])
+                    journal.move(path,backup)
+                    journal.flush()
                 for row in db.execute('SELECT id,stages FROM runs WHERE project_id=?', (pid,)).fetchall():
                     stages = json.loads(row[1]); changed = False
                     for item in stages:
-                        if str(path) in item.get('artifacts', []):
-                            item['artifacts'].remove(str(path))
-                            item['outputs_removed'] = True
-                            item['curated_at'] = time.time()
+                        if item['id']==sid and str(path) in item.get('artifacts', []):
+                            self._detach(item,{str(path)})
                             changed = True
                     if changed:
                         db.execute('UPDATE runs SET stages=? WHERE id=?', (json.dumps(stages), row[0]))
         except Exception:
             if backup and backup.exists():
                 backup.replace(path)
+            if journal:journal.finish()
             raise
         self._cleanup_backup(backup)
+        if journal:journal.finish()
 
     def remove_all(self, token, pid, rid, sid):
-        """Remove a stage's artifacts atomically, including shared cache references."""
-        backups=[]
+        """Remove this producer's references; preserve bytes used by other blocks."""
+        backups=[];journal=None
         try:
             with self.store.change(token,pid,'editor','remove_stage_results','Resultados da etapa removidos') as db:
                 if db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running','awaiting_input')",(pid,)).fetchone():
                     raise ValueError('Aguarde a execução terminar antes de remover arquivos.')
                 stage=self.stage(token,pid,rid,sid)
                 paths={str(self.store.scoped_path(pid,p)) for p in stage.get('artifacts',[])}
+                protected=self._shared_paths(db,pid,sid)
                 backup_dir=self.store.project_dir(pid)/'.history'/'.removed'
                 backup_dir.mkdir(parents=True,exist_ok=True)
+                selected=[]
                 for filename in sorted(paths):
                     path=Path(filename)
-                    if path.is_file():
+                    if path.is_file() and filename not in protected:
                         backup=backup_dir/uuid4().hex
-                        path.replace(backup);backups.append((path,backup))
+                        selected.append((path,backup))
+                from .result_transactions import ResultTransaction
+                journal=ResultTransaction(self.store,db,pid)
+                journal.prepare(selected)
+                for path,backup in selected:
+                    journal.move(path,backup);backups.append((path,backup))
+                journal.flush()
                 for row in db.execute('SELECT id,stages FROM runs WHERE project_id=?',(pid,)).fetchall():
                     stages=json.loads(row[1]);changed=False
                     for item in stages:
-                        if paths.intersection(item.get('artifacts',[])):
-                            item['artifacts']=[p for p in item['artifacts'] if p not in paths]
-                            item['outputs_removed']=True;item['curated_at']=time.time();changed=True
+                        if item['id']==sid and paths.intersection(item.get('artifacts',[])):
+                            self._detach(item,paths);changed=True
                     if changed:db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(stages),row[0]))
         except Exception:
             for path,backup in reversed(backups):
                 if backup.exists():backup.replace(path)
+            if journal:journal.finish()
             raise
         for _,backup in backups:self._cleanup_backup(backup)
+        if journal:journal.finish()
         return len(backups)
 
     def remove_project_results(self,token,pid):
@@ -293,6 +312,32 @@ class ResultFiles:
             raise
         for _,backup in backups:self._cleanup_backup(backup)
         return len(backups)
+
+    @staticmethod
+    def _shared_paths(db,pid,owner):
+        protected={r[0] for r in db.execute('SELECT path FROM assets WHERE project_id=?',(pid,))}
+        for row in db.execute('SELECT stages FROM runs WHERE project_id=?',(pid,)):
+            for item in json.loads(row[0]):
+                if item['id']==owner:continue
+                protected.update(item.get('artifacts',[]))
+                for entry in [item,*item.get('batches',[])]:
+                    for paths in entry.get('input_files',{}).values():protected.update(paths)
+        return protected
+
+    @staticmethod
+    def _detach(item,paths):
+        for entry in [item,*item.get('batches',[])]:
+            if not paths.intersection(entry.get('artifacts',[])):continue
+            entry['artifacts']=[p for p in entry['artifacts'] if p not in paths]
+            entry['artifact_manifest']={p:d for p,d in entry.get('artifact_manifest',{}).items() if p not in paths}
+            entry['artifact_records']=[r for r in entry.get('artifact_records',[]) if r['path'] not in paths]
+            entry['outputs_removed']=True;entry['curated_at']=time.time();entry['reused']=False
+            entry.pop('cache_key',None)
+
+    def remove_project_results(self,token,pid):
+        """Remove generated results, preserving the entire configured pipeline."""
+        from .clear_results import clear_project_results
+        return clear_project_results(self.store,token,pid,reset_configuration=False)
 
     @staticmethod
     def _cleanup_backup(backup):

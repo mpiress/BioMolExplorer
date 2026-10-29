@@ -1,0 +1,14 @@
+{
+  "reason": "2026-10-28: stage_sources filters removed pairs from partial indexes; no change to preparation, docking, scoring, RMSD, PairCache keys or native tool contracts.",
+  "aliases": {
+    "0a02a75b59b41cdd2c0acb17e501ef53edfed203d1d4e5dbc0a8ed2be9f57b0e": "f4295fbe300eb121a6e9b2708a1860c2802d945f00229870ba05e9078664a0d4",
+    "069dca2b28253f7f1dc4b99ac203ce811d19b5c0907c00a02555d15f34de3b37": "7305453dc23752cb51b2f410d66e2301805b8efd50c5f8e88517695499cea9e2"
+  },
+  "operations": [
+    "prepare_structures",
+    "redocking",
+    "docking_vina",
+    "docking_dock6",
+    "consensus"
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "source_builds": [
+    "3869366437e7bd900fcd6693a3644a41fbca1dd5812b5ac4fb2ecd9fbd112ba5"
+  ],
+  "reason": "Audited persistence-only migration; scientific kernels preserved; original producer provenance retained",
+  "operations": {
+    "retrieve_pubchem": "16b270e9d6c412bfde7211998a2246170be6f0f595d961fdf2e17c02256319e9",
+    "retrieve_compounds": "49c18e4ccdae662bee7c66c295aae1a7ae1f4284f1282bc22e0ba9c09df47b4e",
+    "expand_similar_compounds": "49c18e4ccdae662bee7c66c295aae1a7ae1f4284f1282bc22e0ba9c09df47b4e",
+    "retrieve_structures": "49c18e4ccdae662bee7c66c295aae1a7ae1f4284f1282bc22e0ba9c09df47b4e",
+    "retrieve_zinc": "49c18e4ccdae662bee7c66c295aae1a7ae1f4284f1282bc22e0ba9c09df47b4e",
+    "prepare_structures": "f4295fbe300eb121a6e9b2708a1860c2802d945f00229870ba05e9078664a0d4",
+    "admet": "90d916f6ccbebefc6b39506e0ea3b6fca8ab2a9ded303acf1d8257f5d363f1e5",
+    "fingerprints": "8abf2f9efce9cb969d5210770245b283790968379322b591db30b86b7b1ad72e",
+    "similarity": "951d60b41620038b8a2d9cf8a229740937492b41ab49be7c7cfc68cb38df7e0d",
+    "graphs": "a673134359fc652976e193f38ab9b5772280a1fafdbf1257b2e1506abf1e0bcc",
+    "redocking": "f4295fbe300eb121a6e9b2708a1860c2802d945f00229870ba05e9078664a0d4",
+    "docking_vina": "7305453dc23752cb51b2f410d66e2301805b8efd50c5f8e88517695499cea9e2",
+    "docking_dock6": "7305453dc23752cb51b2f410d66e2301805b8efd50c5f8e88517695499cea9e2",
+    "consensus": "7305453dc23752cb51b2f410d66e2301805b8efd50c5f8e88517695499cea9e2",
+    "import_results": "6d05231615074f95ded3b76272c6dc7050005fc5094b85f300c83275a7c1e8a1"
+  },
+  "runtime": {
+    "python": "3.12.3 | packaged by conda-forge | (main, Apr 15 2024, 18:38:13) [GCC 12.3.0]",
+    "packages": {
+      "rdkit": "2026.3.6",
+      "numpy": "1.26.4",
+      "pandas": "3.0.6",
+      "scipy": "1.17.1",
+      "networkx": "3.3",
+      "biopython": "1.84",
+      "torch": "2.14.1",
+      "admet-ai": "2.0.1",
+      "chemprop": "2.3.1",
+      "datasketch": "1.6.5"
+    },
+    "models": {}
+  },
+  "tools": {
+    "chimera": "72358ad800ea0131c88a2be4ee99b4ce73fc9e0c3daeec9b2029b1ea729c9d93",
+    "share/AddCharge/__init__.py": "21bd80e0dbee800281f9820eb39532424cb090eaadaee44fda0634c1d18f2beb",
+    "share/AddH/__init__.py": "ce81e3a6ad8fed1d761f9a68f95c001aade59bb539f4aedc235dfaa8b5f48c88",
+    "share/DockPrep/__init__.py": "7c9c13773b1a4de9fe2bc39f8dcd56caf53441ee7a87b43b6d274a21f2c39d5a",
+    "share/MMMD/MMTKinter.py": "3b721681e38525826b994ef115aa7d961b8390eb83e4b0ad828dffee659f879c",
+    "bin/amber18/bin/sqm": "6121fb382296f640d36ffaddf3f7a4b74a7cbd923540c2003eb0189034eba639",
+    "bin/amber18/bin/antechamber": "66bbe9ad46c0268974605473e3a458cc66f524b45979ca0a46810231834ae89c",
+    "obabel": "763574be7ac40f5ece8ca4b186aaf70246915614447eca518b3be87b901d724e",
+    "vina": "04598a43755cd0e258ac62fc88dcd886aaac6a3167b8ff8712ddc4c07090a019",
+    "dock6": "62ddcc919069b6d7af3872b6b06ad344a75ca1d6be2a34013df265579d92f4f2",
+    "grid": "81403d8fb2fe4755aa74b42cae19a560b215ce3040396a7e73a2ae146364ba59",
+    "sphgen": "7e84de989412bb79ab54ca4e266a49f455cd43773015a53b5492aead2707daa7"
+  }
+}

@@ -127,11 +127,29 @@ Se aparecer **ADMET-AI is not installed in the worker environment**, confira o e
 
 Consulte [ADMET por hipótese](admet_research.md) para unidades, perfis, alertas, arquivos e limites dos modelos.
 
-### AmberTools para protocolos de dinâmica
 
-Crie também o ambiente isolado, sem ativá-lo como worker principal:
+## Ambiente auditado e instalação reproduzível
 
-    conda env create -f requirements-ambertools.yml
-    export BIOMOL_AMBERTOOLS_ENV=BioMolExplorer-AmberTools
+`requirements.yml` declara os imports científicos e da interface, além dos
+executáveis Open Babel e Poppler e da infraestrutura de instalação/build.
+`scripts/audit_dependencies.py` compara os imports Python com esses manifestos,
+incluindo imports dinâmicos literais e o preditor opcional isolado.
 
-Confira nessa raiz bin/antechamber, bin/parmchk2, bin/tleap e bin/sander. cpptraj é necessário somente para análise de trajetória. O backend inicia cada executável com ambiente próprio; não exporte LD_LIBRARY_PATH do AmberTools para o Python principal.
+Para criar um ambiente novo em Linux x86_64 com os builds Conda e artefatos pip
+fixados na auditoria, use o lock correspondente:
+
+```bash
+conda env create -f requirements-linux-64.lock.yml
+conda activate BioMolExplorer
+python -m pip check
+```
+
+O lock inclui hashes dos wheels pip para Python 3.12. Atualize-o ao alterar o
+manifesto principal; ele não é um lock para outras plataformas. A auditoria e as
+resoluções simuladas não substituem uma instalação limpa e testes dos protocolos.
+A edição do manifesto não desinstala pacotes de um ambiente já existente.
+
+ADMET-AI 2 requer uma versão de RDKit mais recente que a fixada no ambiente
+científico. Use `python scripts/setup_admet_ai.py` para o venv CPU local ou crie o
+ambiente opcional de `requirements-admet.yml` e configure `BIOMOL_ADMET_PYTHON`
+com o caminho absoluto do Python desse ambiente. Mantenha os ambientes separados.

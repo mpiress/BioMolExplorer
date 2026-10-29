@@ -16,7 +16,7 @@ def validate_receptor_outputs(prepared, records, engines):
     prepared=Path(prepared)
     if not records:
         raise ValueError('A preparação não produziu receptores utilizáveis.')
-    suffixes=['.dockprep.pdbqt']  # Stable receptor selector for either engine.
+    suffixes=['.dockprep.pdbqt'] if engines in ('vina','both') else []
     if engines in ('dock6','both'):
         suffixes += ['.dockprep.mol2','.noH.pdb']
     for record in records:
@@ -31,9 +31,30 @@ def validate_receptor_outputs(prepared, records, engines):
             raise ValueError('Centro do sítio de docking ausente ou inválido para '+receptor+'.') from error
 
 
-def _prepare_one(original, dataset, destination, options, ph, engines, formats, cache, owned):
-    import time
-    from .diagnostics import event, get_logger
+def export_receptor_pdbqt(prepared,records):
+    """Add only Vina's rigid format to a working copy, preserving charges/geometry."""
+    from .processes import run_command
+    prepared=Path(prepared)
+    for receptor in sorted({f'{r[0]}_{r[3]}' for r in records}):
+        destination=prepared/(receptor+'.dockprep.pdbqt')
+        if destination.is_file() and destination.stat().st_size:continue
+        source=prepared/(receptor+'.dockprep.mol2')
+        if not source.is_file():continue  # Normal bundle validation reports the missing format.
+        run_command(['obabel','-imol2',str(source),'-opdbqt','-O',str(destination),'-xr'],cwd=str(prepared))
+
+
+def prepare_candidates(dataset, destination, config=None, ph=7.4, engines='both'):
+    if engines not in ('vina','dock6','both'):
+        raise ValueError('Selecione Vina, DOCK6 ou ambos para a saída de preparação.')
+    config=config or {}
+    validate_preparation_settings(config)
+    options=dict(DEFAULTS,**config.get('ligand',{}))
+    destination=Path(destination);destination.mkdir(parents=True,exist_ok=True)
+    from .preparation_failures import CURRENT_REPORT,PreparationFailures
+    report=CURRENT_REPORT.get() or PreparationFailures()
+    inputs=read_compounds(dataset);rows=[]
+    from .diagnostics import event,get_logger
+    from .progress import report_progress
     logger=get_logger('scientific_tools')
     started=time.monotonic()
     row=dict(original);code=row['molecule_chembl_id']
@@ -72,6 +93,7 @@ def _prepare_one(original, dataset, destination, options, ph, engines, formats, 
         if not reused:
             with tempfile.TemporaryDirectory(prefix='bme-prepare-') as folder:
                 event(logger,'ligand.preparation.started','Preparando ligante externo (não o receptor).',compound_identifier=code)
+                report_progress(None,row_number-2,len(inputs),key='preparation.ligand',arguments={'code':code,'index':row_number-1,'total':len(inputs)})
                 work=Path(folder)
                 step_started=time.monotonic()
                 if pose:

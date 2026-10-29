@@ -14,8 +14,8 @@ class AppConfig:
     job_timeout: float | None = None
     worker_python: Path | None = None
     resource_dir: Path | None = None
-    preparation_cache: Path | None = None
-    reuse_preparations: bool = True
+    cache_dir: Path | None = None
+    reuse_results: bool = True
 
     def __post_init__(self):
         object.__setattr__(self, 'workspace', Path(self.workspace).expanduser().resolve())

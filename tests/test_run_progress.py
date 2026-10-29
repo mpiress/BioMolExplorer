@@ -30,6 +30,7 @@ class WorkerRetrievalTests(unittest.TestCase):
         fixture = Path(__file__).parent / 'fixtures' / 'chembl_worker.py'
         commands = []
         def launch(args, **kwargs):
+            if args[1:3]!=['-m','biomolexplorer.worker']:return original(args,**kwargs)
             commands.append(args)
             self.assertEqual(kwargs['env']['BIOMOL_PREPARATION_CACHE'],
                 str(store.project_dir(project['id'])/'.biomolexplorer'/'cache'/'ligand-preparation'))
@@ -81,6 +82,7 @@ class WorkerRetrievalTests(unittest.TestCase):
         fixture = Path(__file__).parent / 'fixtures' / 'chembl_worker.py'
         commands = []
         def launch(args, **kwargs):
+            if args[1:3]!=['-m','biomolexplorer.worker']:return original(args,**kwargs)
             commands.append(args)
             self.assertEqual(args[1:3], ['-m', 'biomolexplorer.worker'])
             return original([args[0], str(fixture), *args[3:]], **kwargs)
@@ -164,6 +166,8 @@ class RunFeedbackTests(unittest.TestCase):
 
     def test_english_badge_translates_status_and_preserves_custom_stage_name(self):
         self.ui.language = 'en'
+        self.progress = RunProgress(self.ui, self.run)
+        self.ui.run_progress = self.progress
         self.run['status'] = 'running'
         self.run['stages'][0]['status'] = 'running'
         self.progress.update(self.run, now=130)

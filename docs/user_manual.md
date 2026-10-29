@@ -216,17 +216,17 @@ Em **Preparar para docking**, conecte **Receptor PDB (retrieval ou redocking)** 
 
 Adicione uma ou mais fontes de compostos de **ChEMBL**, **PubChem**, **ZINC** ou arquivos próprios em **Compostos selecionados**. O grupo **Preparação e conformação do ligante** configura esses candidatos externos e permanece disponível. O ligante de referência do PDB serve para definir o sítio de docking, não integra a lista de candidatos. Escolha **Preparar saída para → Vina, DOCK6 ou Vina e DOCK6**. O bloco prepara cada candidato e exporta os formatos selecionados a partir da mesma conformação. Conecte a saída deste bloco tanto à entrada de receptor quanto à entrada de compostos de cada ferramenta escolhida. Para reunir várias fontes em uma execução, selecione **Mesclar arquivos (merge)**; o modo individual prepara cada combinação separadamente. Confira os receptores, compostos e centros produzidos.
 
-Use um bloco separado para cada modo de receptor: não combine PDBs brutos com receptores preparados no mesmo bloco. O pH continua disponível para o preparo dos candidatos quando o receptor é reutilizado. Antes de preparar os compostos, o bloco verifica os centros do sítio (três coordenadas finitas) e os arquivos do receptor exigidos pela saída escolhida. Vina requer `.dockprep.pdbqt`; DOCK6 requer também `.dockprep.mol2` e `.noH.pdb`. O PDBQT permanece como arquivo de seleção do receptor nos dois casos. Arquivos ausentes interrompem o processo com o nome do arquivo necessário, sem refazer o preparo do receptor.
+Use um bloco separado para cada modo de receptor: não combine PDBs brutos com receptores preparados no mesmo bloco. O pH continua disponível para o preparo dos candidatos quando o receptor é reutilizado. Antes de preparar os compostos, o bloco verifica os centros do sítio (três coordenadas finitas) e os arquivos do receptor exigidos pela saída escolhida. Vina requer `.dockprep.pdbqt`; DOCK6 requer `.dockprep.mol2` e `.noH.pdb`. A seleção aceita o receptor MOL2 quando não existe PDBQT; quando ambos estão presentes, mostra apenas o PDBQT. Se um consumidor Vina precisar do formato rígido, ele é exportado em uma cópia de trabalho sem refazer o preparo Chimera. Arquivos ausentes interrompem o processo com o nome do arquivo necessário, sem refazer o preparo do receptor.
 
-Em **Executar redocking**, mantenha **Preparar complexos antes do redocking** ativado para PDBs brutos. Desative-o apenas ao fornecer o conjunto já preparado. Confira registros, dimensões da caixa, esforço de busca e número de poses. Examine os RMSDs e os logs; defina os critérios de aceitação do protocolo no estudo antes de usar seus receptores no docking de candidatos.
+Em **Executar redocking**, mantenha **Preparar complexos antes do redocking** ativado para PDBs brutos. Desative-o apenas ao fornecer o conjunto já preparado. Escolha Vina ou DOCK6 6.11 e confira os campos específicos de busca, sítio e poses. Examine os RMSDs e os logs; defina os critérios de aceitação do protocolo no estudo antes de usar seus receptores no docking de candidatos.
 
-Em **Entradas**, selecione e valide ao menos um par PDB / ligante / resíduo / **Cadeia**; a cadeia é comum às duas estruturas. Configure os cofatores e a preparação do receptor e do ligante nessa seleção. A resolução vem dos metadados e as opções do ligante valem também para a conformação. Pares já configurados são reutilizados sem uma nova solicitação. Consulte [Configuração do redocking](redocking_configuration.md) para as opções, validações e diagnóstico.
+Em **Entradas**, selecione e valide ao menos um par PDB / ligante / resíduo / **Cadeia**; a cadeia é comum às duas estruturas. Revise a tabela e use as ações de editar/remover. Defina uma preparação comum para receptores e outra para ligantes, com cofatores opcionais recolhidos. A resolução vem dos metadados e as opções do ligante valem também para a conformação. Pares já configurados são reutilizados sem uma nova solicitação. Consulte [Configuração do redocking](redocking_configuration.md) para as opções, validações e diagnóstico.
 
 ### Consultar resultados de redocking
 
 Falhas de preparação são isoladas por par; os outros complexos continuam e a conclusão informa os erros. A tabela mantém os pares que falharam em vermelho, com **Falha na preparação**, RMSD **—** e **Ver erro**. **Excluir falha e complexo de origem** remove o PDB da origem e os pares desse PDB da próxima execução, após confirmação, preservando resultados já concluídos. O código fica excluído da recuperação original até uma liberação intencional no campo **PDBs excluídos de novas recuperações**. Se todos os pares falharem, o processo conclui com aviso e não inicia o Vina.
 
-Ao expandir uma etapa concluída em **Execuções**, a tabela mostra PDB, ligante, resíduo, cadeia e **RMSD (Å)**. **Ver simulação** abre um popup com os arquivos correspondentes àquela seleção. A lista distingue o receptor preparado, o ligante de referência, as poses e os metadados. Arquivos compartilhados pelo receptor ou pela coleção acompanham as simulações correspondentes.
+Ao expandir uma etapa concluída em **Execuções**, a tabela mostra Target, PDB, ligante, resíduo, cadeia e **RMSD (Å)**. **Ver simulação** abre um popup com os arquivos correspondentes àquela seleção. A lista distingue o receptor preparado, o ligante de referência, as poses e os metadados. Arquivos compartilhados pelo receptor ou pela coleção acompanham as simulações correspondentes.
 
 Use o botão de download de cada linha para baixar um arquivo, ou **Baixar todos (ZIP)** para obter o conjunto da simulação. O ZIP conserva as pastas, inclusive quando o ligante de referência e a saída do Vina têm o mesmo nome. Arquivos de outras simulações ficam fora desse conjunto.
 
@@ -381,9 +381,9 @@ Um percurso comum é recuperar/importar compostos → fingerprints → similarid
 
 ## Verificações antes da execução
 
-A seleção de pares é obrigatória e usa uma única **Cadeia** para receptor e ligante. Um redocking já configurado reutiliza os pares escolhidos; o pipeline só pede a seleção quando ela ainda não existe. Resolução vem dos metadados, sem campo editável. Cofatores e opções de solvente, hidrogênios, minimização e cargas são configurados por par. A preparação e a conformação do ligante usam as mesmas opções.
+A seleção de pares é obrigatória e usa uma única **Cadeia** para receptor e ligante. Um redocking já configurado reutiliza os pares escolhidos; o pipeline só pede a seleção quando ela ainda não existe. Resolução vem dos metadados, sem campo editável. A tabela lista os pares com ações de editar/remover. Cofatores e opções de solvente, hidrogênios, minimização e cargas são definidos uma vez para todos os receptores e uma vez para todos os ligantes. A preparação e a conformação do ligante usam as mesmas opções.
 
-Antes de calcular, o sistema verifica os resíduos, a cadeia e os cofatores nos PDBs. Entradas já preparadas precisam dos PDBQT e de três coordenadas finitas em `Prepared/centers.csv`. O ambiente científico deve disponibilizar Chimera, Open Babel (`obabel`) e Vina; sem preparação, somente Vina é exigido. O diretório do interpretador científico também integra o PATH dos processos.
+Antes de calcular, o sistema verifica os resíduos, a cadeia e os cofatores nos PDBs. Escolha **AutoDock Vina** ou **DOCK6 6.11** e preencha os campos específicos exibidos. Entradas já preparadas precisam de PDBQT para Vina ou MOL2 e receptor sem H para DOCK6, além de centros válidos. Chimera e Open Babel são necessários para a preparação; o motor escolhido e suas ferramentas devem estar instalados. O diretório do interpretador científico também integra o PATH dos processos.
 
 Falhas de ferramentas mostram o executável, o código de saída e a mensagem do processo. Scripts Chimera que falharam são preservados para diagnóstico. Corrija a entrada ou a instalação indicada e tente novamente. Não há controle de verbose: a verbosidade do Vina permanece em zero.
 
@@ -552,7 +552,7 @@ Selecione a tabela molecular da análise para ADMET ou docking.
 ```text
 Conecte PDBs e selecione os pares receptor/ligante/resíduo/cadeia.
 Valide a curadoria e confira cofatores e preparo com Chimera.
-Revise caixa, esforço e poses; confirme e execute com Vina.
+Escolha Vina ou DOCK6 6.11, revise suas opções e execute.
 Avalie RMSD, logs, Resíduos e o botão 3D de cada par concluído.
 ```
 
@@ -621,6 +621,34 @@ Abra Resíduos para consultar os contatos geométricos.
 
 ### Resultados, limpeza e histórico
 
+Ao lado de **Atualizar resultados**, há duas ações com ícones vermelhos:
+
+| Ação | Remove | Preserva |
+|---|---|---|
+| **Remover todos / Remove All** | Resultados gerados e caches computacionais do projeto | Blocos, conexões e todas as configurações |
+| **Limpar tudo / Clear All** | Os mesmos resultados, seleções de entrada, parâmetros científicos e templates personalizados | Blocos e conexões; os parâmetros voltam aos padrões |
+
+Ambas preservam os arquivos originais da biblioteca, logs e histórico. Confira o
+diálogo antes de confirmar; cancelar não apaga dados. Finalize ou cancele uma
+execução ativa antes de limpar. Após Clear All, configure novamente os blocos.
+
+Com a reutilização habilitada, lotes válidos permanecem disponíveis após reiniciar.
+A equivalência entre configuração, entradas e resultados é verificada ao salvar e
+antes de executar; não há sincronização manual. Adicionar entradas ou ações
+independentes preserva resultados anteriores e processa somente o complemento.
+Alterar parâmetros ou remover entradas/ações exige confirmação antes de salvar.
+O modal lista os blocos com resultados afetados, incluindo dependentes. Confirmar
+salva a alteração e remove somente resultados obsoletos; cancelar restaura a
+configuração anterior e preserva os arquivos. Resultados de outras entradas e
+arquivos compartilhados permanecem disponíveis. Uma execução que ainda utiliza
+os dados afetados deve terminar ou ser cancelada antes dessa alteração.
+
+Por exemplo, adicionar MACCS a um bloco com Morgan concluído executa apenas MACCS.
+Alterar depois o raio de Morgan preserva MACCS. Remover um arquivo de um conjunto
+individual remove apenas seu lote e os lotes dependentes. Um resultado calculado
+por merge representa todo o conjunto: alterar seus integrantes exige reconstruir
+essa combinação, sem substituir o cálculo por uma aproximação de lotes individuais.
+
 ```text
 Finalize ou cancele a execução antes de remover seus dados.
 Abra Resultados por etapa e escolha Remover todos os resultados.
@@ -636,3 +664,29 @@ Baixe tabelas, figuras ou o ZIP da simulação em Resultados.
 Exporte o projeto pelo cartão para guardar configuração e dados.
 Importe o pacote no workspace de destino e confira as ferramentas.
 ```
+
+
+## Identificar os conjuntos nas saídas ADMET
+
+As novas saídas ADMET incluem a origem do conjunto antes do tipo de resultado:
+
+| Tag | Origem |
+| --- | --- |
+| `MOL` | Moléculas de referência da seleção ChEMBL ou arquivo identificado como moléculas |
+| `SIM` | Moléculas similares da seleção ChEMBL ou arquivo identificado como similares |
+| `PUBCHEM` | Compostos recuperados da PubChem |
+| `ZINC` | Compostos recuperados da ZINC |
+| `MIX` | Entradas mescladas de categorias diferentes ou coleção consolidada |
+| `INPUT` | Arquivo cuja categoria não pôde ser determinada com segurança |
+
+Exemplos: `ACHE_molecules_MOL_BBB+.csv`, `ACHE_similars_SIM_HIA-.csv` e
+`ACHE_molecules_MOL_egg.png`. A mesma identificação acompanha a tabela avaliada,
+selecionados/rejeitados, gráficos interativos, relatório de métodos e relatório
+de exclusões, quando gerado. O nome do alvo vem da linhagem do pipeline; arquivos
+avulsos usam uma identificação conservadora pelo nome. Caracteres impróprios e
+nomes muito longos são normalizados com um identificador curto quando necessário.
+
+Os finais `_evaluated`, `_BBB+`, `_HIA-`, `_egg` e `_admet_report` continuam sendo
+reconhecidos pelos leitores e blocos seguintes. A mudança se aplica às novas
+saídas; arquivos históricos não são renomeados nem precisam ser recalculados
+para continuar sendo lidos.

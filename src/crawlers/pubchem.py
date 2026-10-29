@@ -129,13 +129,13 @@ class PubChemSimilarMols:
         # Resolve every reference structure first, including structures with no hits
         # in their own similarity search, so exclusions apply across all queries.
         excluded = set()
-        report_progress('Identificando os compostos de referência no PubChem…', 0, len(references))
+        report_progress('pubchem.references', 0, len(references))
         for index, (_, smiles) in enumerate(references, 1):
             result = self._request('smiles/cids/JSON', {'smiles': smiles})
             excluded.update(result.get('IdentifierList', {}).get('CID', []))
-            report_progress('Identificando os compostos de referência no PubChem…', index, len(references))
+            report_progress('pubchem.references', index, len(references))
         matches = []
-        report_progress('Consultando compostos similares no PubChem…', 0, len(references))
+        report_progress('pubchem.query', 0, len(references))
         for index, (name, smiles) in enumerate(references, 1):
             result = self._request('fastsimilarity_2d/smiles/cids/JSON', {'smiles': smiles},
                                    {'Threshold': self.threshold, 'MaxRecords': self.max_records})
@@ -143,13 +143,13 @@ class PubChemSimilarMols:
             if len(cids) >= self.max_records:
                 self.logger.warning('PubChem result limit reached for %s; results may be truncated', name)
             matches.extend((name, smiles, cid) for cid in dict.fromkeys(cids) if cid not in excluded)
-            report_progress('Consultando compostos similares no PubChem…', index, len(references))
+            report_progress('pubchem.query', index, len(references))
         candidates = sorted({cid for _, _, cid in matches})
         records, accepted, new_structures = [], {}, {}
         properties = ('SMILES,ConnectivitySMILES,InChI,InChIKey,MolecularFormula,MolecularWeight,'
                       'Title,IUPACName,XLogP,TPSA,HBondDonorCount,HBondAcceptorCount,'
                       'RotatableBondCount,HeavyAtomCount,Charge,ExactMass,IsotopeAtomCount')
-        report_progress('Baixando as propriedades dos novos compostos PubChem…', 0, len(candidates))
+        report_progress('pubchem.properties', 0, len(candidates))
         for offset in range(0, len(candidates), 100):
             batch = candidates[offset:offset + 100]
             result = self._request(f'cid/property/{properties}/JSON', {'cid': ','.join(map(str, batch))})
@@ -182,7 +182,7 @@ class PubChemSimilarMols:
                     'HBondDonorCount','HBondAcceptorCount','RotatableBondCount','HeavyAtomCount','Charge','ExactMass','IsotopeAtomCount')})
                 record['PubChem_TPSA']=prop.get('TPSA')
                 records.append(compound_properties(record,calculate=True,source='PubChem'))
-            report_progress('Baixando as propriedades dos novos compostos PubChem…',
+            report_progress('pubchem.properties',
                             min(offset + 100, len(candidates)), len(candidates))
         compounds = pd.DataFrame(records, columns=self.COLUMNS)
         provenance = pd.DataFrame([(name, smiles, accepted[cid], self.threshold) for name, smiles, cid in matches

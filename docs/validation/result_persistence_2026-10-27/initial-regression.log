@@ -1,0 +1,40 @@
+...................[23:26:16] DEPRECATION WARNING: please use MorganGenerator
+[23:26:16] DEPRECATION WARNING: please use MorganGenerator
+[23:26:16] DEPRECATION WARNING: please use MorganGenerator
+[23:26:16] DEPRECATION WARNING: please use MorganGenerator
+[23:26:16] DEPRECATION WARNING: please use MorganGenerator
+[23:26:16] DEPRECATION WARNING: please use MorganGenerator
+[23:26:16] DEPRECATION WARNING: please use MorganGenerator
+[23:26:16] DEPRECATION WARNING: please use MorganGenerator
+[23:26:16] DEPRECATION WARNING: please use MorganGenerator
+............................................................................[23:28:23] SMILES Parse Error: syntax error while parsing: invalid
+[23:28:23] SMILES Parse Error: check for mistakes around position 1:
+[23:28:23] invalid
+[23:28:23] ^
+[23:28:23] SMILES Parse Error: Failed parsing SMILES 'invalid' for input: 'invalid'
+[23:28:24] SMILES Parse Error: syntax error while parsing: invalid
+[23:28:24] SMILES Parse Error: check for mistakes around position 1:
+[23:28:24] invalid
+[23:28:24] ^
+[23:28:24] SMILES Parse Error: Failed parsing SMILES 'invalid' for input: 'invalid'
+.......................F.............................................................................................[23:29:23] 92H: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[23:29:23] 92H: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+.[23:29:23] Explicit valence for atom # 10 C, 6, is greater than permitted
+[23:29:23] sanitize [23:29:23] 5NN0_92H_627A.lig.pdb: ..........[23:29:25] SMILES Parse Error: syntax error while parsing: invalid
+[23:29:25] SMILES Parse Error: check for mistakes around position 1:
+[23:29:25] invalid
+[23:29:25] ^
+[23:29:25] SMILES Parse Error: Failed parsing SMILES 'invalid' for input: 'invalid'
+.....................................................
+======================================================================
+FAIL: test_literal_validation_messages_have_translations_in_both_directions (test_localization.LocalizationCoverageTests.test_literal_validation_messages_have_translations_in_both_directions)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_localization.py", line 170, in test_literal_validation_messages_have_translations_in_both_directions
+    self.assertTrue(Translator('en')(message)!=message or message in known_english,
+AssertionError: False is not true : result_transactions.py:30: Arquivo fora do projeto.
+
+----------------------------------------------------------------------
+Ran 276 tests in 234.620s
+
+FAILED (failures=1)

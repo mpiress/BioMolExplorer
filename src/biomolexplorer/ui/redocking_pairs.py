@@ -1,30 +1,19 @@
 """Explicit redocking selection and preparation beside input sources."""
 import copy
+from types import SimpleNamespace
 import flet as ft
 from biomolexplorer.redocking_config import pair_key, validate_pairs
+from .localization import verbatim
+from .feedback import close_dialog
 
 
 class RedockingPairs:
     def __init__(self, form):
         self.form = form
         self.rows = []
-        from .preparation_settings import PreparationSettings
-        saved=form.stage['parameters'].get('preparation_pairs') or {}
-        seed=next(iter(saved.values()),{})
-        self.preparation=PreparationSettings(form,seed)
-        general_keys=('receptor','ligand','preparation_backend','ambertools_path','ambertools_env','vina_charge_policy')
-        differing=any(any(config.get(key)!=seed.get(key) for key in general_keys) for config in saved.values())
-        self.migration_notice=ft.Text('Existem opções de preparo antigas diferentes entre pares. As opções gerais exibidas partem do primeiro par e serão aplicadas a todos ao confirmar. Revise-as antes de continuar.',
-            size=12,color='#92400E',visible=differing)
-
-        # Cofactors and structural identities stay attached to each curated pair.
-        self.preparation.has_cofactors.visible=False
-        self.preparation.cofactors.visible=False
-        self.preparation.groups['receptor'].title=ft.Text('Preparação de todos os receptores')
-        self.preparation.groups['ligand'].title=ft.Text('Preparação de todos os ligantes')
-
-        self.preparation_panels={}
-        self.box = ft.Column(spacing=20)
+        self.table=ft.DataTable(columns=[ft.DataColumn(ft.Text(t)) for t in ('PDB','Ligante','Número do resíduo','Cadeia','Ações')],rows=[],column_spacing=36,heading_row_color='#F1F5F9',data_row_min_height=56,data_row_max_height=64,divider_thickness=.5)
+        self.box = ft.Row([self.table],scroll=ft.ScrollMode.AUTO,on_size_change=self.resize)
+        self.preparation=form.preparation_settings
         self.summary = ft.Text()
         self.available = ft.Dropdown(label='PDB / ligante / resíduo / cadeia disponíveis',
             disabled=not form.writable, enable_filter=True, enable_search=True)
@@ -32,16 +21,24 @@ class RedockingPairs:
             on_click=self.choose_all, disabled=not form.writable)
         self.control = ft.Column([
             ft.Text('Pares para redocking', size=16, weight=ft.FontWeight.W_600),
-            ft.Text('Os pares das estruturas selecionadas são preservados da curadoria. Revise as identidades abaixo; a preparação geral será aplicada a todo o conjunto.', size=12),
+            ft.Text('Selecione e valide cada par. A cadeia identifica o par; a preparação comum está nas seções de receptor e ligante. A resolução é preservada dos metadados.', size=12),
             ft.Text('Para PDBs recuperados com triagem, esta lista contém os candidatos priorizados. Use Ligantes nos resultados da recuperação para revisar ou incluir alternativas.',size=12),
             self.available,
-            ft.TextButton('Selecionar par e configurar preparação', on_click=self.choose, disabled=not form.writable),
+            ft.TextButton('Adicionar par selecionado', on_click=self.choose, disabled=not form.writable),
             self.select_all_button,
-            ft.TextButton('Informar par manualmente', on_click=lambda e: self.add(), disabled=not form.writable),
-            self.summary, self.box, self.migration_notice, self.preparation.control], spacing=18, data='input')
+            ft.TextButton('Informar par manualmente', on_click=lambda e:self.open_editor(), disabled=not form.writable),
+            self.summary, self.box], spacing=18, data='pairs')
         for record in form.stage['parameters'].get('pdb_codes') or []:
             self.add(record, update=False)
         self.refresh()
+
+    def resize(self,e):
+        # Fill the available card width; preserve readable columns and horizontal
+        # scrolling on small viewports. Avoid updates when layout is unchanged.
+        width=max(680,round(e.width))
+        if self.table.width!=width:
+            self.table.width=width
+            self.form.ui.page.update()
 
     def candidates(self):
         editor = self.form.input_editors['base_input_path']
@@ -79,9 +76,7 @@ class RedockingPairs:
         self.summarize()
 
     def summarize(self):
-        self.summary.value = 'Pares selecionados: ' + ('; '.join(
-            f'{fields[0].value} / {fields[1].value} / {fields[2].value} / {fields[3].value}'
-            for fields, _, _, _, _ in self.rows) if self.rows else 'nenhum')
+        self.summary.value = f'Pares selecionados: {len(self.rows)}'
 
     def choose(self, e):
         if self.available.value is not None:
@@ -89,64 +84,72 @@ class RedockingPairs:
 
     def choose_all(self, e):
         if not self.form.writable:return
-        selected=set();receptors={}
-        for fields, _, (has_cofactors,cofactors), options, _ in self.rows:
-            record=[field.value.strip() for field in fields]
-            record[1]=record[1].upper()
-            try:record[2]=int(record[2])
-            except ValueError:pass  # Keep unfinished manual rows for the user.
-            selected.add(pair_key(record))
-            receptors.setdefault((record[0],record[3]),{
-                'cofactors':[c.strip().upper() for c in cofactors.value.split(',') if c.strip()] if has_cofactors.value else [],
-                'receptor':{key:control.value for key,control in options['receptor'].items()}})
+        selected={pair_key([field.value.strip() for field in fields]) for fields,_,_,_,_ in self.rows}
         for record in self.candidates():
             key=pair_key(record)
             if key in selected:continue
-            self.add(record,update=False,config=receptors.get((record[0],record[3])))
+            self.add(record,update=False)
             selected.add(key)
         self.sync_preparation();self.summarize();self.form.ui.page.update()
 
     def add(self, record=None, update=True, config=None):
         record = list(record or ['', '', '', 'A'])
-        saved = self.form.stage['parameters'].get('preparation_pairs') or {}
-        config = copy.deepcopy(saved.get(pair_key(record), {}) if config is None else config)
-        fields = [ft.TextField(label=label, value=str(value), disabled=not self.form.writable,
-            on_change=lambda e: self.changed()) for label, value in zip(
-                ('Código PDB', 'Ligante', 'Número do resíduo', 'Cadeia'), record[:4])]
-        has_cofactors=ft.Switch(label='Manter cofatores neste receptor',value=bool(config.get('cofactors')),disabled=not self.form.writable)
-        cofactors=ft.TextField(label='Códigos dos cofatores',value=', '.join(config.get('cofactors',[])))
+        fields=[SimpleNamespace(value=str(value)) for value in record[:4]]
+        has_cofactors,cofactors=self.preparation.has_cofactors,self.preparation.cofactors
         settings=self.preparation.settings
-        has_cofactors.on_change=lambda e:(self.sync_preparation(),self.form.ui.page.update())
-        from .settings_layout import grid
-        panel=ft.Container(content=ft.Column([grid(fields),has_cofactors,cofactors],spacing=16),
-            padding=20,border=ft.Border.all(1,'#E2E8F0'),border_radius=12)
-        entry = (fields, record, (has_cofactors, cofactors), settings, panel)
-        self.preparation_panels[id(panel)]=config
+        panel=ft.DataRow(cells=[ft.DataCell(verbatim(ft.Text(field.value))) for field in fields])
+        entry=(fields,record,(has_cofactors,cofactors),settings,panel)
         def remove(e):
-            self.preparation_panels.pop(id(panel),None)
-            self.rows.remove(entry); self.box.controls.remove(panel); self.changed()
-        panel.content.controls.append(ft.TextButton('Remover par', on_click=remove, disabled=not self.form.writable))
-        self.rows.append(entry); self.box.controls.append(panel)
+            self.rows.remove(entry);self.table.rows.remove(panel);self.changed()
+        panel.cells.append(ft.DataCell(ft.Row([
+            ft.IconButton(ft.Icon(ft.Icons.EDIT_OUTLINED,semantics_label='Editar par'),on_click=lambda e:self.open_editor(entry),disabled=not self.form.writable,tooltip='Editar par'),
+            ft.IconButton(ft.Icon(ft.Icons.DELETE_OUTLINE,semantics_label='Remover par'),on_click=remove,disabled=not self.form.writable,tooltip='Remover par')],spacing=8)))
+        self.rows.append(entry);self.table.rows.append(panel)
         if update:
             self.sync_preparation();self.summarize();self.form.ui.page.update()
 
     def changed(self):
+        for fields,_,_,_,row in self.rows:
+            for field,cell in zip(fields,row.cells[:4]):cell.content.value=field.value
         self.summarize(); self.form.ui.page.update()
 
+    def open_editor(self,entry=None):
+        if not self.form.writable:return
+        original=[field.value for field in entry[0]] if entry else ['', '', '', 'A']
+        controls=[ft.TextField(label=label,value=value) for label,value in zip(
+            ('Código PDB','Ligante','Número do resíduo','Cadeia'),original)]
+        error=ft.Text(color='#B91C1C',visible=False)
+        def close(e=None):close_dialog(self.form.ui.page,dialog)
+        def save(e):
+            try:
+                try:record=[controls[0].value.strip(),controls[1].value.strip().upper(),int(controls[2].value),controls[3].value.strip()]
+                except (TypeError,ValueError):raise ValueError('Informe o número do resíduo do ligante para cada par selecionado.') from None
+                others=[[f.value.strip() for f in fields] for fields,_,_,_,_ in self.rows if entry is None or fields is not entry[0]]
+                validate_pairs(others+[record],{})
+                candidates=self.candidates()
+                match=next((r for r in candidates if list(r[:4])==record),None)
+                if candidates and match is None:raise ValueError('O par selecionado não corresponde ao PDB, ligante, resíduo e cadeia dos dados de entrada.')
+                if entry:
+                    for field,value in zip(entry[0],record):field.value=str(value)
+                    # Resolution belongs to the validated tuple, never to an edited number.
+                    entry[1][:]=list(match or (entry[1] if pair_key(entry[1])==pair_key(record) else record))
+                else:self.add(list(match or record),update=False)
+                self.changed();close()
+            except ValueError as exc:
+                error.value=str(exc);error.visible=True;self.form.ui.page.update()
+        dialog=ft.AlertDialog(modal=True,title=ft.Text('Editar par' if entry else 'Adicionar par'),
+            content=ft.Container(width=min(620,max(260,(getattr(self.form.ui.page,'width',None) or 900)-120)),
+                content=ft.Column([ft.ResponsiveRow([ft.Container(c,col={'xs':12,'sm':6},padding=ft.Padding.symmetric(vertical=8)) for c in controls],spacing=24,run_spacing=20),error],tight=True,spacing=16,scroll=ft.ScrollMode.AUTO)),
+            actions=[ft.TextButton('Cancelar',on_click=close),ft.TextButton('Salvar par',on_click=save)])
+        self.form.ui.page.show_dialog(dialog)
+
     def sync_preparation(self):
-        inactive=not self.form.writable or not self.form.field_controls['prepare_complex'].value
-        self.preparation.sync(inactive)
-        for _, _, (has_cofactors,cofactors), settings, panel in self.rows:
-            has_cofactors.disabled=inactive
-            cofactors.disabled=inactive or not has_cofactors.value
-            for options in settings.values():
-                for control in options.values():control.disabled=inactive
+        self.preparation.sync(inactive=not self.form.field_controls['prepare_complex'].value)
 
     def read(self):
         records = []; settings = {}
-        candidates={pair_key(r):r for r in self.candidates()}
-        general=self.preparation.read()
-        for fields, original, (has_cofactors, cofactors), options, panel in self.rows:
+        shared=self.preparation.read()
+        for fields, original, (has_cofactors, cofactors), options, _ in self.rows:
             try: record = [fields[0].value.strip(), fields[1].value.strip().upper(), int(fields[2].value), fields[3].value.strip()]
             except (ValueError, TypeError): raise ValueError('Informe o número do resíduo do ligante para cada par selecionado.')
             # Only the selected metadata tuple supplies resolution.
@@ -155,12 +158,7 @@ class RedockingPairs:
             if candidates and match is None:
                 raise ValueError('O par selecionado não corresponde ao PDB, ligante, resíduo e cadeia dos dados de entrada.')
             if match and len(match) > 4: record.append(match[4])
-            config = copy.deepcopy(self.preparation_panels[id(panel)])
-            for key in ('receptor','ligand','preparation_backend','ambertools_path','ambertools_env','vina_charge_policy'):
-                config.pop(key,None)
-                if key in general:config[key]=copy.deepcopy(general[key])
-            config['cofactors']=[c.strip().upper() for c in cofactors.value.split(',') if c.strip()] if has_cofactors.value else []
-            if has_cofactors.value and not config['cofactors']: raise ValueError('Informe quais cofatores devem ser mantidos no receptor.')
+            config=copy.deepcopy(shared)
             records.append(record); settings[pair_key(record)] = config
         # An empty draft is valid while the user is assembling the pipeline.
         # PipelineService.resume()/execution performs the mandatory check.

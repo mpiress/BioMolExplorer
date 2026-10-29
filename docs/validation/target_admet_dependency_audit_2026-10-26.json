@@ -1,0 +1,507 @@
+{
+  "python_files": 270,
+  "imports": {
+    "Bio": {
+      "package": "biopython",
+      "locations": [
+        "src/biomolexplorer/pdb_ligands.py:12",
+        "src/wrappers/docking.py:34",
+        "tests/test_pdb_ligand_triage.py:160"
+      ],
+      "environment": "main"
+    },
+    "PIL": {
+      "package": "pillow",
+      "locations": [
+        "scripts/validate_docking_viewer.py:9",
+        "scripts/validate_pdb_viewer.py:9",
+        "src/biomolexplorer/input_validation.py:67",
+        "src/biomolexplorer/pdf_preview.py:25",
+        "src/biomolexplorer/ui/footprint.py:96",
+        "src/biomolexplorer/ui/graph_raster.py:11",
+        "src/biomolexplorer/ui/graph_raster.py:18",
+        "src/biomolexplorer/ui/pipeline_png.py:17",
+        "src/biomolexplorer/visualizations.py:201",
+        "src/kernel/utilities.py:34",
+        "tests/test_footprint_popup.py:16",
+        "tests/test_footprint_popup.py:90",
+        "tests/test_graph_navigation_gephi.py:13",
+        "tests/test_pipeline_png.py:10"
+      ],
+      "environment": "main"
+    },
+    "admet_ai": {
+      "package": "admet-ai",
+      "locations": [
+        "src/biomolexplorer/admet_predictors.py:46",
+        "src/biomolexplorer/admet_predictors.py:50"
+      ],
+      "environment": "optional ADMET"
+    },
+    "datasketch": {
+      "package": "datasketch",
+      "locations": [
+        "src/kernel/descriptors.py:40"
+      ],
+      "environment": "main"
+    },
+    "fastapi": {
+      "package": "fastapi",
+      "locations": [
+        "src/biomolexplorer/ui/web_host.py:2",
+        "src/biomolexplorer/ui/web_host.py:3",
+        "tests/test_pdb_viewer.py:92"
+      ],
+      "environment": "main"
+    },
+    "flet": {
+      "package": "flet",
+      "locations": [
+        "src/biomolexplorer/ui/action_help.py:3",
+        "src/biomolexplorer/ui/activity_measures.py:4",
+        "src/biomolexplorer/ui/admet_settings.py:2",
+        "src/biomolexplorer/ui/app.py:12",
+        "src/biomolexplorer/ui/artifact_picker.py:2",
+        "src/biomolexplorer/ui/branding.py:4",
+        "src/biomolexplorer/ui/color_palette.py:2",
+        "src/biomolexplorer/ui/compound_table.py:3",
+        "src/biomolexplorer/ui/configuration_loading.py:2",
+        "src/biomolexplorer/ui/dataset_origin.py:2",
+        "src/biomolexplorer/ui/dependencies.py:2",
+        "src/biomolexplorer/ui/docking_results.py:2",
+        "src/biomolexplorer/ui/docking_scene.py:4",
+        "src/biomolexplorer/ui/file_selection.py:6",
+        "src/biomolexplorer/ui/file_table.py:3",
+        "src/biomolexplorer/ui/flow_canvas.py:5",
+        "src/biomolexplorer/ui/flow_canvas.py:7",
+        "src/biomolexplorer/ui/folder_browser.py:7",
+        "src/biomolexplorer/ui/footprint.py:4",
+        "src/biomolexplorer/ui/graph_appearance.py:3",
+        "src/biomolexplorer/ui/graph_appearance.py:4",
+        "src/biomolexplorer/ui/graph_explorer.py:5",
+        "src/biomolexplorer/ui/graph_explorer.py:6",
+        "src/biomolexplorer/ui/graph_raster.py:5",
+        "src/biomolexplorer/ui/graph_raster.py:6",
+        "src/biomolexplorer/ui/graph_table.py:5",
+        "src/biomolexplorer/ui/guided.py:5",
+        "src/biomolexplorer/ui/import_files.py:2",
+        "src/biomolexplorer/ui/input_editor.py:3",
+        "src/biomolexplorer/ui/localization.py:11",
+        "src/biomolexplorer/ui/localization.py:12",
+        "src/biomolexplorer/ui/molecular_cards.py:3",
+        "src/biomolexplorer/ui/molecular_inspector.py:4",
+        "src/biomolexplorer/ui/molecular_network_dashboard.py:3",
+        "src/biomolexplorer/ui/molecular_network_dashboard.py:4",
+        "src/biomolexplorer/ui/molecule_3d.py:3",
+        "src/biomolexplorer/ui/molecule_3d.py:4",
+        "src/biomolexplorer/ui/network_charts.py:2",
+        "src/biomolexplorer/ui/network_charts.py:3",
+        "src/biomolexplorer/ui/pdb_results.py:3",
+        "src/biomolexplorer/ui/preparation_failures.py:2",
+        "src/biomolexplorer/ui/preparation_settings.py:4",
+        "src/biomolexplorer/ui/project_tools.py:8",
+        "src/biomolexplorer/ui/redocking_pairs.py:3",
+        "src/biomolexplorer/ui/redocking_results.py:2",
+        "src/biomolexplorer/ui/removal.py:3",
+        "src/biomolexplorer/ui/results_viewer.py:6",
+        "src/biomolexplorer/ui/results_viewer.py:7",
+        "src/biomolexplorer/ui/run_presentation.py:2",
+        "src/biomolexplorer/ui/run_progress.py:3",
+        "src/biomolexplorer/ui/stage_results.py:3",
+        "src/biomolexplorer/ui/updates.py:3",
+        "src/biomolexplorer/ui/zoom.py:2",
+        "tests/test_canvas_drag_regression.py:8",
+        "tests/test_compound_inspection.py:13",
+        "tests/test_compound_tables.py:178",
+        "tests/test_configuration_loading.py:5",
+        "tests/test_editor_responsiveness.py:8",
+        "tests/test_file_selection.py:14",
+        "tests/test_footprint_popup.py:9",
+        "tests/test_frontend_navigation.py:8",
+        "tests/test_graph_explorer.py:32",
+        "tests/test_graph_layout_fragments.py:16",
+        "tests/test_graph_layout_fragments.py:17",
+        "tests/test_graph_navigation_gephi.py:11",
+        "tests/test_graph_scaffold_scope.py:233",
+        "tests/test_guided_dependencies.py:8",
+        "tests/test_guided_input_preservation.py:6",
+        "tests/test_guided_ui.py:44",
+        "tests/test_localization.py:7",
+        "tests/test_localization.py:8",
+        "tests/test_mcs_ranking_refinements.py:9",
+        "tests/test_molecular_inspector_presentation.py:5",
+        "tests/test_network_analysis.py:10",
+        "tests/test_network_refinement.py:8",
+        "tests/test_pdb_ligand_triage.py:12",
+        "tests/test_pipeline_editor_regressions.py:9",
+        "tests/test_pipeline_execution.py:537",
+        "tests/test_pipeline_guidance.py:23",
+        "tests/test_pipeline_png.py:11",
+        "tests/test_preparation_settings.py:8",
+        "tests/test_removal_progress.py:7",
+        "tests/test_results_display.py:22",
+        "tests/test_retrieval_usability.py:120",
+        "tests/test_retrieval_usability.py:17",
+        "tests/test_retrieval_usability.py:175",
+        "tests/test_runtime_messages.py:14",
+        "tests/test_ui_layout.py:6",
+        "tests/test_workspace_actions.py:12",
+        "tests/test_zoom_visualizations.py:15",
+        "tests/test_zoom_visualizations.py:16"
+      ],
+      "environment": "main"
+    },
+    "flet_web": {
+      "package": "flet-web",
+      "locations": [
+        "src/biomolexplorer/ui/web_host.py:4"
+      ],
+      "environment": "main"
+    },
+    "matplotlib": {
+      "package": "matplotlib",
+      "locations": [
+        "src/biomolexplorer/egg_plot.py:27",
+        "src/biomolexplorer/egg_plot.py:28",
+        "src/biomolexplorer/egg_plot.py:29",
+        "src/biomolexplorer/egg_plot.py:30",
+        "src/caad/complex_network.py:19",
+        "src/caad/complex_network.py:26",
+        "src/caad/complex_network.py:27",
+        "src/caad/docking.py:30",
+        "src/caad/docking.py:39",
+        "src/caad/docking.py:46",
+        "src/caad/graph_results.py:171",
+        "src/caad/graph_results.py:172",
+        "src/caad/graph_results.py:173",
+        "src/caad/graph_results.py:174",
+        "src/caad/graph_results.py:175",
+        "src/caad/graph_results.py:176",
+        "src/caad/redocking.py:48",
+        "src/caad/redocking.py:57",
+        "src/caad/redocking.py:64",
+        "src/kernel/descriptors.py:22",
+        "src/kernel/utilities.py:21",
+        "src/wrappers/docking.py:40",
+        "tests/test_footprint_popup.py:89"
+      ],
+      "environment": "main"
+    },
+    "networkx": {
+      "package": "networkx",
+      "locations": [
+        "src/biomolexplorer/graph_layouts.py:9",
+        "src/biomolexplorer/network_analysis.py:10",
+        "src/biomolexplorer/network_centrality.py:6",
+        "src/biomolexplorer/ui/graph_explorer.py:427",
+        "src/biomolexplorer/ui/results_viewer.py:40",
+        "src/biomolexplorer/visualizations.py:104",
+        "src/biomolexplorer/visualizations.py:30",
+        "src/caad/complex_network.py:24",
+        "src/caad/complex_network.py:37",
+        "src/caad/graph_results.py:12",
+        "tests/test_compound_inspection.py:11",
+        "tests/test_graph_layout_fragments.py:8",
+        "tests/test_graph_navigation_gephi.py:12",
+        "tests/test_graph_scaffold_scope.py:164",
+        "tests/test_graph_scaffold_scope.py:198",
+        "tests/test_mcs_ranking_refinements.py:8",
+        "tests/test_molecular_network_dashboard.py:13",
+        "tests/test_network_analysis.py:9",
+        "tests/test_network_refinement.py:7",
+        "tests/test_ranking_scopes.py:10",
+        "tests/test_result_visualizations.py:8",
+        "tests/test_zoom_visualizations.py:8"
+      ],
+      "environment": "main"
+    },
+    "numpy": {
+      "package": "numpy",
+      "locations": [
+        "src/biomolexplorer/docking_interactions.py:57",
+        "src/biomolexplorer/docking_interactions.py:75",
+        "src/biomolexplorer/graph_layouts.py:8",
+        "src/biomolexplorer/molecular_surface.py:23",
+        "src/biomolexplorer/network_centrality.py:107",
+        "src/biomolexplorer/network_centrality.py:65",
+        "src/caad/docking.py:40",
+        "src/caad/redocking.py:58",
+        "src/kernel/descriptors.py:28",
+        "tests/test_molecular_surface.py:14"
+      ],
+      "environment": "main"
+    },
+    "pandas": {
+      "package": "pandas",
+      "locations": [
+        "scripts/check_chembl.py:25",
+        "src/biomolexplorer/compound_properties.py:87",
+        "src/biomolexplorer/docking_data.py:53",
+        "src/biomolexplorer/molecule_quality.py:151",
+        "src/biomolexplorer/molecule_quality.py:173",
+        "src/biomolexplorer/pipeline.py:1050",
+        "src/biomolexplorer/pubchem_retrieval.py:24",
+        "src/biomolexplorer/pubchem_retrieval.py:7",
+        "src/biomolexplorer/redocking_cache.py:214",
+        "src/biomolexplorer/result_files.py:377",
+        "src/caad/complex_network.py:34",
+        "src/caad/docking.py:45",
+        "src/caad/graph_results.py:13",
+        "src/caad/redocking.py:63",
+        "src/crawlers/bioactivities.py:19",
+        "src/crawlers/complex.py:26",
+        "src/crawlers/molecules.py:21",
+        "src/crawlers/pubchem.py:13",
+        "src/crawlers/targets.py:19",
+        "src/kernel/descriptors.py:30",
+        "src/kernel/filters.py:16",
+        "src/kernel/utilities.py:32",
+        "src/wrappers/admet.py:18",
+        "src/wrappers/crawlers.py:223",
+        "src/wrappers/crawlers.py:247",
+        "src/wrappers/docking.py:188",
+        "src/wrappers/docking.py:27",
+        "src/wrappers/docking.py:280",
+        "src/wrappers/molecular_analyzer.py:133",
+        "src/wrappers/redocking.py:155",
+        "src/wrappers/redocking.py:23",
+        "tests/test_admet_research.py:10",
+        "tests/test_analysis_origins.py:8",
+        "tests/test_application.py:15",
+        "tests/test_chembl_rest.py:7",
+        "tests/test_compound_inspection.py:12",
+        "tests/test_compound_retrieval.py:11",
+        "tests/test_dataset_identity.py:10",
+        "tests/test_docking_handoffs.py:11",
+        "tests/test_flexible_retrieval.py:9",
+        "tests/test_graph_explorer.py:17",
+        "tests/test_graph_layout_fragments.py:9",
+        "tests/test_graph_subset_exports.py:7",
+        "tests/test_molecule_quality.py:9",
+        "tests/test_project_portability.py:140",
+        "tests/test_pubchem.py:9",
+        "tests/test_pubchem_workflow.py:13",
+        "tests/test_redocking_configuration.py:144",
+        "tests/test_redocking_configuration.py:208",
+        "tests/test_redocking_incremental.py:12",
+        "tests/test_redocking_partial_failures.py:12",
+        "tests/test_result_visualizations.py:9",
+        "tests/test_run_progress.py:58",
+        "tests/test_zoom_visualizations.py:9"
+      ],
+      "environment": "main"
+    },
+    "pymol": {
+      "package": "pymol-open-source",
+      "locations": [
+        "src/caad/docking.py:50",
+        "src/caad/redocking.py:68",
+        "src/kernel/descriptors.py:197"
+      ],
+      "environment": "main"
+    },
+    "rcsbsearchapi": {
+      "package": "rcsbsearchapi",
+      "locations": [
+        "src/crawlers/complex.py:21",
+        "src/crawlers/complex.py:22"
+      ],
+      "environment": "main"
+    },
+    "rdkit": {
+      "package": "rdkit",
+      "locations": [
+        "src/biomolexplorer/compound_properties.py:63",
+        "src/biomolexplorer/compound_properties.py:64",
+        "src/biomolexplorer/dock6_validation.py:14",
+        "src/biomolexplorer/docking_data.py:319",
+        "src/biomolexplorer/docking_interactions.py:30",
+        "src/biomolexplorer/docking_interactions.py:31",
+        "src/biomolexplorer/docking_interactions.py:76",
+        "src/biomolexplorer/docking_interactions.py:77",
+        "src/biomolexplorer/docking_interactions.py:78",
+        "src/biomolexplorer/docking_scene.py:35",
+        "src/biomolexplorer/input_validation.py:196",
+        "src/biomolexplorer/input_validation.py:89",
+        "src/biomolexplorer/molecular_network.py:12",
+        "src/biomolexplorer/molecular_parsing.py:15",
+        "src/biomolexplorer/molecule_quality.py:64",
+        "src/biomolexplorer/network_scaffolds.py:18",
+        "src/biomolexplorer/network_scaffolds.py:19",
+        "src/biomolexplorer/network_scaffolds.py:35",
+        "src/biomolexplorer/network_scaffolds.py:36",
+        "src/biomolexplorer/network_scaffolds.py:8",
+        "src/biomolexplorer/pipeline.py:916",
+        "src/biomolexplorer/ui/results_viewer.py:152",
+        "src/biomolexplorer/visualizations.py:247",
+        "src/biomolexplorer/visualizations.py:248",
+        "src/biomolexplorer/visualizations.py:259",
+        "src/biomolexplorer/visualizations.py:260",
+        "src/biomolexplorer/visualizations.py:276",
+        "src/biomolexplorer/zinc_retrieval.py:150",
+        "src/caad/admet.py:21",
+        "src/caad/admet.py:22",
+        "src/caad/admet.py:23",
+        "src/caad/graph_results.py:14",
+        "src/caad/graph_results.py:15",
+        "src/crawlers/pubchem.py:15",
+        "src/kernel/descriptors.py:44",
+        "src/kernel/descriptors.py:45",
+        "src/kernel/descriptors.py:46",
+        "src/kernel/descriptors.py:47",
+        "src/kernel/descriptors.py:48",
+        "src/kernel/descriptors.py:49",
+        "src/kernel/descriptors.py:50",
+        "src/kernel/filters.py:19",
+        "src/kernel/utilities.py:37",
+        "src/kernel/utilities.py:38",
+        "src/kernel/utilities.py:39",
+        "src/kernel/utilities.py:40",
+        "src/wrappers/admet.py:85",
+        "src/wrappers/crawlers.py:163",
+        "tests/test_admet_research.py:11",
+        "tests/test_compound_tables.py:145",
+        "tests/test_docking_interactions.py:13",
+        "tests/test_graph_explorer.py:18",
+        "tests/test_graph_layout_fragments.py:10",
+        "tests/test_mcs_ranking_refinements.py:132",
+        "tests/test_molecular_parsing.py:10",
+        "tests/test_molecular_parsing.py:11",
+        "tests/test_pdb_viewer.py:118",
+        "tests/test_results_display.py:247"
+      ],
+      "environment": "main"
+    },
+    "requests": {
+      "package": "requests",
+      "locations": [
+        "scripts/validate_docking_viewer.py:8",
+        "scripts/validate_pdb_viewer.py:8",
+        "src/biomolexplorer/zinc_retrieval.py:111",
+        "src/biomolexplorer/zinc_retrieval.py:112",
+        "src/crawlers/chembl_client.py:10",
+        "src/crawlers/chembl_client.py:9",
+        "src/crawlers/complex.py:138",
+        "src/crawlers/complex.py:139",
+        "src/crawlers/complex.py:183",
+        "src/crawlers/complex.py:184",
+        "src/crawlers/molecules.py:19",
+        "src/crawlers/molecules.py:36",
+        "src/crawlers/pubchem.py:14",
+        "src/crawlers/pubchem.py:16",
+        "tests/fixtures/chembl_worker.py:5",
+        "tests/test_pdb_viewer.py:78",
+        "tests/test_pubchem.py:10"
+      ],
+      "environment": "main"
+    },
+    "scipy": {
+      "package": "scipy",
+      "locations": [
+        "src/biomolexplorer/molecular_surface.py:24",
+        "src/biomolexplorer/network_centrality.py:108",
+        "src/biomolexplorer/network_centrality.py:64"
+      ],
+      "environment": "main"
+    },
+    "seaborn": {
+      "package": "seaborn",
+      "locations": [
+        "src/caad/complex_network.py:28",
+        "src/wrappers/docking.py:41"
+      ],
+      "environment": "main"
+    },
+    "setuptools": {
+      "package": "setuptools",
+      "locations": [
+        "setup.py:5",
+        "setup.py:6"
+      ],
+      "environment": "main"
+    },
+    "urllib3": {
+      "package": "urllib3",
+      "locations": [
+        "src/biomolexplorer/zinc_retrieval.py:113",
+        "src/crawlers/chembl_client.py:11",
+        "src/crawlers/complex.py:140",
+        "src/crawlers/complex.py:185",
+        "src/crawlers/molecules.py:37",
+        "src/crawlers/pubchem.py:17"
+      ],
+      "environment": "main"
+    },
+    "uvicorn": {
+      "package": "uvicorn",
+      "locations": [
+        "src/biomolexplorer/ui/web_host.py:31"
+      ],
+      "environment": "main"
+    },
+    "vina": {
+      "package": "vina",
+      "locations": [
+        "src/biomolexplorer/vina_session.py:48"
+      ],
+      "environment": "main"
+    },
+    "websockets": {
+      "package": "websockets",
+      "locations": [
+        "scripts/validate_docking_viewer.py:10",
+        "scripts/validate_pdb_viewer.py:10"
+      ],
+      "environment": "main"
+    }
+  },
+  "dynamic_imports": [
+    "scripts/setup_admet_ai.py:11: os",
+    "tests/test_redocking_incremental.py:82: biomolexplorer.redocking_preparation",
+    "tests/test_redocking_incremental.py:146: biomolexplorer.redocking_preparation",
+    "tests/test_redocking_incremental.py:154: biomolexplorer.redocking_preparation",
+    "tests/test_redocking_incremental.py:158: biomolexplorer.redocking_preparation"
+  ],
+  "infrastructure": {
+    "python": "interpreter",
+    "pip": "environment installer",
+    "openbabel": "obabel CLI: docking conversion/preparation",
+    "poppler": "pdftoppm CLI: PDF preview",
+    "setuptools": "setup.py/build backend"
+  },
+  "main": {
+    "python": "=3.12.3",
+    "pip": "=26.2",
+    "openbabel": "=3.1.1",
+    "numpy": "=1.26.4",
+    "pandas": "=2.1.4",
+    "rdkit": "=2023.09.6",
+    "networkx": "=3.3",
+    "biopython": "=1.84",
+    "datasketch": "=1.6.5",
+    "seaborn": "=0.13.2",
+    "pymol-open-source": "=3.0.0",
+    "vina": "=1.2.5",
+    "requests": "=2.34.2",
+    "matplotlib": "=3.10.9",
+    "pillow": "=12.3.0",
+    "poppler": "=24.04.0",
+    "scipy": "=1.17.1",
+    "urllib3": "=2.7.0",
+    "setuptools": "=83.0.0",
+    "rcsbsearchapi": "==1.6.0",
+    "flet": "==1.0.3",
+    "flet-web": "==1.0.3",
+    "fastapi": "==0.142.2",
+    "uvicorn": "==0.54.0",
+    "websockets": "==17.2"
+  },
+  "optional_admet": {
+    "python": "=3.12.3",
+    "pip": "",
+    "torch": "==2.8.0+cpu",
+    "admet-ai": "==2.0.1"
+  },
+  "missing": [],
+  "orphans": []
+}

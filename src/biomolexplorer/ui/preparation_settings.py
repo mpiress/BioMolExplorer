@@ -59,6 +59,7 @@ class PreparationSettings:
             self.settings[role]=options
             if role=='ligand' and form.stage['operation'] in ('prepare_structures','docking_vina','docking_dock6'):
                 notice='Prepare os compostos selecionados de ChEMBL, PubChem, ZINC ou arquivos próprios. Todas as fontes usam estas opções.'
+            if form.stage['operation']=='redocking':notice='Estas opções serão aplicadas a todos os receptores selecionados.' if role=='receptor' else 'Estas opções serão aplicadas a todos os ligantes selecionados.'
             controls=[ft.Text(notice,size=12)]
             if role=='ligand':
                 controls += [self.backend,ft.Text('Chimera prepara receptores e ligantes. Open Babel converte os formatos para Vina e DOCK6, sem substituir o método de cargas selecionado.',size=12)]
@@ -71,12 +72,12 @@ class PreparationSettings:
         self.sync()
 
     def sync(self,inactive=False):
-        inactive=inactive or not self.form.writable
-        self.backend.disabled=True;self.ambertools.disabled=inactive;self.ambertools_env.disabled=inactive;self.vina_policy.disabled=inactive
+        inactive=inactive or not self.form.writable or (self.form.stage['operation']=='redocking' and not self.form.field_controls['prepare_complex'].value)
         receptor_inactive=inactive or self.receptor_inactive
         self.groups['receptor'].visible=not self.receptor_inactive
         self.has_cofactors.disabled=receptor_inactive
         self.cofactors.disabled=receptor_inactive or not self.has_cofactors.value
+        if self.form.stage['operation']=='redocking':self.cofactors.visible=bool(self.has_cofactors.value)
         for role,options in self.settings.items():
             for control in options.values():control.disabled=receptor_inactive if role=='receptor' else inactive
 

@@ -8,21 +8,30 @@ from pathlib import Path
 _LOCK = threading.Lock()
 
 
-def report_progress(message, completed=None, total=None):
+def report_progress(message=None, completed=None, total=None, *, key=None, arguments=None):
     filename = os.environ.get('BIOMOL_PROGRESS_FILE')
     if not filename:
         return
-    event = {'message': str(message)[:1500], 'updated_at': time.time()}
-    if completed is not None and total is not None:
-        event.update(completed=int(completed), total=int(total))
     # Monitoring failures must never invalidate scientific output.
     try:
+        from .i18n import RuntimeMessages
+        messages = RuntimeMessages('pt')
+        if key is None and isinstance(message, str) and message in messages.catalog:key = message
+        if key is not None:message = messages(key, **(arguments or {}))
+        event = {'message': str(message)[:1500], 'updated_at': time.time()}
+        if key is not None:event.update(message_key=key,message_args=arguments or {})
+        if completed is not None and total is not None:
+            event.update(completed=int(completed), total=int(total))
+        payload = json.dumps(event, ensure_ascii=False)
+        if len(payload)>8000:
+            event.pop('message_key',None);event.pop('message_args',None)
+            payload=json.dumps(event,ensure_ascii=False)
         with _LOCK:
             path = Path(filename)
             temporary = path.with_suffix('.tmp')
-            temporary.write_text(json.dumps(event, ensure_ascii=False), encoding='utf-8')
+            temporary.write_text(payload, encoding='utf-8')
             temporary.replace(path)
-    except OSError:
+    except (OSError,KeyError,TypeError,ValueError):
         from .diagnostics import get_logger
         get_logger('backend').warning('Não foi possível atualizar o acompanhamento do worker.', exc_info=True)
 

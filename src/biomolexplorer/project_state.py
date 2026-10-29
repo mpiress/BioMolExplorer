@@ -107,8 +107,6 @@ def record(store, db, project_id, user_id, action, summary, before=None):
 
 
 def read_snapshot(store, project_id, event_id, side='before', db=None):
-    # A terminal run update may already hold SQLite's exclusive spill lock.
-    # Resolve its project location through that same transaction.
     path = store.project_dir(project_id,db) / '.history' / 'snapshots' / f'{event_id}-{side}.json'
     return json.loads(path.read_text(encoding='utf-8'))
 

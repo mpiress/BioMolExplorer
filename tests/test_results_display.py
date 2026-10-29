@@ -140,6 +140,16 @@ class ResultsDisplayTests(unittest.TestCase):
         self.assertTrue(self.admet_csv.exists())
         self.assertIn(str(self.admet_csv),self.store.get_run(self.token,self.rid)['stages'][1]['artifacts'])
 
+    def test_single_file_removal_preserves_bytes_used_by_another_block(self):
+        run=self.store.get_run(self.token,self.rid)
+        run['stages'][0]['input_files']={'base_input_path':[str(self.admet_csv)]}
+        with self.store.connect() as db:db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(run['stages']),self.rid))
+        self.service.remove(self.token,self.pid,self.rid,self.admet['id'],str(self.admet_csv))
+        self.assertTrue(self.admet_csv.exists())
+        stages=self.store.get_run(self.token,self.rid)['stages']
+        self.assertNotIn(str(self.admet_csv),stages[1]['artifacts'])
+        self.assertEqual(stages[0]['input_files']['base_input_path'],[str(self.admet_csv)])
+
     def test_bulk_removal_includes_internal_files_and_history_restores_everything(self):
         stage=self.store.get_run(self.token,self.rid)['stages'][1]
         files=[Path(p) for p in stage['artifacts']];original={p:p.read_bytes() for p in files}
@@ -162,7 +172,7 @@ class ResultsDisplayTests(unittest.TestCase):
         with self.store.connect() as db:db.execute('UPDATE runs SET status=? WHERE id=?',('awaiting_input',self.rid))
         with self.assertRaisesRegex(ValueError,'Aguarde'):self.service.remove_all(self.token,*args)
 
-    def test_bulk_removal_invalidates_shared_artifacts_and_clears_missing_entries(self):
+    def test_bulk_removal_preserves_artifacts_shared_with_other_blocks_and_clears_missing_entries(self):
         run=self.store.get_run(self.token,self.rid)
         run['stages'][0]['artifacts'].append(str(self.admet_csv))
         run['stages'][1]['artifacts'].append(str(self.admet_csv.parent/'missing.csv'))
@@ -170,8 +180,8 @@ class ResultsDisplayTests(unittest.TestCase):
         self.service.remove_all(self.token,self.pid,self.rid,self.admet['id'])
         stages=self.store.get_run(self.token,self.rid)['stages']
         self.assertEqual(stages[1]['artifacts'],[])
-        self.assertEqual(stages[0]['artifacts'],[str(self.compounds)])
-        self.assertTrue(stages[0]['outputs_removed']);self.assertTrue(self.compounds.exists())
+        self.assertEqual(stages[0]['artifacts'],[str(self.compounds),str(self.admet_csv)])
+        self.assertFalse(stages[0].get('outputs_removed'));self.assertTrue(self.compounds.exists());self.assertTrue(self.admet_csv.exists())
 
     def test_project_wide_removal_preserves_imported_inputs_and_is_one_audited_change(self):
         asset=self.store.project_dir(self.pid)/'inputs.csv';asset.write_text('name,smiles\nA,CCO\n')
@@ -219,7 +229,7 @@ class ResultsDisplayTests(unittest.TestCase):
         asset=self.store.finish_upload(self.token,ticket)
         path=self.store.asset_path(self.token,self.pid,asset);original=path.read_bytes()
         stage=new_stage('admet');stage['bindings']['base_input_path']={'asset':asset,'selector':'auto'}
-        self.store.save_pipeline(self.token,self.pid,[stage],0)
+        self.store.save_pipeline(self.token,self.pid,[stage],0,prune_results=True)
         with self.assertRaisesRegex(ValueError,'associado'):self.service.remove_asset(self.token,self.pid,asset)
         self.store.save_pipeline(self.token,self.pid,[],1)
         self.service.remove_asset(self.token,self.pid,asset)

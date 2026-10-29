@@ -100,7 +100,9 @@ class ArtifactSelectionIntegrationTests(unittest.TestCase):
                 a['name']='Retrieval AChE';b['name']='Retrieval BChE'
                 b['parameters']['search_term']='CHEMBL221'
                 consumer=new_stage('admet');consumer['bindings']['base_input_path']=pack([{'stage':a['id']},{'stage':b['id']}])
-                self.save([a,b,consumer]);manager,calls=self.immediate_manager()
+                project=self.store.project(self.token,self.project_id)
+                self.store.save_pipeline(self.token,self.project_id,[a,b,consumer],project['revision'],prune_results=True)
+                manager,calls=self.immediate_manager()
                 with patch('biomolexplorer.pipeline.JobManager',manager):
                     service=PipelineService(self.store)
                     try:

@@ -11,7 +11,13 @@ def target_input(stage, field):
 
 def prepared_receptor(path):
     """The preparation stage gives ligand-free receptors this dedicated suffix."""
-    return Path(path).name.endswith('.dockprep.pdbqt')
+    return Path(path).name.endswith(('.dockprep.pdbqt','.dockprep.mol2'))
+
+
+def preferred_receptors(paths):
+    """One selectable receptor per bundle; retain legacy PDBQT when available."""
+    paths=list(paths);pdbqt={str(p).removesuffix('.pdbqt') for p in paths if str(p).endswith('.dockprep.pdbqt')}
+    return [p for p in paths if not (str(p).endswith('.dockprep.mol2') and str(p).removesuffix('.mol2') in pdbqt)]
 
 
 def ligand_input_file(path):
@@ -53,7 +59,7 @@ def dock6_variant_matches(stage, refs, results, store, project_id):
         return paths if selector=='auto' else [p for p in paths if matches_selector(p,selector)]
     receptor_ref=refs['base_input_path']
     receptor_files=files(receptor_ref)
-    receptors={p.name.split('.',1)[0] for p in receptor_files if p.name.endswith('.dockprep.pdbqt')}
+    receptors={p.name.split('.',1)[0] for p in receptor_files if prepared_receptor(p)}
     all_paths=[store.scoped_path(project_id,p) for p in results.get(receptor_ref.get('stage'),[])]
     records=[]
     for path in all_paths:

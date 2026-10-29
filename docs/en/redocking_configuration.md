@@ -10,23 +10,41 @@ An explicit choice in **Results → Ligands → Save ligands** also updates pair
 
 Then choose **Run pipeline** and **Yes, reuse** to calculate the new pairs and incorporate them into accumulated results. Curation itself does not start calculations. To repair a ligand choice saved by an older version without reaching redocking, reopen **Ligands** and save the list again.
 
-Each selection has a single **Chain**, used for both receptor and ligand, and its own preparation options. Resolution follows the selected metadata and has no editable control. For user-supplied PDBs without metadata, use the manual pair option.
+The **Selected pairs** table contains PDB, Ligand, Residue number, Chain and Actions. **Edit pair** opens a separate form; Cancel discards changes. **Remove pair** removes the row from the selection without deleting its source PDB. Resolution follows the metadata and is not editable. Use the manual pair option for PDBs without metadata.
 
-Enable the cofactor option and enter residue codes separated by commas, such as `FAD, MG`. Without cofactors, complex selection is `select #0:.{chain}`. Declared cofactors are preserved as part of the receptor, including those outside the selected chain. The redocking ligand cannot also be a cofactor.
+Expand **Receptor cofactors (optional)** and enable the cofactor option and enter residue codes separated by commas, such as `FAD, MG`. Without cofactors, complex selection is `select #0:.{chain}`. Declared cofactors are preserved as part of the receptor, including those outside the selected chain. The redocking ligand cannot also be a cofactor.
 
-Configure solvent removal, removal of existing hydrogens, hydrogen addition, minimization and charge method for receptor and ligand. Ligand preparation and ligand conformation share the same settings. pH is configured once for the stage.
+Configure solvent removal, removal of existing hydrogens, hydrogen addition, minimization and charge method for receptor and ligand. **Shared preparation for the collection** contains one panel for all receptors and another for all ligands. Ligand preparation and conformation share these options. PDBQT conversion pH appears under Vina settings. Panels align side by side on wide screens and stack on narrow screens; the cofactor input is hidden until enabled.
 
-Pairs using the same PDB and chain share their prepared receptor file and must use identical receptor options and cofactors. Their ligand settings may differ. Individual processing passes only pairs and settings for the corresponding structure.
+Pairs using the same PDB and chain share their prepared receptor. The interface applies common receptor and ligand settings to the entire set. Legacy per-pair projects remain executable through the backend; the interface warns before replacing heterogeneous settings with shared preparation when saving. Individual processing passes only pairs and settings for the corresponding structure.
 
-Configured pairs are reused without another selection prompt. Before calculations, the pipeline validates receptor, ligand, residue, chain and cofactors against the structure. Prepared complexes require valid PDBQT files and ligand centers. Chimera, Open Babel and Vina must be available in the scientific environment; prepared inputs require only Vina. Verbosity is always zero.
+Configured pairs are reused without another selection prompt. Before calculations, the pipeline validates receptor, ligand, residue, chain and cofactors against the structure. Prepared complexes require valid binding centers and engine-specific formats: PDBQT for Vina; receptor and ligand MOL2 plus receptor `.noH.pdb` for DOCK6. Preparation uses classic Chimera and Open Babel; prepared inputs skip these steps. The selected engine must be installed. DOCK6 also requires sphgen, sphere_selector, showbox, grid and parameter files from its 6.11 installation. Verbosity is always zero.
 
 ## Diagnosing a failed run
 
 Review the reported executable and process message in the execution log. Failed Chimera command scripts are retained. A missing or invalid ligand center and incomplete prepared files prevent docking. Correct the configuration or installation and retry; see [pipeline validation](pipeline_validation.md) for test coverage and native execution limits.
 
+## Choose the engine
+
+Under **Redocking method**, select **AutoDock Vina** or **DOCK6 6.11**. Only active engine fields are shown and validated; switching retains the other engine's values for later editing.
+
+- **Vina:** box X/Y/Z in Å, conversion pH, search effort and pose count. The reference ligand supplies the box center. **Vina · engine options** contains seed and scoring function.
+- **DOCK6:** administrator-managed installation, flexible/rigid search, SES density, probe radius, sphere selection distance, maximum orientations, saved poses and seed. Expandable sections contain engine, grid, box and sphere options. The workflow uses the prepared ligand directly, without additionally minimizing the crystallographic reference.
+
+```text
+Select and review pairs in the table.
+Set one preparation for receptors and one for ligands.
+Choose Vina or DOCK6 6.11 and adjust its fields.
+Save, run the pipeline and review RMSD and diagnostics.
+```
+
+New runs with MOL2 available calculate symmetry-corrected heavy-atom RMSD without geometric alignment. The reference restores ligand coordinates from the original PDB; if no PDB exists, results explicitly record `RMSD_REFERENCE=prepared`. Legacy Vina inputs containing only PDBQT retain the legacy calculation, identified by `RMSD_METHOD`. These methods are not interchangeable. CSV export includes `Engine`, `RMSD_method` and `RMSD_reference`. A finite RMSD is not automatic protocol acceptance.
+
+Preparation uses the component CCD graph before Chimera adds hydrogens and charges. IDATM types are fixed from that graph to prevent incorrect geometric reinterpretation. MOL2 is written without reopening PDB. After PDBQT conversion, names are restored by matching coordinates before docking. The `.export.json` or `.input.json` records the definition and missing atoms; observed fragments are not completed with invented heavy atoms. Recoverable Vina/RMSD pair failures are recorded without aborting the remaining pairs.
+
 ## Backend configuration
 
-Pass `pdb_codes=[["4M0E", "1YL", 604, "A", 2.0]]` for the selected records. `preparation_pairs` is a dictionary keyed by `4M0E|1YL|604|A`, with `cofactors`, `receptor` and `ligand` settings. Allowed preparation options are `remove_solvent`, `remove_hydrogens`, `add_hydrogens`, `minimize` and `charge_type` (`gas` or `am1`). Omitted options use the defaults. The fifth record element is resolution metadata. Existing projects with a separate `ligand_chain` use the shared `CHAIN` value.
+Pass `pdb_codes=[["4M0E", "1YL", 604, "A", 2.0]]` for the selected records. `preparation_options` specifies common `receptor`, `ligand` and `cofactors` settings and takes precedence. For compatibility, `preparation_pairs` is a dictionary keyed by `4M0E|1YL|604|A`, with `cofactors`, `receptor` and `ligand` settings. Allowed preparation options are `remove_solvent`, `remove_hydrogens`, `add_hydrogens`, `minimize` and `charge_type` (`gas` or `am1`). Omitted options use the defaults. The fifth record element is resolution metadata. Existing projects with a separate `ligand_chain` use the shared `CHAIN` value.
 
 Selecting a subset does not delete other PDB structures or prepared files from the input collection. When a pair does not specify a charge method, ligand preparation retains the stage-wide charge method.
 
@@ -50,7 +68,7 @@ The table summarizes finite, nonnegative values from the `RMSD` column of `pdb_c
 
 ## Reuse the receptor for candidate docking
 
-Connect redocking to **PDB receptor (retrieval or redocking)** in **Prepare for docking** and select the `.dockprep.pdbqt` receptor under **Receptor to use**. Ligand-only files are hidden. Receptor preparation controls are disabled while companion formats and binding centers are reused. Candidates from one or more ChEMBL, PubChem, ZINC or uploaded sources still undergo preparation. Choose Vina, DOCK6 or both, then connect receptor and compounds to each selected engine. See the [user manual](user_manual.md#preparation-and-redocking) for individual and merge processing.
+Connect redocking to **PDB receptor (retrieval or redocking)** in **Prepare for docking** and select the `.dockprep.pdbqt` receptor (or `.dockprep.mol2` for a DOCK6-only preparation) under **Receptor to use**. Ligand-only files are hidden. Receptor preparation controls are disabled while companion formats and binding centers are reused. Candidates from one or more ChEMBL, PubChem, ZINC or uploaded sources still undergo preparation. Choose Vina, DOCK6 or both, then connect receptor and compounds to each selected engine. See the [user manual](user_manual.md#preparation-and-redocking) for individual and merge processing.
 
 ## Styles and 3D interactions
 
@@ -91,20 +109,48 @@ Compatibility uses PDB contents, chain, cofactors, preparation options, pH, char
 
 Only successfully completed pipeline runs supply reusable data. Cancelled, interrupted, failed or awaiting-input runs never supply incremental results, even if an individual stage finished. Partial files may remain in history for diagnostics but are discarded as sources for subsequent calculations. Preparation failures and removed outputs are also excluded. **No, run again** bypasses reuse.
 
-## Redocking engine and Chimera preparation
 
-Choose **Redocking engine**: AutoDock Vina (default) or DOCK6. Search controls
-follow the selected engine. Older projects default to Vina when
-`redocking_engine` is absent. Both engines use Chimera preparation and the
-administrator supplies the DOCK6 installation.
+## Target and best RMSDs per target
 
-DOCK6 redocks the pair's reference ligand with a shared site/grid and flexible
-or rigid search. Poses follow the existing redocking result contract. Its RMSD
-uses heavy atoms and molecular symmetry in the receptor coordinate frame;
-it does not align the pose onto the reference.
+The redocking table includes **Target**, obtained from the retrieval block that
+supplied each PDB through saved file provenance. Merged inputs match the PDB to
+its specific source. Imported metadata may also provide `Target` or `TARGET`.
+When the source cannot be identified, the cell shows **—**; the redocking block
+name is not used to invent an association.
 
-Structural cleanup precedes hydrogens, charges and minimization, including
-ligand alternate locations. Local chemical definitions and repaired export
-bond orders participate in traceability and caching. See
-[molecular preparation](molecular_preparation.md). Complete Chimera output is
-retained in logs. Obsolete failure reports are removed after a successful retry.
+Use **Therapeutic target** to filter and search for target, PDB or ligand. The
+initial ordering groups targets and prioritizes smaller RMSDs. Click **Target**
+or **RMSD (Å)** to sort. **Highlight best RMSDs per target** marks each minimum and
+its ties in green (numerical tolerance 1e-9 Å). Failures remain red and are excluded
+from comparison. Minima use all results for the target, including other pages and
+rows outside the text search.
+
+**Download RMSD table** exports filtered pairs with `Target` and `Best_for_target`,
+revalidating access. Labels do not modify poses, RMSDs, original scientific
+metadata or caches. Earlier results can display the column when opened if their
+provenance is available.
+
+```text
+Open results and select ACHE in the target filter.
+Enable Highlight best RMSDs per target.
+Compare green rows and open the desired simulation.
+Download the RMSD table to retain the selection and its origin.
+```
+
+## Native preparation integrity
+
+Ligands receive the observed component's CCD topology before Chimera adds hydrogens.
+After protonation, the molecular graph is validated and its formal charge is supplied
+explicitly to native AM1-BCC or Gasteiger charging. Minimization uses this already
+prepared graph without repeating DockPrep or replacing the chosen charges. The
+`.lig.preparation.json` report records charge, method and validation.
+
+For Chimera's known `accPhiPsi` FindHBond error, only hydrogen placement is retried
+using native geometric AddH; charging and minimization remain enabled. Free
+crystallization amino acids recorded as HETATM are excluded from the protein unless
+explicitly selected as cofactors. Peptide-bonded amino acids remain in the receptor.
+
+RMSD compares heavy atoms in the crystal reference and best pose without alignment
+that would hide displacement. A high RMSD is an evaluation result, not an execution
+failure. Topology, tool and configuration errors remain visible with their failing
+step and diagnostics, while other pairs continue independently.

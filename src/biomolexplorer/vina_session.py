@@ -75,7 +75,7 @@ class VinaSessions:
             # Compute before loading any ligand: include every atom type, even
             # when the first molecule lacks types required by later compounds.
             event(self.logger, 'vina.maps.started', 'Calculando mapas uma vez para este receptor e sítio.', receptor_file=str(receptor))
-            report_progress('Vina: calculando mapas do receptor e do sítio de docking.')
+            report_progress('vina.maps')
             self.session = None
             self.key = None
             session = Vina(sf_name=initialization[0], cpu=initialization[1], seed=initialization[2],
@@ -87,9 +87,8 @@ class VinaSessions:
         else:
             event(self.logger, 'vina.maps.reused', 'Reutilizando receptor e mapas do sítio.')
         started = time.monotonic()
-        fields = {'configuration': configuration.name, 'compound_identifier': compound_identifier}
-        event(self.logger, 'vina.ligand.started', 'Docking do composto iniciado.', **fields)
-        report_progress('Vina: docking de '+ligand.name+' com receptor e mapas reutilizados.')
+        event(self.logger, 'vina.ligand.started', 'Docking do composto iniciado.', ligand_file=str(path('ligand')))
+        report_progress(key='vina.docking',arguments={'file':path('ligand').name})
         try:
             self.session.set_ligand_from_file(str(ligand))
             self.session.dock(exhaustiveness=int(options.get('exhaustiveness', 8)),

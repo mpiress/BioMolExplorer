@@ -10,7 +10,7 @@ from .artifact_picker import ArtifactPicker
 from biomolexplorer.artifact_choices import matches_selector, selector_for, produced_files
 from biomolexplorer.bindings import sources, pack
 from biomolexplorer.catalog import field_label
-from biomolexplorer.docking_inputs import target_input, prepared_receptor, ligand_input_file
+from biomolexplorer.docking_inputs import target_input, prepared_receptor, preferred_receptors, ligand_input_file
 from biomolexplorer.flow import INPUTS, EXTERNAL_INPUTS, input_types
 from biomolexplorer.input_validation import columns
 from .localization import verbatim, stage_control
@@ -130,7 +130,7 @@ class FileSelection:
                     allowed=choices(item)
                     if allowed:matching=[p for p in matching if any(matches_selector(p,s) for s in allowed)]
                 if self.stage['operation'] in ('prepare_structures','docking_vina','docking_dock6') and field=='base_input_path' and any(prepared_receptor(p) for p in files):
-                    matching=[p for p in matching if prepared_receptor(p)]
+                    matching=preferred_receptors(p for p in matching if prepared_receptor(p))
                 if self.stage['operation'] in ('docking_vina','docking_dock6') and field=='base_selected_mols':
                     matching=[p for p in files if ligand_input_file(p) and
                         (p.suffix!='.csv' or {'molecule_chembl_id','canonical_smiles'}<=columns(p))]

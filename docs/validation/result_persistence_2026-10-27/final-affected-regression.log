@@ -1,0 +1,19 @@
+........................[23:30:21] DEPRECATION WARNING: please use MorganGenerator
+[23:30:21] DEPRECATION WARNING: please use MorganGenerator
+[23:30:21] DEPRECATION WARNING: please use MorganGenerator
+[23:30:21] DEPRECATION WARNING: please use MorganGenerator
+[23:30:21] DEPRECATION WARNING: please use MorganGenerator
+[23:30:21] DEPRECATION WARNING: please use MorganGenerator
+[23:30:21] DEPRECATION WARNING: please use MorganGenerator
+[23:30:21] DEPRECATION WARNING: please use MorganGenerator
+[23:30:21] DEPRECATION WARNING: please use MorganGenerator
+.......................[23:31:10] SMILES Parse Error: syntax error while parsing: invalid
+[23:31:10] SMILES Parse Error: check for mistakes around position 1:
+[23:31:10] invalid
+[23:31:10] ^
+[23:31:10] SMILES Parse Error: Failed parsing SMILES 'invalid' for input: 'invalid'
+......................................................................
+----------------------------------------------------------------------
+Ran 117 tests in 115.059s
+
+OK

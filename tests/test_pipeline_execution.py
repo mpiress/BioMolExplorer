@@ -459,6 +459,10 @@ class PipelineExecutionTests(unittest.TestCase):
                 stage['bindings']['base_input_path']['selector']=self.output_name(run,source,'compounds.csv')
                 resumed=self.wait(service.resume(self.token,run['id'],stage))
                 self.assertEqual(resumed['status'],'succeeded',resumed['error'])
+                # Confirmed curation is now durable. Explicitly request a new
+                # selection to exercise cancellation while awaiting input.
+                stage['bindings']['base_input_path']['selector']='auto'
+                self.save([source,stage])
                 run=self.wait(service.submit(self.token,self.project_id,reuse_results=False))
                 service.cancel(self.token,run['id'])
                 cancelled=self.store.get_run(self.token,run['id'])

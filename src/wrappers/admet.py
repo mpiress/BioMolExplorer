@@ -31,7 +31,7 @@ class ADMETWrapper:
     def __init__(self, base_output_path, base_input_path=None, input_file=None, verbose=0,
                  admet_profile='legacy', admet_mode=None, prediction_backend='rdkit',
                  bbb_target=None, hia_target=None, rule_set=None, max_rule_violations=None,
-                 alert_policy=None, alert_catalogs=None, property_limits=None):
+                 alert_policy=None, alert_catalogs=None, property_limits=None,dataset_origin=None):
         from biomolexplorer.admet_config import resolve_config
         self.config=resolve_config(dict(admet_profile=admet_profile,admet_mode=admet_mode,
             prediction_backend=prediction_backend,bbb_target=bbb_target,hia_target=hia_target,
@@ -41,6 +41,7 @@ class ADMETWrapper:
         self.set_output_path()
 
         self.base_input_path = base_input_path
+        self.dataset_origin = dataset_origin
         self.csv_files = self.set_input_path(input_file)
 
         self.evaluator = MoleculeEvaluator()
@@ -94,6 +95,9 @@ class ADMETWrapper:
         self.total_evaluated=0;self.total_hypothesis_selected=0
         for filename in self.csv_files:
             filename=Path(filename).stem;df_input=self._load_data(filename)
+            from biomolexplorer.dataset_identity import output_stem,admet_origin
+            origin=self.dataset_origin or admet_origin([Path(self.base_input_path)/(filename+'.csv')])
+            filename=output_stem(filename,origin)
             rows=[];self.excluded_count=0
             provider=dict(provider='RDKit',version=rdBase.rdkitVersion,domain_assessment='not_assessed')
             predictions={}
@@ -126,11 +130,14 @@ class ADMETWrapper:
             self.total_evaluated+=len(evaluated);self.total_hypothesis_selected+=len(selected)
             results=selected if self.config['admet_mode']=='filter' else evaluated
             self.df_results=results;self.evaluated=evaluated
-            # Public outputs describe each assessment independently, not the
-            # intersection of unrelated BBB/HIA/rule/alert criteria.
-            self.export_results(evaluated,filename);self.generate_plot(evaluated,filename)
-            metadata=dict(schema_version=3,source_input=str(Path(self.base_input_path)/(filename+'.csv')),outputs=self.output_files,configuration=self.config,provider=provider,rdkit_version=rdBase.rdkitVersion,
-                evaluated=len(evaluated),selected=len(selected),output=len(evaluated),hypothesis_output=len(results),
+            # Preserve every valid molecule and each failed criterion even when filtering.
+            evaluated.to_csv(Path(self.base_output_path)/(filename+'_evaluated.csv'),index=False)
+            self.export_results(results,filename);self.generate_plot(results,filename)
+            from biomolexplorer.admet_outputs import export_standard,SCHEMA_VERSION
+            outputs=export_standard(evaluated,self.config,self.base_output_path,filename)
+            metadata=dict(schema_version=SCHEMA_VERSION,outputs=outputs,dataset_origin=origin,output_stem=filename,
+                configuration=self.config,provider=provider,rdkit_version=rdBase.rdkitVersion,
+                evaluated=len(evaluated),selected=len(selected),output=len(results),
                 descriptors=DESCRIPTORS,methods=dict(
                     BBB='Local legacy ellipse with penalties; not validated BOILED-Egg',
                     HIA='Local ellipse approximation; passive permeability only',

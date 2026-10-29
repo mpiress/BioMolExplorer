@@ -150,4 +150,173 @@ class ConfigurationLoadingTests(unittest.TestCase):
         asyncio.run(scenario())
 
 
+class ConfigurationSavingTests(unittest.TestCase):
+    def setUp(self):
+        fixtures.PipelineEditorRegressionTests.setUp(self)
+        self.stage['parameters']['pdb_query']='ACHE'
+
+    def test_apply_publishes_modal_splash_before_reads_and_saves_only_once(self):
+        from types import SimpleNamespace
+        async def scenario():
+            await self.ui.open_stage_dialog(self.stage['id'])
+            dialog=self.page.dialogs[-1];button=dialog.actions[-1]
+            entered=asyncio.Event();release=asyncio.Event();writes=[]
+            async def call(function,*args,**kwargs):
+                if function==self.store.project and len(args)>2:
+                    # This is the first permission read in Apply, before form validation.
+                    self.assertTrue(button.disabled)
+                    self.assertTrue(all(c.disabled for c in dialog.actions))
+                    splash=self.page.dialogs[-1]
+                    self.assertIsNot(splash,dialog);self.assertTrue(splash.open);self.assertTrue(splash.modal)
+                    entered.set();await release.wait()
+                if function==self.store.save_pipeline:writes.append(args)
+                return function(*args,**kwargs)
+            self.ui.call=call
+            click=SimpleNamespace(control=button)
+            pending=asyncio.create_task(button.on_click(click))
+            await asyncio.wait_for(entered.wait(),1)
+            splash=self.page.dialogs[-1]
+            await button.on_click(click)
+            self.assertEqual(writes,[])
+            release.set();await pending
+            await button.on_click(click)  # An already queued click after completion.
+            self.assertEqual(len(writes),1)
+            self.assertFalse(splash.open);self.assertFalse(dialog.open)
+        asyncio.run(scenario())
+
+    def test_failed_apply_hides_only_splash_and_restores_buttons_for_retry(self):
+        from types import SimpleNamespace
+        async def scenario():
+            await self.ui.open_stage_dialog(self.stage['id'])
+            dialog=self.page.dialogs[-1];button=dialog.actions[-1];attempts=0
+            async def call(function,*args,**kwargs):
+                nonlocal attempts
+                if function==self.store.project and len(args)>2:
+                    attempts+=1
+                    if attempts==1:raise ValueError('test saving failure')
+                return function(*args,**kwargs)
+            self.ui.call=call
+            before=len(self.page.dialogs)
+            await button.on_click(SimpleNamespace(control=button))
+            self.assertTrue(dialog.open)
+            self.assertTrue(all(not c.disabled for c in dialog.actions))
+            self.assertFalse(self.page.dialogs[before].open)
+            self.assertTrue(self.page.dialogs[-1].open)  # Keep the validation/error notification.
+            await button.on_click(SimpleNamespace(control=button))
+            self.assertEqual(attempts,2);self.assertFalse(dialog.open)
+        asyncio.run(scenario())
+
+    def test_cancelled_handler_releases_splash_and_preserves_disabled_state(self):
+        from types import SimpleNamespace
+        async def scenario():
+            dialog=ft.AlertDialog(actions=[ft.TextButton('Cancel',disabled=True),ft.TextButton('Apply')])
+            self.ui.page.show_dialog(dialog)
+            entered=asyncio.Event();release=asyncio.Event()
+            async def save(e):entered.set();await release.wait()
+            action=self.ui.event_action(save,configuration_dialog=lambda:dialog)
+            pending=asyncio.create_task(action(SimpleNamespace(control=dialog.actions[-1])))
+            await asyncio.wait_for(entered.wait(),1);splash=self.page.dialogs[-1]
+            pending.cancel()
+            with self.assertRaises(asyncio.CancelledError):await pending
+            self.assertFalse(splash.open);self.assertTrue(dialog.open)
+            self.assertTrue(dialog.actions[0].disabled);self.assertFalse(dialog.actions[1].disabled)
+        asyncio.run(scenario())
+
+    def test_save_failure_keeps_form_open_and_allows_a_new_attempt(self):
+        from types import SimpleNamespace
+        async def scenario():
+            await self.ui.open_stage_dialog(self.stage['id'])
+            dialog=self.page.dialogs[-1];button=dialog.actions[-1]
+            entered=asyncio.Event();release=asyncio.Event();attempts=0
+            async def call(function,*args,**kwargs):
+                nonlocal attempts
+                if function==self.store.save_pipeline:
+                    attempts+=1
+                    if attempts==1:
+                        entered.set();await release.wait()
+                        raise OSError('test write failure')
+                return function(*args,**kwargs)
+            self.ui.call=call
+            pending=asyncio.create_task(button.on_click(SimpleNamespace(control=button)))
+            await asyncio.wait_for(entered.wait(),1)
+            splash=self.page.dialogs[-1]
+            self.assertTrue(splash.open);self.assertTrue(button.disabled)
+            release.set();await pending
+            self.assertFalse(splash.open);self.assertTrue(dialog.open)
+            self.assertFalse(button.disabled)
+            await button.on_click(SimpleNamespace(control=button))
+            self.assertEqual(attempts,2);self.assertFalse(dialog.open)
+        asyncio.run(scenario())
+
+    def test_saving_splash_follows_session_language(self):
+        from types import SimpleNamespace
+        async def scenario(language):
+            self.ui.page.set_language(language)
+            dialog=ft.AlertDialog(actions=[ft.TextButton('Apply')]);self.ui.page.show_dialog(dialog)
+            async def save(e):
+                values=[c.value for c in walk(self.page.dialogs[-1]) if isinstance(c,ft.Text)]
+                self.assertIn('Saving settings…' if language=='en' else 'Salvando configurações…',values)
+                self.assertTrue(self.page.dialogs[-1].open)
+            await self.ui.event_action(save,configuration_dialog=lambda:dialog)(SimpleNamespace(control=dialog.actions[0]))
+            self.assertFalse(self.page.dialogs[-1].open)
+        for language in ('en','pt'):asyncio.run(scenario(language))
+
+
+class ExecutionPreparationTests(unittest.TestCase):
+    setUp=fixtures.PipelineEditorRegressionTests.setUp
+
+    def test_restart_shows_splash_through_save_and_result_validation_then_reuse_menu(self):
+        async def scenario():
+            for language in ('en','pt'):
+                self.ui.page.set_language(language)
+                self.ui.service.existing_results=lambda *args:True
+                entered=asyncio.Event();release=asyncio.Event();reads=[]
+                original=self.ui.call
+                async def call(function,*args,**kwargs):
+                    splash=next(c for c in reversed(self.page.dialogs) if isinstance(c,ft.AlertDialog) and c.open)
+                    self.assertTrue(splash.open);self.assertTrue(splash.modal)
+                    if function==self.ui.service.existing_results:
+                        reads.append(1);entered.set();await release.wait()
+                    return function(*args,**kwargs)
+                self.ui.call=call
+                pending=asyncio.create_task(self.ui.run_pipeline())
+                await asyncio.wait_for(entered.wait(),2)
+                splash=next(c for c in reversed(self.page.dialogs) if isinstance(c,ft.AlertDialog) and c.open)
+                labels=[c.value for c in walk(splash) if isinstance(c,ft.Text)]
+                self.assertIn('Preparing execution…' if language=='en' else 'Preparando a execução…',labels)
+                await self.ui.run_pipeline();self.assertEqual(len(reads),1)
+                release.set();await pending
+                self.assertFalse(splash.open);self.assertTrue(self.ui.reuse_dialog.open)
+                self.assertIs(self.page.dialogs[-1],self.ui.reuse_dialog)
+                self.assertFalse(self.ui.submitting)
+                self.ui.dismiss_reuse_prompt();self.ui.call=original
+        asyncio.run(scenario())
+
+    def test_failed_or_cancelled_preparation_releases_splash_and_allows_retry(self):
+        async def scenario():
+            self.ui.service.existing_results=lambda *args:True
+            entered=asyncio.Event()
+            async def fail(*args,**kwargs):raise RuntimeError('validation failure')
+            self.ui.call=fail
+            with self.assertRaisesRegex(RuntimeError,'validation failure'):await self.ui.run_pipeline()
+            self.assertFalse(self.page.dialogs[-1].open);self.assertFalse(self.ui.submitting)
+            async def wait(*args,**kwargs):entered.set();await asyncio.Event().wait()
+            self.ui.call=wait
+            pending=asyncio.create_task(self.ui.run_pipeline());await asyncio.wait_for(entered.wait(),1)
+            splash=self.page.dialogs[-1];self.assertTrue(splash.open)
+            pending.cancel()
+            with self.assertRaises(asyncio.CancelledError):await pending
+            self.assertFalse(splash.open);self.assertFalse(self.ui.submitting)
+        asyncio.run(scenario())
+
+    def test_declining_configuration_change_closes_splash_without_reuse_prompt(self):
+        from unittest.mock import AsyncMock
+        async def scenario():
+            self.ui.save_draft=AsyncMock(return_value=False)
+            await self.ui.run_pipeline()
+            self.assertFalse(self.page.dialogs[-1].open)
+            self.assertIsNone(self.ui.reuse_dialog);self.assertFalse(self.ui.submitting)
+        asyncio.run(scenario())
+
+
 if __name__=='__main__':unittest.main()

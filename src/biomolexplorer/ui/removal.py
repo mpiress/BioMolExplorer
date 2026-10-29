@@ -20,9 +20,10 @@ class RemovalProgress:
         self.ui.page.update()
 
         async def execute():
-            async with processing(self.ui,self.title,'Removendo os dados e atualizando os resultados. Aguarde um instante.'):
-                await action()
-                self.completed = True
+            # Flush the busy state before any deletion or expensive UI rebuild.
+            await asyncio.sleep(0)
+            result=await action()
+            self.completed = result is not False
 
         try:
             await self.ui.guard(execute)

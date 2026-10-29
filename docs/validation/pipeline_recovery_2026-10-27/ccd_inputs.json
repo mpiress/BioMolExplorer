@@ -1,0 +1,281 @@
+[
+  {
+    "pair": "1P0I_BUA_606A",
+    "atoms": 6,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "1XLU_ISP_1001A",
+    "atoms": 7,
+    "scope": "observed_fragment",
+    "missing_heavy_atoms": [
+      "O2P"
+    ],
+    "status": "valid"
+  },
+  {
+    "pair": "1XLW_DEP_1001A",
+    "atoms": 8,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "2WIG_TC3_601A",
+    "atoms": 7,
+    "scope": "observed_fragment",
+    "missing_heavy_atoms": [
+      "OXT"
+    ],
+    "status": "valid"
+  },
+  {
+    "pair": "2WIJ_TN7_601A",
+    "atoms": 8,
+    "scope": "observed_fragment",
+    "missing_heavy_atoms": [
+      "OXT"
+    ],
+    "status": "valid"
+  },
+  {
+    "pair": "2WIK_TC5_601A",
+    "atoms": 9,
+    "scope": "observed_fragment",
+    "missing_heavy_atoms": [
+      "OXT"
+    ],
+    "status": "valid"
+  },
+  {
+    "pair": "2WSL_EFS_1544A",
+    "atoms": 6,
+    "scope": "observed_fragment",
+    "missing_heavy_atoms": [
+      "O3"
+    ],
+    "status": "valid"
+  },
+  {
+    "pair": "2XQF_VX_1530A",
+    "atoms": 6,
+    "scope": "observed_fragment",
+    "missing_heavy_atoms": [
+      "O3"
+    ],
+    "status": "valid"
+  },
+  {
+    "pair": "4BDS_THA_701A",
+    "atoms": 15,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "5NN0_92H_627A",
+    "atoms": 34,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "6QAA_HUN_613A",
+    "atoms": 28,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "6ZWI_QRH_604A",
+    "atoms": 24,
+    "scope": "observed_fragment",
+    "missing_heavy_atoms": [
+      "C02",
+      "C03",
+      "C04",
+      "C05",
+      "C06",
+      "C07",
+      "C08",
+      "C09",
+      "C11",
+      "C13",
+      "C14",
+      "C15",
+      "C27",
+      "C28",
+      "O01",
+      "O10",
+      "O12"
+    ],
+    "status": "valid"
+  },
+  {
+    "pair": "7AWG_S6Q_605A",
+    "atoms": 29,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "7BO3_IA4_610A",
+    "atoms": 22,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "7QBR_AI6_604A",
+    "atoms": 30,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "7QHD_C0I_606A",
+    "atoms": 48,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "8AI7_M8X_612F",
+    "atoms": 22,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "8AI7_MKF_198F",
+    "atoms": 11,
+    "scope": "observed_fragment",
+    "missing_heavy_atoms": [
+      "OXT"
+    ],
+    "status": "valid"
+  },
+  {
+    "pair": "8QTX_WXN_605A",
+    "atoms": 23,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "4M0E_1YL_604A",
+    "atoms": 21,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "5HF5_DEP_604A",
+    "atoms": 8,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "5HF9_HI6_607A",
+    "atoms": 21,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "6NTO_L2Y_605A",
+    "atoms": 11,
+    "scope": "observed_fragment",
+    "missing_heavy_atoms": [
+      "F1"
+    ],
+    "status": "valid"
+  },
+  {
+    "pair": "6O5V_LND_601A",
+    "atoms": 20,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "6WVO_HI6_604A",
+    "atoms": 21,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "2QP8_SC7_1A",
+    "atoms": 40,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "3VF3_0GS_401A",
+    "atoms": 31,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "4B78_KGG_1385A",
+    "atoms": 28,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "4DJX_0KQ_501A",
+    "atoms": 24,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "4L7G_1W0_501A",
+    "atoms": 22,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "5HU1_66F_501A",
+    "atoms": 28,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "6EJ2_B7E_901A",
+    "atoms": 28,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "6EQM_BUH_401A",
+    "atoms": 34,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "6UWV_QK7_401A",
+    "atoms": 28,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  },
+  {
+    "pair": "7MYI_ZQS_401A",
+    "atoms": 21,
+    "scope": "complete_component",
+    "missing_heavy_atoms": [],
+    "status": "valid"
+  }
+]

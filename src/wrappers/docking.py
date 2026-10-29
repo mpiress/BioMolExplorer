@@ -191,6 +191,13 @@ def prepare_docking_receptor(base_input_path, target, output, pdb_code, ph, opti
         else:
             records=list(records)
             if records and isinstance(records[0],str):records=[records]
+        if engine=='vina' and any(not (source/'Prepared'/f'{r[0]}_{r[3]}.dockprep.pdbqt').is_file() and
+                (source/'Prepared'/f'{r[0]}_{r[3]}.dockprep.mol2').is_file() for r in records):
+            from biomolexplorer.docking_preparation import export_receptor_pdbqt
+            destination=Path(output)/'Receptor'/target.replace(' ','')
+            shutil.copytree(source,destination,dirs_exist_ok=True)
+            export_receptor_pdbqt(destination/'Prepared',records)
+            source=destination;base_input_path=str(destination.parent)
         validate_receptor_outputs(source/'Prepared',records,engine)
         event(logger,'receptor.reused','Receptor preparado reutilizado; sem nova preparação.',engine=engine)
         return base_input_path

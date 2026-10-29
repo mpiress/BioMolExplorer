@@ -55,17 +55,17 @@ class ResearchAdmetTests(unittest.TestCase):
         self.assertEqual(len(result),3);self.assertEqual(result['source'].tolist(),['Imported','Reference','ChEMBL'])
         self.assertGreater(result.loc[0,'StructuralAlert_count'],0)
         self.assertEqual(result['PGP'].unique().tolist(),['not_evaluated'])
-        report=json.loads((self.root/'output/compounds_admet_report.json').read_text())
+        report=json.loads((self.root/'output/compounds_INPUT_admet_report.json').read_text())
         self.assertEqual(report['output'],3);self.assertIn('not validated',report['methods']['BBB'])
         self.assertEqual(report['provider']['domain_assessment'],'not_assessed')
-        self.assertTrue((self.root/'output/compounds_egg.png').read_bytes().startswith(b'\x89PNG'))
-        model=load_view((self.root/'output'/('compounds_egg'+SUFFIX)).read_bytes())
+        self.assertTrue((self.root/'output/compounds_INPUT_egg.png').read_bytes().startswith(b'\x89PNG'))
+        model=load_view((self.root/'output'/('compounds_INPUT_egg'+SUFFIX)).read_bytes())
         self.assertEqual(len(model['nodes']),3)
 
     def test_alert_exclusion_keeps_complete_audit_and_annotate_mode_keeps_failed_candidates(self):
         wrapper,filtered=self.run_admet(admet_profile='custom',admet_mode='filter',alert_catalogs=['BRENK'],alert_policy='exclude')
         self.assertNotIn('NITRO',filtered['molecule_chembl_id'].tolist())
-        evaluated=pd.read_csv(self.root/'output/compounds_alerts.csv')
+        evaluated=pd.read_csv(self.root/'output/compounds_INPUT_evaluated.csv')
         rejected=evaluated[evaluated['ADMET_selected']==False]
         self.assertIn('Alertas estruturais',rejected.iloc[0]['ADMET_reasons'])
         _,annotated=self.run_admet(admet_profile='custom',admet_mode='annotate',alert_catalogs=['BRENK'],alert_policy='exclude')
@@ -80,11 +80,11 @@ class ResearchAdmetTests(unittest.TestCase):
 
     def test_all_rejected_and_empty_inputs_preserve_schema(self):
         _,result=self.run_admet(admet_profile='custom',admet_mode='filter',property_limits={'MW':[900,None]})
-        self.assertTrue(result.empty);self.assertEqual(len(pd.read_csv(self.root/'output/compounds_alerts.csv')),3)
+        self.assertTrue(result.empty);self.assertEqual(len(pd.read_csv(self.root/'output/compounds_INPUT_evaluated.csv')),3)
         self.assertIn('ADMET_selected',result.columns)
         pd.DataFrame(columns=['molecule_chembl_id','canonical_smiles']).to_csv(self.source/'compounds.csv',index=False)
         _,empty=self.run_admet(admet_profile='exploratory');self.assertTrue(empty.empty)
-        self.assertTrue((self.root/'output/compounds_egg.png').exists())
+        self.assertTrue((self.root/'output/compounds_INPUT_egg.png').exists())
 
     def test_limits_are_inclusive_and_missing_model_values_never_pass_a_required_limit(self):
         props=dict(BBB='BBB+',HIA='HIA+',Lipinski_violations=1,Veber_violations=0,
@@ -118,7 +118,7 @@ class ResearchAdmetTests(unittest.TestCase):
         with patch('biomolexplorer.admet_predictors.predict_admet_ai',side_effect=predict):
             _,result=self.run_admet(admet_profile='custom',prediction_backend='admet_ai',admet_mode='filter',property_limits={'ML_hERG':[None,.2]})
         self.assertTrue(result.empty)
-        evaluated=pd.read_csv(self.root/'output/compounds_alerts.csv')
+        evaluated=pd.read_csv(self.root/'output/compounds_INPUT_evaluated.csv')
         self.assertEqual(len(evaluated),3);self.assertEqual(evaluated['ML_hERG'].tolist(),[.8]*3)
         self.assertTrue(evaluated['BBB'].str.startswith('BBB').all())
 
@@ -127,8 +127,8 @@ class ResearchAdmetTests(unittest.TestCase):
         operation=execute_operation('admet',dict(base_input_path=str(self.source),input_file='compounds.csv',
             admet_profile='peripheral',admet_mode='filter'),output)
         names={Path(p).name for p in operation.artifacts}
-        self.assertTrue({'compounds_BBB+.csv','compounds_BBB-.csv','compounds_HIA+.csv','compounds_HIA-.csv','compounds_alerts.csv','compounds_admet_report.json'}<=names)
-        self.assertTrue((pd.read_csv(output/'compounds_BBB-.csv')['BBB']=='BBB-').all())
+        self.assertTrue({'compounds_INPUT.csv','compounds_INPUT_evaluated.csv','compounds_INPUT_admet_report.json'}<=names)
+        self.assertTrue((pd.read_csv(output/'compounds_INPUT.csv')['BBB']=='BBB-').all())
 
     def test_egg_resize_uses_full_viewport_and_preserves_hit_testing_and_outliers(self):
         from biomolexplorer.ui.results_viewer import ResultsViewer

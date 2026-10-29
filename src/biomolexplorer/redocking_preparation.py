@@ -12,12 +12,12 @@ FIELDS=['PDB_CODE','LIGAND','RESNUM','CHAIN','RESOLUTION','STATUS','FAILED_STEP'
 
 
 def recoverable(error):
-    if getattr(error,'error_code',None) in ('TOOL_NOT_FOUND','TOOL_START_FAILED'):return False
+    if getattr(error,'error_code',None) in ('TOOL_NOT_FOUND','TOOL_START_FAILED','TOOL_VERSION_UNSUPPORTED'):return False
     if isinstance(error,FileNotFoundError) and Path(str(error.filename)).name in ('chimera','obabel','vina'):return False
     return isinstance(error,(ValueError,RuntimeError,FileNotFoundError,subprocess.SubprocessError))
 
 
-def prepare_pairs(dock,records,settings,charge_type,pH,ready=None):
+def prepare_pairs(dock,records,settings,charge_type,pH,ready=None,engine='vina'):
     """Reuse receptors, but isolate ligand failures and clean partial outputs."""
     from .redocking_config import chimera_pairs
     settings=chimera_pairs(records,settings)
@@ -29,18 +29,10 @@ def prepare_pairs(dock,records,settings,charge_type,pH,ready=None):
         receptor=(record[0],record[3]);key=pair_key(record)
         try:
             if receptor in failed_receptors:raise ValueError(failed_receptors[receptor])
-            validate_structure_pairs(dock.complexpath,[record],{key:settings[key]} if key in settings else {})
-            with cache.locked(record):
-                receptor_ready, ligand_ready=cache.restore(record)
-                if receptor_ready:ready.add(receptor)
-                if ligand_ready and receptor in ready:
-                    completed=[record]
-                else:
-                    completed=dock.prepare_for_docking([record],charge_type,pH,True,
-                        preparation_pairs=settings,_prepared_receptors=ready)
-                validate_structure_pairs(Path(dock.outputpath).parent,[record],{key:settings[key]} if key in settings else {},prepared=True)
-                cache.remember(record)
-            ready.add(receptor)
+            validate_structure_pairs(dock.complexpath,[record],{key:settings[key]} if key in settings else {},engine=engine)
+            completed=dock.prepare_for_docking([record],charge_type,pH,True,
+                preparation_pairs=settings,_prepared_receptors=ready,**({'docking_engine':engine} if engine!='vina' else {}))
+            validate_structure_pairs(dock.complexpath,[record],{key:settings[key]} if key in settings else {},prepared=True,engine=engine)
             prepared.extend(completed)
         except Exception as error:
             if not recoverable(error):raise

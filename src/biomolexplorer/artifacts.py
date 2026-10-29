@@ -70,21 +70,17 @@ def records(item, run_id=None):
         identity=slot_id(item['id'], locator(item['id'], path))
         prior=previous.get(path, {})
         batch=next((b for b in item.get('batches',[]) if path in b.get('artifacts',[])),{})
-        from .artifact_naming import publication_metadata,output_role
-        published=publication_metadata(path)
-        identity=published.get('artifact_id',identity)
-        operation=item.get('operation',config.get('operation','unknown'))
-        descriptor=ArtifactDescriptor(identity,config.get('block_id',item.get('block_id','')),
-            operation,published.get('output',prior.get('output',output_role(operation,path,config.get('parameters',{})))),path,
-            source=prior.get('source',{}),parent_artifact_ids=prior.get('parent_artifact_ids',[]),
-            lineage=prior.get('lineage',[]),parameters=config.get('parameters',{}),
-            record_count=published.get('record_count',prior.get('record_count')),
-            provenance=prior.get('provenance',dict(software_version=item.get('software_version'),
-                cache_key=item.get('cache_key'),legacy_name=published.get('legacy_name',Path(path).name))))
-        origin=prior.get('run_id') or item.get('reused_from_run') or run_id
-        result.append(dict(**descriptor.to_dict(),
+        origin=prior.get('run_id') or batch.get('reused_from_run') or item.get('reused_from_run') or run_id
+        runtime=batch.get('processing_runtime') if batch else item.get('processing_runtime')
+        result.append(dict(artifact_id=identity,
             occurrence_id=hashlib.sha256(json.dumps([identity, origin]).encode()).hexdigest(),
             stage_id=item['id'], stage_name=item.get('name', item['id']),
+            operation=item.get('operation', config.get('operation', 'unknown')),
+            content_sha256=item.get('artifact_manifest',{}).get(str(Path(path).resolve())),
+            processing_version=batch.get('processing_version') if batch else item.get('processing_version'),
+            producer_software=batch.get('producer_software') if batch else item.get('producer_software'),
+            runtime_id=hashlib.sha256(json.dumps(runtime,sort_keys=True).encode()).hexdigest() if runtime else None,
+            dependency_manifest=item.get('input_manifest',{}),
             run_id=origin, name=Path(path).name, selector=selector, locator=locator(item['id'],path), path=path,
             processing_scope='all' if batch.get('configuration',{}).get('_combined_input') else 'individual',
             batch_label=batch.get('label'),
@@ -108,9 +104,16 @@ def validate_reference(ref, files):
         from .artifact_naming import publication_metadata
         matching=[p for p in files if publication_metadata(p).get('artifact_id',slot_id(ref['stage'],locator(ref['stage'],p)))==ref['artifact_id']]
         if len(matching)!=1:
+            from .admet_outputs import legacy_reference
+            migrated=legacy_reference(ref,files)
+            if migrated is not None:return migrated
             raise ValueError('A identidade do arquivo selecionado mudou. Revise a seleção da origem.')
     else:
         matching=[p for p in files if matches_selector(p, ref['selector'])]
+        if not matching:
+            from .admet_outputs import legacy_reference
+            migrated=legacy_reference(ref,files)
+            if migrated is not None:return migrated
     if len(matching)!=1 or not Path(matching[0]).is_file():
         raise ValueError('O arquivo escolhido não está nos resultados da etapa (ausente ou ambíguo). Revise a seleção da origem.')
     return matching[0]

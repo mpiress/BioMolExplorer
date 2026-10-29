@@ -21,7 +21,7 @@ from .operations import OPERATIONS, validate_operation
 from .templates import validate_templates, materialize_templates
 from .workspace import AccessDenied
 from .diagnostics import get_logger, log_context, event, diagnose_exception
-from .stage_cache import artifact_manifest, manifest_matches, implementation_digest, input_manifests, stage_key, path_manifest,file_digest
+from .stage_cache import artifact_manifest, manifest_matches, implementation_digest, input_manifests, stage_key, path_manifest, operation_digest
 from .bindings import sources as input_sources, dependencies as stage_dependencies, asset_references
 
 ACTIVE_RUNS = ('queued', 'running', 'awaiting_input')
@@ -301,6 +301,8 @@ class PipelineService:
         if type(reuse_results) is not bool:
             raise ValueError('A opção de reaproveitamento deve ser verdadeira ou falsa.')
         project = self.store.project(token, project_id, 'editor')
+        if self.store.result_removal_plan(token,project_id,project['pipeline'])['affected']:
+            raise ValueError('Confirme a invalidação dos resultados antes de salvar esta alteração.')
         user = self.store.user(token)
         stages = [execution_stage(stage,'curated') for stage in project['pipeline']]
         order = validate_pipeline(stages)
@@ -582,7 +584,7 @@ class PipelineService:
 
     def _materialize_inputs(self, project_id, stage, field, refs, results, directory=None):
         from .input_validation import columns, merge_csv, validate_file
-        from .docking_inputs import target_input, prepared_receptor
+        from .docking_inputs import target_input, prepared_receptor, preferred_receptors
         from .project_state import digest
         import hashlib
         operation=stage['operation']
@@ -624,10 +626,10 @@ class PipelineService:
                 selected.extend(matching if stage.get('_process_all_inputs') else matching[:1])
             else:
                 from .zinc_retrieval import LIST_SUFFIXES
-                allowed={'structures':{'.pdb','.cif','.mmcif'},'prepared_structures':{'.pdb','.pdbqt'},
+                allowed={'structures':{'.pdb'},'prepared_structures':{'.pdb','.pdbqt','.mol2'},
                          'vina':{'.pdbqt'},'dock6':{'.mol2'},'other':LIST_SUFFIXES}[kind]
                 candidates=[Path(p) for p in upstream if Path(p).suffix.lower() in allowed]
-                if receptor_only:candidates=[p for p in candidates if prepared_receptor(p)]
+                if receptor_only:candidates=preferred_receptors(p for p in candidates if prepared_receptor(p))
                 if kind=='prepared_structures' and any(p.parent.name=='Prepared' for p in candidates):
                     candidates=[p for p in candidates if p.parent.name=='Prepared']
                 if kind=='structures':
@@ -719,20 +721,8 @@ class PipelineService:
                 with metadata.open(encoding='utf-8-sig',newline='') as stream:
                     reader=csv.DictReader(stream);fields=list(reader.fieldnames or []);rows=list(reader)
                 filenames={p.name for p in selected}
-                if kind=='structures':
-                    selected_codes={Path(name).stem.upper() for name in filenames if Path(name).suffix.lower() in ('.pdb','.cif','.mmcif')}
-                    rows=[r for r in rows if str(r.get('PDB_CODE','')).upper() in selected_codes]
-                else:rows=[r for r in rows if r.get('STATUS','succeeded') in ('succeeded','SUCCESS') and f'{r["PDB_CODE"]}_{r["CHAIN"]}.dockprep.pdbqt' in filenames]
-                if not rows and operation=='redocking' and kind=='structures':
-                    # A curated redocking plan is authoritative. Retrieval
-                    # metadata may legitimately omit a ligand that the user
-                    # selected later, but the raw PDB is still a valid input.
-                    configured=stage.get('parameters',{}).get('pdb_codes') or []
-                    rows=[dict(zip(('PDB_CODE','LIGAND','RESNUM','CHAIN','RESOLUTION'),
-                                   list(record[:4])+[record[4] if len(record)>4 else '']))
-                          for record in configured if str(record[0]).upper() in selected_codes]
-                    for name in ('PDB_CODE','LIGAND','RESNUM','CHAIN','RESOLUTION'):
-                        if name not in fields:fields.append(name)
+                if kind=='structures':rows=[r for r in rows if r['PDB_CODE']+'.pdb' in filenames]
+                else:rows=[r for r in rows if r.get('STATUS')!='preparation_failed' and any(f'{r["PDB_CODE"]}_{r["CHAIN"]}.dockprep.'+ext in filenames for ext in ('pdbqt','mol2'))]
                 if not rows:raise ValueError('Os arquivos selecionados não possuem registros PDB compatíveis nos metadados.')
                 with metadata.open('w',encoding='utf-8',newline='') as stream:
                     writer=csv.DictWriter(stream,fieldnames=fields);writer.writeheader();writer.writerows(rows)
@@ -763,7 +753,9 @@ class PipelineService:
                 if 'stage' in ref:
                     files=results.get(ref['stage'],[])
                     chosen=validate_reference(ref,files)
-                    if ref.get('artifact_id'):ref['selector']=selector_for(chosen,files)
+                    if ref.get('artifact_id'):
+                        from .artifacts import slot_id,locator
+                        ref.update(selector=selector_for(chosen,files),artifact_id=slot_id(ref['stage'],locator(ref['stage'],chosen)))
         params = self._runtime_parameters(stage)
         if stage['operation']=='dynamics_dock6':
             from .md_inputs import MDInputs
@@ -819,7 +811,7 @@ class PipelineService:
                 pipeline=json.loads(row[0])
             kind,_=generated_kind(stage,pipeline,results)
             if kind:params['fingerprint']=kind
-        if stage['operation'] in ('docking_dock6','redocking') and self.dock6_path is not None:
+        if (stage['operation']=='docking_dock6' or stage['operation']=='redocking' and stage['parameters'].get('redocking_engine','vina')=='dock6') and self.dock6_path is not None:
             params['dock6_app_path']=str(self.dock6_path)
         bindings = dict(stage.get('bindings',{}))
         if stage['operation'] == 'consensus' and not params.get('base_input_path') and 'base_input_path' not in bindings:
@@ -920,9 +912,10 @@ class PipelineService:
                 params[field] = str(self.store.scoped_path(project_id,path if path.is_absolute() else self.store.project_dir(project_id) / path))
         self._validate_parameters(project_id,dict(stage,parameters=params),cache_only=cache_only)
         if stage['operation']=='redocking' and not cache_only:
-            from .redocking_config import validate_structure_pairs
+            from .redocking_config import validate_structure_pairs,effective_preparation
+            params['preparation_pairs']=effective_preparation(params)
             validate_structure_pairs(Path(params['base_input_path'])/params['target'].replace(' ',''),
-                params['pdb_codes'], params.get('preparation_pairs') or {}, prepared=not params.get('prepare_complex',True))
+                params['pdb_codes'],params.get('preparation_pairs') or {},prepared=not params.get('prepare_complex',True),engine=params.get('redocking_engine','vina'))
         if stage['operation']=='retrieve_zinc':
             from .zinc_retrieval import read_download_list
             read_download_list(Path(params['base_input_path'])/params['filename'])
@@ -1023,11 +1016,12 @@ class PipelineService:
             refs=[]
             prepared=not stage['parameters'].get('prepare_complex',True)
             records=stage['parameters'].get('pdb_codes') or []
-            identities={f'{r[0]}_{r[3]}.dockprep.pdbqt' for r in records} if prepared else {f'{r[0]}{suffix}' for r in records for suffix in ('.pdb','.cif','.mmcif')}
+            identities={f'{r[0]}_{r[3]}.dockprep.'+ext for r in records for ext in ('pdbqt','mol2')} if prepared else {f'{r[0]}.pdb' for r in records}
             for ref in input_sources(stage.get('bindings',{}).get('base_input_path',{})):
                 if 'stage' not in ref or ref.get('selector','auto')!='auto':
                     refs.append(ref);continue
-                files=[Path(p) for p in results.get(ref['stage'],[])]
+                from .docking_inputs import preferred_receptors
+                files=preferred_receptors(Path(p) for p in results.get(ref['stage'],[]))
                 for path in files:
                     if path.name not in identities:continue
                     selector=selector_for(path,files)
@@ -1090,51 +1084,76 @@ class PipelineService:
         if not emitted and stage['operation']=='consensus':
             raise ValueError('Selecione resultados Vina e DOCK6 com os mesmos identificadores de receptor e composto.')
 
+    def _work_units(self,project_id,stage,results):
+        variants=self._variants(project_id,stage,results) if stage.get('input_processing')=='individual' else [(stage,stage['name'])]
+        from .result_state import FINGERPRINTS
+        for variant,label in variants:
+            if stage['operation']=='fingerprints':
+                actions=[key for key in FINGERPRINTS if variant['parameters'].get(key,True)]
+                for action in actions:
+                    unit=copy.deepcopy(variant);unit['input_processing']='merge'
+                    unit['parameters'].update({key:key==action for key in FINGERPRINTS})
+                    yield unit,label+' · '+action
+            else:yield variant,label
+
     def _execute_stage(self, run_id, project_id, user_id, item, stages, run_dir, results, state):
         stage=execution_stage(item['configuration'],item.get('input_mode'))
-        if stage['operation'] in ('consensus','dynamics_dock6'):stage['input_processing']='merge'
-        if stage.get('input_processing') not in ('individual','both') or stage.get('provided_results') or stage['operation']=='import_results':
+        if stage['operation']=='consensus':stage['input_processing']='merge'
+        if stage.get('input_processing')!='individual' and stage['operation']!='fingerprints' or stage.get('provided_results') or stage['operation']=='import_results':
             return self._execute_single(run_id,project_id,user_id,item,stages,run_dir,results,state)
-        artifacts=[];inputs={};excluded=0;redocking_failures=0;redocking_reused=0;docking_failures=0
+        artifacts=[];inputs={};excluded=0;redocking_failures=0;redocking_reused=0;excluded_inputs={}
         item['batches']=[]
-        for index,(variant,label) in enumerate(self._variants(project_id,stage,results),1):
+        for index,(variant,label) in enumerate(self._work_units(project_id,stage,results),1):
             if state['event'].is_set():raise InterruptedError('Execução cancelada.')
             slug=re.sub(r'[^A-Za-z0-9_.+-]','_',label)[:90].strip('.') or 'entrada'
             directory=run_dir/stage['id']/'individual'/f'{index:03d}_{slug}'
             item['input_files']={}
             item['current_batch']={'index':index,'label':label}
             item['progress']=None
-            software=state.get('cache_software') or implementation_digest()+':'+str(self.worker_python or os.sys.executable)
+            item.pop('skip_reason',None)
+            software=implementation_digest()+':'+str(self.worker_python or os.sys.executable)
             key=self._cache_key(project_id,user_id,variant,results,software,pipeline=execution_context(stages))
-            cached=self._cached_batch(project_id,stage['id'],key) if state.get('reuse_results',True) else None
+            cached=self._cached_batch(project_id,stage['id'],key,user_id,software,variant) if state.get('reuse_results',True) else None
             try:
                 if cached:
                     produced=cached['artifacts']
-                    item.update(input_files=copy.deepcopy(cached.get('input_files',{})),
-                        artifact_context=copy.deepcopy(cached.get('artifact_context',{})),
-                        excluded_records=cached.get('excluded_records',0),redocking_failures=0,redocking_reused=cached.get('redocking_reused',0),docking_failures=0)
-                elif variant.get('_combined_input') and stage['operation']=='fingerprints':
-                    produced=self._merge_fingerprint_batches(variant,item,directory)
+                    if cached.get('skip_reason'):item['skip_reason']=cached['skip_reason']
+                    for field in ('input_files','input_manifest','processing_runtime','artifact_context','log_path','excluded_records','redocking_failures','redocking_reused'):
+                        item[field]=copy.deepcopy(cached.get(field,{} if field in ('input_files','input_manifest','artifact_context') else 0 if field.endswith(('records','failures','reused')) else None))
                 else:produced=self._execute_single(run_id,project_id,user_id,item,stages,run_dir,results,state,variant,directory)
             except (AccessDenied,InterruptedError):raise
             except Exception as exc:raise RuntimeError(f'Arquivo {index} ({label}): {exc}') from exc
             batch=dict(label=label,artifacts=produced,input_files=copy.deepcopy(item.get('input_files',{})),
                        artifact_context=copy.deepcopy(item.get('artifact_context',{})),
-                       log_path=cached.get('log_path') if cached else item.get('log_path'),job_id=None if cached else item.get('job_id'),configuration=variant,
-                       cache_key=key,artifact_manifest=artifact_manifest(produced),reused=bool(cached),
-                       excluded_records=item.get('excluded_records',0),redocking_failures=item.get('redocking_failures',0),
-                       redocking_reused=item.get('redocking_reused',0))
-            batch['docking_failures']=item.get('docking_failures',0)
-            if cached:batch['reused_from_run']=cached['reused_from_run']
+                       log_path=item.get('log_path'),job_id=item.get('job_id'),configuration=variant,
+                       status='succeeded',cache_key=key,artifact_manifest=artifact_manifest(produced),
+                       input_manifest=copy.deepcopy(item.get('input_manifest',{})),
+                       processing_runtime=copy.deepcopy(item.get('processing_runtime')),
+                       reused=bool(cached),processing_version=cached.get('processing_version') if cached else operation_digest(stage['operation']),
+                       adopted_processing_version=cached.get('adopted_processing_version') if cached else None,
+                       producer_software=cached.get('producer_software') if cached else software,
+                       reused_from_run=cached.get('reused_from_run') if cached else None,
+                       skip_reason=item.get('skip_reason'),
+                       excluded_records=item.get('excluded_records',0),redocking_failures=item.get('redocking_failures',0),redocking_reused=item.get('redocking_reused',0))
             item['batches'].append(batch)
             for field,paths in batch['input_files'].items():inputs.setdefault(field,[]).extend(paths)
-            excluded+=item.get('excluded_records',0)
+            if stage['operation'] in ('fingerprints','prepare_structures'):
+                from .result_state import digest
+                identity=digest(batch['input_manifest'])
+                excluded_inputs[identity]=max(excluded_inputs.get(identity,0),item.get('excluded_records',0))
+                excluded=sum(excluded_inputs.values())
+            else:excluded+=item.get('excluded_records',0)
             redocking_failures+=item.get('redocking_failures',0)
             redocking_reused+=item.get('redocking_reused',0)
             docking_failures+=item.get('docking_failures',0)
             artifacts.extend(produced)
             item['artifacts']=list(artifacts)
+            self._update(run_id,'running',stages)
         item['input_files']={f:list(dict.fromkeys(paths)) for f,paths in inputs.items()}
+        item['input_manifest']={b['cache_key']:b.get('input_manifest',{}) for b in item['batches']}
+        item['processing_runtime']={b['cache_key']:b.get('processing_runtime') for b in item['batches']}
+        item.pop('skip_reason',None)
+        if item['batches'] and all(b.get('skip_reason') for b in item['batches']):item['skip_reason']=item['batches'][0]['skip_reason']
         item['excluded_records']=excluded
         item['redocking_failures']=redocking_failures
         item['redocking_reused']=redocking_reused
@@ -1142,55 +1161,76 @@ class PipelineService:
         item.pop('current_batch',None)
         return artifacts
 
-    @staticmethod
-    def _merge_fingerprint_batches(stage,item,directory):
-        """Fingerprints are per molecule: ALL can reuse the calculated vectors."""
-        from .fingerprint_selection import filename_kind
-        from .molecule_quality import merge_clean_csv,QualityReport
-        from .artifact_naming import publish
-        directory.mkdir(parents=True)
-        groups={};inputs={}
-        for batch in item['batches']:
-            for field,paths in batch.get('input_files',{}).items():
-                inputs.setdefault(field,[]).extend(paths)
-            for path in batch['artifacts']:
-                kind=filename_kind(path)
-                if kind and Path(path).suffix=='.csv':groups.setdefault(kind,[]).append(path)
-        if not groups:raise ValueError('Nenhum fingerprint calculado disponível para o conjunto completo.')
-        report=QualityReport('fingerprints');files=[]
-        try:
-            for kind,paths in groups.items():
-                output=directory/(kind+'_all.csv')
-                merge_clean_csv(paths,output,'fingerprints',report)
-                files.append(str(output))
-        finally:
-            import shutil
-            shutil.rmtree(directory/'.quality-inputs',ignore_errors=True)
-        quality=report.write(directory)
-        if quality:files.append(str(quality))
-        item['input_files']={field:list(dict.fromkeys(paths)) for field,paths in inputs.items()}
-        item['excluded_records']=len(report.records)
-        item['artifact_context']={}
-        item['job_id']=None
-        item['log_path']=None
-        return publish(stage,files,directory)
-
-    def _cached_batch(self,project_id,stage_id,key):
+    def _cached_batch(self,project_id,stage_id,key,user_id=None,software=None,unit=None):
+        """Completed batches survive later failures, cancellation and restarts."""
         with self.store.connect() as db:
-            previous=db.execute('SELECT id,stages,status FROM runs WHERE project_id=? ORDER BY created DESC',(project_id,)).fetchall()
-        for run_id,encoded,run_status in previous:
-            if run_status!='succeeded':continue
-            for item in json.loads(encoded):
-                if item['id']!=stage_id or item.get('outputs_removed'):continue
-                for batch in item.get('batches',[]):
-                    if batch.get('cache_key')!=key or batch.get('redocking_failures') or batch.get('docking_failures'):continue
-                    manifest=batch.get('artifact_manifest')
+            rows=db.execute("SELECT id,stages FROM runs WHERE project_id=? AND status NOT IN ('queued','running','awaiting_input') ORDER BY created DESC",(project_id,)).fetchall()
+        for row in rows:
+            snapshot=json.loads(row[1])
+            for item in snapshot:
+                if item['id']!=stage_id or item.get('outputs_removed') and not item.get('artifacts'):continue
+                batches=item.get('batches',[]) or ([item] if item.get('status')=='succeeded' else [])
+                if user_id and software and item.get('status')=='succeeded' and any(not b.get('cache_key') for b in batches):
+                    from .legacy_cache import compatible
+                    provenance=item.get('cache_software')
+                    config=execution_stage(item['configuration'],item.get('input_mode'))
+                    if compatible(item['operation'],provenance,config.get('parameters',{}),software):
+                        prior={s['id']:s.get('artifacts',[]) for s in snapshot if s['status']=='succeeded'}
+                        context=execution_context(snapshot)
+                        try:
+                            if set(item.get('artifact_manifest',{}))=={str(Path(p).resolve()) for p in item.get('artifacts',[])} and manifest_matches(item.get('artifact_manifest')) and self._legacy_cache_key(project_id,user_id,config,prior,provenance,pipeline=context)==item.get('cache_key'):
+                                batches=self._upgrade_legacy_batches(project_id,user_id,item,prior,software,context,row[0])
+                        except (OSError,ValueError,KeyError):pass
+                for batch in batches:
+                    if batch.get('status')!='succeeded':continue
+                    if batch.get('redocking_failures'):continue
+                    if batch.get('cache_key')!=key:
+                        batch=self._fingerprint_component(batch,unit,software,key)
+                        if batch is None:continue
+                    if not batch.get('artifacts'):
+                        if batch.get('status')=='succeeded' and batch.get('skip_reason') and batch.get('artifact_manifest')=={}:
+                            return dict(batch,reused_from_run=batch.get('reused_from_run') or row[0])
+                        continue
                     try:
                         for path in batch['artifacts']:self.store.scoped_path(project_id,path)
-                        if manifest and set(manifest)=={str(Path(p).resolve()) for p in batch['artifacts']} and manifest_matches(manifest):
-                            return dict(batch,reused_from_run=run_id)
-                    except (OSError,ValueError,KeyError):continue
+                        if set(batch.get('artifact_manifest',{}))!={str(Path(p).resolve()) for p in batch['artifacts']}:continue
+                        if manifest_matches(batch.get('artifact_manifest')):return dict(batch,reused_from_run=batch.get('reused_from_run') or row[0])
+                    except (OSError,ValueError):continue
         return None
+
+    @staticmethod
+    def _fingerprint_component(batch,unit,software,key):
+        """Reuse verified algorithms from earlier combined fingerprint jobs."""
+        if unit is None or unit['operation']!='fingerprints':return None
+        from .result_state import FINGERPRINTS,signature,inputs_changed
+        from .stage_cache import runtime_signature
+        config=batch.get('configuration',{})
+        if config.get('operation')!='fingerprints' or not batch.get('input_manifest'):return None
+        if batch.get('processing_version')!=operation_digest('fingerprints') or inputs_changed(batch):return None
+        actions=[name for name in FINGERPRINTS if unit['parameters'].get(name,True)]
+        if len(actions)!=1:return None
+        action=actions[0]
+        if not config['parameters'].get(action,True):return None
+        projected=copy.deepcopy(config);projected['parameters'].update({name:name==action for name in FINGERPRINTS})
+        if signature(projected)!=signature(unit):return None
+        if batch.get('processing_runtime')!=runtime_signature('fingerprints',software.split(':',1)[-1],unit['parameters']):return None
+        paths=batch.get('artifacts',[])
+        if sum(bool(config['parameters'].get(name,True)) for name in FINGERPRINTS)>1:
+            paths=[path for path in paths if Path(path).name.startswith(action+'_')]
+        if not paths:return None
+        return dict(batch,cache_key=key,configuration=projected,artifacts=paths,
+                    artifact_manifest={path:batch.get('artifact_manifest',{}).get(path) for path in paths})
+
+    def _upgrade_legacy_batches(self,project_id,user_id,item,prior,software,context,run_id):
+        upgraded=[]
+        for old in item.get('batches',[]):
+            batch=copy.deepcopy(old);config=batch['configuration']
+            batch.update(cache_key=self._cache_key(project_id,user_id,config,prior,software,pipeline=context),
+                status='succeeded',artifact_manifest=artifact_manifest(batch['artifacts']),processing_version=None,
+                adopted_processing_version=operation_digest(config['operation']),processing_runtime=None,
+                producer_software=item.get('producer_software') or item.get('cache_software'),reused_from_run=run_id)
+            upgraded.append(batch)
+        return upgraded
 
     def _execute_single(self, run_id, project_id, user_id, item, stages, run_dir, results, state, stage=None, stage_dir=None):
         stage = stage or execution_stage(item['configuration'],item.get('input_mode'))
@@ -1199,6 +1239,9 @@ class PipelineService:
         if stage['operation'] == 'import_results' or stage.get('provided_results'):
             params=stage.get('provided_results') or stage['parameters']
             item['provided']=bool(stage.get('provided_results'))
+            from .result_state import input_digest
+            with self.store.connect() as db:
+                item['source_manifest']={asset:input_digest(db.execute('SELECT path FROM assets WHERE project_id=? AND id=?',(project_id,asset)).fetchone()[0]) for asset in params['asset_ids']}
             artifacts=self._import(project_id,params,stage_dir / 'artifacts')
             with self.store.connect() as db:
                 item['input_files']={'assets':[row[0] for asset_id in params.get('asset_ids',[])
@@ -1214,12 +1257,23 @@ class PipelineService:
                         write_view(destination,view);artifacts.append(str(destination))
             return artifacts
         params = self._resolve(project_id,user_id,stage,results,stage_dir/'inputs',item,pipeline=execution_context(stages))
+        item['input_manifest']=input_manifests(stage,results,item.get('input_files'))
+        from .stage_cache import runtime_signature
+        item['processing_runtime']=runtime_signature(stage['operation'],str(self.worker_python or os.sys.executable),params)
+        if stage['operation']=='admet':
+            from .result_origins import ResultOrigins
+            from .dataset_identity import admet_origin
+            selected=[p for p in item.get('input_files',{}).get('base_input_path',[]) if Path(p).suffix.lower()=='.csv']
+            matching=[p for p in selected if Path(p).name==params.get('input_file')]
+            if matching and stage.get('input_processing')!='merge':selected=matching
+            if selected:
+                params['dataset_origin']=admet_origin(selected,ResultOrigins(stages,run_id))
         item['artifact_context']={key:params.get(key) for key in ('target','search_term') if params.get(key) is not None}
         if stage['operation']=='redocking':
             import sys
             from .redocking_config import validate_redocking_tools
             tool_path=str(Path(self.worker_python or sys.executable).parent)+os.pathsep+os.environ.get('PATH','')
-            validate_redocking_tools(params.get('prepare_complex',True),tool_path,params.get('preparation_pairs'))
+            validate_redocking_tools(params.get('prepare_complex',True),tool_path,engine=params.get('redocking_engine','vina'),dock6_path=params.get('dock6_app_path'))
         resource = materialize_templates(stage_dir / 'resources',stage.get('templates',{}))
         if stage['operation']=='dynamics_dock6' and state.get('reuse_results',True):
             from .md_cache import seed_runs
@@ -1232,21 +1286,23 @@ class PipelineService:
             batch=item.get('current_batch')
             codes={str(r[0]) for r in params.get('pdb_codes',[])}
             requested={str(r[0]) for r in item['configuration']['parameters'].get('pdb_codes',[])}
-            # Historical inputs remain available in the cache, while current
-            # outputs contain only this batch's requested receptors and pairs.
-            only_codes=codes
-            exclude_codes=set()
+            # Other selected receptors have their own individual batch. Retain
+            # unselected historical receptors in the first batch only.
+            only_codes=codes if batch and batch['index']>1 else None
+            exclude_codes=requested-codes if batch and batch['index']==1 else set()
+            software=implementation_digest()+':'+str(self.worker_python or os.sys.executable)
+            verified=self._verified_legacy_keys(project_id,user_id,stage['id'],software)
             if stage_sources(self.store,project_id,stage['id'],seed/target,
                     source=Path(params['base_input_path'])/target,configuration=stage,
-                    only_codes=only_codes,exclude_codes=exclude_codes):
+                    only_codes=only_codes,exclude_codes=exclude_codes,
+                    verified_legacy_keys=verified,runtime_python=str(self.worker_python or os.sys.executable)):
                 import shutil
                 shutil.copytree(Path(params['base_input_path'])/target,seed/target,
                     dirs_exist_ok=True,ignore=shutil.ignore_patterns('cache'))
                 params['base_input_path']=str(seed)
         manager = JobManager(AppConfig(workspace=stage_dir, cpu_workers=self.cpu_workers,
             worker_python=self.worker_python, job_timeout=self.job_timeout, resource_dir=resource,
-            preparation_cache=self.store.project_dir(project_id)/'.biomolexplorer'/'cache'/'ligand-preparation',
-            reuse_preparations=state.get('reuse_results',True)))
+            cache_dir=self.store.project_dir(project_id)/'.biomolexplorer/cache',reuse_results=state.get('reuse_results',True)))
         try:
             with self._lock:
                 state['manager'] = manager
@@ -1307,15 +1363,9 @@ class PipelineService:
         if stage.get('input_processing') in ('individual','both') and not stage.get('provided_results') and stage['operation'] not in ('import_results','dynamics_dock6'):
             keys=[self._cache_key(project_id,user_id,variant,results,software,pipeline) for variant,_ in self._variants(project_id,stage,results)]
             return stage_key(stage,{'individual_keys':keys},{},software)
-        parameters=stage.get('provided_results') or (stage['parameters'] if stage['operation']=='import_results' else self._resolve(project_id,user_id,stage,results,cache_only=True,pipeline=pipeline))
-        if stage.get('_individual_input'):
-            # Hash the materialized batch, including its required companions,
-            # rather than every output of every connected producer.
-            bound={ref.get('stage') for group in stage.get('bindings',{}).values() for ref in input_sources(group)}
-            remaining=dict(stage,bindings={},depends_on=list(stage_dependencies(stage)-bound))
-            inputs={**input_manifests(remaining,results),
-                **{'bound:'+field:path_manifest(parameters[field]) for field in stage.get('bindings',{}) if parameters.get(field)}}
-        else:inputs=input_manifests(stage,results)
+        probe={}
+        parameters=stage.get('provided_results') or (stage['parameters'] if stage['operation']=='import_results' else self._resolve(project_id,user_id,stage,results,item=probe,cache_only=True,pipeline=pipeline))
+        inputs=input_manifests(stage,results,probe.get('input_files'))
         asset_ids=asset_references(stage)
         for asset_id in sorted(asset_ids):
             with self.store.connect() as db:
@@ -1330,13 +1380,45 @@ class PipelineService:
                 for field in stage.get('bindings',{}) if parameters.get(field)})
         return stage_key(stage,parameters,inputs,software)
 
+    def _legacy_cache_key(self,project_id,user_id,stage,results,software,pipeline=None):
+        from .legacy_cache import legacy_stage_key
+        if stage.get('input_processing')=='individual' and not stage.get('provided_results') and stage['operation']!='import_results':
+            keys=[self._legacy_cache_key(project_id,user_id,v,results,software,pipeline) for v,_ in self._variants(project_id,stage,results)]
+            return legacy_stage_key(stage,{'individual_keys':keys},{},software)
+        parameters=stage.get('provided_results') or (stage['parameters'] if stage['operation']=='import_results' else self._resolve(project_id,user_id,stage,results,cache_only=True,pipeline=pipeline))
+        inputs=input_manifests(stage,results)
+        for asset_id in sorted(asset_references(stage)):
+            with self.store.connect() as db:asset=db.execute('SELECT path FROM assets WHERE project_id=? AND id=?',(project_id,asset_id)).fetchone()
+            if asset is None:raise AccessDenied('Arquivo não autorizado.')
+            inputs['asset:'+asset_id]=path_manifest(self.store.scoped_path(project_id,asset['path']))
+        return legacy_stage_key(stage,parameters,inputs,software)
+
+    def _verified_legacy_keys(self,project_id,user_id,stage_id,software):
+        from .legacy_cache import compatible
+        verified=set()
+        with self.store.connect() as db:rows=db.execute('SELECT stages FROM runs WHERE project_id=?',(project_id,)).fetchall()
+        for row in rows:
+            snapshot=json.loads(row[0])
+            for item in snapshot:
+                if item['id']!=stage_id or item['status']!='succeeded' or item.get('outputs_removed') or item.get('dependency_obsolete'):continue
+                config=execution_stage(item['configuration'],item.get('input_mode'));provenance=item.get('cache_software')
+                if not compatible(item['operation'],provenance,config.get('parameters',{}),software):continue
+                try:
+                    for path in item.get('artifacts',[]):self.store.scoped_path(project_id,path)
+                    if set(item.get('artifact_manifest',{}))!={str(Path(p).resolve()) for p in item.get('artifacts',[])}:continue
+                    if not manifest_matches(item.get('artifact_manifest')):continue
+                    prior={s['id']:s.get('artifacts',[]) for s in snapshot if s['status']=='succeeded'}
+                    if self._legacy_cache_key(project_id,user_id,config,prior,provenance,pipeline=execution_context(snapshot))==item.get('cache_key'):
+                        verified.add(item['cache_key'])
+                except (OSError,ValueError,KeyError):continue
+        return verified
+
     def _cached_stage(self,project_id,user_id,stage,key,software):
         with self.store.connect() as db:
             previous=db.execute('SELECT id,stages,status FROM runs WHERE project_id=? ORDER BY created DESC',(project_id,)).fetchall()
         latest_redocking_seen=False
         for run_id,encoded,run_status in previous:
-            if stage['operation']=='redocking' and run_status!='succeeded':
-                continue
+            if run_status in ACTIVE_RUNS:continue
             snapshot=json.loads(encoded)
             old=next((s for s in snapshot if (s['id']==stage['id'] or
                       s.get('operation')==stage['operation'] and s.get('cache_key')==key)
@@ -1344,18 +1426,19 @@ class PipelineService:
                       and (s.get('artifacts') or stage['operation']=='redocking')),None)
             if old is None:
                 continue
-            if stage['operation']=='dynamics_dock6' and old.get('md_failures'):continue
-            if stage['operation'] in ('docking_vina','docking_dock6') and old.get('docking_failures'):continue
+            known_version=old.get('processing_version') or old.get('adopted_processing_version')
+            if known_version and known_version!=operation_digest(stage['operation']):continue
             if stage['operation']=='redocking':
                 # An older exact request may lack pairs accumulated by a newer
                 # run. Reconcile per pair instead of returning that stale table.
                 if latest_redocking_seen:return None
                 latest_redocking_seen=True
                 if old.get('redocking_failures'):return None
-            if old.get('outputs_removed'):
+            if old.get('outputs_removed') or old.get('dependency_obsolete'):
                 continue
             if not old.get('artifacts'):continue
             try:
+                legacy_adopted=False
                 for path in old['artifacts']:
                     self.store.scoped_path(project_id,path)
                 manifest=old.get('artifact_manifest') or artifact_manifest(old['artifacts'])
@@ -1375,8 +1458,12 @@ class PipelineService:
                     provenance=old.get('cache_software')
                     if not provenance and old.get('software_version'):
                         provenance=old['software_version']+':'+software.split(':',1)[1]
-                    if not provenance or self._cache_key(project_id,user_id,configuration,prior_results,provenance,pipeline=context)!=candidate_key:
-                        continue
+                    verified=bool(provenance and self._cache_key(project_id,user_id,configuration,prior_results,provenance,pipeline=context)==candidate_key)
+                    if not verified:
+                        from .legacy_cache import compatible
+                        verified=compatible(stage['operation'],provenance,configuration.get('parameters',{}),software) and self._legacy_cache_key(project_id,user_id,configuration,prior_results,provenance,pipeline=context)==candidate_key
+                        legacy_adopted=verified
+                    if not verified:continue
                     candidate_key=self._cache_key(project_id,user_id,configuration,prior_results,software,pipeline=context)
                 if not candidate_key:
                     # Upgrade successful results produced before cache metadata
@@ -1402,7 +1489,11 @@ class PipelineService:
                     candidate_key=self._cache_key(project_id,user_id,execution_stage(old['configuration'],old.get('input_mode')),prior_results,software,
                         pipeline=execution_context([s for s in snapshot if s.get('configuration')]))
                 if candidate_key==key:
-                    return dict(old,artifact_manifest=manifest,reused_from_run=run_id)
+                    result=dict(old,artifact_manifest=manifest,reused_from_run=run_id)
+                    if legacy_adopted:
+                        result['adopted_processing_version']=operation_digest(stage['operation'])
+                        result['batches']=self._upgrade_legacy_batches(project_id,user_id,old,prior_results,software,context,run_id)
+                    return result
             except (OSError,ValueError,KeyError):
                 continue
         return None
@@ -1413,7 +1504,6 @@ class PipelineService:
         found=set()
         for run in self.store.list_runs(token,project_id):
             for item in run['stages']:
-                if item['operation']=='redocking' and run['status']!='succeeded':continue
                 if item['id'] in found or item['status']!='succeeded' or not item.get('artifacts') or item.get('outputs_removed'):
                     continue
                 try:
@@ -1489,6 +1579,8 @@ class PipelineService:
         state = self._active[run_id]
         results = {s['id']:s['artifacts'] for s in stages if s['status']=='succeeded'}
         try:
+            from .stage_cache import runtime_packages
+            operation_digest.cache_clear();runtime_packages.cache_clear()
             software=implementation_digest() + ':' + str(self.worker_python or os.sys.executable)
             state['cache_software']=software
             run_dir = self.store.project_dir(project_id) / 'runs' / run_id
@@ -1566,10 +1658,16 @@ class PipelineService:
                         artifacts = self._execute_stage(run_id,project_id,user_id,item,stages,run_dir,results,state)
                         item['artifact_manifest']=artifact_manifest(artifacts)
                     item['cache_key']=key
+                    item['processing_version']=cached.get('processing_version') if cached else operation_digest(stage['operation'])
+                    item['producer_software']=(cached.get('producer_software') or cached.get('cache_software')) if cached else software
+                    if cached and cached.get('adopted_processing_version'):item['adopted_processing_version']=cached['adopted_processing_version']
                     item['cache_software']=software
                     item['software_version']=software.split(':',1)[0]
                     if cached and cached.get('artifact_records'):item['artifact_records']=copy.deepcopy(cached['artifact_records'])
                     if cached and cached.get('input_files'):item['input_files']=cached['input_files']
+                    if cached and cached.get('input_manifest'):item['input_manifest']=cached['input_manifest']
+                    if cached and cached.get('source_manifest'):item['source_manifest']=cached['source_manifest']
+                    if cached:item['processing_runtime']=cached.get('processing_runtime')
                     if cached and cached.get('provided'):item['provided']=True
                     if cached and cached.get('excluded_records'):item['excluded_records']=cached['excluded_records']
                     if cached and cached.get('redocking_failures'):item['redocking_failures']=cached['redocking_failures']
@@ -1658,8 +1756,8 @@ class PipelineService:
         """Confirm one pending stage without rerunning completed retrievals."""
         configuration=execution_stage(configuration,'curated')
         if configuration.get('operation')=='redocking' and not configuration.get('provided_results'):
-            from .redocking_config import validate_pairs
-            validate_pairs(configuration['parameters'].get('pdb_codes'),configuration['parameters'].get('preparation_pairs') or {})
+            from .redocking_config import validate_pairs,effective_preparation
+            validate_pairs(configuration['parameters'].get('pdb_codes'),effective_preparation(configuration['parameters']))
         run = self.store.get_run(token,run_id)
         self.store.project(token,run['project_id'],'editor')
         user = self.store.user(token)
@@ -1678,6 +1776,10 @@ class PipelineService:
                 raise ValueError('Escolha arquivos de blocos já concluídos nesta execução.')
             candidate=[configuration if s is pending else s['configuration'] for s in stages]
             validate_pipeline(candidate)
+            project=self.store.project(token,run['project_id']);saved=project['pipeline']
+            proposed=[configuration if s['id']==configuration['id'] else s for s in saved]
+            if self.store.result_removal_plan(token,run['project_id'],proposed)['affected']:
+                raise ValueError('Confirme a invalidação dos resultados antes de salvar esta alteração.')
             context=[dict(c,_execution_batches=s.get('batches',[])) for c,s in zip(candidate,stages)]
             for group in configuration.get('bindings',{}).values():
                 if any('stage' in ref and ref.get('selector','auto')=='auto' for ref in input_sources(group)):
@@ -1690,6 +1792,10 @@ class PipelineService:
                 for variant,_ in self._variants(run['project_id'],configuration,results):
                     self._resolve(run['project_id'],user['id'],variant,results,cache_only=True,pipeline=context)
             else:self._resolve(run['project_id'],user['id'],configuration,results,cache_only=True,pipeline=context)
+            # Curated input choices are durable project configuration, rather
+            # than a run-only override that would look like a later edit.
+            if proposed!=saved:
+                self.store.save_pipeline(token,run['project_id'],proposed,project['revision'])
             pending.update(configuration=copy.deepcopy(configuration),name=configuration['name'],input_mode='curated',
                            status='queued',curation_confirmed=True,error=None)
             state={'event':threading.Event(),'manager':None,'job_id':None,'reuse_results':pending.get('reuse_results',True)}

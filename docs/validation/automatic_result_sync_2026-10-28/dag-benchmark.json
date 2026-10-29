@@ -1,0 +1,12 @@
+{
+  "scope": "Metadata-only DAG invalidation preview; no chemistry jobs or file deletion",
+  "blocks": 100,
+  "runs": 10,
+  "input_units": 4000,
+  "affected_blocks": 100,
+  "preview_seconds": [
+    0.1114631179952994,
+    0.11646177500369959,
+    0.11160247499356046
+  ]
+}

@@ -140,7 +140,7 @@ def exact_edges(filename,metric,threshold,report=None):
     function=getattr(DataStructs,name+'Similarity')
     rows=[]
     for index,left in enumerate(vectors):
-        if index%100==0:report_progress(f'Calculando similaridade exata: {index}/{len(vectors)} compostos…')
+        if index%100==0:report_progress(key='similarity.exact',arguments={'completed':index,'total':len(vectors)})
         for j in range(index+1,len(vectors)):
             # Directed metrics are represented as an undirected molecular graph
             # only when both directions satisfy the chosen threshold.
@@ -225,7 +225,7 @@ def export_analysis(dataset,edges,output,identifier,title,origin=None,mcs_timeou
     output=Path(output);graph=build_graph(dataset,edges)
     model=graph_view(graph,dataset,title)
     mcc=graph.subgraph(model['mcc']);selected=dataset[dataset['molecule_chembl_id'].isin(model['mcc'])].copy()
-    report_progress('Buscando o fragmento comum do MCC: '+title+'…')
+    report_progress(key='graphs.fragment',arguments={'title':title})
     model['fragment']=common_fragment(selected['canonical_smiles'].tolist(),mcs_timeout,ring_matches_ring_only,complete_rings_only)
     model['origin']=origin or {};model['analysis_id']=identifier
     model['statistics']={'nodes':len(graph),'edges':graph.number_of_edges(),'components':nx.number_connected_components(graph),
@@ -288,7 +288,7 @@ def analyze_inputs(entries,output,metric='Tanimoto',fingerprint='morgan',thresho
     output=Path(output);selected_frames=[]
     quality=CURRENT_REPORT.get() or QualityReport('graphs')
     for index,entry in enumerate(entries):
-        path=Path(entry['file']);kind=entry['kind'];report_progress(f'Análise de grafos {index+1}/{len(entries)} · {path.name}')
+        path=Path(entry['file']);kind=entry['kind'];report_progress(key='graphs.analysis',arguments={'index':index+1,'total':len(entries),'file':path.name})
         validate_file(path,kind,validate_rows=False)
         dataset=read_compounds(entry.get('compound_files',[])+([str(path)] if 'canonical_smiles' in columns(path) else []),quality)
         if kind=='fingerprints':

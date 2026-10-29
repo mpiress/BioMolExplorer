@@ -8,14 +8,16 @@ from pathlib import Path
 import shutil
 
 from .paths import resolve_path
-from .redocking_config import DEFAULTS, pair_key
-from .stage_cache import file_digest, implementation_digest
+from .redocking_config import DEFAULTS, pair_key,effective_preparation
+from .stage_cache import file_digest, operation_digest,runtime_signature
 from .storage import write_text
 from .calculation_cache import copy_artifact
 
 NAME = 'redocking_cache.json'
 PARAMETERS = dict(pH=7.4, sizeof_box=[24, 24, 24], exhaustiveness=20, num_modes=10,
-                  prepare_complex=True, charge_type='gas')
+                  prepare_complex=True, charge_type='gas',redocking_engine='vina',dock6_app_path=None,
+                  density=.5,radius=1.4,distance=10.,conformer_search_type='flex',
+                  max_orientations=1000,num_scored_conformers=1,dock6_seed=73)
 
 
 def raw_structure(folder,code):
@@ -33,7 +35,7 @@ def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, default=str).encode()).hexdigest()
 
 
-def legacy_indexes(batch):
+def legacy_indexes(batch,runtime_python=None):
     """Adopt intact native results predating the pair index, without editing them."""
     configuration = batch.get('configuration', {})
     if configuration.get('provided_results'):
@@ -50,23 +52,17 @@ def legacy_indexes(batch):
             row.setdefault('STATUS', 'succeeded')
         rows = [row for row in rows if all(re.fullmatch(r'[A-Za-z0-9_+-]{1,40}', row.get(k, ''))
                 for k in ('PDB_CODE', 'LIGAND', 'RESNUM', 'CHAIN'))]
-        legacy_settings={key:dict(value) for key,value in parameters.get('preparation_pairs',{}).items()}
-        # Never relabel native/unknown historical preparation as Chimera.
-        if any(legacy_settings.get('|'.join(str(row[name]) for name in ('PDB_CODE','LIGAND','RESNUM','CHAIN')),{}).get('preparation_backend')!='legacy_chimera' for row in rows):continue
-        for row in rows:
-            key='|'.join(str(row[name]) for name in ('PDB_CODE','LIGAND','RESNUM','CHAIN'))
-            legacy_settings.setdefault(key,{}).setdefault('preparation_backend','legacy_chimera')
-        cache = PairCache(source, root / source.name, [], legacy_settings,
+        cache = PairCache(source, root / source.name, [], effective_preparation(parameters),
                           {key: parameters.get(key, value) for key, value in PARAMETERS.items()},
-                          template_overrides=configuration.get('templates', {}))
+                          template_overrides=configuration.get('templates', {}),runtime_python=runtime_python)
         yield root / NAME, cache.publish(rows, write=False)
 
 
 def stage_sources(store, project_id, stage_id, destination, source=None, configuration=None,
-                  only_codes=None, exclude_codes=()):
+                  only_codes=None, exclude_codes=(),verified_legacy_keys=(),runtime_python=None):
     """Copy only manifest-verified files from committed runs of this block."""
     with store.connect() as db:
-        runs = db.execute("SELECT stages FROM runs WHERE project_id=? AND status='succeeded' ORDER BY created DESC",
+        runs = db.execute("SELECT stages FROM runs WHERE project_id=? AND status NOT IN ('queued','running','awaiting_input') ORDER BY created DESC",
                           (project_id,)).fetchall()
     count = 0
     seen = set()
@@ -80,13 +76,16 @@ def stage_sources(store, project_id, stage_id, destination, source=None, configu
         return original_hashes[path] in hashes
     for run in runs:
         for stage in json.loads(run['stages']):
-            if stage['id'] != stage_id or stage['status'] != 'succeeded' or stage.get('outputs_removed'):
+            if stage['id'] != stage_id or stage.get('outputs_removed') or stage.get('dependency_obsolete') and not stage.get('partial_results'):
                 continue
+            if stage['status']!='succeeded' and not stage.get('batches'):continue
             if stage.get('operation', stage.get('configuration', {}).get('operation')) != 'redocking' or stage.get('provided'):
                 continue
             candidates = list(stage.get('batches') or [stage])
             manifest = stage.get('artifact_manifest', {})
             for batch in candidates:
+                if stage['status']!='succeeded' and batch.get('status')!='succeeded':continue
+                manifest=batch.get('artifact_manifest') or stage.get('artifact_manifest',{})
                 previous = batch.get('configuration', stage.get('configuration', {}))
                 if configuration is not None:
                     from .bindings import sources
@@ -99,7 +98,13 @@ def stage_sources(store, project_id, stage_id, destination, source=None, configu
                         continue
                 indexes = [Path(p) for p in batch.get('artifacts', []) if Path(p).name == NAME]
                 try:
-                    if indexes:
+                    if stage.get('cache_key') in verified_legacy_keys:
+                        # The caller proved the original v1 request, content
+                        # manifest, compatible source build and runtime envelope.
+                        snapshots=list(legacy_indexes(batch,runtime_python))
+                        for _,data in snapshots:
+                            for entry in data['entries']:entry['producer_software']=stage.get('cache_software')
+                    elif indexes:
                         snapshots = []
                         for index in indexes:
                             index = store.scoped_path(project_id, index)
@@ -122,6 +127,9 @@ def stage_sources(store, project_id, stage_id, destination, source=None, configu
                             continue
                         entries = []
                         for entry in data['entries']:
+                            if (stage.get('partial_results') or batch.get('partial_results')) and configuration is not None:
+                                selected={pair_key(r) for r in configuration.get('parameters',{}).get('pdb_codes',[]) or []}
+                                if pair_key(entry['record']) not in selected:continue
                             if entry['pair_key'] in seen:
                                 continue
                             code = entry['record'][0]
@@ -164,25 +172,38 @@ def stage_sources(store, project_id, stage_id, destination, source=None, configu
 
 
 class PairCache:
-    def __init__(self, source, output, records, settings, parameters, template_overrides=None):
+    def __init__(self, source, output, records, settings, parameters, template_overrides=None,runtime_python=None):
         self.source, self.output = Path(source), Path(output)
         self.root = self.output.parent
         self.prepared = self.source / 'Prepared'
-        self.settings, self.parameters = settings, parameters
+        self.settings = settings
+        self.engine=parameters.get('redocking_engine','vina')
+        self.parameters={k:v for k,v in PARAMETERS.items() if k in ('pH','sizeof_box','exhaustiveness','num_modes','prepare_complex','charge_type')}
+        self.parameters.update(parameters)
+        if self.engine=='vina':self.parameters={k:v for k,v in self.parameters.items() if k in ('pH','sizeof_box','exhaustiveness','num_modes','prepare_complex','charge_type')}
+        else:
+            for k,v in PARAMETERS.items():self.parameters.setdefault(k,v)
+            for k in ('sizeof_box','exhaustiveness','num_modes'):self.parameters.pop(k,None)
         self.code_hashes = {}
         self.native_identities={}
         self._centers_stamp = None
         self._centers_rows = []
         templates = {}
         from .templates import quiet_template, RESOURCE_ROOT
-        for name in ('chimera/prepare_complex.template', 'chimera/prepare_receptor.template',
-                     'chimera/prepare_ligand.template', 'vina/config.template'):
+        names=['chimera/prepare_complex.template','chimera/prepare_receptor.template','chimera/prepare_ligand.template']
+        names+=['vina/config.template'] if self.engine=='vina' else ['dock6/'+n+'.template' for n in ('redocking','grid','showbox','INSPH')]
+        for name in names:
             if template_overrides is None:
                 text = resolve_path('src/scripts/' + name).read_text()
             else:
                 text = template_overrides.get(name, (RESOURCE_ROOT / name).read_text())
             templates[name] = hashlib.sha256(quiet_template(name, text).encode()).hexdigest()
-        self.science = dict(code=implementation_digest(), templates=templates)
+        self.science = dict(code=operation_digest('redocking'), templates=templates)
+        import sys
+        self.science['runtime']=runtime_signature('redocking',runtime_python or sys.executable,dict(self.parameters,redocking_engine=self.engine))
+        if self.engine=='dock6':
+            root=Path(self.parameters.get('dock6_app_path') or '')
+            self.science['dock6_files']={name:file_digest(root/name) for name in ('bin/dock6','bin/sphgen','bin/sphere_selector','bin/showbox','bin/grid','parameters/vdw_AMBER_parm99.defn','parameters/flex.defn','parameters/flex_drive.tbl')}
         self.records = records
         self.restored = {}
         from .calculation_cache import CalculationCache
@@ -213,9 +234,8 @@ class PairCache:
             receptor['cofactor_topologies']={name:file_digest(component_path(name,self.source,config)) for name in config.get('cofactors',[])}
         # Supplied prepared structures are also scientific inputs.
         if not self.parameters['prepare_complex']:
-            receptor['prepared'] = file_digest(self.prepared / f'{code}_{chain}.dockprep.pdbqt')
-            if self.parameters.get('redocking_engine')=='dock6':
-                receptor['prepared_mol2']=file_digest(self.prepared/f'{code}_{chain}.dockprep.mol2')
+            receptor['prepared'] = file_digest(self.prepared / f'{code}_{chain}.dockprep.{"pdbqt" if self.engine=="vina" else "mol2"}')
+            if self.engine=='dock6':receptor['noH']=file_digest(self.prepared/f'{code}_{chain}.noH.pdb')
         rkey = digest(receptor)
         pair = dict(receptor=rkey, identity=pair_key(record), parameters=self.parameters,
                     options=dict(DEFAULTS, **config.get('ligand', {})),
@@ -230,9 +250,7 @@ class PairCache:
                 if key not in self.native_identities:self.native_identities[key]=parameterization_identity(prefix,True,environment)
                 pair['minimization']=self.native_identities[key]
         if not self.parameters['prepare_complex']:
-            pair['prepared'] = file_digest(self.prepared / (self.prefix(record) + '.lig.pdbqt'))
-            if self.parameters.get('redocking_engine')=='dock6':
-                pair['prepared_mol2']=file_digest(self.prepared/(self.prefix(record)+'.lig.mol2'))
+            pair['prepared'] = file_digest(self.prepared / (self.prefix(record) + ('.lig.pdbqt' if self.engine=='vina' else '.lig.mol2')))
             pair['centers'] = self.centers(record)
         return rkey, digest(pair)
 
@@ -308,7 +326,7 @@ class PairCache:
                     if receptor not in receptor_keys and pkey != entry['pair_key']:
                         continue
                     receptor_digest = next(entry['files'][name] for name, path in paths.items()
-                                           if path.name == receptor_prefix + 'dockprep.pdbqt')
+                                           if path.name == receptor_prefix + ('dockprep.pdbqt' if self.engine=='vina' else 'dockprep.mol2'))
                     if receptor in receptor_files and receptor_files[receptor] != receptor_digest:
                         continue
                     receptor_files[receptor] = receptor_digest
@@ -352,16 +370,18 @@ class PairCache:
                     continue
                 receptor_key, pkey = self.keys(record, config)
                 prefix = self.prefix(record)
-                required = [self.prepared / f'{record[0]}_{record[3]}.dockprep.pdbqt',
-                            self.prepared / (prefix + '.lig.pdbqt'), self.output / (prefix + '.lig.pdbqt')]
+                extension='pdbqt' if self.engine=='vina' else 'mol2'
+                required=[self.prepared/f'{record[0]}_{record[3]}.dockprep.{extension}',
+                          self.prepared/(prefix+'.lig.'+extension),self.output/(prefix+'.lig.'+extension)]
+                if self.engine=='dock6':required.append(self.prepared/f'{record[0]}_{record[3]}.noH.pdb')
                 if not all(p.is_file() and p.stat().st_size for p in required):
                     continue
                 files = [p for p in self.prepared.iterdir() if p.is_file() and
-                         p.suffix in ('.pdb', '.pdbqt', '.mol2') and
+                         p.suffix in ('.pdb', '.pdbqt', '.mol2', '.json') and
                          p.name.startswith((f'{record[0]}_{record[3]}.', prefix + '.'))]
                 files += [p for p in self.output.iterdir() if p.is_file() and p.name.startswith(prefix + '.')
-                          and p.suffix in ('.pdb', '.pdbqt', '.mol2', '.csv')]
-                raw = raw_structure(self.source,record[0])
+                          and p.suffix in ('.pdb', '.pdbqt', '.mol2', '.csv','.json','.out','.in')]
+                raw = self.source / f'{record[0]}.pdb'
                 if raw.is_file():files.append(raw)
                 for path in files:
                     if path not in hashes:hashes[path] = file_digest(path)
@@ -370,17 +390,8 @@ class PairCache:
                     return (Path('structures')/self.source.name/path.relative_to(self.source)).as_posix()
                 entry=dict(record=record, config=config, receptor_key=receptor_key,
                     pair_key=pkey, row=row, center=self.centers(record),
-                    files={relative(p): hashes[p] for p in files})
-                entries.append(entry)
-                if write:
-                    # Missing experimental metadata may be NaN in pandas; it is
-                    # not a scientific cache parameter and is stored as null.
-                    safe=json.loads(json.dumps(entry,default=str))
-                    def finite(value):
-                        if isinstance(value,dict):return {k:finite(v) for k,v in value.items()}
-                        if isinstance(value,list):return [finite(v) for v in value]
-                        return None if isinstance(value,float) and not math.isfinite(value) else value
-                    self.checkpoints.remember(pkey,{relative(p):p for p in files},finite(safe))
+                    producer_software=self.restored.get(key,{}).get('producer_software'),
+                    files={p.relative_to(self.root).as_posix(): hashes[p] for p in files}))
             except (OSError, ValueError, KeyError, TypeError):
                 continue
         data = dict(version=1, target=self.source.name, entries=entries)

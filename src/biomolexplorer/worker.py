@@ -16,9 +16,9 @@ def main():
         request = json.loads(request_path.read_text())
         event(logger, 'worker.started', f'Worker iniciado; python={sys.executable}', operation=request['operation'])
         write_summary('running', operation=request['operation'])
-        report_progress('Preparando a execução da etapa no Python…')
+        report_progress('worker.starting')
         result = execute_operation(**request).to_dict()
-        report_progress('Etapa concluída. Organizando os resultados…')
+        report_progress('worker.done')
         exit_code = 0
         duration = round((time.monotonic()-started)*1000)
         event(logger, 'worker.succeeded', 'Scientific worker completed', duration_ms=duration, artifacts=len(result.get('artifacts', [])))
