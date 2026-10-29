@@ -37,6 +37,9 @@ dependencies:
     - fastapi==0.142.2
     - uvicorn==0.54.0
     - websockets==17.2
+    - --extra-index-url https://download.pytorch.org/whl/cpu
+    - torch==2.8.0+cpu
+    - admet-ai==2.0.1
 # Optional admet_ai imports run in an isolated environment because ADMET-AI 2
 # requires newer RDKit than the scientific protocol above. See requirements-admet.yml
 # and scripts/setup_admet_ai.py (the existing CPU-only installer).
