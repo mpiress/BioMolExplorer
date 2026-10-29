@@ -1,4 +1,6 @@
 {
+  "Esta tabela é somente leitura.": "This table is read-only.",
+  "Ver tabela": "View table",
   "Preparando a execução…": "Preparing execution…",
   "Salvando configurações e validando o estado da execução. Aguarde.": "Saving settings and validating the execution state. Please wait.",
   "Confirme a invalidação dos resultados antes de salvar esta alteração.": "Confirm result invalidation before saving this change.",

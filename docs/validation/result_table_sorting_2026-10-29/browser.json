@@ -1,0 +1,45 @@
+{
+  "sorts": [
+    {
+      "project": "aa26e5f541b54516a687633fa242507d",
+      "tab": "Execu\u00e7\u00f5es",
+      "active": true,
+      "sort": "score",
+      "ascending": true,
+      "first": "M40",
+      "reads": 1,
+      "source_unchanged": true
+    },
+    {
+      "project": "aa26e5f541b54516a687633fa242507d",
+      "tab": "Execu\u00e7\u00f5es",
+      "active": true,
+      "sort": "score",
+      "ascending": false,
+      "first": "M01",
+      "reads": 1,
+      "source_unchanged": true
+    },
+    {
+      "project": "aa26e5f541b54516a687633fa242507d",
+      "tab": "Execu\u00e7\u00f5es",
+      "active": true,
+      "sort": "score",
+      "ascending": true,
+      "first": "M40",
+      "reads": 1,
+      "source_unchanged": true
+    },
+    {
+      "project": "aa26e5f541b54516a687633fa242507d",
+      "tab": "Execu\u00e7\u00f5es",
+      "active": true,
+      "sort": "score",
+      "ascending": false,
+      "first": "M01",
+      "reads": 1,
+      "source_unchanged": true
+    }
+  ],
+  "javascript_errors": []
+}

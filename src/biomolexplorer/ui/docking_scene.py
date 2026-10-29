@@ -6,6 +6,7 @@ from .processing import save_file
 from biomolexplorer.docking_scene import scene_payload
 from .feedback import close_dialog
 from .localization import verbatim
+from .table_sort import TableSort
 
 
 async def residue_dialog(ui,pid,spec_loader,valid,open_3d,open_3d_url=None):
@@ -15,6 +16,22 @@ async def residue_dialog(ui,pid,spec_loader,valid,open_3d,open_3d_url=None):
     # the remaining height. Keep both scroll directions inside a clipped viewport.
     listing=ft.Column(expand=True,scroll=ft.ScrollMode.AUTO,spacing=8)
     state={}
+    sorting=TableSort('pose')
+    def render():
+        table=ft.DataTable(column_spacing=20,data_row_min_height=40,data_row_max_height=48,
+            columns=[ft.DataColumn(ft.Text(label)) for label in
+            ('Resíduo','Cadeia','Pose (Å)','Referência (Å)','Átomos na pose','Átomos na referência')],rows=[])
+        def changed():
+            if valid():render();ui.page.update()
+        sorting.bind(table,['residue','chain','pose','reference','pose_atoms','reference_atoms'],changed,numeric={'pose','reference'})
+        for row in sorting.order(state['rows'],lambda r,k:f"{r['resn']} {r['resi']}{r['icode']}" if k=='residue' else r.get(k),numeric={'pose','reference'}):
+            values=[f"{row['resn']} {row['resi']}{row['icode']}",row['chain'] or '—',
+                f"{row['pose']:.3f}" if row['pose'] is not None else '—',
+                f"{row['reference']:.3f}" if row['reference'] is not None else '—',row.get('pose_atoms','—'),row.get('reference_atoms','—')]
+            table.rows.append(ft.DataRow(cells=[ft.DataCell(verbatim(ft.Text(value))) for value in values]))
+        listing.controls=[ft.Row([table],scroll=ft.ScrollMode.AUTO)] if state['rows'] else [ft.Text('Nenhum contato nesta distância.')]
+        if state['data']['reference_kind']:
+            listing.controls.insert(0,ft.Text('Referência: ligante cristalográfico.' if state['data']['reference_kind']=='crystal' else 'Referência: ligante preparado.'))
     async def load():
         spec=await ui.call(spec_loader)
         data=await ui.call(scene_payload,ui.store,ui.token,pid,spec,float(cutoff.value))
@@ -28,17 +45,7 @@ async def residue_dialog(ui,pid,spec_loader,valid,open_3d,open_3d_url=None):
                 entry[role]=item['distance']
                 entry[role+'_atoms']=item['receptor_atom']+' / '+item['ligand_atom']
         state['rows']=list(rows.values())
-        table=ft.DataTable(column_spacing=20,data_row_min_height=40,data_row_max_height=48,
-            columns=[ft.DataColumn(ft.Text(label)) for label in
-            ('Resíduo','Cadeia','Pose (Å)','Referência (Å)','Átomos na pose','Átomos na referência')],rows=[])
-        for row in sorted(state['rows'],key=lambda r:r['pose'] if r['pose'] is not None else r['reference']):
-            values=[f"{row['resn']} {row['resi']}{row['icode']}",row['chain'] or '—',
-                f"{row['pose']:.3f}" if row['pose'] is not None else '—',
-                f"{row['reference']:.3f}" if row['reference'] is not None else '—',row.get('pose_atoms','—'),row.get('reference_atoms','—')]
-            table.rows.append(ft.DataRow(cells=[ft.DataCell(verbatim(ft.Text(value))) for value in values]))
-        listing.controls=[ft.Row([table],scroll=ft.ScrollMode.AUTO)] if state['rows'] else [ft.Text('Nenhum contato nesta distância.')]
-        if data['reference_kind']:
-            listing.controls.insert(0,ft.Text('Referência: ligante cristalográfico.' if data['reference_kind']=='crystal' else 'Referência: ligante preparado.'))
+        render()
         ui.page.update()
     async def apply(e):await ui.guard(load)
     async def export():

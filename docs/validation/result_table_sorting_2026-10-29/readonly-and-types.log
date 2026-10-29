@@ -1,0 +1,10 @@
+.....[06:46:42] SMILES Parse Error: syntax error while parsing: invalid
+[06:46:42] SMILES Parse Error: check for mistakes around position 1:
+[06:46:42] invalid
+[06:46:42] ^
+[06:46:42] SMILES Parse Error: Failed parsing SMILES 'invalid' for input: 'invalid'
+.........................
+----------------------------------------------------------------------
+Ran 30 tests in 15.156s
+
+OK

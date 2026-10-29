@@ -1,5 +1,6 @@
 """Preparation failures stay visible; deleting them removes exact input origins."""
 import asyncio
+import copy
 import csv
 import io
 import json
@@ -98,7 +99,7 @@ class FailedResultDeletionTests(unittest.TestCase):
         self.consumer['bindings']['base_input_path']={'stage':self.producer['id']}
         self.consumer['parameters']['pdb_codes']=[['1ABC','BAD',3,'A'],['2ABC','LIG',1,'A']]
         self.producer['parameters']['pdb_ids']=['1ABC','2ABC']
-        self.store.save_pipeline(self.token,self.pid,[self.producer,self.consumer],0)
+        self.store.save_pipeline(self.token,self.pid,[self.producer,self.consumer],0,prune_results=True)
         root=self.store.project_dir(self.pid)/'runs'/self.rid/'partial'
         source=root/'retrieval'/'PDB';source.mkdir(parents=True)
         self.original=source/'1ABC.pdb';self.original.write_text(ATOM+LIG+BAD)
@@ -187,11 +188,14 @@ class FailedResultDeletionTests(unittest.TestCase):
         project=self.store.project(self.token,self.pid)
         project['pipeline'][0].update(operation='import_results',parameters={'kind':'structures','asset_ids':[asset]})
         project['pipeline'][0].pop('process_all',None)
-        self.store.save_pipeline(self.token,self.pid,project['pipeline'],project['revision'])
         run=self.store.get_run(self.token,self.rid)
-        run['stages'][0].update(operation='import_results',artifacts=[str(path)])
+        # Seed an originally imported-source history, rather than performing a
+        # live source replacement that correctly invalidates these old results.
+        run['stages'][0].update(operation='import_results',configuration=copy.deepcopy(project['pipeline'][0]),artifacts=[str(path)])
         run['stages'][1]['input_files']={'base_input_path':[str(path)]}
-        with self.store.connect() as db:db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(run['stages']),self.rid))
+        with self.store.connect() as db:
+            db.execute('UPDATE projects SET pipeline=? WHERE id=?',(json.dumps(project['pipeline']),self.pid))
+            db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(run['stages']),self.rid))
         self.service.remove_failure(*self.args,self.failure()['id'])
         self.assertFalse(path.exists())
         self.assertNotIn(asset,[r['id'] for r in self.store.assets(self.token,self.pid)])

@@ -5,17 +5,21 @@ from .processing import save_file
 from .removal import RemovalProgress
 from .feedback import close_dialog
 from .localization import verbatim
+from .table_sort import TableSort
 
 
 class FileTable:
-    def __init__(self, ui, project_id, files, writable=False, remove=None, download=None, preview=None, extra_actions=None):
+    def __init__(self, ui, project_id, files, writable=False, remove=None, download=None, preview=None, extra_actions=None,run_id=None,stage_id=None):
         self.ui,self.project_id,self.files=ui,project_id,files
         self.token=ui.token;self.active=True;self.offset=0;self.limit=25
         self.remove_action,self.download_action,self.preview_action=remove,download,preview
         self.extra_actions=extra_actions
+        self.run_id,self.stage_id=run_id,stage_id
         self.writable=writable
+        self.sorting=TableSort()
         self.table=ft.DataTable(columns=[ft.DataColumn(ft.Text(n)) for n in ('Arquivo','Tamanho','Ações')],rows=[],
             column_spacing=30,heading_row_color='#F1F5F9',data_row_min_height=72,data_row_max_height=92)
+        self.sorting.bind(self.table,['name','size',None],self.sorted,numeric={'size'})
         origins=sorted({f.get('origin','') for f in files if f.get('origin')})
         self._origin_values=origins
         self.origin=ft.Dropdown(label='Origem dos resultados',value='',visible=len(origins)>1,
@@ -27,6 +31,10 @@ class FileTable:
         self.page_size=ft.Dropdown(label='Itens por página',value='25',width=160,
             options=[ft.DropdownOption(key=str(n),text=str(n)) for n in (10,25,50,100)],on_select=self.resize)
         self.redraw()
+
+    def sorted(self):
+        if not self.valid():return
+        self.offset=0;self.redraw();self.ui.page.update()
 
     def valid(self):
         return self.active and self.ui.token==self.token and self.ui.current and self.ui.current['id']==self.project_id
@@ -43,6 +51,7 @@ class FileTable:
         self.origin.visible=len(origins)>1
         if self.origin.value not in origins:self.origin.value=''
         visible=[f for f in self.files if not self.origin.value or f.get('origin')==self.origin.value]
+        visible=self.sorting.order(visible,lambda row,key:row.get('display_name',row['name']) if key=='name' else row.get(key),numeric={'size'})
         if self.offset>=len(visible):self.offset=max(0,((len(visible)-1)//self.limit)*self.limit)
         rows=[]
         for item in visible[self.offset:self.offset+self.limit]:
@@ -54,6 +63,11 @@ class FileTable:
                     if self.valid():await save_file(self.ui,file_name=item['name'],src_bytes=data)
                 await self.ui.guard(action)
             actions=[ft.IconButton(ft.Icons.DOWNLOAD,tooltip='Baixar '+item['name'],on_click=download)]
+            if self.run_id and self.stage_id and Path(item['name']).suffix.lower()=='.csv':
+                async def table(e,item=item):
+                    from .result_table import show_result_table
+                    if self.valid():await self.ui.guard(lambda:show_result_table(self.ui,self.project_id,self.run_id,self.stage_id,item['path']))
+                actions.append(ft.IconButton(ft.Icons.TABLE_CHART_OUTLINED,tooltip='Ver tabela',on_click=table))
             if self.preview_action and (str(item.get('path','')).endswith('.biomol-view.json') or Path(item['name']).suffix.lower() in ('.png','.jpg','.jpeg')):
                 async def preview(e,item=item):
                     if self.valid():await self.ui.guard(lambda:self.preview_action(item))

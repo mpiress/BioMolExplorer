@@ -5,19 +5,24 @@ import json
 import flet as ft
 from .processing import save_file
 from .localization import verbatim
+from .table_sort import TableSort
+from biomolexplorer.table_sort import is_numeric,ordered
 
 
 class GraphTable:
     PAGE_SIZE=50
 
     def __init__(self,explorer):
-        self.explorer=explorer;self.offset=0
+        self.explorer=explorer;self.offset=0;self.sorting=TableSort()
         self.kind=ft.Dropdown(label='Tabela',value='nodes',width=160,on_select=self.search,
             options=[ft.DropdownOption(key='nodes',text='Nós'),ft.DropdownOption(key='edges',text='Arestas')])
         self.query=ft.TextField(label='Buscar na tabela',expand=True,on_submit=self.search)
-        self.order=ft.Dropdown(label='Ordenar',value='id',width=200,on_select=self.search,
+        self.order=ft.Dropdown(label='Ordenar',value='id',width=200,on_select=self.preset,
             options=[ft.DropdownOption(key='id',text='Identificador / extremos'),ft.DropdownOption(key='value',text='Métrica / escore decrescente')])
         self.caption=ft.Text(size=12);self.body=ft.Column(spacing=4)
+
+    def preset(self,e=None):
+        self.sorting.key=None;self.search(e)
 
     def rows(self):
         explorer=self.explorer;view=explorer.view;graph=explorer.graph()
@@ -28,33 +33,39 @@ class GraphTable:
             rows=[dict(compound_id=node,metric=explorer.metric,metric_value=values.get(node),
                 community=groups.get(node),properties=view.nodes[node]['properties']) for node in graph]
             if query:rows=[row for row in rows if query in json.dumps(row,ensure_ascii=False).casefold()]
-            rows.sort(key=(lambda row:(-(row['metric_value'] or 0),row['compound_id'])) if self.order.value=='value' else lambda row:row['compound_id'])
+            rows=ordered(rows,lambda r:r.get('metric_value') if self.order.value=='value' else r['compound_id'],self.order.value!='value',self.order.value=='value')
         else:
             rows=[dict(source=a,target=b,**attrs) for a,b,attrs in graph.edges(data=True)]
             if query:rows=[row for row in rows if query in json.dumps(row,ensure_ascii=False).casefold()]
-            rows.sort(key=(lambda row:(-float(row.get('value') or 0),row['source'],row['target'])) if self.order.value=='value' else lambda row:(row['source'],row['target']))
-        return rows
+            rows=ordered(rows,lambda r:r.get('value') if self.order.value=='value' else r['source']+' '+r['target'],self.order.value!='value',self.order.value=='value')
+        fields={key for row in rows for key in row}
+        if self.sorting.key not in fields:self.sorting.key=None
+        numeric={key for key in fields if key not in ('compound_id','source','target') and is_numeric(r.get(key) for r in rows)}
+        return self.sorting.order(rows,numeric=numeric)
 
     def refresh(self):
         rows=self.rows();self.offset=min(self.offset,max(0,(len(rows)-1)//self.PAGE_SIZE*self.PAGE_SIZE))
         self.caption.value=f'{self.explorer.view.mode} · subgrafo filtrado · {len(rows)} registros · página {self.offset//self.PAGE_SIZE+1} / {max(1,(len(rows)+49)//50)}'
-        self.body.controls=[]
+        fields=['compound_id','metric','metric_value','community','properties'] if self.kind.value=='nodes' else ['source','target']+sorted({key for row in rows for key in row}-{'source','target'})
+        table=ft.DataTable(columns=[ft.DataColumn(verbatim(ft.Text(key))) for key in fields],rows=[],column_spacing=24)
+        numeric={key for key in fields if key not in ('compound_id','source','target') and is_numeric(r.get(key) for r in rows)}
+        self.sorting.bind(table,fields,self.search,numeric)
         async def choose(e,node):
             view=self.explorer.view
             await view.ui.guard(lambda:view.select(node,show_popup=True))
         for row in rows[self.offset:self.offset+self.PAGE_SIZE]:
-            if self.kind.value=='nodes':
-                node=row['compound_id'];props=row['properties']
-                async def open_node(e,node=node):await choose(e,node)
-                self.body.controls.append(ft.Container(padding=8,border=ft.Border.all(1,'#E2E8F0'),content=ft.Column([
-                    ft.Row([verbatim(ft.TextButton(node,on_click=open_node)),ft.Text(f'{row["metric"]}: {row["metric_value"] if row["metric_value"] is not None else "—"} · C{row["community"] or "—"}',size=12)],wrap=True),
-                    verbatim(ft.Text(json.dumps(props,ensure_ascii=False,sort_keys=True),size=11,selectable=True))])))
-            else:
-                async def open_source(e,node=row['source']):await choose(e,node)
-                async def open_target(e,node=row['target']):await choose(e,node)
-                self.body.controls.append(ft.Row([verbatim(ft.TextButton(row['source'],on_click=open_source)),ft.Text('↔'),
-                    verbatim(ft.TextButton(row['target'],on_click=open_target)),verbatim(ft.Text(' · '.join(f'{k}: {v}' for k,v in row.items() if k not in ('source','target')),size=12))],wrap=True))
-        if not rows:self.body.controls=[ft.Text('Nenhum registro corresponde aos filtros.')]
+            cells=[]
+            for key in fields:
+                value=row.get(key)
+                if key in ('compound_id','source','target'):
+                    async def open_node(e,node=value):await choose(e,node)
+                    control=ft.TextButton(str(value),on_click=open_node)
+                else:
+                    text=json.dumps(value,ensure_ascii=False,sort_keys=True) if isinstance(value,dict) else str(value) if value is not None else '—'
+                    control=ft.Text(text,max_lines=2,overflow=ft.TextOverflow.ELLIPSIS,tooltip=text,selectable=True)
+                cells.append(ft.DataCell(verbatim(control)))
+            table.rows.append(ft.DataRow(cells=cells))
+        self.body.controls=[ft.Row([table],scroll=ft.ScrollMode.AUTO)] if rows else [ft.Text('Nenhum registro corresponde aos filtros.')]
 
     def search(self,e=None):
         self.offset=0;self.refresh();self.explorer.view.ui.page.update()

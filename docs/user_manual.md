@@ -621,6 +621,13 @@ Abra Resíduos para consultar os contatos geométricos.
 
 ### Resultados, limpeza e histórico
 
+Clique nos cabeçalhos das colunas de dados para alternar a ordenação crescente e
+decrescente. A seta mostra a direção; campos ausentes ficam no final. A ordenação
+considera o conjunto filtrado antes da paginação e mantém os filtros e a etapa
+aberta. Use **Ver tabela** para inspecionar todas as colunas de um CSV, incluindo
+propriedades e alertas ADMET, fingerprints, similaridades e relatórios. Essa
+inspeção é somente leitura; ordenar não modifica os arquivos nem executa o pipeline.
+
 Ao lado de **Atualizar resultados**, há duas ações com ícones vermelhos:
 
 | Ação | Remove | Preserva |

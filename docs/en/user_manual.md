@@ -613,6 +613,13 @@ Open Residues to inspect geometric contacts.
 
 ### Results, cleanup and history
 
+Click data-column headers to toggle ascending and descending order. The arrow
+shows the direction; missing values remain last. Sorting applies to the filtered
+dataset before pagination and preserves filters and the open stage. Use **View
+table** to inspect every CSV column, including ADMET properties and alerts,
+fingerprints, similarities and reports. This inspection is read-only; sorting
+neither modifies files nor executes the pipeline.
+
 Two actions with red icons appear beside **Refresh Results**:
 
 | Action | Removes | Preserves |

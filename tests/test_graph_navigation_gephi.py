@@ -131,14 +131,14 @@ class GraphNavigationTests(unittest.TestCase):
 
     def test_data_laboratory_search_pagination_inspection_and_complete_csv(self):
         view=self.viewer(nx.path_graph(120));table=view.explorer.table
-        self.assertEqual(len(table.body.controls),50)
+        self.assertEqual(len(table.body.controls[0].controls[0].rows),50)
         table.page(1);self.assertEqual(table.offset,50)
         rows=list(csv.DictReader(io.StringIO(table.csv().decode())))
         self.assertEqual(len(rows),120)
         view.nodes['0']['properties']['source']='PubChem'
         table.query.value='PubChem';table.search()
         self.assertEqual(len(table.rows()),1);self.assertEqual(table.offset,0)
-        button=table.body.controls[0].content.controls[0].controls[0]
+        button=table.body.controls[0].controls[0].rows[0].cells[0].content
         asyncio.run(button.on_click(None));self.assertEqual(view.selected,'0')
         table.kind.value='edges';table.query.value='';table.search()
         self.assertEqual(len(table.rows()),119)

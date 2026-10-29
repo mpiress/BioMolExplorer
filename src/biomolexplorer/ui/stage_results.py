@@ -119,7 +119,7 @@ class StageResults:
                     self.graph_file_records=[dict(f,description=(subset_label(f['path'],getattr(self.ui,'tr',None)) or descriptions.get(Path(f['path']).parent.name,'Resultado'))+' · '+f.get('origin',''))
                         for f in files if not f['name'].endswith('.biomol-view.json')]
                     self.graph_files=FileTable(self.ui,self.project_id,[],
-                        self.writable and not active,remove=remove,preview=preview)
+                        self.writable and not active,remove=remove,preview=preview,run_id=self.run_id,stage_id=self.stage['id'])
                     self.root.controls=[ft.Row([self.dataset]),ft.Text('Cada opção corresponde a um arquivo de entrada. As relações e os compostos de análises diferentes são apresentados separadamente.',size=12,color='#64748B'),
                         self.loading,self.graph,ft.ExpansionTile(title=ft.Text('Arquivos desta análise'),controls=[ft.Container(self.graph_files.build(),padding=20)])]
                     if any(d.get('unavailable') for d in datasets):self.root.controls.insert(1,ft.Text('Arquivos acima de 32 MB permanecem disponíveis para download, mas não são carregados no dashboard.',size=12,color='#B45309'))
@@ -141,7 +141,7 @@ class StageResults:
                 if not self.valid():return
                 self.pdb_actions=PDBActions(self,self.writable and not running)
                 extra=self.pdb_actions.actions
-            self.child=FileTable(self.ui,self.project_id,files,self.writable and not active,remove=remove,preview=preview,extra_actions=extra)
+            self.child=FileTable(self.ui,self.project_id,files,self.writable and not active,remove=remove,preview=preview,extra_actions=extra,run_id=self.run_id,stage_id=self.stage['id'])
             self.root.controls=[self.child.build()] if files else [ft.Text('Nenhum arquivo de resultado disponível.',size=13,color='#64748B')]
             self.loaded=True;self.ui.page.update()
         except Exception:
@@ -182,9 +182,12 @@ class StageResults:
                 from .admet_alerts import ADMETAlertTable
                 await self.ui.guard(ADMETAlertTable(self,filename).open)
             buttons=[ft.Button('Baixar gráfico EGG',icon=ft.Icons.DOWNLOAD,on_click=png),
-                     ft.Button('Baixar arquivo selecionado',icon=ft.Icons.DOWNLOAD,on_click=csv),
-                     ft.Button('Ver alertas químicos',icon=ft.Icons.TABLE_CHART_OUTLINED,on_click=alerts,
-                        disabled=(model.get('admet_report') or {}).get('configuration',self.stage.get('configuration',{}).get('parameters',{})).get('alert_catalogs')==[])]
+                     ft.Button('Baixar arquivo selecionado',icon=ft.Icons.DOWNLOAD,on_click=csv)]
+            async def table(e):
+                from .result_table import show_result_table
+                if self.valid() and sequence==self.sequence:
+                    await self.ui.guard(lambda:show_result_table(self.ui,self.project_id,self.run_id,self.stage['id'],filename))
+            buttons.append(ft.Button('Ver tabela',icon=ft.Icons.TABLE_CHART_OUTLINED,on_click=table))
             if model.get('admet_report'):
                 async def report(e):
                     import json

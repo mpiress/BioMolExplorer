@@ -112,10 +112,10 @@ class ResultsDisplayTests(unittest.TestCase):
         with self.assertRaises(AccessDenied):self.service.preparation_failures(self.token,self.pid,self.rid,self.retrieval['id'],str(path))
         ui=self.ui();show_preparation_failures(ui,loaded);dialog=ui.dialogs[-1]
         controls=dialog.content.content.controls;body=controls[1];navigation=controls[2]
-        self.assertEqual(len(body.controls),25)
+        self.assertEqual(len(body.controls[0].controls[0].rows),25)
         navigation.controls[-1].on_click(SimpleNamespace())
         self.assertEqual(len(body.controls),1)
-        self.assertEqual(body.controls[0].content.controls[0].value,'BAD25')
+        self.assertEqual(body.controls[0].controls[0].rows[0].cells[0].content.value,'BAD25')
 
     def test_unclassified_uploaded_admet_uses_backend_classifier(self):
         self.admet_csv.write_text('molecule_chembl_id,canonical_smiles,TPSA,WLOGP,MW,HBD,RB\nA,CCO,20,1,,,\n')
