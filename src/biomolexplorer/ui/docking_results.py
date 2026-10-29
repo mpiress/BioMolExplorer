@@ -9,25 +9,12 @@ class DockingResultsTable(CompoundTableViewer):
     def __init__(self,*args,**kwargs):
         super().__init__(*args,**kwargs)
         self.service=DockingResults(self.ui.store)
-        self.sort_by=None;self.ascending=True
-
-    def page_options(self):
-        return {'sort_by':self.sort_by,'ascending':self.ascending} if self.sort_by else {}
 
     async def change_table(self,e):
-        self.sort_by=None;self.table.sort_column_index=None
+        self.sorting.key=None;self.table.sort_column_index=None
         await super().change_table(e)
 
-    async def sort_rows(self,key,index):
-        if not self.valid():return
-        self.ascending=not self.ascending if self.sort_by==key else True
-        self.sort_by=key;self.offset=0
-        self.table.sort_column_index=index;self.table.sort_ascending=self.ascending
-        await self.ui.guard(self.load)
-
-    async def load(self):
-        await super().load()
-        if not self.valid() or self.data is None:return
+    def render_rows(self,result):
         properties=self.data.get('columns',[]) or (self.data['rows'][0]['properties'] if self.data['rows'] else {})
         consensus='vina' in properties and 'dock6' in properties
         scores=['vina','dock6','normalized_score'] if consensus else [k for k in ('score','vina','dock6','z-score','min-max') if k in properties]
@@ -35,9 +22,9 @@ class DockingResultsTable(CompoundTableViewer):
             (key,{'vina':'Score Vina','dock6':'Score DOCK6','normalized_score':'Score normalizado'}.get(key,key)) for key in scores]+([] if consensus else [('canonical_smiles','SMILES')])
         self.table.columns=[]
         for index,(key,label) in enumerate(columns):
-            async def sort(e,key=key,index=index):await self.sort_rows(key,index)
-            self.table.columns.append(ft.DataColumn(ft.Text(label),numeric=key in scores,on_sort=sort))
+            self.table.columns.append(ft.DataColumn(ft.Text(label),numeric=key in scores))
         self.table.columns.append(ft.DataColumn(ft.Text('Ações')))
+        self.sorting.bind(self.table,[key for key,label in columns]+[None],self.sort_changed,numeric=scores)
         rows=[]
         for row in self.data['rows']:
             fields=row['properties']
@@ -56,7 +43,7 @@ class DockingResultsTable(CompoundTableViewer):
             values=[row['id']]+([] if consensus else [fields.get('receptor_id','—')])+[fields.get(k,'—') for k in scores]+([] if consensus else [row['smiles'] or '—'])
             rows.append(ft.DataRow(cells=[ft.DataCell(verbatim(ft.Text(str(v),selectable=True))) for v in values]+
                                      [ft.DataCell(ft.Row(actions,spacing=2))]))
-        self.table.rows=rows;self.ui.page.update()
+        self.table.rows=rows
 
     async def pose_preview(self,row,column):
         if not self.valid():return

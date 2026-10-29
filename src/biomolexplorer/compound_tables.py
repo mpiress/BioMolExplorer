@@ -3,7 +3,6 @@ import csv
 import hashlib
 import io
 import json
-import math
 import os
 import re
 import shutil
@@ -11,6 +10,10 @@ import time
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from uuid import uuid4
+from contextlib import contextmanager
+from types import SimpleNamespace
+from itertools import chain
+from .table_sort import ordered,is_numeric
 
 from .stage_cache import artifact_manifest
 from .workspace import AccessDenied
@@ -32,14 +35,42 @@ def compound_links(row):
 
 
 class CompoundTables:
+    requires_compounds=True
+    available_statuses=('succeeded',)
     def __init__(self,store):
         self.store=store
+        self._snapshot=None
+
+    @contextmanager
+    def _reader(self,path):
+        stat=path.stat();stamp=(str(path),stat.st_dev,stat.st_ino,stat.st_size,stat.st_mtime_ns,stat.st_ctime_ns)
+        cached=self._snapshot
+        if cached and cached[0]==stamp:
+            yield cached[1],SimpleNamespace(fieldnames=cached[2],rows=cached[3])
+            return
+        with path.open('rb') as source:
+            version=self._digest(source)
+            reader=csv.DictReader(io.TextIOWrapper(source,encoding='utf-8-sig',newline=''))
+            if stat.st_size<=8*1024*1024:
+                rows=[]
+                for row in reader:
+                    rows.append(row)
+                    if len(rows)>50000:
+                        self._snapshot=None
+                        yield version,SimpleNamespace(fieldnames=reader.fieldnames,rows=chain(rows,reader))
+                        return
+                fields=list(reader.fieldnames or [])
+                self._snapshot=(stamp,version,fields,rows)
+                yield version,SimpleNamespace(fieldnames=fields,rows=rows)
+            else:
+                self._snapshot=None
+                yield version,SimpleNamespace(fieldnames=reader.fieldnames,rows=reader)
 
     def _stage(self,token,project_id,run_id,stage_id):
         run=self.store.get_run(token,run_id)
         if run['project_id']!=project_id:
             raise AccessDenied('Resultado de outro projeto.')
-        stage=next((s for s in run['stages'] if s['id']==stage_id and s['status']=='succeeded'),None)
+        stage=next((s for s in run['stages'] if s['id']==stage_id and s['status'] in self.available_statuses),None)
         if stage is None:
             raise ValueError('A tabela estará disponível após concluir a recuperação.')
         return run,stage
@@ -83,41 +114,31 @@ class CompoundTables:
             raise ValueError('Ordenação de tabela inválida.')
         path=self._path(token,project_id,run_id,stage_id,filename)
         rows=[];matched=total=0;selected=[]
-        with path.open('rb') as source:
-            version=self._digest(source)
-            reader=csv.DictReader(io.TextIOWrapper(source,encoding='utf-8-sig',newline=''))
-            if not {'molecule_chembl_id','canonical_smiles'}.issubset(reader.fieldnames or []):
+        with self._reader(path) as (version,reader):
+            if self.requires_compounds and not {'molecule_chembl_id','canonical_smiles'}.issubset(reader.fieldnames or []):
                 raise ValueError('Esta tabela não contém código do composto e SMILES.')
-            fields=reader.fieldnames or []
+            fields=list(reader.fieldnames or [])
             if 'vina' in fields and 'dock6' in fields and 'min-max' in fields and 'normalized_score' not in fields:
                 fields=fields+['normalized_score']
             if sort_by is not None and sort_by not in fields:
                 raise ValueError('Coluna de ordenação inválida.')
-            for index,row in enumerate(reader):
+            for index,original in enumerate(reader.rows):
+                row=dict(original)
                 if 'normalized_score' in fields and 'normalized_score' not in row:row['normalized_score']=row.get('min-max','')
                 total+=1
-                identifier=row['molecule_chembl_id'] or ''
-                smiles=row['canonical_smiles'] or ''
-                if query.lower() not in (identifier+' '+smiles).lower():
+                identifier=row.get('molecule_chembl_id',row.get(fields[0],'')) or ''
+                smiles=row.get('canonical_smiles') or ''
+                searchable=identifier+' '+smiles if self.requires_compounds else ' '.join(str(v or '') for v in row.values())
+                if query.lower() not in searchable.lower():
                     continue
                 record={'index':index,'id':identifier,'smiles':smiles,'links':compound_links(row),'properties':row}
                 if sort_by is not None:selected.append(record)
                 elif offset<=matched<offset+limit:rows.append(record)
                 matched+=1
         if sort_by is not None:
-            numeric=sort_by in ('score','vina','dock6','normalized_score','z-score','min-max')
-            def key(record):
-                value=record['properties'].get(sort_by,'')
-                if numeric:
-                    try:
-                        value=float(value)
-                        return value if math.isfinite(value) else None
-                    except (ValueError,TypeError):return None
-                return str(value).casefold() if value else None
-            present=[record for record in selected if key(record) is not None]
-            missing=[record for record in selected if key(record) is None]
-            present.sort(key=key,reverse=not ascending)
-            rows=(present+missing)[offset:offset+limit]
+            numeric=sort_by in ('score','vina','dock6','normalized_score','z-score','min-max') or (
+                sort_by not in ('molecule_chembl_id','canonical_smiles','receptor_id') and is_numeric(r['properties'].get(sort_by) for r in selected))
+            rows=ordered(selected,lambda row:row['properties'].get(sort_by),ascending,numeric)[offset:offset+limit]
         project=self.store.project(token,project_id)
         with self.store.connect() as db:
             active=db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running','awaiting_input')",(project_id,)).fetchone()

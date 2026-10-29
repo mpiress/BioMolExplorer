@@ -8,6 +8,7 @@ from .removal import RemovalProgress
 from .feedback import close_dialog
 from .file_table import FileTable
 from .localization import verbatim
+from .table_sort import TableSort
 
 
 class RedockingResultsTable:
@@ -22,6 +23,7 @@ class RedockingResultsTable:
         self.limit = 25
         self.sort_key = 'target'
         self.ascending = True
+        self.sorting=TableSort('target')
         self.messages = RuntimeMessages(session_language(self.ui))
         targets=sorted({t for row in simulations for t in row.get('targets',[])},key=str.casefold)
         self.target_filter=ft.Dropdown(label=self.messages('redocking.filter.target'),value='all',
@@ -34,10 +36,7 @@ class RedockingResultsTable:
             for title in ('Target', 'PDB', 'Ligante', 'Resíduo', 'Cadeia', 'Estado', 'RMSD (Å)', '3D', 'Resíduos', 'Ações')], rows=[],
             column_spacing=28, heading_row_color='#F1F5F9')
         self.table.columns[0]=verbatim(ft.DataColumn('Target'))
-        self.table.columns[0].on_sort=lambda e:self.sort('target')
-        self.table.columns[6].on_sort=lambda e:self.sort('rmsd')
-        self.table.sort_column_index=0
-        self.table.sort_ascending=True
+        self.sorting.bind(self.table,['target','pdb','ligand','residue','chain','status','rmsd',None,None,None],self.sorted,numeric={'residue','rmsd'})
         self.count = ft.Text(size=13, color='#64748B')
         self.warning = ft.Text(size=13,color='#B91C1C')
         self.previous = ft.TextButton('Página anterior', on_click=lambda e: self.move(-1))
@@ -58,14 +57,8 @@ class RedockingResultsTable:
         query=(self.search.value or '').strip().casefold()
         rows=[r for r in self.simulations if (target=='all' or target[7:] in r.get('targets',[]))
             and (not query or query in ' '.join(str(r.get(k,'')) for k in ('target','pdb','ligand','residue','chain')).casefold())]
-        def score(row):
-            value=row.get('rmsd')
-            valid=row.get('status')!='preparation_failed' and isinstance(value,(int,float)) and math.isfinite(value)
-            return (not valid, value if valid and (self.ascending or self.sort_key!='rmsd') else -value if valid else math.inf)
-        if self.sort_key=='rmsd':return sorted(rows,key=lambda r:(*score(r),r.get('target','').casefold(),r['pdb']))
-        rows.sort(key=score)
-        rows.sort(key=lambda r:r.get('target','').casefold(),reverse=not self.ascending)
-        return rows
+        rows=TableSort('rmsd').order(rows,lambda r,k:None if r.get('status')=='preparation_failed' else r.get(k),numeric={'rmsd'})
+        return self.sorting.order(rows,lambda r,k:None if k=='rmsd' and r.get('status')=='preparation_failed' else r.get(k),numeric={'residue','rmsd'})
 
     def filter_changed(self):
         if not self.valid():return
@@ -73,10 +66,14 @@ class RedockingResultsTable:
 
     def sort(self,key):
         if not self.valid():return
-        self.ascending=not self.ascending if self.sort_key==key else True
-        self.sort_key=key;self.offset=0
-        self.table.sort_column_index=0 if key=='target' else 6
-        self.table.sort_ascending=self.ascending
+        self.sorting.ascending=not self.sorting.ascending if self.sorting.key==key else True
+        self.sorting.key=key
+        self.sorting.indicator(self.table,['target','pdb','ligand','residue','chain','status','rmsd',None,None,None])
+        self.sorted()
+
+    def sorted(self):
+        if not self.valid():return
+        self.sort_key=self.sorting.key;self.ascending=self.sorting.ascending;self.offset=0
         self.redraw();self.ui.page.update()
 
     def redraw(self):
@@ -187,7 +184,7 @@ class RedockingResultsTable:
                 if self.valid() and files.valid():
                     await self.ui.guard(lambda: self.ui.preview_artifact(results.project_id, item['path']))
             return [ft.IconButton(ft.Icons.VIEW_IN_AR, tooltip='Visualizar estrutura 3D', on_click=preview)]
-        files = FileTable(self.ui, results.project_id, simulation['files'], extra_actions=preview_actions)
+        files = FileTable(self.ui, results.project_id, simulation['files'], extra_actions=preview_actions,run_id=results.run_id,stage_id=results.stage['id'])
         self.file_tables.append(files)
         previous_editing = getattr(self.ui, 'editing_stage', False)
         self.ui.editing_stage = True

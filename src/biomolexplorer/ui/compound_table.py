@@ -6,6 +6,7 @@ from biomolexplorer.visualizations import molecule_image
 from .removal import RemovalProgress
 from .feedback import close_dialog
 from .localization import verbatim
+from .table_sort import TableSort
 
 
 class CompoundTableViewer:
@@ -14,6 +15,7 @@ class CompoundTableViewer:
         self.token=ui.token
         self.inline=inline;self.active=True
         self.service=CompoundTables(ui.store)
+        self.sorting=TableSort()
         self.tables=tables;self.offset=0;self.limit=25;self.sequence=0;self.preview_version=0;self.data=None
         self.selector=ft.Dropdown(label='Tabela de compostos',value=tables[0]['path'],width=450,enable_filter=True,enable_search=True,menu_height=320,
             options=[ft.DropdownOption(key=t['path'],text=t.get('label',t['name'])+(' · conjunto integrado' if t['integrated'] else '')) for t in tables],on_select=self.change_table)
@@ -22,6 +24,7 @@ class CompoundTableViewer:
         self.notice=ft.Text(size=12,color='#64748B')
         self.table=ft.DataTable(columns=[ft.DataColumn(ft.Text(name)) for name in ('Código do composto','SMILES','Visualização','Ações')],
             rows=[],data_row_min_height=68,data_row_max_height=80,column_spacing=24,heading_row_color='#F1F5F9')
+        self.sorting.bind(self.table,['molecule_chembl_id','canonical_smiles',None,None],self.sort_changed)
         async def previous(e):await self.move(-1)
         async def next_page(e):await self.move(1)
         self.previous=ft.TextButton('Página anterior',on_click=previous)
@@ -38,7 +41,13 @@ class CompoundTableViewer:
         self.limit=int(self.page_size.value);self.offset=0
         await self.ui.guard(self.load)
 
-    def page_options(self):return {}
+    def page_options(self):
+        return {'sort_by':self.sorting.key,'ascending':self.sorting.ascending} if self.sorting.key else {}
+
+    async def sort_changed(self):
+        if not self.valid():return
+        self.offset=0
+        await self.ui.guard(self.load)
 
     async def load(self):
         self.sequence+=1;sequence=self.sequence
@@ -61,6 +70,13 @@ class CompoundTableViewer:
         label=self.ui.tr('composto encontrado' if result['matched']==1 else 'compostos encontrados') if hasattr(self.ui,'tr') else ('composto encontrado' if result['matched']==1 else 'compostos encontrados')
         self.count.value=f"{result['name']} · {result['matched']} {label} · {result['total']} na tabela · Página {self.offset//self.limit+1}"
         self.notice.value='A remoção afeta somente o arquivo selecionado. As análises que usam esse arquivo serão atualizadas na próxima execução.' if result['can_edit'] else 'Consulta disponível. Para remover compostos, é necessário ser editor e aguardar o pipeline terminar.'
+        self.render_rows(result)
+        self.previous.disabled=self.offset==0
+        self.next.disabled=self.offset+self.limit>=result['matched']
+        self.ui.page.update()
+
+    def render_rows(self,result):
+        """Publish a complete schema/row pair; subclasses never render base cells."""
         rows=[]
         for row in result['rows']:
             async def show_2d(e,row=row):await self.ui.guard(lambda:self.preview(row,False))
@@ -76,9 +92,6 @@ class CompoundTableViewer:
                                     ft.TextButton('3D',on_click=show_3d,disabled=not bool(row['smiles']))],spacing=0)),
                 ft.DataCell(ft.TextButton('Remover',icon=ft.Icons.DELETE_OUTLINE,on_click=remove,disabled=not result['can_edit'],style=ft.ButtonStyle(color='#B91C1C')))]))
         self.table.rows=rows
-        self.previous.disabled=self.offset==0
-        self.next.disabled=self.offset+self.limit>=result['matched']
-        self.ui.page.update()
 
     async def change_table(self,e):
         if not self.valid():return
@@ -150,8 +163,13 @@ class CompoundTableViewer:
             if self.valid():await self.ui.picker.save_file(file_name=filename,src_bytes=data)
         await self.ui.guard(action)
 
-    def build(self):
-        return ft.Column([ft.Row([self.selector,ft.TextButton('Baixar tabela',icon=ft.Icons.DOWNLOAD,on_click=self.download)],wrap=True),
+    async def inspect_table(self,e):
+        from .result_table import show_result_table
+        if self.valid():await self.ui.guard(lambda:show_result_table(self.ui,self.project_id,self.run_id,self.stage_id,self.selector.value))
+
+    def build(self,inspect_dataset=True):
+        return ft.Column([ft.Row([self.selector,ft.TextButton('Baixar tabela',icon=ft.Icons.DOWNLOAD,on_click=self.download),
+                *([ft.TextButton('Ver tabela',icon=ft.Icons.TABLE_CHART_OUTLINED,on_click=self.inspect_table)] if inspect_dataset else [])],wrap=True),
             ft.Row([self.search,ft.TextButton('Buscar',on_click=self.search_rows)]),self.loading,
             ft.Row([self.count,self.page_size],wrap=True,alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
             ft.Container(ft.Row([self.table],scroll=ft.ScrollMode.AUTO)),

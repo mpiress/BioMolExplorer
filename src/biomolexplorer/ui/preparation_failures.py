@@ -2,6 +2,7 @@
 import flet as ft
 from .localization import verbatim
 from .feedback import close_dialog
+from .table_sort import TableSort
 
 
 def show_preparation_failures(ui,records):
@@ -9,16 +10,21 @@ def show_preparation_failures(ui,records):
     body=ft.Column(spacing=12,scroll=ft.ScrollMode.AUTO,height=390)
     count=ft.Text(size=12,color='#64748B')
     previous=ft.TextButton('Página anterior');next_button=ft.TextButton('Próxima página')
+    sorting=TableSort()
     def render():
-        body.controls=[]
-        for row in records[offset:offset+limit]:
-            body.controls.append(ft.Container(padding=12,border_radius=10,bgcolor='#F8FAFC',content=ft.Column([
-                verbatim(ft.Text(row['compound_identifier'],size=15,weight=ft.FontWeight.W_600)),
-                verbatim(ft.Text(row['reason'],size=12,selectable=True)),
-                verbatim(ft.Text(row['preparation_step']+' · '+row['preparation_context'],size=11,color='#64748B',selectable=True)),
-                verbatim(ft.Text(row['submitted_smiles'],size=11,selectable=True))],spacing=6)))
+        fields=list(dict.fromkeys(['compound_identifier','reason','preparation_step','preparation_context','submitted_smiles']+[key for row in records for key in row]))
+        table=ft.DataTable(columns=[ft.DataColumn(verbatim(ft.Text(key))) for key in fields],rows=[],column_spacing=24)
+        sorting.bind(table,fields,sort_changed,numeric={'input_row'})
+        for row in sorting.order(records,numeric={'input_row'})[offset:offset+limit]:
+            table.rows.append(ft.DataRow(cells=[ft.DataCell(verbatim(ft.Text(str(row.get(key) or '—'),
+                max_lines=3,tooltip=str(row.get(key) or ''),selectable=True))) for key in fields]))
+        body.controls=[ft.Row([table],scroll=ft.ScrollMode.AUTO)]
         count.value=f'{len(records)} compostos não utilizados · Página {offset//limit+1}'
         previous.disabled=offset==0;next_button.disabled=offset+limit>=len(records)
+    def sort_changed():
+        nonlocal offset
+        if ui.token!=token or not ui.current or ui.current['id']!=project_id:return
+        offset=0;render();ui.page.update()
     def move(direction):
         def click(e):
             nonlocal offset

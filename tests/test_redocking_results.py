@@ -116,6 +116,25 @@ class RedockingResultsTests(unittest.TestCase):
         asyncio.run(table.open(table.simulations[0]['id']));page.localize(ui.dialogs[-1])
         self.assertEqual(ui.dialogs[-1].actions[0].content,'Download all (ZIP)')
 
+    def test_all_data_headers_sort_locally_without_losing_filters_or_project(self):
+        async def scenario():
+            stage=self.stage();ui=self.ui();result=StageResults(ui,self.pid,self.rid,stage,True)
+            await result.load();table=result.child;project=ui.current
+            table.search.value='1ABC';table.filter_changed()
+            original=ui.call
+            async def no_fetch(*args,**kwargs):self.fail('Sorting must not reload simulations')
+            ui.call=no_fetch
+            for index in range(7):
+                self.assertIsNotNone(table.table.columns[index].on_sort)
+                await table.table.columns[index].on_sort(None)
+                table.table.before_update()
+            self.assertEqual(table.search.value,'1ABC');self.assertIs(ui.current,project);self.assertTrue(table.active)
+            await table.table.columns[6].on_sort(None)
+            scores=[row['rmsd'] for row in table.filtered()]
+            self.assertEqual(scores,sorted(scores,reverse=True))
+            ui.call=original
+        asyncio.run(scenario())
+
     def test_molecular_viewer_serves_pdbqt_and_mol2_with_correct_format(self):
         stage=self.stage();viewers=StructureViewers(self.store)
         try:
