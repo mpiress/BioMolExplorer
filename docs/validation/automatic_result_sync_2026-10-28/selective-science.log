@@ -1,0 +1,7 @@
+test_real_changed_dataset_reuses_other_fingerprints_similarity_and_graphs (test_result_persistence.PersistentBatchTests.test_real_changed_dataset_reuses_other_fingerprints_similarity_and_graphs) ... ok
+test_partial_index_reuses_surviving_pair_without_resurrecting_removed_pair (test_redocking_incremental.IncrementalRedockingTests.test_partial_index_reuses_surviving_pair_without_resurrecting_removed_pair) ... ok
+
+----------------------------------------------------------------------
+Ran 2 tests in 33.254s
+
+OK

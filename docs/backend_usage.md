@@ -322,3 +322,69 @@ Os limites são inclusivos e combinados com E; `null` deixa um lado aberto. Os c
 Receptores preparados são validados e reutilizados. A API Python Vina reutiliza mapas por receptor/caixa/configuração dentro do lote; templates não suportados ou API ausente usam CLI, registrado no log. DOCK6 compartilha superfície, esferas e grid por receptor/sítio, valida os MOL2 e executa minimização/docking/footprint por composto. Falhas individuais excluem somente o candidato; falhas globais interrompem a etapa. Veja [reutilização Vina](user_manual.md#reutilizacao-do-receptor-no-vina) e [validação DOCK6](user_manual.md#validacao-e-exclusoes-no-dock6).
 
 `preparation_failures.csv` é o nome preservado do relatório também para falhas posteriores do DOCK6. Colunas: `compound_identifier`, `submitted_smiles`, `input_file`, `input_row`, `preparation_step`, `preparation_context`, `reason`. Campos `preparation_step/context` identificam a operação concreta, mesmo para docking/footprint. Os detalhes da operação incluem `preparation_failures`, contagem e caminho do relatório quando disponíveis. Não inclua esses compostos no denominador de resultados utilizáveis sem registrar as exclusões.
+
+## Persistência e reutilização incremental
+
+Os resultados publicados pertencem a execuções duráveis no SQLite. Cada lote
+concluído registra configuração, entradas e hashes, manifesto de saídas, versão
+científica e ambiente do worker. Lotes completos de execuções posteriormente
+interrompidas, canceladas ou com falhas podem ser reutilizados; lotes incompletos,
+ativos, removidos, modificados ou com protocolos incompatíveis não são aceitos.
+Os arquivos são referenciados pela nova execução, sem copiar os resultados antigos.
+
+As chaves consideram somente entradas realmente selecionadas. Mudanças em um
+conjunto não invalidam outros conjuntos independentes. Rótulos de apresentação de
+grafos não fazem parte da identidade científica. Operações de merge e métricas
+que dependem do conjunto completo são recalculadas quando esse conjunto muda;
+não são aproximadas por resultados individuais incompatíveis.
+
+Caches do projeto ficam em `.biomolexplorer/cache`: receptores preparados são
+compartilhados entre redocking e docking quando PDB, cadeia, opções do receptor,
+cofatores, pH, templates e ferramentas correspondem. A extração do complexo para
+preparar o ligante continua própria de cada chamada, preservando seu inventário
+original. Fingerprints também são reutilizados por molécula, algoritmo, opções e
+versão do RDKit, em SQLite com payload comprimido e checksum. Desabilitar a
+reutilização ignora esses caches computacionais.
+
+`ResultFiles.remove_project_results(token, pid)` remove resultados e caches,
+preservando todas as configurações. `ResultFiles.clear_project_results(token, pid)`
+restaura os parâmetros padrão e limpa seleções e templates, mantendo a topologia.
+Ambas preservam originais da biblioteca e histórico e recusam execuções ativas.
+A interface sempre confirma a exclusão antes de chamar esses métodos.
+
+`WorkspaceStore.result_removal_plan` compara requisições científicas normalizadas e
+hashes de conteúdo persistidos, prevendo arquivos e blocos afetados. Alterações
+destrutivas são recusadas pelo backend até a confirmação. Após confirmar, salve com
+`save_pipeline(..., prune_results=True, confirmation=proposal['confirmation'])`.
+A confirmação é vinculada ao estado previsto e revalidada sob o lock SQLite.
+Mudanças concorrentes exigem nova confirmação. Cancelar não salva o rascunho.
+Uma fila de propagação e índices de consumidores por arquivo percorrem o DAG sem
+varrer repetidamente todos os descendentes. Lotes independentes e arquivos
+compartilhados são preservados; operações agregadas afetadas são invalidadas.
+Movimentos, metadados e auditoria são revertidos se a transação falhar.
+
+Não existe uma ação manual de sincronização: salvamento, `submit` e `resume`
+verificam a equivalência. Curadorias confirmadas também são persistidas no projeto,
+evitando que uma escolha feita em execução pareça uma alteração posterior.
+Requisições normalizadas e hashes por assinatura de arquivo possuem caches
+limitados; o hash de conteúdo é refeito quando inode, tamanho, mtime ou ctime mudam.
+Fingerprints possuem unidades independentes por entrada e algoritmo. A preparação
+conjunta mantém os dois formatos na mesma conformação nativa. Índices parciais de redocking preservam pares válidos
+e receptores compartilhados, sem ressuscitar pares removidos. Resultados antigos
+combinando algoritmos podem fornecer componentes verificáveis sem repetir jobs.
+
+Resultados antigos permanecem legíveis. Quando a versão científica ou a
+proveniência antiga não puderem ser verificadas, pode ser necessário recalcular o
+artefato; ele não é apagado por essa invalidação. A versão desconhecida de um
+produtor antigo não é apresentada como se fosse a versão atual.
+
+O cache versão 1 possui migração conservadora para builds e ambientes científicos
+explicitamente auditados em `resources/legacy_cache_compatibility.json`. A migração
+confere a requisição e os hashes originais, preserva a proveniência e pode aproveitar
+lotes e pares anteriores mesmo quando novas entradas são adicionadas. A compatibilidade
+não é presumida para versões desconhecidas nem para pesos antigos do ADMET-AI.
+
+As exclusões de resultados usam um journal durável de movimentações, coordenado com
+a transação SQLite. Na abertura do workspace, uma interrupção antes do commit restaura
+os arquivos; após o commit, conclui a limpeza. Recuperações conflitantes preservam os
+arquivos e registram o problema, sem sobrescrever dados existentes.

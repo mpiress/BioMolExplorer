@@ -5,12 +5,12 @@ from .branding import BRAND_BLUE, BRAND_NAVY, logo
 
 
 class ConfigurationLoading:
-    def __init__(self, page, saving=False):
+    def __init__(self, page, saving=False, *, title=None, description=None):
         self.page = page
         self.saving = saving
         self.requests = set()
-        title='Salvando configurações…' if saving else 'Carregando configurações…'
-        description='Validando e salvando as configurações do bloco. Aguarde a conclusão.' if saving else 'Lendo informações do bloco. Aguarde um instante.'
+        title=title or ('Salvando configurações…' if saving else 'Carregando configurações…')
+        description=description or ('Validando e salvando as configurações do bloco. Aguarde a conclusão.' if saving else 'Lendo informações do bloco. Aguarde um instante.')
         emblem = ft.Stack([
             ft.ProgressRing(width=112, height=112, stroke_width=4, color=BRAND_BLUE,
                             semantics_label=title),

@@ -1,0 +1,32 @@
+.......................[07:32:00] DEPRECATION WARNING: please use MorganGenerator
+[07:32:00] DEPRECATION WARNING: please use MorganGenerator
+[07:32:00] DEPRECATION WARNING: please use MorganGenerator
+[07:32:00] DEPRECATION WARNING: please use MorganGenerator
+[07:32:00] DEPRECATION WARNING: please use MorganGenerator
+[07:32:00] DEPRECATION WARNING: please use MorganGenerator
+[07:32:00] DEPRECATION WARNING: please use MorganGenerator
+[07:32:00] DEPRECATION WARNING: please use MorganGenerator
+[07:32:00] DEPRECATION WARNING: please use MorganGenerator
+........................................................................[07:34:10] SMILES Parse Error: syntax error while parsing: invalid
+[07:34:10] SMILES Parse Error: check for mistakes around position 1:
+[07:34:10] invalid
+[07:34:10] ^
+[07:34:10] SMILES Parse Error: Failed parsing SMILES 'invalid' for input: 'invalid'
+[07:34:10] SMILES Parse Error: syntax error while parsing: invalid
+[07:34:10] SMILES Parse Error: check for mistakes around position 1:
+[07:34:10] invalid
+[07:34:10] ^
+[07:34:10] SMILES Parse Error: Failed parsing SMILES 'invalid' for input: 'invalid'
+.....................................................................................................................[07:35:09] 92H: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[07:35:09] 92H: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+.[07:35:09] Explicit valence for atom # 10 C, 6, is greater than permitted
+[07:35:09] sanitize [07:35:09] 5NN0_92H_627A.lig.pdb: ..........[07:35:12] SMILES Parse Error: syntax error while parsing: invalid
+[07:35:12] SMILES Parse Error: check for mistakes around position 1:
+[07:35:12] invalid
+[07:35:12] ^
+[07:35:12] SMILES Parse Error: Failed parsing SMILES 'invalid' for input: 'invalid'
+...........................................................
+----------------------------------------------------------------------
+Ran 282 tests in 249.661s
+
+OK

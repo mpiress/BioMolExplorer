@@ -159,8 +159,11 @@ def generate_fingerprints(base_input_path:str, morgan_n_bits:Optional[int]=2048,
                     frame = clean_dataframe(frame,source=str(source)).rename(columns={'canonical_smiles': 'smiles'})
                     if frame.empty:
                         continue
-                    values=ds.get_fingerprints(smiles_df=frame, morgan=kind == 'morgan', maccs=kind == 'maccs',
-                        pharmacophore=kind == 'pharmacophore', radius=radius, morgan_n_bits=morgan_n_bits)
+                    from biomolexplorer.molecular_cache import fingerprints as cached_fingerprints
+                    def compute(rows):
+                        return ds.get_fingerprints(smiles_df=rows,morgan=kind=='morgan',maccs=kind=='maccs',
+                            pharmacophore=kind=='pharmacophore',radius=radius,morgan_n_bits=morgan_n_bits)
+                    values=cached_fingerprints(frame,compute,kind,radius,morgan_n_bits)
                     metadata=frame.rename(columns={'smiles':'canonical_smiles'}).drop(columns=['fingerprint'],errors='ignore')
                     metadata['fingerprint']=values['fingerprint'].to_numpy()
                     yield metadata

@@ -603,11 +603,33 @@ Abra Resíduos para consultar os contatos geométricos.
 
 ### Resultados, limpeza e histórico
 
-O botão **Limpar tudo**, ao lado de **Atualizar resultados**, remove os resultados
-gerados de todas as execuções e limpa as seleções de arquivos e pares. As conexões
-entre os blocos, os parâmetros científicos, os arquivos importados e os logs são
-preservados. Confirme a ação para iniciar do zero; durante a limpeza, os botões
-ficam desabilitados. Finalize ou cancele uma execução ativa antes de limpar.
+Ao lado de **Atualizar resultados**, há duas ações com ícones vermelhos:
+
+| Ação | Remove | Preserva |
+|---|---|---|
+| **Remover todos / Remove All** | Resultados gerados e caches computacionais do projeto | Blocos, conexões e todas as configurações |
+| **Limpar tudo / Clear All** | Os mesmos resultados, seleções de entrada, parâmetros científicos e templates personalizados | Blocos e conexões; os parâmetros voltam aos padrões |
+
+Ambas preservam os arquivos originais da biblioteca, logs e histórico. Confira o
+diálogo antes de confirmar; cancelar não apaga dados. Finalize ou cancele uma
+execução ativa antes de limpar. Após Clear All, configure novamente os blocos.
+
+Com a reutilização habilitada, lotes válidos permanecem disponíveis após reiniciar.
+A equivalência entre configuração, entradas e resultados é verificada ao salvar e
+antes de executar; não há sincronização manual. Adicionar entradas ou ações
+independentes preserva resultados anteriores e processa somente o complemento.
+Alterar parâmetros ou remover entradas/ações exige confirmação antes de salvar.
+O modal lista os blocos com resultados afetados, incluindo dependentes. Confirmar
+salva a alteração e remove somente resultados obsoletos; cancelar restaura a
+configuração anterior e preserva os arquivos. Resultados de outras entradas e
+arquivos compartilhados permanecem disponíveis. Uma execução que ainda utiliza
+os dados afetados deve terminar ou ser cancelada antes dessa alteração.
+
+Por exemplo, adicionar MACCS a um bloco com Morgan concluído executa apenas MACCS.
+Alterar depois o raio de Morgan preserva MACCS. Remover um arquivo de um conjunto
+individual remove apenas seu lote e os lotes dependentes. Um resultado calculado
+por merge representa todo o conjunto: alterar seus integrantes exige reconstruir
+essa combinação, sem substituir o cálculo por uma aproximação de lotes individuais.
 
 ```text
 Finalize ou cancele a execução antes de remover seus dados.

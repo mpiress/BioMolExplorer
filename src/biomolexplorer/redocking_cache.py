@@ -9,7 +9,7 @@ import shutil
 
 from .paths import resolve_path
 from .redocking_config import DEFAULTS, pair_key,effective_preparation
-from .stage_cache import file_digest, implementation_digest
+from .stage_cache import file_digest, operation_digest,runtime_signature
 from .storage import write_text
 
 NAME = 'redocking_cache.json'
@@ -23,7 +23,7 @@ def digest(value):
     return hashlib.sha256(json.dumps(value, sort_keys=True, default=str).encode()).hexdigest()
 
 
-def legacy_indexes(batch):
+def legacy_indexes(batch,runtime_python=None):
     """Adopt intact native results predating the pair index, without editing them."""
     configuration = batch.get('configuration', {})
     if configuration.get('provided_results'):
@@ -42,15 +42,15 @@ def legacy_indexes(batch):
                 for k in ('PDB_CODE', 'LIGAND', 'RESNUM', 'CHAIN'))]
         cache = PairCache(source, root / source.name, [], effective_preparation(parameters),
                           {key: parameters.get(key, value) for key, value in PARAMETERS.items()},
-                          template_overrides=configuration.get('templates', {}))
+                          template_overrides=configuration.get('templates', {}),runtime_python=runtime_python)
         yield root / NAME, cache.publish(rows, write=False)
 
 
 def stage_sources(store, project_id, stage_id, destination, source=None, configuration=None,
-                  only_codes=None, exclude_codes=()):
+                  only_codes=None, exclude_codes=(),verified_legacy_keys=(),runtime_python=None):
     """Copy only manifest-verified files from committed runs of this block."""
     with store.connect() as db:
-        runs = db.execute("SELECT stages FROM runs WHERE project_id=? AND status='succeeded' ORDER BY created DESC",
+        runs = db.execute("SELECT stages FROM runs WHERE project_id=? AND status NOT IN ('queued','running','awaiting_input') ORDER BY created DESC",
                           (project_id,)).fetchall()
     count = 0
     seen = set()
@@ -64,13 +64,16 @@ def stage_sources(store, project_id, stage_id, destination, source=None, configu
         return original_hashes[path] in hashes
     for run in runs:
         for stage in json.loads(run['stages']):
-            if stage['id'] != stage_id or stage['status'] != 'succeeded' or stage.get('outputs_removed'):
+            if stage['id'] != stage_id or stage.get('outputs_removed') or stage.get('dependency_obsolete') and not stage.get('partial_results'):
                 continue
+            if stage['status']!='succeeded' and not stage.get('batches'):continue
             if stage.get('operation', stage.get('configuration', {}).get('operation')) != 'redocking' or stage.get('provided'):
                 continue
             candidates = list(stage.get('batches') or [stage])
             manifest = stage.get('artifact_manifest', {})
             for batch in candidates:
+                if stage['status']!='succeeded' and batch.get('status')!='succeeded':continue
+                manifest=batch.get('artifact_manifest') or stage.get('artifact_manifest',{})
                 previous = batch.get('configuration', stage.get('configuration', {}))
                 if configuration is not None:
                     from .bindings import sources
@@ -83,7 +86,13 @@ def stage_sources(store, project_id, stage_id, destination, source=None, configu
                         continue
                 indexes = [Path(p) for p in batch.get('artifacts', []) if Path(p).name == NAME]
                 try:
-                    if indexes:
+                    if stage.get('cache_key') in verified_legacy_keys:
+                        # The caller proved the original v1 request, content
+                        # manifest, compatible source build and runtime envelope.
+                        snapshots=list(legacy_indexes(batch,runtime_python))
+                        for _,data in snapshots:
+                            for entry in data['entries']:entry['producer_software']=stage.get('cache_software')
+                    elif indexes:
                         snapshots = []
                         for index in indexes:
                             index = store.scoped_path(project_id, index)
@@ -106,6 +115,9 @@ def stage_sources(store, project_id, stage_id, destination, source=None, configu
                             continue
                         entries = []
                         for entry in data['entries']:
+                            if (stage.get('partial_results') or batch.get('partial_results')) and configuration is not None:
+                                selected={pair_key(r) for r in configuration.get('parameters',{}).get('pdb_codes',[]) or []}
+                                if pair_key(entry['record']) not in selected:continue
                             if entry['pair_key'] in seen:
                                 continue
                             code = entry['record'][0]
@@ -148,7 +160,7 @@ def stage_sources(store, project_id, stage_id, destination, source=None, configu
 
 
 class PairCache:
-    def __init__(self, source, output, records, settings, parameters, template_overrides=None):
+    def __init__(self, source, output, records, settings, parameters, template_overrides=None,runtime_python=None):
         self.source, self.output = Path(source), Path(output)
         self.root = self.output.parent
         self.prepared = self.source / 'Prepared'
@@ -173,7 +185,9 @@ class PairCache:
             else:
                 text = template_overrides.get(name, (RESOURCE_ROOT / name).read_text())
             templates[name] = hashlib.sha256(quiet_template(name, text).encode()).hexdigest()
-        self.science = dict(code=implementation_digest(), templates=templates)
+        self.science = dict(code=operation_digest('redocking'), templates=templates)
+        import sys
+        self.science['runtime']=runtime_signature('redocking',runtime_python or sys.executable,dict(self.parameters,redocking_engine=self.engine))
         if self.engine=='dock6':
             root=Path(self.parameters.get('dock6_app_path') or '')
             self.science['dock6_files']={name:file_digest(root/name) for name in ('bin/dock6','bin/sphgen','bin/sphere_selector','bin/showbox','bin/grid','parameters/vdw_AMBER_parm99.defn','parameters/flex.defn','parameters/flex_drive.tbl')}
@@ -319,6 +333,7 @@ class PairCache:
                     if path not in hashes:hashes[path] = file_digest(path)
                 entries.append(dict(record=record, config=config, receptor_key=receptor_key,
                     pair_key=pkey, row=row, center=self.centers(record),
+                    producer_software=self.restored.get(key,{}).get('producer_software'),
                     files={p.relative_to(self.root).as_posix(): hashes[p] for p in files}))
             except (OSError, ValueError, KeyError, TypeError):
                 continue

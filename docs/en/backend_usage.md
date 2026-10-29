@@ -321,3 +321,64 @@ Ranges are inclusive and combine with AND; `null` leaves one side open. These th
 Prepared receptors are validated and reused. Vina's Python API reuses maps per receptor/box/configuration within a batch; unsupported templates or a missing API use the logged CLI fallback. DOCK6 shares surface, spheres and grids per receptor/site, validates MOL2 and runs minimization/docking/footprint per compound. Individual failures exclude the candidate; global failures stop the stage. See [Vina reuse](user_manual.md#reusing-receptors-in-vina) and [DOCK6 validation](user_manual.md#dock6-validation-and-exclusions).
 
 `preparation_failures.csv` remains the report filename for later DOCK6 failures too. Columns: `compound_identifier`, `submitted_smiles`, `input_file`, `input_row`, `preparation_step`, `preparation_context`, `reason`. Step/context fields identify the concrete operation, including docking/footprint. Operation details include `preparation_failures`, counts and the report path when available. Record exclusions when interpreting how many compounds produced usable results.
+
+## Persistent and incremental results
+
+Published results belong to durable SQLite runs. Each completed batch records its
+configuration, selected input hashes, output manifest, scientific implementation
+and worker runtime. Completed batches survive later failures, cancellation and
+restart. Active, incomplete, removed, modified or incompatible batches are not
+reused. New runs reference valid existing results rather than copying them.
+
+Only selected inputs determine validity; unrelated datasets and presentation labels
+do not invalidate independent experiments. Merge operations and whole-dataset
+metrics are recalculated when their actual input set changes, without substituting
+scientifically incompatible individual results.
+
+Project caches live in `.biomolexplorer/cache`. Docking and redocking share prepared
+receptors when PDB content, chain, receptor settings, cofactors, pH, templates and
+tools match. Complex extraction remains local to preserve each ligand's original
+atom inventory. Fingerprints are also reused by molecular identity, algorithm,
+options and RDKit version in a compressed, checksummed SQLite store. Disabling reuse
+bypasses computational caches.
+
+`ResultFiles.remove_project_results(token, pid)` removes generated results and
+computational caches while preserving every setting. `clear_project_results` also
+restores scientific defaults and clears selections and custom templates, keeping
+block topology. Both retain original library files and history and reject active
+runs. The UI obtains explicit confirmation before invoking either operation.
+
+`WorkspaceStore.result_removal_plan` compares normalized scientific requests and
+persisted content hashes, listing affected files and blocks. The backend rejects
+destructive changes until confirmation. After confirmation, call
+`save_pipeline(..., prune_results=True, confirmation=proposal['confirmation'])`.
+Confirmation is bound to the previewed state and rechecked under the SQLite lock;
+concurrent changes require another confirmation. Cancel does not save the draft.
+A work queue and file-consumer indexes propagate invalidation through the DAG
+without repeated full descendant scans. Independent batches and shared files
+survive; affected aggregate operations are invalidated. Files, metadata and audit
+roll back if the transaction fails.
+
+No manual synchronization action exists: saving, `submit` and `resume` verify
+equivalence. Confirmed curation is also persisted in the project so run-time choices
+are not mistaken for later edits. Normalized requests and file-content checksums
+use bounded caches; checksums are recomputed when inode, size, mtime or ctime change.
+Fingerprint units are independent per input and algorithm. Joint preparation keeps
+both formats in the same native conformation. Partial redocking indexes retain valid pairs and shared receptors
+without resurrecting removed pairs. Earlier combined fingerprint jobs can supply
+verified components without launching those jobs again.
+
+Legacy results remain readable. An unverifiable scientific version or provenance
+may require recomputation, without deleting the historical artifact. Unknown legacy
+producer versions are not relabeled as the current processing version.
+
+Version-1 caches can migrate for builds and scientific runtimes explicitly audited
+in `resources/legacy_cache_compatibility.json`. Migration verifies original requests
+and artifact hashes and preserves provenance. Earlier batches and pairs can be
+reused even when new inputs are added. Compatibility is not assumed for unknown
+versions or for unverified legacy ADMET-AI model weights.
+
+Result deletion uses a durable file-move journal coordinated with the SQLite
+transaction. On workspace startup, interruption before commit restores files;
+interruption after commit finishes cleanup. Conflicting recovery preserves files
+and logs the problem without overwriting existing data.

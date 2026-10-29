@@ -76,6 +76,27 @@ class IncrementalRedockingTests(unittest.TestCase):
         self.last_scripts=self.scripts[:];self.scripts.clear();docked=self.docked[:];self.docked.clear()
         return output,stage,rows,docked
 
+    def test_partial_index_reuses_surviving_pair_without_resurrecting_removed_pair(self):
+        output,stage,_,_=self.run_pairs([['1ABC','LIG',1,'A'],['1ABC','BAD',3,'A']])
+        index=output/NAME;data=json.loads(index.read_text())
+        surviving=next(e for e in data['entries'] if e['record'][1]=='LIG')
+        keep={str((output/name).resolve()) for name in surviving['files']}|{str(index.resolve())}
+        for name in stage['artifacts']:
+            if str(Path(name).resolve()) not in keep:Path(name).unlink(missing_ok=True)
+        stage['artifacts']=[p for p in stage['artifacts'] if str(Path(p).resolve()) in keep]
+        stage['artifact_manifest']=artifact_manifest(stage['artifacts'])
+        stage.update(partial_results=True,dependency_obsolete=True)
+        self.store.db.execute('UPDATE runs SET stages=?',(json.dumps([stage]),))
+        configuration=copy.deepcopy(stage['configuration']);configuration['parameters']['pdb_codes']=[['1ABC','LIG',1,'A']]
+        root=self.root/'filtered-input';shutil.copytree(self.source,root/'Target')
+        self.assertEqual(stage_sources(self.store,'project','redock',root/'Target',configuration=configuration),1)
+        parameters=dict(configuration['parameters'],base_input_path=str(root))
+        result=execute_operation('redocking',parameters,self.root/'filtered-output')
+        self.assertEqual(self.docked,[])
+        with (self.root/'filtered-output/structures/Target/pdb_codes.csv').open() as stream:
+            rows=list(csv.DictReader(stream))
+        self.assertEqual([r['LIGAND'] for r in rows],['LIG'])
+
     def test_new_ligand_reuses_receptor_and_accumulates_without_repeating_old_pair(self):
         first,_,_,_=self.run_pairs([['1ABC','LIG',1,'A']])
         self.assertEqual(len(json.loads((first/NAME).read_text())['entries']),1)
@@ -143,13 +164,13 @@ class IncrementalRedockingTests(unittest.TestCase):
         self.assertEqual(stage_sources(self.store,'project','redock',self.root/'other'/'Target',
                                       configuration=configuration),0)
 
-    def test_cancelled_and_failed_runs_are_never_reused(self):
+    def test_completed_stages_survive_later_run_failure_but_active_runs_are_not_reused(self):
         for status in ('cancelled','failed','running','awaiting_input'):
             with self.subTest(status=status):
                 self.store.db.execute('DELETE FROM runs')
                 self.run_pairs([['1ABC','LIG',1,'A']],status=status)
                 _,_,_,docked=self.run_pairs([['1ABC','LIG',1,'A']])
-                self.assertEqual(docked,[('1ABC','LIG')])
+                self.assertEqual(docked,[] if status in ('cancelled','failed') else [('1ABC','LIG')])
 
     def test_truncated_pose_invalidates_reuse(self):
         output,_,_,_=self.run_pairs([['1ABC','LIG',1,'A']])
@@ -193,6 +214,46 @@ class IncrementalRedockingTests(unittest.TestCase):
 
 class SchedulerIncrementalTests(unittest.TestCase):
     """Exercise the real store and scheduler, with only scientific engines mocked."""
+    def test_verified_legacy_pairs_are_migrated_before_adding_a_ligand(self):
+        import sys
+        import test_pipeline_execution as execution
+        from biomolexplorer.catalog import new_stage
+        from biomolexplorer.pipeline import PipelineService,execution_stage,execution_context
+        from biomolexplorer.templates import RESOURCE_ROOT
+        fixture=execution.PipelineExecutionTests();fixture.setUp();self.addCleanup(fixture.tearDown)
+        science=IncrementalRedockingTests();science.setUp();self.addCleanup(science.doCleanups)
+        source=fixture.store.project_dir(fixture.project_id)/'input/Target';shutil.copytree(science.source,source)
+        stage=new_stage('redocking');stage['parameters'].update(base_input_path=str(source.parent),target='Target',pdb_codes=[['1ABC','LIG',1,'A']])
+        fixture.save([stage])
+        class Manager:
+            def __init__(self,config):self.config=config
+            def submit(self,operation,parameters):
+                result=execute_operation(operation,parameters,self.config.workspace/'artifacts')
+                self.job=dict(id='worker',status='succeeded',log_path=str(self.config.workspace/'worker.log'),error=None,progress=None,result=result.to_dict())
+                return self.job
+            def get(self,job):return self.job
+            def close(self):pass
+            def cancel(self,job):self.job['status']='cancelled'
+        with patch('biomolexplorer.pipeline.JobManager',Manager):
+            service=PipelineService(fixture.store);self.addCleanup(service.close)
+            first=fixture.finish_selected(service,service.submit(fixture.token,fixture.project_id))
+            self.assertEqual(first['status'],'succeeded',first.get('error'))
+            snapshot=copy.deepcopy(first['stages']);old=snapshot[0]
+            index=next(Path(p) for p in old['artifacts'] if Path(p).name==NAME)
+            data=json.loads(index.read_text())
+            for entry in data['entries']:entry['receptor_key']='legacy';entry['pair_key']='legacy'
+            index.write_text(json.dumps(data));old['artifact_manifest']=artifact_manifest(old['artifacts'])
+            build=json.loads((RESOURCE_ROOT/'legacy_cache_compatibility.json').read_text())['source_builds'][0]
+            provenance=build+':'+sys.executable;old['cache_software']=provenance
+            old['cache_key']=service._legacy_cache_key(fixture.project_id,fixture.store.user(fixture.token)['id'],
+                execution_stage(old['configuration'],old.get('input_mode')),{},provenance,pipeline=execution_context(snapshot))
+            for name in ('processing_version','processing_runtime','producer_software'):old.pop(name,None)
+            with fixture.store.connect() as db:db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(snapshot),first['id']))
+            stage['parameters']['pdb_codes']=[['1ABC','LIG',1,'A'],['1ABC','BAD',3,'A']];fixture.save([stage])
+            second=fixture.finish_selected(service,service.submit(fixture.token,fixture.project_id))
+            self.assertEqual(second['status'],'succeeded',second.get('error'))
+            self.assertEqual(science.docked,[('1ABC','LIG'),('1ABC','BAD')])
+
     def test_scheduler_passes_verified_seeds_and_results_table_accumulates(self):
         import test_pipeline_execution as execution
         from biomolexplorer.catalog import new_stage
@@ -221,7 +282,7 @@ class SchedulerIncrementalTests(unittest.TestCase):
             service=PipelineService(fixture.store);self.addCleanup(service.close)
             first=fixture.finish_selected(service,service.submit(fixture.token,fixture.project_id))
             self.assertEqual(first['status'],'succeeded',first.get('error'))
-            stage['parameters']['pdb_codes']=[['1ABC','BAD',3,'A']];fixture.save([stage])
+            stage['parameters']['pdb_codes']=[['1ABC','LIG',1,'A'],['1ABC','BAD',3,'A']];fixture.save([stage])
             second=fixture.finish_selected(service,service.submit(fixture.token,fixture.project_id))
         self.assertEqual(second['status'],'succeeded',second.get('error'))
         self.assertIn('redocking-inputs',submitted[-1]['base_input_path'])
@@ -230,23 +291,25 @@ class SchedulerIncrementalTests(unittest.TestCase):
         rows=RedockingResults(fixture.store).simulations(fixture.token,fixture.project_id,second['id'],stage['id'])
         self.assertEqual({r['ligand'] for r in rows},{'LIG','BAD'})
         self.assertEqual([r['rmsd'] for r in rows],[.25,.25])
-        # A whole-stage match must also reject a run that did not commit.
+        # A completed, hash-verified stage remains valid when a later operation
+        # leaves the overall run interrupted.
         with fixture.store.connect() as db:
             db.execute("UPDATE runs SET status='interrupted' WHERE id=?",(second['id'],))
         with patch('biomolexplorer.pipeline.JobManager',Manager):
             third=fixture.finish_selected(service,service.submit(fixture.token,fixture.project_id))
         self.assertEqual(third['status'],'succeeded',third.get('error'))
-        self.assertEqual(science.docked,[('1ABC','LIG'),('1ABC','BAD'),('1ABC','BAD')])
-        self.assertFalse(third['stages'][0].get('reused'))
-        # Returning to the first selection must keep later accumulated results,
-        # rather than returning the first run's smaller, whole-stage table.
-        stage['parameters']['pdb_codes']=[['1ABC','LIG',1,'A']];fixture.save([stage])
+        self.assertEqual(science.docked,[('1ABC','LIG'),('1ABC','BAD')])
+        self.assertTrue(third['stages'][0].get('reused'))
+        # Removing a selected pair is now an explicitly confirmed contraction.
+        stage['parameters']['pdb_codes']=[['1ABC','LIG',1,'A']]
+        project=fixture.store.project(fixture.token,fixture.project_id)
+        fixture.store.save_pipeline(fixture.token,fixture.project_id,[stage],project['revision'],prune_results=True)
         with patch('biomolexplorer.pipeline.JobManager',Manager):
             fourth=fixture.finish_selected(service,service.submit(fixture.token,fixture.project_id))
         self.assertEqual(fourth['status'],'succeeded',fourth.get('error'))
-        self.assertEqual(science.docked,[('1ABC','LIG'),('1ABC','BAD'),('1ABC','BAD')])
+        self.assertEqual(science.docked,[('1ABC','LIG'),('1ABC','BAD')])
         rows=RedockingResults(fixture.store).simulations(fixture.token,fixture.project_id,fourth['id'],stage['id'])
-        self.assertEqual({r['ligand'] for r in rows},{'LIG','BAD'})
+        self.assertEqual({r['ligand'] for r in rows},{'LIG'})
 
 
 if __name__=='__main__':unittest.main()

@@ -56,6 +56,7 @@ class WorkspaceStore:
                     user_id TEXT, actor_name TEXT NOT NULL, actor_email TEXT NOT NULL, action TEXT NOT NULL,
                     summary TEXT NOT NULL, created REAL NOT NULL, has_before INTEGER NOT NULL);
                 CREATE INDEX IF NOT EXISTS history_project ON project_history(project_id,created);
+                CREATE TABLE IF NOT EXISTS result_file_transactions(id TEXT PRIMARY KEY,project_id TEXT NOT NULL);
             ''')
 
         from .project_folders import finish
@@ -64,6 +65,11 @@ class WorkspaceStore:
         except (OSError, ValueError):
             import logging
             logging.getLogger(__name__).exception('Não foi possível concluir a limpeza de projetos excluídos.')
+        from .result_transactions import recover
+        try:recover(self)
+        except (OSError,ValueError):
+            import logging
+            logging.getLogger(__name__).exception('Não foi possível recuperar uma limpeza de resultados interrompida.')
 
     def project_destination(self, token, name, parent):
         from .project_folders import plan
@@ -245,22 +251,50 @@ class WorkspaceStore:
         from .project_folders import delete
         delete(self, token, project_id, expected_directory)
 
-    def save_pipeline(self, token, project_id, stages, expected_revision, base_pipeline=None):
+    def save_pipeline(self, token, project_id, stages, expected_revision, base_pipeline=None, prune_results=False, confirmation=None):
         self.project(token, project_id, 'editor')
         from .pipeline import validate_pipeline
         validate_pipeline(stages)
-        with self.change(token, project_id, 'editor', 'pipeline', 'Pipeline e configurações dos blocos alterados') as db:
-            current = db.execute('SELECT pipeline,revision FROM projects WHERE id=?', (project_id,)).fetchone()
-            if current['revision'] != expected_revision:
-                if base_pipeline is None:
-                    raise ValueError('O projeto foi alterado por outro usuário. Reabra-o antes de salvar.')
-                from .project_merge import merge_pipeline
-                from .graph_contract import normalize_legacy_graphs
-                stages = merge_pipeline(base_pipeline, stages, normalize_legacy_graphs(json.loads(current['pipeline'])))
-                validate_pipeline(stages)
-            db.execute('UPDATE projects SET pipeline=?,revision=revision+1,updated=? WHERE id=?',
-                (json.dumps(stages, allow_nan=False), time.time(), project_id))
+        from .result_sync import finish
+        moved=[];journal=None
+        try:
+            with self.change(token, project_id, 'editor', 'pipeline', 'Pipeline e configurações dos blocos alterados') as db:
+                current = db.execute('SELECT pipeline,revision FROM projects WHERE id=?', (project_id,)).fetchone()
+                if current['revision'] != expected_revision:
+                    if base_pipeline is None:
+                        raise ValueError('O projeto foi alterado por outro usuário. Reabra-o antes de salvar.')
+                    from .project_merge import merge_pipeline
+                    from .graph_contract import normalize_legacy_graphs
+                    stages = merge_pipeline(base_pipeline, stages, normalize_legacy_graphs(json.loads(current['pipeline'])))
+                    validate_pipeline(stages)
+                from .result_sync import plan,apply
+                proposal=plan(db,project_id,stages,self.project_dir(project_id,db))
+                if proposal['affected']:
+                    if not prune_results:
+                        raise ValueError('Confirme a invalidação dos resultados antes de salvar esta alteração.')
+                    if confirmation is not None and confirmation!=proposal['confirmation']:
+                        raise ValueError('Os resultados foram alterados. Revise a confirmação antes de salvar.')
+                    if proposal['active_conflicts'] or db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running')",(project_id,)).fetchone():
+                        raise ValueError('Aguarde ou cancele a execução antes de limpar os resultados.')
+                    stages=proposal['pipeline'];validate_pipeline(stages)
+                    from .result_transactions import ResultTransaction
+                    journal=ResultTransaction(self,db,project_id)
+                    apply(self,db,project_id,proposal,moved,journal)
+                db.execute('UPDATE projects SET pipeline=?,revision=revision+1,updated=? WHERE id=?',
+                    (json.dumps(stages, allow_nan=False), time.time(), project_id))
+        except BaseException:
+            finish(moved,rollback=True)
+            if journal:journal.finish()
+            raise
+        finish(moved)
+        if journal:journal.finish()
         return self.project(token, project_id)
+
+    def result_removal_plan(self,token,project_id,stages):
+        self.project(token,project_id,'editor')
+        from .result_sync import plan
+        with self.connect() as db:proposal=plan(db,project_id,stages,self.project_dir(project_id,db))
+        return {key:proposal[key] for key in ('affected','shared_preserved','blocks','active_conflicts','confirmation')}
 
     def invite(self, token, project_id, email, role='viewer'):
         project = self.project(token, project_id, 'owner')

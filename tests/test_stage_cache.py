@@ -23,7 +23,10 @@ class StageCacheTests(unittest.TestCase):
     immediate_manager=execution.PipelineExecutionTests.immediate_manager
 
     def run_twice(self,stages,change,force=False):
-        self.save(stages)
+        def confirmed_save():
+            project=self.store.project(self.token,self.project_id)
+            self.store.save_pipeline(self.token,self.project_id,stages,project['revision'],prune_results=True)
+        confirmed_save()
         manager,calls=self.immediate_manager()
         with patch('biomolexplorer.pipeline.JobManager',manager):
             service=PipelineService(self.store,worker_python=sys.executable)
@@ -31,7 +34,7 @@ class StageCacheTests(unittest.TestCase):
                 first=self.finish_selected(service,service.submit(self.token,self.project_id))
                 self.assertEqual(first['status'],'succeeded',first['error'])
                 change(stages,first)
-                self.save(stages)
+                confirmed_save()
                 second=self.finish_selected(service,service.submit(self.token,self.project_id,reuse_results=not force))
                 self.assertEqual(second['status'],'succeeded',second['error'])
                 return first,second,calls
@@ -153,6 +156,8 @@ class StageCacheTests(unittest.TestCase):
                 tables=CompoundTables(self.store)
                 page=tables.page(self.token,self.project_id,first['id'],source['id'],path)
                 tables.remove(self.token,self.project_id,first['id'],source['id'],path,0,page['version'])
+                project=self.store.project(self.token,self.project_id)
+                self.store.save_pipeline(self.token,self.project_id,project['pipeline'],project['revision'],prune_results=True)
                 second=self.finish_selected(service,service.submit(self.token,self.project_id))
             finally:service.close()
         self.assertEqual(second['status'],'succeeded',second['error'])

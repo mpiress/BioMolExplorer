@@ -87,3 +87,10 @@ class RemovalProgressTests(unittest.IsolatedAsyncioTestCase):
         await progress.run(AsyncMock(side_effect=OSError('failure')))
         self.assertFalse(dialog.actions[0].disabled)
         self.assertTrue(dialog.actions[1].disabled)
+
+    async def test_cancelled_nested_confirmation_restores_controls_without_completion(self):
+        ui=self.ui();dialog=ft.AlertDialog(content=ft.Text('Confirmar'),actions=[ft.TextButton('Cancelar'),ft.TextButton('Remover')])
+        progress=RemovalProgress(ui,dialog)
+        await progress.run(AsyncMock(return_value=False))
+        self.assertFalse(progress.completed);self.assertFalse(progress.running)
+        self.assertTrue(all(not control.disabled for control in dialog.actions))

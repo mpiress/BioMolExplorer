@@ -1,0 +1,138 @@
+{
+  "scope": "Native preparation and format validation; minimization explicitly disabled in this test configuration",
+  "results": [
+    {
+      "block": "producer",
+      "engine": "vina",
+      "ligand_charge_method": "gas",
+      "receptor_prepared": true,
+      "receptor_sha256": "7b0f98a7248eada1ca660cedb556259575a4c7876aaacd6b1b1e80f994bf240c",
+      "ligand_atoms": 14,
+      "seconds": 4.002215871005319,
+      "commands": [
+        [
+          "chimera",
+          "--nogui",
+          "--silent",
+          "/tmp/biomol-native-shared-persistence-final/producer/prepare_complex_1P0I_A.com"
+        ],
+        [
+          "chimera",
+          "--nogui",
+          "--silent",
+          "/tmp/biomol-native-shared-persistence-final/producer/prepare_receptor_1P0I_A.com"
+        ],
+        [
+          "obabel",
+          "-i",
+          "mol2",
+          "/tmp/biomol-native-shared-persistence-final/producer/1P0I_A.dockprep.mol2",
+          "-o",
+          "pdbqt",
+          "-O",
+          "1P0I_A.dockprep.pdbqt",
+          "-p",
+          "7.4",
+          "-xr",
+          "-xn"
+        ],
+        [
+          "chimera",
+          "--nogui",
+          "--silent",
+          "/tmp/biomol-native-shared-persistence-final/producer/prepare_ligand_1P0I_BUA_606A.hydrogenation.com"
+        ],
+        [
+          "chimera",
+          "--nogui",
+          "--silent",
+          "/tmp/biomol-native-shared-persistence-final/producer/prepare_ligand_1P0I_BUA_606A.com"
+        ],
+        [
+          "obabel",
+          "-i",
+          "mol2",
+          "/tmp/biomol-native-shared-persistence-final/producer/1P0I_BUA_606A.lig.mol2",
+          "-o",
+          "pdbqt",
+          "-O",
+          "1P0I_BUA_606A.lig.pdbqt",
+          "-p",
+          "7.4",
+          "-xn"
+        ]
+      ]
+    },
+    {
+      "block": "second-block",
+      "engine": "vina",
+      "ligand_charge_method": "am1",
+      "receptor_prepared": false,
+      "receptor_sha256": "7b0f98a7248eada1ca660cedb556259575a4c7876aaacd6b1b1e80f994bf240c",
+      "ligand_atoms": 14,
+      "seconds": 2.090469763992587,
+      "commands": [
+        [
+          "chimera",
+          "--nogui",
+          "--silent",
+          "/tmp/biomol-native-shared-persistence-final/second-block/prepare_complex_1P0I_A.com"
+        ],
+        [
+          "chimera",
+          "--nogui",
+          "--silent",
+          "/tmp/biomol-native-shared-persistence-final/second-block/prepare_ligand_1P0I_BUA_606A.hydrogenation.com"
+        ],
+        [
+          "chimera",
+          "--nogui",
+          "--silent",
+          "/tmp/biomol-native-shared-persistence-final/second-block/prepare_ligand_1P0I_BUA_606A.com"
+        ],
+        [
+          "obabel",
+          "-i",
+          "mol2",
+          "/tmp/biomol-native-shared-persistence-final/second-block/1P0I_BUA_606A.lig.mol2",
+          "-o",
+          "pdbqt",
+          "-O",
+          "1P0I_BUA_606A.lig.pdbqt",
+          "-p",
+          "7.4",
+          "-xn"
+        ]
+      ]
+    },
+    {
+      "block": "dock6-block",
+      "engine": "dock6",
+      "ligand_charge_method": "gas",
+      "receptor_prepared": false,
+      "receptor_sha256": "7b0f98a7248eada1ca660cedb556259575a4c7876aaacd6b1b1e80f994bf240c",
+      "ligand_atoms": 14,
+      "seconds": 1.6130581889883615,
+      "commands": [
+        [
+          "chimera",
+          "--nogui",
+          "--silent",
+          "/tmp/biomol-native-shared-persistence-final/dock6-block/prepare_complex_1P0I_A.com"
+        ],
+        [
+          "chimera",
+          "--nogui",
+          "--silent",
+          "/tmp/biomol-native-shared-persistence-final/dock6-block/prepare_ligand_1P0I_BUA_606A.hydrogenation.com"
+        ],
+        [
+          "chimera",
+          "--nogui",
+          "--silent",
+          "/tmp/biomol-native-shared-persistence-final/dock6-block/prepare_ligand_1P0I_BUA_606A.com"
+        ]
+      ]
+    }
+  ]
+}

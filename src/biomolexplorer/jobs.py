@@ -180,7 +180,8 @@ class JobManager:
                 environment['BIOMOL_LOG_CONTEXT'] = json.dumps(current_context())
                 environment['MPLBACKEND'] = 'Agg'
                 environment['MPLCONFIGDIR'] = str(job_dir / 'matplotlib')
-                environment['BIOMOL_CACHE_DIR'] = str(self.config.state_dir / 'cache')
+                environment['BIOMOL_CACHE_DIR'] = str(self.config.cache_dir or self.config.state_dir / 'cache')
+                environment['BIOMOL_REUSE_RESULTS'] = '1' if self.config.reuse_results else '0'
                 environment['BIOMOL_PROGRESS_FILE'] = str(job_dir / 'progress.json')
                 if self.config.resource_dir:
                     environment['BIOMOL_RESOURCE_DIR'] = str(self.config.resource_dir)

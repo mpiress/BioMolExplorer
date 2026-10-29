@@ -10,6 +10,14 @@ from .bindings import sources,pack
 from .workspace import AccessDenied
 
 
+def unregistered_original(item):
+    """Legacy supplied files without library provenance may be the only original."""
+    config=item.get('configuration',{})
+    supplied=item.get('operation')=='import_results' or item.get('provided') or config.get('provided_results')
+    ids=(config.get('provided_results') or config.get('parameters',{})).get('asset_ids',[])
+    return bool(supplied and not ids)
+
+
 def reset_selections(pipeline):
     pipeline=copy.deepcopy(pipeline);count=0
     for stage in pipeline:
@@ -35,11 +43,28 @@ def reset_selections(pipeline):
     return pipeline,count
 
 
-def clear_project_results(store,token,pid):
+def reset_defaults(pipeline):
+    """Restore block configuration, retaining identities and visual topology."""
+    from .catalog import new_stage
+    pipeline=copy.deepcopy(pipeline)
+    for stage in pipeline:
+        defaults=new_stage(stage['operation'])
+        stage['parameters']=defaults['parameters'];stage['templates']={}
+        for key in ('provided_results','input_processing','follow_inputs','preparation_pairs','input_expansions','input_files','artifact_records','dataset_origin'):
+            stage.pop(key,None)
+        if 'process_all' in defaults:stage['process_all']=defaults['process_all']
+        for field,group in list(stage.get('bindings',{}).items()):
+            value=pack([dict(stage=r['stage'],selector='auto') for r in sources(group) if 'stage' in r])
+            if value:stage['bindings'][field]=value
+            else:stage['bindings'].pop(field,None)
+    return pipeline
+
+
+def clear_project_results(store,token,pid,*,reset_configuration=True):
     """Commit file removal and selection reset together, restoring both on failure."""
-    moved=[];backup=None;files_removed=0;stages_cleared=0
+    moved=[];backup=None;files_removed=0;stages_cleared=0;journal=None
     try:
-        with store.change(token,pid,'editor','clear_all_results','Resultados e seleções de entrada limpos') as db:
+        with store.change(token,pid,'editor','clear_all_results' if reset_configuration else 'remove_all_results','Limpeza de resultados persistidos') as db:
             if db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running','awaiting_input')",(pid,)).fetchone():
                 raise ValueError('Aguarde ou cancele a execução antes de limpar os resultados.')
             root=store.project_dir(pid,db).resolve()
@@ -49,14 +74,13 @@ def clear_project_results(store,token,pid):
                 return path if path.is_relative_to(root) and path!=root else None
             runs=[(row[0],json.loads(row[1])) for row in db.execute('SELECT id,stages FROM runs WHERE project_id=?',(pid,))]
             protected={p for row in db.execute('SELECT path FROM assets WHERE project_id=?',(pid,)) if (p:=scoped(row[0]))}
-            def provided(item):return item.get('operation')=='import_results' or item.get('provided') or bool(item.get('configuration',{}).get('provided_results'))
+            def provided(item):return unregistered_original(item)
             for _,stages in runs:
                 for item in stages:
                     if provided(item):protected.update(p for value in item.get('artifacts',[]) if (p:=scoped(value)))
             candidates=set()
             for rid,stages in runs:
                 for item in stages:
-                    if provided(item):continue
                     stages_cleared+=1
                     candidates.update(p for value in item.get('artifacts',[]) if (p:=scoped(value)))
                     stage_root=root/'runs'/rid/item['id']
@@ -65,8 +89,10 @@ def clear_project_results(store,token,pid):
                             candidates.update(p.resolve() for p in stage_root.rglob(name) if p.is_dir() and not p.is_symlink())
                     item.update(artifacts=[],artifact_manifest={},artifact_records=[],input_files={},batches=[],
                         outputs_removed=True,curated_at=time.time(),reused=False,redocking_failures=0,redocking_reused=0,excluded_records=0)
-                    for key in ('cache_key','cache_software','reused_from_run','current_batch','progress'):item.pop(key,None)
+                    for key in ('cache_key','cache_software','reused_from_run','current_batch','progress','input_manifest'):item.pop(key,None)
             if (root/'.input-cache').is_dir():candidates.add(root/'.input-cache')
+            if (root/'.biomolexplorer/cache/preparation').is_dir():candidates.add(root/'.biomolexplorer/cache/preparation')
+            if (root/'.biomolexplorer/cache/calculations/molecular').is_dir():candidates.add(root/'.biomolexplorer/cache/calculations/molecular')
             owned=set()
             for path in candidates:
                 if not path.is_relative_to(root) or path in protected:continue
@@ -78,11 +104,18 @@ def clear_project_results(store,token,pid):
             for path in sorted(owned,key=lambda p:(len(p.parts),str(p))):
                 if path.exists() and not any(path.is_relative_to(parent) for parent in selected if parent.is_dir()):selected.append(path)
             backup=root/'.history'/('.clear-'+uuid4().hex);backup.mkdir(parents=True)
+            from .result_transactions import ResultTransaction
+            journal=ResultTransaction(store,db,pid)
+            journal.prepare([(path,backup/str(i)) for i,path in enumerate(selected)])
             for index,path in enumerate(selected):
                 files_removed+=sum(p.is_file() for p in path.rglob('*')) if path.is_dir() else 1
-                destination=backup/str(index);path.replace(destination);moved.append((path,destination))
+                destination=backup/str(index);journal.move(path,destination);moved.append((path,destination))
+            journal.flush()
             pipeline=json.loads(db.execute('SELECT pipeline FROM projects WHERE id=?',(pid,)).fetchone()[0])
-            pipeline,links_reset=reset_selections(pipeline)
+            links_reset=0
+            if reset_configuration:
+                pipeline,links_reset=reset_selections(pipeline)
+                pipeline=reset_defaults(pipeline)
             # Run timestamps describe execution, not the later cleanup duration.
             for rid,stages in runs:db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(stages),rid))
             db.execute('UPDATE projects SET pipeline=?,revision=revision+1,updated=? WHERE id=?',(json.dumps(pipeline),time.time(),pid))
@@ -90,6 +123,8 @@ def clear_project_results(store,token,pid):
         for path,saved in reversed(moved):
             if saved.exists():path.parent.mkdir(parents=True,exist_ok=True);saved.replace(path)
         if backup:shutil.rmtree(backup,ignore_errors=True)
+        if journal:journal.finish()
         raise
     if backup:shutil.rmtree(backup,ignore_errors=True)
+    if journal:journal.finish()
     return dict(files_removed=files_removed,stages_cleared=stages_cleared,links_reset=links_reset)

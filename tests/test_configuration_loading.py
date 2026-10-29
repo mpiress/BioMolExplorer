@@ -235,4 +235,61 @@ class ConfigurationSavingTests(unittest.TestCase):
         for language in ('en','pt'):asyncio.run(scenario(language))
 
 
+class ExecutionPreparationTests(unittest.TestCase):
+    setUp=fixtures.PipelineEditorRegressionTests.setUp
+
+    def test_restart_shows_splash_through_save_and_result_validation_then_reuse_menu(self):
+        async def scenario():
+            for language in ('en','pt'):
+                self.ui.page.set_language(language)
+                self.ui.service.existing_results=lambda *args:True
+                entered=asyncio.Event();release=asyncio.Event();reads=[]
+                original=self.ui.call
+                async def call(function,*args,**kwargs):
+                    splash=next(c for c in reversed(self.page.dialogs) if isinstance(c,ft.AlertDialog) and c.open)
+                    self.assertTrue(splash.open);self.assertTrue(splash.modal)
+                    if function==self.ui.service.existing_results:
+                        reads.append(1);entered.set();await release.wait()
+                    return function(*args,**kwargs)
+                self.ui.call=call
+                pending=asyncio.create_task(self.ui.run_pipeline())
+                await asyncio.wait_for(entered.wait(),2)
+                splash=next(c for c in reversed(self.page.dialogs) if isinstance(c,ft.AlertDialog) and c.open)
+                labels=[c.value for c in walk(splash) if isinstance(c,ft.Text)]
+                self.assertIn('Preparing execution…' if language=='en' else 'Preparando a execução…',labels)
+                await self.ui.run_pipeline();self.assertEqual(len(reads),1)
+                release.set();await pending
+                self.assertFalse(splash.open);self.assertTrue(self.ui.reuse_dialog.open)
+                self.assertIs(self.page.dialogs[-1],self.ui.reuse_dialog)
+                self.assertFalse(self.ui.submitting)
+                self.ui.dismiss_reuse_prompt();self.ui.call=original
+        asyncio.run(scenario())
+
+    def test_failed_or_cancelled_preparation_releases_splash_and_allows_retry(self):
+        async def scenario():
+            self.ui.service.existing_results=lambda *args:True
+            entered=asyncio.Event()
+            async def fail(*args,**kwargs):raise RuntimeError('validation failure')
+            self.ui.call=fail
+            with self.assertRaisesRegex(RuntimeError,'validation failure'):await self.ui.run_pipeline()
+            self.assertFalse(self.page.dialogs[-1].open);self.assertFalse(self.ui.submitting)
+            async def wait(*args,**kwargs):entered.set();await asyncio.Event().wait()
+            self.ui.call=wait
+            pending=asyncio.create_task(self.ui.run_pipeline());await asyncio.wait_for(entered.wait(),1)
+            splash=self.page.dialogs[-1];self.assertTrue(splash.open)
+            pending.cancel()
+            with self.assertRaises(asyncio.CancelledError):await pending
+            self.assertFalse(splash.open);self.assertFalse(self.ui.submitting)
+        asyncio.run(scenario())
+
+    def test_declining_configuration_change_closes_splash_without_reuse_prompt(self):
+        from unittest.mock import AsyncMock
+        async def scenario():
+            self.ui.save_draft=AsyncMock(return_value=False)
+            await self.ui.run_pipeline()
+            self.assertFalse(self.page.dialogs[-1].open)
+            self.assertIsNone(self.ui.reuse_dialog);self.assertFalse(self.ui.submitting)
+        asyncio.run(scenario())
+
+
 if __name__=='__main__':unittest.main()

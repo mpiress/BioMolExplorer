@@ -1,0 +1,12 @@
+{
+  "sessions": [
+    {
+      "language": "en",
+      "no_deletion_before_confirmation": true,
+      "cancel_preserved_results": true,
+      "confirmed_removal_deleted_exclusive_results": true,
+      "imported_preserved": true
+    }
+  ],
+  "javascript_errors": []
+}

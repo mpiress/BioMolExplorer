@@ -111,5 +111,6 @@
   "redocking.count": "{shown} of {total} pairs · Page {page}",
   "redocking.export": "Download RMSD table",
   "run.status.cleared": "Results cleared",
-  "run.overview.cleared": "Generated results and input selections were cleared. Connections and source files are preserved."
+  "run.overview.cleared": "Generated results and input selections were cleared. Connections and source files are preserved.",
+  "run.status.historical": "Historical result · dependencies changed"
 }

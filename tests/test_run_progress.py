@@ -30,6 +30,7 @@ class WorkerRetrievalTests(unittest.TestCase):
         fixture = Path(__file__).parent / 'fixtures' / 'chembl_worker.py'
         commands = []
         def launch(args, **kwargs):
+            if args[1:3]!=['-m','biomolexplorer.worker']:return original(args,**kwargs)
             commands.append(args)
             return original([args[0], str(fixture), *args[3:]], **kwargs)
         with tempfile.TemporaryDirectory(prefix='biomol default retrieval ') as temp:
@@ -77,6 +78,7 @@ class WorkerRetrievalTests(unittest.TestCase):
         fixture = Path(__file__).parent / 'fixtures' / 'chembl_worker.py'
         commands = []
         def launch(args, **kwargs):
+            if args[1:3]!=['-m','biomolexplorer.worker']:return original(args,**kwargs)
             commands.append(args)
             self.assertEqual(args[1:3], ['-m', 'biomolexplorer.worker'])
             return original([args[0], str(fixture), *args[3:]], **kwargs)

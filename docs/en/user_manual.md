@@ -595,10 +595,32 @@ Open Residues to inspect geometric contacts.
 
 ### Results, cleanup and history
 
-**Clear All**, beside **Refresh Results**, removes generated results across all
-runs and resets file and pair selections. Block connections, scientific settings,
-imported files and logs are preserved. Confirm the action to start over; buttons
-are disabled while cleanup runs. Finish or cancel any active run before clearing.
+Two actions with red icons appear beside **Refresh Results**:
+
+| Action | Removes | Preserves |
+|---|---|---|
+| **Remove All** | Generated results and computational caches in the project | Blocks, connections and every setting |
+| **Clear All** | Those results, input selections, scientific settings and custom templates | Blocks and connections; settings return to defaults |
+
+Both preserve original library files, logs and history. Review the dialog before
+confirming; canceling leaves data intact. Finish or cancel active runs before
+cleaning. Configure the blocks again after Clear All.
+
+With reuse enabled, valid batches remain available after restarting. Configuration,
+input and result equivalence is checked when saving and before execution; no manual
+synchronization is needed. Adding independent inputs or actions preserves earlier
+results and processes only the complement. Changing parameters or removing inputs
+or actions requires confirmation before saving. The dialog lists affected blocks,
+including downstream dependents. Confirm saves the change and deletes obsolete
+results; Cancel restores the previous configuration and preserves files. Other
+inputs and shared files survive. A run still using affected data must finish or
+be cancelled before that change.
+
+For example, adding MACCS to completed Morgan work executes only MACCS. Changing
+Morgan's radius afterwards preserves MACCS. Removing one file from an individual
+set removes only its batch and dependent batches. A merged result represents the
+entire set: changing its members requires rebuilding that combination, without
+approximating the calculation using incompatible individual batches.
 
 ```text
 Finish or cancel the run before removing its data.

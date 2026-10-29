@@ -436,6 +436,27 @@ class Docking():
             complexes = []
             receptors = []
             ligands   = []
+            from biomolexplorer import preparation_cache
+            ready=_prepared_receptors if _prepared_receptors is not None else set()
+            shared={}
+            fresh_complex=set()
+            if preparation_cache.root() is not None:
+                for record in pdb_codes:
+                    identity=(record[0],record[3]);prefix=f'{record[0]}_{record[3]}'
+                    options=(preparation_pairs or {}).get(pair_key(record),{})
+                    key=preparation_cache.receptor_key(Path(self.complexpath)/(record[0]+'.pdb'),record,options,pH)
+                    shared[identity]=key
+                    if identity not in ready and preparation_cache.restore(key,self.outputpath,prefix):
+                        config=dict(DEFAULTS,**options.get('receptor',{}))
+                        if docking_engine!='dock6' and not (Path(self.outputpath)/(prefix+'.dockprep.pdbqt')).is_file():
+                            self.prepare_on_obabel(prefix+'.dockprep.mol2',prefix+'.dockprep.pdbqt',
+                                ([('p',str(pH))] if config['add_hydrogens'] else [])+[('xr','')],input_format='mol2',output_format='pdbqt')
+                        ready.add(identity)
+                        event(self.logger,'receptor.reused','Receptor preparado reutilizado; sem nova preparação.',
+                            receptor=prefix,cache_key=key)
+                        # Complex extraction also supplies the ligand's original
+                        # H/solvent inventory; it is not a receptor cache artifact.
+                        fresh_complex.add(identity)
 
 
             for pdb in pdb_codes:
@@ -450,7 +471,7 @@ class Docking():
                 if preparation_pairs is not None:
                     complex_preparation = preparation
 
-                if (_prepared_receptors is None or (receptor,chain) not in _prepared_receptors) and f'prepare_complex_{receptor}_{chain}.com' not in complexes:
+                if ((receptor,chain) not in ready or (receptor,chain) in fresh_complex) and f'prepare_complex_{receptor}_{chain}.com' not in complexes:
                     self.generate_docking_script(input_template='src/scripts/chimera/prepare_complex.template',
                                                 output_script=directory(self.outputpath) + f'prepare_complex_{receptor}_{chain}.com',
                                                 pdb_code=directory(self.complexpath) + receptor,
@@ -460,7 +481,7 @@ class Docking():
                     complexes.append(f'prepare_complex_{receptor}_{chain}.com')
 
 
-                if (_prepared_receptors is None or (receptor,chain) not in _prepared_receptors) and f'prepare_receptor_{receptor}_{chain}.com' not in receptors:
+                if (receptor,chain) not in ready and f'prepare_receptor_{receptor}_{chain}.com' not in receptors:
                     self.generate_docking_script(input_template='src/scripts/chimera/prepare_receptor.template',
                                                 output_script=directory(self.outputpath) + f'prepare_receptor_{receptor}_{chain}.com',
                                                 input_complex=directory(self.outputpath) + f'{receptor}_{chain}' + '.complex',
@@ -495,14 +516,17 @@ class Docking():
             for pdb in pdb_codes:
                 chain = pdb[3]
                 receptor_key = (pdb[0], chain)
-                if _prepared_receptors is not None and receptor_key in _prepared_receptors:continue
+                if receptor_key in ready:continue
                 if receptor_key in converted_receptors:
                     continue
                 options = dict(DEFAULTS, **(preparation_pairs or {}).get(pair_key(pdb), {}).get('receptor', {}))
                 if docking_engine!='dock6':
                     self.prepare_on_obabel(f'{pdb[0]}_{chain}.dockprep.mol2', f'{pdb[0]}_{chain}.dockprep.pdbqt', ([('p',str(pH))] if options['add_hydrogens'] else []) + [('xr','')], input_format='mol2', output_format='pdbqt')
                 converted_receptors.add(receptor_key)
-                if _prepared_receptors is not None:_prepared_receptors.add(receptor_key)
+                ready.add(receptor_key)
+
+            for identity,key in shared.items():
+                if identity in ready:preparation_cache.publish(key,self.outputpath,f'{identity[0]}_{identity[1]}')
 
             args = [(file,) for file in ligands]
             if _prepared_receptors is None:self.process_in_parallel(method_name='prepare_on_chimera', args_list=args)

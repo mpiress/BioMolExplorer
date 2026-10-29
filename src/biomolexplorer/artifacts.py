@@ -40,11 +40,18 @@ def records(item, run_id=None):
         if selector is None:raise ValueError('Os resultados contêm caminhos de arquivo duplicados.')
         identity=slot_id(item['id'], locator(item['id'], path))
         prior=previous.get(path, {})
-        origin=prior.get('run_id') or item.get('reused_from_run') or run_id
+        batch=next((b for b in item.get('batches',[]) if path in b.get('artifacts',[])),{})
+        origin=prior.get('run_id') or batch.get('reused_from_run') or item.get('reused_from_run') or run_id
+        runtime=batch.get('processing_runtime') if batch else item.get('processing_runtime')
         result.append(dict(artifact_id=identity,
             occurrence_id=hashlib.sha256(json.dumps([identity, origin]).encode()).hexdigest(),
             stage_id=item['id'], stage_name=item.get('name', item['id']),
             operation=item.get('operation', config.get('operation', 'unknown')),
+            content_sha256=item.get('artifact_manifest',{}).get(str(Path(path).resolve())),
+            processing_version=batch.get('processing_version') if batch else item.get('processing_version'),
+            producer_software=batch.get('producer_software') if batch else item.get('producer_software'),
+            runtime_id=hashlib.sha256(json.dumps(runtime,sort_keys=True).encode()).hexdigest() if runtime else None,
+            dependency_manifest=item.get('input_manifest',{}),
             run_id=origin, name=Path(path).name, selector=selector, locator=locator(item['id'],path), path=path,
             context=prior.get('context', {'target':config.get('parameters', {}).get('target'),
                      'search_term':config.get('parameters', {}).get('search_term')}),

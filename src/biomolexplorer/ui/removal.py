@@ -33,8 +33,8 @@ class RemovalProgress:
         async def execute():
             # Flush the busy state before any deletion or expensive UI rebuild.
             await asyncio.sleep(0)
-            await action()
-            self.completed = True
+            result=await action()
+            self.completed = result is not False
 
         try:
             await self.ui.guard(execute)

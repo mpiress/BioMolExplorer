@@ -103,7 +103,9 @@ class InputProcessingTests(unittest.TestCase):
                 self.assertEqual(len(calls),3)
                 self.assertTrue(again['stages'][1]['reused'])
                 self.assertEqual(len(again['stages'][1]['batches']),2)
-                stage['input_processing']='merge';self.save([source,stage])
+                stage['input_processing']='merge'
+                project=self.store.project(self.token,self.project_id)
+                self.store.save_pipeline(self.token,self.project_id,[source,stage],project['revision'],prune_results=True)
                 merged=self.confirm_all(service,self.wait(service.submit(self.token,self.project_id)),'merge')
                 self.assertEqual(merged['status'],'succeeded',merged['error'])
                 self.assertEqual(len(calls),4)

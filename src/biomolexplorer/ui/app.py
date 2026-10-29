@@ -43,9 +43,9 @@ def user_text(value, *args, **kwargs):
     return verbatim(text(value, *args, **kwargs))
 
 
-def button(label,handler,primary=False,icon=None,disabled=False):
-    return ft.Button(label,on_click=handler,icon=icon,disabled=disabled,
-        style=ft.ButtonStyle(bgcolor=TEAL if primary else '#FFFFFF',color='#FFFFFF' if primary else INK,
+def button(label,handler,primary=False,icon=None,disabled=False,danger=False):
+    return ft.Button(label,on_click=handler,icon=icon,icon_color='#B91C1C' if danger else None,disabled=disabled,
+        style=ft.ButtonStyle(bgcolor=TEAL if primary else '#FFFFFF',color='#B91C1C' if danger else '#FFFFFF' if primary else INK,
                              padding=16,shape=ft.RoundedRectangleBorder(radius=10)))
 
 
@@ -798,18 +798,17 @@ class WorkspaceUI(ProjectTools):
                                    defer_pubchem_selection=bool(updated.get('bindings',{})))
             candidate=[updated if s['id']==stage_id else s for s in self.current['pipeline']]
             validate_pipeline(candidate)
-            if waiting_run_id:
-                resumed=await self.call(self.service.resume,token,waiting_run_id,updated)
-                applied=True
-                self.editing_stage=False
-                close_dialog(self.page,dialog)
-                self.current_run=resumed['id']
-                if getattr(self,'run_progress',None):self.run_progress.update(resumed)
             if hasattr(self,'flow_editor'):self.flow_editor.remember()
             self.current['pipeline']=candidate; self.dirty=True
-            await self.save_draft(silent=True)
+            if await self.save_draft(silent=True) is False:
+                self.editing_stage=False;close_dialog(self.page,dialog)
+                return
             applied=True
             if waiting_run_id:
+                resumed=await self.call(self.service.resume,token,waiting_run_id,updated)
+                self.editing_stage=False;close_dialog(self.page,dialog)
+                self.current_run=resumed['id']
+                if getattr(self,'run_progress',None):self.run_progress.update(resumed)
                 self.tab='Execuções'
                 await self.draw_project()
                 if not self.polling or self.polling.done():self.polling=self.page.run_task(self.poll_runs)
@@ -930,17 +929,43 @@ class WorkspaceUI(ProjectTools):
             text('As etapas serão adicionadas ao pipeline atual.\nVocê poderá mudar tudo depois.',color=MUTED),choice],tight=True),
             actions=[ft.TextButton('Cancelar',on_click=lambda e:self.page.pop_dialog()),button('Adicionar modelo',self.event_action(apply),True)]))
 
-    async def save_draft(self,silent=False):
+    async def save_draft(self,silent=False,verify_results=False):
         async with self._save_lock:
-            await self._save_draft(silent)
+            return await self._save_draft(silent,verify_results)
 
-    async def _save_draft(self,silent=False):
+    async def _save_draft(self,silent=False,verify_results=False):
         token, project = self.token, self.current
         if project is None or project['role']=='viewer':
             return
-        if not self.dirty:return
+        if not self.dirty and not verify_results:return True
         sent=copy.deepcopy(project['pipeline'])
-        saved=await self.call(self.store.save_pipeline,token,project['id'],sent,project['revision'],base_pipeline=self.base_pipeline)
+        proposal=await self.call(self.store.result_removal_plan,token,project['id'],sent)
+        prune=bool(proposal['affected'])
+        if prune:
+            runs=await self.call(self.store.list_runs,token,project['id'])
+            if proposal['active_conflicts'] or any(r['status'] in ('queued','running') for r in runs):
+                raise ValueError('Aguarde ou cancele a execução antes de limpar os resultados.')
+        if prune:
+            accepted=asyncio.get_running_loop().create_future()
+            def answer(value):
+                close_dialog(self.page,dialog)
+                if not accepted.done():accepted.set_result(value)
+            dialog=ft.AlertDialog(modal=True,scrollable=True,title=text('Confirmar alteração e invalidar resultados?',24),
+                content=ft.Container(width=560,content=ft.Column([
+                    text('Esta alteração modifica parâmetros ou remove entradas ou ações. Os resultados obsoletos serão excluídos, incluindo os resultados dependentes indicados abaixo. Resultados equivalentes de outras entradas, arquivos compartilhados e originais serão preservados. Cancelar restaura a configuração anterior.'),
+                    text('Blocos com resultados afetados:',weight=ft.FontWeight.W_600),
+                    *[user_text('• '+(self.tr(block['name']) if block['name'] in default_stage_names() else block['name'])) for block in proposal['blocks']]],tight=True,spacing=16)),
+                actions=[ft.TextButton('Cancelar',on_click=lambda e:answer(False)),
+                         button('Confirmar remoção',lambda e:answer(True),icon=ft.Icons.DELETE_OUTLINE,danger=True)])
+            self.page.show_dialog(dialog)
+            if not await accepted:
+                original=await self.call(self.store.project,token,project['id'])
+                project.update(original);self.base_pipeline=copy.deepcopy(original['pipeline']);self.dirty=False
+                if hasattr(self,'flow_editor'):self.flow_editor.refresh()
+                return False
+            if self.token!=token or self.current is not project:return
+        if not self.dirty and not prune:return True
+        saved=await self.call(self.store.save_pipeline,token,project['id'],sent,project['revision'],base_pipeline=self.base_pipeline,prune_results=prune,confirmation=proposal['confirmation'] if prune else None)
         if self.token != token or self.current is not project:
             return
         previous_pipeline=project['pipeline']
@@ -983,10 +1008,24 @@ class WorkspaceUI(ProjectTools):
             if getattr(self,'reuse_dialog_key',None)==(token,project_id) and active_dialog.open:return
             self.dismiss_reuse_prompt()
         selected_stage = selected_stage_id or self.selected
-        await self.save_draft()
-        if self.token != token or not self.current or self.current['id'] != project_id:
-            return
-        if reuse_results is None and await self.call(self.service.existing_results,token,project_id):
+        from .configuration_loading import ConfigurationLoading
+        loading=ConfigurationLoading(self.page,saving=True,title='Preparando a execução…',
+            description='Salvando configurações e validando o estado da execução. Aguarde.')
+        request=object();loading.show(request)
+        try:
+            # Publish feedback before persistence, hashing and cache validation.
+            await asyncio.sleep(0)
+            if await self.save_draft(verify_results=True) is False:return
+            if self.token!=token or not self.current or self.current['id']!=project_id:return
+            has_results=reuse_results is None and await self.call(self.service.existing_results,token,project_id)
+            if self.token!=token or not self.current or self.current['id']!=project_id:return
+            if not has_results:
+                run=await self.call(self.service.submit,token,project_id,[selected_stage] if selected else None,
+                    reuse_results=reuse_results if reuse_results is not None else not getattr(self,'force_execution',False))
+        finally:
+            # The choice and run-progress dialogs must never sit under a splash.
+            loading.hide(request)
+        if has_results:
             if self.token!=token or not self.current or self.current['id']!=project_id:return
             async def choose(reuse):
                 if getattr(self,'reuse_dialog',None) is not dialog:return
@@ -1014,10 +1053,6 @@ class WorkspaceUI(ProjectTools):
             self.page.show_dialog(dialog)
             return
         if self.token!=token or not self.current or self.current['id']!=project_id:return
-        run=await self.call(self.service.submit,token,project_id,[selected_stage] if selected else None,
-                            reuse_results=reuse_results if reuse_results is not None else not getattr(self,'force_execution',False))
-        if self.token != token or not self.current or self.current['id'] != project_id:
-            return
         self.current_run=run['id']
         from .run_progress import RunProgress
         self.run_progress=RunProgress(self,run)
@@ -1138,8 +1173,8 @@ class WorkspaceUI(ProjectTools):
                 report_buttons=[ft.TextButton('Baixar relatório de exclusões'+(f' ({index+1})' if len(reports)>1 else ''),
                     icon=ft.Icons.DOWNLOAD,on_click=self.event(self.download_stage_report,project_id,path))
                     for index,path in enumerate(reports)]
-                display_status='cleared' if stage.get('outputs_removed') else stage['status']
-                stage_label=self.message('run.status.'+('cleared' if stage.get('outputs_removed') else 'reused' if stage.get('reused') else 'provided' if stage.get('provided') else stage['status']))
+                display_status='cleared' if stage.get('outputs_removed') else 'historical' if stage.get('dependency_obsolete') else stage['status']
+                stage_label=self.message('run.status.'+('cleared' if stage.get('outputs_removed') else 'historical' if stage.get('dependency_obsolete') else 'reused' if stage.get('reused') else 'provided' if stage.get('provided') else stage['status']))
                 if stage.get('excluded_records'):stage_label+=self.message('run.stage.excluded',count=stage['excluded_records'])
                 if stage.get('redocking_failures'):stage_label+=self.message('run.stage.preparation_failures',count=stage['redocking_failures'])
                 from .run_presentation import STATES,state_icon
@@ -1197,30 +1232,36 @@ class WorkspaceUI(ProjectTools):
         if not content:
             content=[panel(ft.Column([text('Pronto para explorar?',24),text('Configure suas etapas e execute o pipeline. Os resultados e logs aparecerão aqui.',color=MUTED)]))]
         toolbar=ft.Row([button('Atualizar resultados',self.event(self.draw_project),icon=ft.Icons.REFRESH),
+            button('Remover todos',self.event(self.remove_all_results),icon=ft.Icons.DELETE_OUTLINE,
+                danger=True,disabled=not writable or bool(active)),
             button('Limpar tudo',self.event(self.clear_all_results),icon=ft.Icons.DELETE_SWEEP_OUTLINED,
-                disabled=not writable or bool(active))],wrap=True,spacing=16)
+                danger=True,disabled=not writable or bool(active))],wrap=True,spacing=16)
         return ft.Column([toolbar,*content],expand=True,scroll=ft.ScrollMode.AUTO,spacing=16)
 
-    async def clear_all_results(self):
+    async def remove_all_results(self):
+        await self.clear_all_results(results_only=True)
+
+    async def clear_all_results(self,results_only=False):
         from biomolexplorer.result_files import ResultFiles
         token,project=self.token,self.current
         if project is None or project['role']=='viewer':raise AccessDenied('Somente editores podem limpar os resultados.')
         async def action():
             if self.token!=token or self.current is not project:return
-            await self.save_draft(silent=True)
-            await self.call(ResultFiles(self.store).clear_project_results,token,project['id'])
+            if await self.save_draft(silent=True) is False:return False
+            method=ResultFiles(self.store).remove_project_results if results_only else ResultFiles(self.store).clear_project_results
+            await self.call(method,token,project['id'])
             fresh=await self.call(self.store.project,token,project['id'])
             close_dialog(self.page,dialog)
             if self.token==token and self.current is project:
                 self.close_project_views()
                 self.current=fresh;self.base_pipeline=copy.deepcopy(fresh['pipeline'])
                 await self.draw_project()
-                self.notify('Resultados e seleções de entrada limpos.')
+                self.notify('Resultados removidos. Pipeline e configurações preservados.' if results_only else 'Resultados removidos e configurações restauradas aos padrões.')
         async def clear(e):await progress.run(action)
-        dialog=ft.AlertDialog(modal=True,title=text('Limpar todos os resultados e seleções?',24),
-            content=ft.Container(width=560,content=text('Os resultados gerados e as seleções de arquivos e pares serão removidos de todas as execuções deste projeto. As conexões entre blocos, os parâmetros científicos, os arquivos importados e os logs serão preservados. A alteração será registrada no histórico.')),
+        dialog=ft.AlertDialog(modal=True,title=text('Remover todos os resultados?' if results_only else 'Limpar todos os resultados e configurações?',24),
+            content=ft.Container(width=560,content=text('Todos os resultados gerados e caches de preparo deste projeto serão removidos. Blocos, conexões, todas as configurações, arquivos importados, logs e histórico serão preservados. A próxima execução recalculará os resultados removidos.' if results_only else 'Todos os resultados gerados, caches, seleções de entrada, parâmetros científicos e templates personalizados serão limpos. Cada bloco voltará às configurações padrão. Os blocos, suas conexões, os arquivos importados na biblioteca, os logs e o histórico serão preservados. Será necessário configurar novamente o pipeline antes de executar.')),
             actions=[ft.TextButton('Cancelar',on_click=lambda e:close_dialog(self.page,dialog)),
-                button('Limpar tudo',clear,icon=ft.Icons.DELETE_SWEEP_OUTLINED)])
+                button('Remover todos' if results_only else 'Limpar tudo',clear,icon=ft.Icons.DELETE_SWEEP_OUTLINED,danger=True)])
         progress=RemovalProgress(self,dialog)
         self.page.show_dialog(dialog)
 
@@ -1235,7 +1276,7 @@ class WorkspaceUI(ProjectTools):
         async def remove(e):
             await progress.run(action)
         dialog=ft.AlertDialog(modal=True,title=text('Remover todos os resultados?',24),
-            content=ft.Container(width=520,content=text('Os arquivos desta etapa serão removidos, incluindo referências reaproveitadas em outras execuções. O registro da execução e o log serão preservados. Você poderá restaurar os arquivos pelo histórico.')),
+            content=ft.Container(width=520,content=text('Os resultados desta etapa e suas referências reaproveitadas serão removidos. Arquivos ainda utilizados por outros blocos serão preservados. As configurações, os registros de execução e os logs serão mantidos. Você poderá restaurar os resultados pelo histórico.')),
             actions=[ft.TextButton('Cancelar',on_click=lambda e:close_dialog(self.page,dialog)),
                 button('Remover resultados',remove,icon=ft.Icons.DELETE_OUTLINE)])
         progress=RemovalProgress(self,dialog)
@@ -1452,22 +1493,19 @@ class WorkspaceUI(ProjectTools):
                 dismiss()
                 await self.open_stage_dialog(pending['id'],waiting_run_id=run_id,configuration=updated)
                 return
+            # Confirm and persist scientific changes before allowing a worker
+            # to consume them, including changes made in the file-selection UI.
+            if hasattr(self,'flow_editor'):self.flow_editor.remember()
+            self.current['pipeline']=[updated if stage['id']==pending['id'] else stage for stage in self.current['pipeline']]
+            self.dirty=True
+            if await self.save_draft(silent=True) is False:
+                dismiss();drafts.pop(key,None)
+                return
+            updated=next(stage for stage in self.current['pipeline'] if stage['id']==pending['id'])
             resumed=await self.call(self.service.resume,token,run_id,updated)
             dismiss()
             self.current_run=resumed['id']
             if progress:progress.update(resumed)
-            # Store the same inputs in the block so reopening its settings does
-            # not require another selection. Keep other current block settings.
-            if hasattr(self,'flow_editor'):self.flow_editor.remember()
-            for stage in self.current['pipeline']:
-                if stage['id']==pending['id']:
-                    stage['bindings']=copy.deepcopy(updated['bindings'])
-                    stage['input_processing']=updated.get('input_processing','individual')
-                    if stage['operation']=='retrieve_pubchem':
-                        for field in ('selection_mode','compound_id'):stage['parameters'][field]=updated['parameters'].get(field,'')
-                    self.dirty=True
-                    break
-            await self.save_draft(silent=True)
             drafts.pop(key,None)
             await self.draw_project()
         async def configure(e):

@@ -111,5 +111,6 @@
   "redocking.count": "{shown} de {total} pares · Página {page}",
   "redocking.export": "Baixar tabela RMSD",
   "run.status.cleared": "Resultados limpos",
-  "run.overview.cleared": "Os resultados gerados e as seleções foram limpos. As conexões e os arquivos de origem foram preservados."
+  "run.overview.cleared": "Os resultados gerados e as seleções foram limpos. As conexões e os arquivos de origem foram preservados.",
+  "run.status.historical": "Resultado histórico · dependências alteradas"
 }

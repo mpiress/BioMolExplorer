@@ -5,6 +5,7 @@ from biomolexplorer.i18n import RuntimeMessages
 from .localization import verbatim
 
 STATES={
+    'historical':('#64748B','#F1F5F9',ft.Icons.HISTORY),
     'cleared':('#64748B','#F1F5F9',ft.Icons.DELETE_SWEEP_OUTLINED),
     'succeeded':('#15803D','#F0FDF4',ft.Icons.CHECK_CIRCLE_OUTLINE),
     'failed':('#B91C1C','#FEF2F2',ft.Icons.ERROR_OUTLINE),
