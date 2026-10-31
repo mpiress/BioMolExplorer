@@ -1,0 +1,7 @@
+.Executing <Task pending name='Task-7' coro=<LoginLifecycleTests.test_login_button_opens_workspace_with_real_persisted_credentials() running at /home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_login_processing_lifecycle.py:77> cb=[_run_until_complete_cb() at /home/michel/progs/miniconda3/envs/BioMolExplorer/lib/python3.12/asyncio/base_events.py:182] created at /home/michel/progs/miniconda3/envs/BioMolExplorer/lib/python3.12/asyncio/runners.py:100> took 0.559 seconds
+.Executing <Task pending name='Task-12' coro=<LoginLifecycleTests.test_registered_credentials_survive_restart_and_consecutive_workspace_reads() running at /home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_login_processing_lifecycle.py:34> cb=[_run_until_complete_cb() at /home/michel/progs/miniconda3/envs/BioMolExplorer/lib/python3.12/asyncio/base_events.py:182] created at /home/michel/progs/miniconda3/envs/BioMolExplorer/lib/python3.12/asyncio/runners.py:100> took 0.439 seconds
+........................
+----------------------------------------------------------------------
+Ran 26 tests in 8.173s
+
+OK

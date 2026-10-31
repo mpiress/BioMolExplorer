@@ -257,5 +257,12 @@
   "PDB: {0} estruturas baixadas; {1} falhas de download.": "PDB: {0} structures downloaded; {1} download failures.",
   "Vina: docking de {0} com receptor e mapas reutilizados.": "Vina: docking {0} with reused receptor and maps.",
   "Preparando ligante {0} ({1}/{2}).": "Preparing ligand {0} ({1}/{2}).",
-  "Não foi possível obter a definição CCD do ligante {0}.": "Could not retrieve the CCD definition for ligand {0}."
+  "Não foi possível obter a definição CCD do ligante {0}.": "Could not retrieve the CCD definition for ligand {0}.",
+  "{0} / {1} pares selecionados": "{0} / {1} selected pairs",
+  "{0} pares de dinâmica · {1} falhas": "{0} Amber Score pairs · {1} failures",
+  "Exibindo pares {0}–{1} de {2}.": "Showing pairs {0}–{1} of {2}.",
+  "Exibindo arquivos {0}–{1} de {2}. Pesquise pelo alvo ou use Mais arquivos.": "Showing files {0}–{1} of {2}. Search by target or use More files.",
+  "{0} disponíveis nesta busca · {1} selecionados · Página {2}": "{0} available in this search · {1} selected · Page {2}",
+  "{0} arquivo(s) adicionado(s).": "{0} file(s) added.",
+  "{0} arquivo(s) removido(s).": "{0} file(s) removed."
 }

@@ -30,8 +30,8 @@ class CompoundCatalog:
                     cache.move_to_end(key)
                     values = cache[key]
                 else:
-                    from biomolexplorer.pubchem_retrieval import reference_choices
-                    values = await self.ui.call(reference_choices, [path])
+                    from biomolexplorer.docking_inputs import compound_identifiers
+                    values = await self.ui.call(compound_identifiers, [path])
                     if not self.valid():
                         return
                     # A file changed during reading cannot enter the cache.

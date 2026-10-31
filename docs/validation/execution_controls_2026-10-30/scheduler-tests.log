@@ -1,0 +1,16 @@
+[14:31:29] MOL1: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[14:31:29] MOL1: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[14:31:40] SMILES Parse Error: syntax error while parsing: invalid
+[14:31:40] SMILES Parse Error: check for mistakes around position 1:
+[14:31:40] invalid
+[14:31:40] ^
+[14:31:40] SMILES Parse Error: Failed parsing SMILES 'invalid' for input: 'invalid'
+[14:31:40] SMILES Parse Error: syntax error while parsing: invalid
+[14:31:40] SMILES Parse Error: check for mistakes around position 1:
+[14:31:40] invalid
+[14:31:40] ^
+[14:31:40] SMILES Parse Error: Failed parsing SMILES 'invalid' for input: 'invalid'
+----------------------------------------------------------------------
+Ran 52 tests in 34.117s
+
+OK

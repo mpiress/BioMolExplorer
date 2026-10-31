@@ -35,7 +35,7 @@ def field(control, *, full=False):
         control.expand=None
         label=getattr(control,'_settings_label',None) or control.label
         control._settings_label=label
-        if label and len(label)>30:
+        if label:
             control.label=None
             content=ft.Row([ft.Semantics(label=label,content=control),ft.Text(label,expand=True)],spacing=12)
         else:content=control
@@ -86,6 +86,9 @@ def fit_dialog(dialog,page):
     if not isinstance(dialog,ft.AlertDialog):return
     dialog.inset_padding=ft.Padding.symmetric(horizontal=24,vertical=20)
     dialog.scrollable=True
+    dialog.actions_padding=ft.Padding.symmetric(horizontal=20,vertical=16)
+    dialog.actions_alignment=ft.MainAxisAlignment.END
+    dialog.actions_overflow_button_spacing=12
     content=dialog.content
     if isinstance(content,ft.Container):
         if getattr(content,'_settings_auto_size',False):

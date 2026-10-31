@@ -1,4 +1,5 @@
 """Authenticated Flet workspace and pipeline editor."""
+from .processing import processing,with_processing,background,save_file
 import argparse
 import asyncio
 import copy
@@ -74,7 +75,7 @@ class WorkspaceUI(ProjectTools):
         self.run_progress = None
         self.selection_dialog = None
         self.selection_dialog_key = None
-        self.auto_selection_key = None
+        self._selection_preparation = None
         self.reuse_dialog = None
         self.reuse_dialog_key = None
         self.submitting = False
@@ -155,6 +156,9 @@ class WorkspaceUI(ProjectTools):
         """Discard private dialogs/drafts when leaving a project or losing access."""
         loading=getattr(self,'_configuration_loading',None)
         if loading:loading.close()
+        cleanup=getattr(self,'_results_cleanup_dialog',None)
+        if cleanup:cleanup.open=False
+        self._results_cleanup_dialog=None
         self.dismiss_reuse_prompt()
         viewer = getattr(self,'result_viewer',None)
         if viewer is not None:
@@ -179,7 +183,9 @@ class WorkspaceUI(ProjectTools):
         self.run_progress = None
         self.selection_dialog = None
         self.selection_dialog_key = None
-        self.auto_selection_key = None
+        preparation=getattr(self,'_selection_preparation',None)
+        if preparation and not preparation[1].done():preparation[1].cancel()
+        self._selection_preparation = None
         self.page.on_keyboard_event = None
         self.pending_file_selections = {}
         self._configuration_dialogs = {}
@@ -242,6 +248,7 @@ class WorkspaceUI(ProjectTools):
         error = text('',color='#DC2626')
         submit = button('Criar conta' if register else 'Entrar no workspace',None,True,ft.Icons.ARROW_FORWARD)
         async def authenticate(e):
+            authenticated=False
             submit.disabled = True
             language_choice.disabled = True
             error.value = ''
@@ -252,11 +259,12 @@ class WorkspaceUI(ProjectTools):
                 token = await self.call(self.store.register,name.value or '',email.value or '',password.value or '') if register else \
                         await self.call(self.store.login,email.value or '',password.value or '')
                 self.token = token
+                authenticated=True
                 password.value = confirmation.value = ''
                 await self.show_workspace()
             except Exception as exc:
-                get_logger('frontend').exception('Falha na autenticação')
-                error.value = str(exc)
+                get_logger('frontend').exception('Falha ao abrir workspace' if authenticated else 'Falha na autenticação')
+                error.value = self.tr('Credenciais validadas, mas não foi possível abrir o workspace. Tente novamente; consulte o log da interface.') if authenticated else str(exc)
                 submit.disabled = False
                 language_choice.disabled = False
                 self.page.update()
@@ -577,7 +585,8 @@ class WorkspaceUI(ProjectTools):
         project_actions.append(action_row(self,'history',button('Histórico',self.event(self.history_dialog,project['id']),icon=ft.Icons.HISTORY)))
         execution_actions=[action_row(self,key,button(label,self.event(handler,*args),icon=icon,disabled=not writable))
             for key,label,handler,args,icon in [
-                ('save','Salvar',self.save_draft,(),ft.Icons.SAVE_OUTLINED),
+                ('save','Salvar',self.save_pipeline_action,(),ft.Icons.SAVE_OUTLINED),
+                ('order','Ordem de execução',self.execution_order_dialog,(),ft.Icons.SWAP_VERT),
                 ('templates','Modelos prontos',self.preset_dialog,(),ft.Icons.DASHBOARD_OUTLINED),
                 ('run','Executar pipeline',self.run_pipeline,(),ft.Icons.PLAY_ARROW),
                 ('selected','Executar até seleção',self.run_pipeline,(True,),ft.Icons.PLAY_CIRCLE_OUTLINE)]]
@@ -609,7 +618,7 @@ class WorkspaceUI(ProjectTools):
         self.automatic_labels={}
         for run in runs:
             for item in run['stages']:
-                if item['status']=='succeeded' and item['id'] not in self.automatic_labels:
+                if item['status']=='succeeded' and item.get('artifacts') and not item.get('outputs_removed') and item['id'] not in self.automatic_labels:
                     from biomolexplorer.artifact_choices import choices
                     options=choices(item)
                     self.automatic_labels[item['id']]='compounds.csv' if any(p.endswith('/compounds.csv') or p=='compounds.csv' for p in options) else next(iter(sorted(options)),item['name']).rsplit('/',1)[-1]
@@ -626,6 +635,11 @@ class WorkspaceUI(ProjectTools):
                 'Lendo informações do bloco. Aguarde um instante.',modal=False):
             async with self._dialog_lock:
                 if self._dialog_request!=request or self.token!=token or self.current is not project:return
+                previous=getattr(self,'settings_dialog',None)
+                if previous is not None and previous.open:
+                    invalidate=getattr(previous,'_configuration_invalidate',None)
+                    if invalidate:invalidate()
+                    close_dialog(self.page,previous)
                 await self._open_stage_dialog(stage_id,waiting_run_id,configuration,request)
 
     def _track_configuration_dialog(self,dialog,run_id,stage_id):
@@ -657,7 +671,8 @@ class WorkspaceUI(ProjectTools):
         if not self.editing_stage:self._dialog_request=getattr(self,'_dialog_request',0)+1
         progress=getattr(self,'run_progress',None)
         if run_id and progress and progress.run['id']==run_id:
-            progress.is_open=False;progress.closing=True;progress.reopen_requested=False
+            progress.closing=progress.closing or bool(progress.dialog.open)
+            progress.is_open=False;progress.reopen_requested=False
             close_dialog(self.page,progress.dialog)
 
     async def _open_stage_dialog(self,stage_id,waiting_run_id=None,configuration=None,request=None):
@@ -698,7 +713,7 @@ class WorkspaceUI(ProjectTools):
         self.artifact_items={}
         for run in runs:
             for item in run['stages']:
-                if item['id'] in self.artifact_choices or item['status']!='succeeded':continue
+                if item['id'] in self.artifact_choices or item['status']!='succeeded' or not item.get('artifacts') or item.get('outputs_removed'):continue
                 from biomolexplorer.artifact_choices import choices
                 self.artifact_choices[item['id']]=choices(item)
                 self.artifact_items[item['id']]=dict(item,run_id=run['id'])
@@ -831,8 +846,9 @@ class WorkspaceUI(ProjectTools):
         applied=False
         async def apply(e):
             nonlocal applied
-            if applied or self.token!=token or self.current is not project:return
+            if applied or self.token!=token or self.current is not project or self._dialog_request!=request or not dialog.open:return
             await self.call(self.store.project,self.token,self.current['id'],'editor')
+            if applied or self.token!=token or self.current is not project or self._dialog_request!=request:return
             updated=reader()
             if updated.get('provided_results'):
                 from biomolexplorer.input_validation import validate_bundle
@@ -846,6 +862,7 @@ class WorkspaceUI(ProjectTools):
                 parameters.update(updated['parameters'])
                 parameters.update({key:'pending-input' for key in updated.get('bindings',{})})
                 validate_operation(updated['operation'],parameters,
+                                   defer_redocking_selection=not waiting_run_id,
                                    defer_pubchem_selection=bool(updated.get('bindings',{})))
             candidate=[updated if s['id']==stage_id else s for s in self.current['pipeline']]
             validate_pipeline(candidate)
@@ -854,30 +871,39 @@ class WorkspaceUI(ProjectTools):
             if await self.save_draft(silent=True) is False:
                 self.editing_stage=False;close_dialog(self.page,dialog)
                 return
-            applied=True
             if waiting_run_id:
                 resumed=await self.call(self.service.resume,token,waiting_run_id,updated)
-                self.editing_stage=False;close_dialog(self.page,dialog)
+                applied=True
+                self._finish_configuration_dialogs(waiting_run_id,stage_id)
                 self.current_run=resumed['id']
                 if getattr(self,'run_progress',None):self.run_progress.update(resumed)
                 self.tab='Execuções'
                 await self.draw_project()
                 if not self.polling or self.polling.done():self.polling=self.page.run_task(self.poll_runs)
             else:
-                self.editing_stage=False
-                close_dialog(self.page,dialog)
+                applied=True
+                self._finish_configuration_dialogs(waiting_run_id,stage_id)
                 if hasattr(self,'flow_editor'):self.flow_editor.refresh()
         await render_mode(mode)
-        async def cancel_settings(e):
-            if waiting_run_id and writable:
-                await self.cancel_run(waiting_run_id)
-            else:
-                close_dialog(self.page,dialog)
+        def invalidate():
+            nonlocal applied
+            applied=True
+        def cancel_settings(e):
+            invalidate();close_dialog(self.page,dialog);dismissed(e)
         dialog=ft.AlertDialog(title=ft.Column([text(TITLES[original['operation']][2].upper(),11,TEAL,ft.FontWeight.W_600),stage_control(user_text(original['name'],24,weight=ft.FontWeight.W_700),original),text(TITLES[original['operation']][1],13,MUTED),ft.Row([
             ft.TextButton('Visual · formulário guiado',on_click=visual),ft.TextButton('Avançado · parâmetros e scripts',on_click=advanced)],wrap=True)],spacing=12),content=body,
-            actions=[ft.TextButton('Cancelar' if writable else 'Fechar',on_click=lambda e:close_dialog(self.page,dialog)),button('Aplicar e continuar pipeline' if waiting_run_id else 'Aplicar configuração',self.event_action(apply,configuration_dialog=lambda:dialog),True,disabled=not writable)])
+            actions=[ft.TextButton('Cancelar' if writable else 'Fechar',on_click=cancel_settings),button('Aplicar e continuar pipeline' if waiting_run_id else 'Aplicar configuração',self.event_action(apply,configuration_dialog=lambda:dialog,processing_title='Aplicando configuração…'),True,disabled=not writable)])
+        self.settings_dialog=dialog;self.settings_run_id=waiting_run_id
+        dialog._configuration_invalidate=invalidate
+        self._track_configuration_dialog(dialog,waiting_run_id,stage_id)
         self.editing_stage=True
         def dismissed(e):
+            invalidate()
+            registry=getattr(self,'_configuration_dialogs',{})
+            key=(waiting_run_id,stage_id)
+            remaining=[item for item in registry.get(key,[]) if item is not dialog and item.open]
+            if remaining:registry[key]=remaining
+            else:registry.pop(key,None)
             if getattr(self,'settings_dialog',None) is dialog:
                 self.settings_dialog=None;self.settings_run_id=None
             if self._dialog_request==request:
@@ -887,7 +913,7 @@ class WorkspaceUI(ProjectTools):
         dialog.on_dismiss=dismissed
         self.page.show_dialog(dialog)
 
-    def event_action(self,handler,configuration_dialog=None):
+    def event_action(self,handler,configuration_dialog=None,processing_title=None):
         running=False;completed=False
         async def wrapped(e):
             nonlocal running,completed
@@ -900,9 +926,9 @@ class WorkspaceUI(ProjectTools):
             try:
                 for c in controls:c.disabled=True
                 if configuration_dialog:
-                    from .configuration_loading import ConfigurationLoading
-                    loading=ConfigurationLoading(self.page,saving=True)
-                    loading.show(request)
+                    from .processing import splash_for
+                    loading=splash_for(self)
+                    loading.show(request,processing_title or 'Salvando configurações…','Validando e salvando as configurações do bloco. Aguarde a conclusão.',modal=True)
                 self.page.update()
                 async def execute():
                     nonlocal completed
@@ -911,7 +937,10 @@ class WorkspaceUI(ProjectTools):
                     await asyncio.sleep(0)
                     await handler(e)
                     completed=configuration_dialog is not None
-                await self.guard(execute)
+                if configuration_dialog:
+                    async with processing(self,processing_title or 'Salvando configurações…','Validando e salvando as configurações do bloco. Aguarde a conclusão.',immediate=False):
+                        await self.guard(execute)
+                else:await self.guard(execute)
             finally:
                 running=False
                 if loading:loading.hide(request)
@@ -937,21 +966,9 @@ class WorkspaceUI(ProjectTools):
         }.get(operation,{})
         for field,candidates in wanted.items():
             def compatible(s):
-                if s['operation'] not in candidates:
-                    return False
-                if s['operation']!='import_results':
-                    return True
-                from biomolexplorer.flow import output_types
-                kinds=output_types(s)
-                if field=='base_selected_mols' or operation in ('retrieve_pubchem','admet','fingerprints','graphs'):
-                    return bool(kinds & {'compounds','vina','dock6'}) if field=='base_selected_mols' and operation in ('docking_vina','docking_dock6') else 'compounds' in kinds
-                if field=='base_vina_path':
-                    return 'vina' in kinds
-                if field=='base_dock6_path':
-                    return 'dock6' in kinds
-                if operation in ('prepare_structures','redocking','docking_vina','docking_dock6'):
-                    return bool(kinds & {'structures','prepared_structures'})
-                return True
+                from biomolexplorer.flow import compatible as typed_connection
+                port='base_vina_path' if operation=='consensus' and field=='base_input_path' else field
+                return s['operation'] in candidates and typed_connection(s,stage,port)
             source=next((s for s in reversed(previous) if compatible(s)),None)
             if source:
                 stage['bindings'][field]={'stage':source['id'],'selector':'auto'}
@@ -964,7 +981,9 @@ class WorkspaceUI(ProjectTools):
 
     async def preset_dialog(self):
         choice=ft.Dropdown(label='Modelo de pipeline',value=next(iter(PRESETS)),options=[ft.DropdownOption(key=k,text=k) for k in PRESETS],width=440)
+        token,project=self.token,self.current
         async def apply(e):
+            if self.token!=token or self.current is not project:return
             stages=[]
             for operation in PRESETS[choice.value]:
                 stage=new_stage(operation)
@@ -978,15 +997,37 @@ class WorkspaceUI(ProjectTools):
                     stage['input_processing']='merge'
                 stages.append(stage)
             from biomolexplorer.flow import arrange
+            from biomolexplorer.pipeline import validate_pipeline
+            validate_pipeline(self.current['pipeline']+stages)
             self.current['pipeline']+=stages
             arrange(self.current['pipeline'])
             self.selected=stages[0]['id']
             self.dirty=True
-            self.page.pop_dialog()
+            if await self.save_draft(silent=True) is False:return
+            if self.token!=token or self.current is not project:return
+            close_dialog(self.page,dialog)
             await self.draw_project()
-        self.page.show_dialog(ft.AlertDialog(title=text('Comece com um caminho pronto',24),content=ft.Column([
+        dialog=ft.AlertDialog(title=text('Comece com um caminho pronto',24),content=ft.Column([
             text('As etapas serão adicionadas ao pipeline atual.\nVocê poderá mudar tudo depois.',color=MUTED),choice],tight=True),
-            actions=[ft.TextButton('Cancelar',on_click=lambda e:self.page.pop_dialog()),button('Adicionar modelo',self.event_action(apply),True)]))
+            actions=[ft.TextButton('Cancelar',on_click=lambda e:close_dialog(self.page,dialog)),button('Adicionar modelo',self.event_action(apply,configuration_dialog=lambda:dialog,processing_title='Aplicando modelo…'),True)])
+        self.page.show_dialog(dialog)
+
+    async def save_pipeline_action(self):
+        """Explicit Save acknowledges autosaved drafts and prevents queued repeats."""
+        if getattr(self,'_manual_save_running',False):return
+        self._manual_save_running=True
+        try:
+            task=getattr(self,'_save_task',None)
+            if task and not task.done():task.cancel()
+            self._save_task=None
+            async with processing(self,'Salvando pipeline…',
+                    'Gravando as configurações e o histórico do projeto. Aguarde um instante.'):
+                if not self.current or self.current['role']=='viewer':return
+                token,project=self.token,self.current
+                if project['pipeline']!=self.base_pipeline:self.dirty=True
+                result=await self.save_draft(silent=True)
+                if result is not False and self.token==token and self.current is project:self.notify('Pipeline salvo.')
+        finally:self._manual_save_running=False
 
     async def save_draft(self,silent=False,verify_results=False):
         async with self._save_lock:
@@ -1061,6 +1102,28 @@ class WorkspaceUI(ProjectTools):
         self.reuse_dialog_key=None
         if dialog is not None and dialog.open:close_dialog(self.page,dialog)
 
+    async def execution_order_dialog(self,continue_selected=None,selected_stage_id=None):
+        from .execution_order import show_order
+        if self.current['role']=='viewer':return
+        if await self.save_draft() is False:return
+        await show_order(self,continue_selected,selected_stage_id)
+
+    async def pause_run(self,run_id):
+        run=await self.call(self.service.pause,self.token,run_id)
+        progress=getattr(self,'run_progress',None)
+        if progress and progress.valid() and progress.run['id']==run_id:progress.update(run)
+        await self.draw_project()
+
+    async def continue_paused_run(self,run_id):
+        token=self.token
+        run=await self.call(self.service.continue_run,token,run_id)
+        if self.token!=token or not self.current or self.current['id']!=run['project_id']:return
+        progress=getattr(self,'run_progress',None)
+        if progress and progress.valid() and progress.run['id']==run_id:progress.update(run)
+        self.current_run=run_id
+        await self.draw_project()
+        if not self.polling or self.polling.done():self.polling=self.page.run_task(self.poll_runs)
+
     async def _submit_pipeline(self,selected=False,reuse_results=None,selected_stage_id=None):
         token, project_id = self.token, self.current['id']
         active_dialog=getattr(self,'reuse_dialog',None)
@@ -1068,6 +1131,8 @@ class WorkspaceUI(ProjectTools):
             if getattr(self,'reuse_dialog_key',None)==(token,project_id) and active_dialog.open:return
             self.dismiss_reuse_prompt()
         selected_stage = selected_stage_id or self.selected
+        if selected and not any(stage['id']==selected_stage for stage in self.current['pipeline']):
+            raise ValueError('Selecione um bloco para executar até a seleção.')
         from .configuration_loading import ConfigurationLoading
         loading=ConfigurationLoading(self.page,saving=True,title='Preparando a execução…',
             description='Salvando configurações e validando o estado da execução. Aguarde.')
@@ -1077,6 +1142,11 @@ class WorkspaceUI(ProjectTools):
             await asyncio.sleep(0)
             if await self.save_draft(verify_results=True) is False:return
             if self.token!=token or not self.current or self.current['id']!=project_id:return
+            preference=await self.call(self.store.execution_order,token,project_id)
+            if not preference['confirmed']:
+                loading.hide(request)
+                await self.execution_order_dialog(continue_selected=selected,selected_stage_id=selected_stage)
+                return
             has_results=reuse_results is None and await self.call(self.service.existing_results,token,project_id)
             if self.token!=token or not self.current or self.current['id']!=project_id:return
             if not has_results:
@@ -1197,10 +1267,14 @@ class WorkspaceUI(ProjectTools):
         runs=await self.call(self.store.list_runs,token,project_id)
         if self.token != token or not self.current or self.current['id'] != project_id:
             return ft.Column([])
+        available=await self.call(self.store.available_results,token,project_id,include_checkpoints=True)
+        listed={run['id'] for run in runs}
+        for source_run in dict.fromkeys(entry['publication_run_id'] for entry in available):
+            if source_run not in listed:
+                recovered=await self.call(self.store.get_run,token,source_run)
+                if recovered['project_id']==project_id:runs.append(recovered)
+        if self.token!=token or not self.current or self.current['id']!=project_id:return ft.Column([])
         active=next((run for run in runs if run['status'] in ('queued','running','awaiting_input')),None)
-        visible={(r['id'],s['id']) for r in runs for s in r['stages']}
-        for key in list(self.stage_results):
-            if key not in visible:self.stage_results.pop(key).close()
         if active and getattr(self,'run_progress',None) is None:
             from .run_progress import RunProgress
             self.run_progress=RunProgress(self,active)
@@ -1211,21 +1285,35 @@ class WorkspaceUI(ProjectTools):
         if progress and progress.valid():
             refreshed=next((run for run in runs if run['id']==progress.run['id']),None)
             if refreshed:progress.update(refreshed)
-        focus_id=active['id'] if active else progress.run['id'] if progress and progress.valid() else runs[0]['id'] if runs else None
+        from biomolexplorer.result_visibility import consolidated_run
+        from biomolexplorer.published_results import artifact_integrity
+        from biomolexplorer.clear_results import unregistered_original
+        def valid_result(entry):
+            if unregistered_original(entry) and not entry.get('artifact_manifest'):
+                try:return all(self.store.scoped_path(project_id,p).is_file() for p in entry.get('artifacts',[]))
+                except (OSError,ValueError):return False
+            return artifact_integrity(self.store,project_id,entry,include_batches=True)
+        consolidated=await self.call(consolidated_run,([active]+[r for r in runs if r['id']!=active['id']]) if active else runs,
+            self.current['pipeline'],available,valid_result=valid_result)
+        if self.token!=token or not self.current or self.current['id']!=project_id:return ft.Column([])
+        visible={(s['_result_run_id'],s['id']) for s in consolidated['stages']} if consolidated else set()
+        expanded_by_stage={key[1]:result.expanded for key,result in self.stage_results.items()}
+        for key in list(self.stage_results):
+            if key not in visible:self.stage_results.pop(key).close()
         content=[]
-        history=[]
-        for run in runs:
+        for run in [consolidated] if consolidated else []:
             stage_rows=[]
             for stage in run['stages']:
                 from .stage_results import StageResults
-                key=(run['id'],stage['id'])
+                result_run_id=stage['_result_run_id']
+                key=(result_run_id,stage['id'])
                 signature=(stage['status'],tuple(stage.get('artifacts',[])),writable,bool(active),
                     json.dumps(stage.get('artifact_manifest'),sort_keys=True),stage.get('curated_at'))
                 result=self.stage_results.get(key)
                 if result is None or result.signature!=signature:
-                    expanded=result.expanded if result else False
+                    expanded=result.expanded if result else expanded_by_stage.get(stage['id'],False)
                     if result:result.close()
-                    result=StageResults(self,project_id,run['id'],stage,writable)
+                    result=StageResults(self,project_id,result_run_id,stage,writable)
                     result.expanded=expanded
                     result.signature=signature;self.stage_results[key]=result
                 if self.results_focus==key:result.expanded=True
@@ -1238,6 +1326,8 @@ class WorkspaceUI(ProjectTools):
                     for index,path in enumerate(reports)]
                 display_status='cleared' if stage.get('outputs_removed') else 'historical' if stage.get('dependency_obsolete') else stage['status']
                 stage_label=self.message('run.status.'+('cleared' if stage.get('outputs_removed') else 'historical' if stage.get('dependency_obsolete') else 'reused' if stage.get('reused') else 'provided' if stage.get('provided') else stage['status']))
+                if stage.get('coverage_pending'):stage_label+=' · '+self.tr('Há processamento pendente para as novas entradas.')
+                if stage.get('_execution_status'):stage_label+=' · '+self.message('run.status.'+stage['_execution_status'])
                 if stage.get('excluded_records'):stage_label+=self.message('run.stage.excluded',count=stage['excluded_records'])
                 if stage.get('redocking_failures'):stage_label+=self.message('run.stage.preparation_failures',count=stage['redocking_failures'])
                 from .run_presentation import STATES,state_icon
@@ -1248,12 +1338,13 @@ class WorkspaceUI(ProjectTools):
                     path=min(failures,key=lambda p:len(Path(p).parts))
                     stage_details.append(ft.Row([
                         ft.TextButton('Compostos não utilizados',icon=ft.Icons.WARNING_AMBER_OUTLINED,
-                            on_click=self.event(self.open_preparation_failures,project_id,run['id'],stage['id'],path)),
+                            on_click=self.event(self.open_preparation_failures,project_id,result_run_id,stage['id'],path)),
                         ft.TextButton('Baixar lista de compostos não utilizados',icon=ft.Icons.DOWNLOAD,
                             on_click=self.event(self.download_stage_report,project_id,path))],wrap=True))
-                if writable and stage.get('artifacts'):
+                if writable and stage.get('artifacts') and not stage.get('_result_sources'):
                     stage_details.append(ft.TextButton('Remover todos os resultados',icon=ft.Icons.DELETE_SWEEP_OUTLINED,
-                        disabled=bool(active),on_click=self.event(self.remove_stage_results,project_id,run['id'],stage['id'])))
+                        disabled=bool(active),on_click=self.event(self.remove_stage_results,project_id,result_run_id,stage['id'])))
+                if stage.get('_integrity_notice'):stage_details.append(text(stage['_integrity_notice'],color='#B91C1C'))
                 if stage.get('error'):stage_details.append(text(readable_error(stage['error'],session_language(self)),color='#B91C1C'))
                 if report_buttons:stage_details.append(ft.Row(report_buttons,wrap=True))
                 stage_details.append(result.root)
@@ -1268,15 +1359,18 @@ class WorkspaceUI(ProjectTools):
             actions=[]
             if run['status'] in ('queued','running','awaiting_input') and writable:
                 actions=[button(self.message('run.action.cancel'),self.event(self.cancel_run,run['id']),icon=ft.Icons.STOP)]
+                if run['status'] in ('queued','running'):
+                    actions.insert(0,button(self.message('run.action.pause'),self.event_action(lambda e,rid=run['id']:self.pause_run(rid)),icon=ft.Icons.PAUSE,disabled=any(s.get('pause_requested') for s in run['stages'])))
                 if run['status']=='awaiting_input':
                     pending=next(s for s in run['stages'] if s['status']=='awaiting_input')
                     actions.insert(0,verbatim(button(self.message('run.action.configure_stage',stage=self.tr(pending['name']) if pending['name'] in default_stage_names() else pending['name']),self.event(self.configure_pending,run['id']),True,ft.Icons.EDIT)))
+                    if pending.get('pause_reason')=='user':actions.insert(0,button(self.message('run.action.resume'),self.event_action(lambda e,rid=run['id']:self.continue_paused_run(rid)),True,ft.Icons.PLAY_ARROW))
             timestamp=datetime.fromtimestamp(run['created'],timezone.utc).strftime('%d/%m/%Y %H:%M UTC')
-            label=self.message('run.label.current' if run['status'] in ('queued','running','awaiting_input') else 'run.label.latest' if run['id']==focus_id else 'run.label.previous')
+            label=self.message('run.label.latest')
             if run['status']=='succeeded':
                 first=next((s for s in run['stages'] if s['status']=='succeeded' and s.get('artifacts')),None)
                 if first:
-                    async def explore(e,key=(run['id'],first['id'])):
+                    async def explore(e,key=(first['_result_run_id'],first['id'])):
                         self.results_focus=key;await self.guard(self.draw_project)
                     actions.append(button(self.message('run.action.explore'),explore,True,ft.Icons.INSIGHTS))
             from .run_presentation import outcome_overview
@@ -1284,14 +1378,7 @@ class WorkspaceUI(ProjectTools):
             if run.get('error'):details.append(text(readable_error(run['error'],session_language(self)),color='#B45309' if run['status']=='awaiting_input' else '#B91C1C'))
             details.extend([text(self.message('run.results.stages'),14,INK,ft.FontWeight.W_600),*stage_rows])
             card=panel(ft.Column(details,spacing=16),padding=18)
-            if run['id']==focus_id:
-                content.append(card)
-            else:
-                history.append(card)
-        if history:
-            content.append(ft.ExpansionTile(title=text(f'Execuções anteriores ({len(history)})',16),
-                subtitle=text('Histórico de resultados e diagnósticos. Estas execuções não fazem parte da execução atual.',12,MUTED),
-                expanded=bool(self.results_focus and self.results_focus[0]!=focus_id),controls=history))
+            content.append(card)
         if not content:
             content=[panel(ft.Column([text('Pronto para explorar?',24),text('Configure suas etapas e execute o pipeline. Os resultados e logs aparecerão aqui.',color=MUTED)]))]
         toolbar=ft.Row([button('Atualizar resultados',self.event(self.draw_project),icon=ft.Icons.REFRESH),
@@ -1308,9 +1395,14 @@ class WorkspaceUI(ProjectTools):
         from biomolexplorer.result_files import ResultFiles
         token,project=self.token,self.current
         if project is None or project['role']=='viewer':raise AccessDenied('Somente editores podem limpar os resultados.')
+        previous=getattr(self,'_results_cleanup_dialog',None)
+        if previous is not None and previous.open:
+            if getattr(self,'_results_cleanup_key',None)==(token,project['id']):return
+            close_dialog(self.page,previous)
         async def action():
             if self.token!=token or self.current is not project:return
             if await self.save_draft(silent=True) is False:return False
+            if self.token!=token or self.current is not project:return False
             method=ResultFiles(self.store).remove_project_results if results_only else ResultFiles(self.store).clear_project_results
             await self.call(method,token,project['id'])
             fresh=await self.call(self.store.project,token,project['id'])
@@ -1325,7 +1417,9 @@ class WorkspaceUI(ProjectTools):
             content=ft.Container(width=560,content=text('Todos os resultados gerados e caches de preparo deste projeto serão removidos. Blocos, conexões, todas as configurações, arquivos importados, logs e histórico serão preservados. A próxima execução recalculará os resultados removidos.' if results_only else 'Todos os resultados gerados, caches, seleções de entrada, parâmetros científicos e templates personalizados serão limpos. Cada bloco voltará às configurações padrão. Os blocos, suas conexões, os arquivos importados na biblioteca, os logs e o histórico serão preservados. Será necessário configurar novamente o pipeline antes de executar.')),
             actions=[ft.TextButton('Cancelar',on_click=lambda e:close_dialog(self.page,dialog)),
                 button('Remover todos' if results_only else 'Limpar tudo',clear,icon=ft.Icons.DELETE_SWEEP_OUTLINED,danger=True)])
-        progress=RemovalProgress(self,dialog)
+        progress=RemovalProgress(self,dialog,title='Removendo dados…' if results_only else 'Limpando resultados e configurações…')
+        self._results_cleanup_dialog=dialog
+        self._results_cleanup_key=(token,project['id'])
         self.page.show_dialog(dialog)
 
     async def remove_stage_results(self,project_id,run_id,stage_id):
@@ -1547,6 +1641,31 @@ class WorkspaceUI(ProjectTools):
         await self.draw_project()
         self.notify('Execução cancelada.' if run['status']=='cancelled' else 'Cancelamento solicitado.')
 
+    def prepare_pending_inputs(self,run,pending):
+        """One bounded session cache, warmed without opening any interface."""
+        from .file_selection import prepare_selection_data
+        token=self.token;pid=run['project_id']
+        key=(token,pid,run['id'],pending['id'],json.dumps([
+            pending['configuration'],[(s['id'],s['status'],s.get('artifacts'),
+                s.get('artifact_manifest'),s.get('pdb_reviews')) for s in run['stages']]],sort_keys=True))
+        cached=getattr(self,'_selection_preparation',None)
+        if cached and cached[0]==key:return cached[1]
+        snapshot=copy.deepcopy(run);selection=copy.deepcopy(pending)
+        async def prepare():
+            def work():
+                assets=self.store.assets(token,pid)
+                return prepare_selection_data(self.store,token,snapshot,selection,assets)
+            return await asyncio.to_thread(work)
+        task=asyncio.create_task(prepare())
+        def finished(task):
+            if not task.cancelled() and task.exception():
+                # A prefetch failure must not stop polling or navigate away.
+                get_logger('frontend').warning('Input preparation failed; run=%s stage=%s',run['id'],pending['id'],
+                    exc_info=(type(task.exception()),task.exception(),task.exception().__traceback__))
+        task.add_done_callback(finished)
+        self._selection_preparation=(key,task)
+        return task
+
     @with_processing('Preparando seleção de arquivos…','Organizando as entradas e os metadados do próximo bloco. Aguarde um instante.',foreground=True)
     async def configure_pending(self,run_id):
         from .file_selection import FileSelection,selection_dialog_size
@@ -1568,33 +1687,32 @@ class WorkspaceUI(ProjectTools):
         from .pdb_results import PDBActions
         from .stage_results import StageResults
         def file_actions(stage,path):
+            if pending['configuration']['operation']=='dynamics_dock6':
+                async def preview(e):
+                    async def action():
+                        selected=await self.call(self.store.asset_path,token,project['id'],stage['asset_id']) if stage.get('asset_id') else path
+                        await self.preview_artifact(project['id'],str(selected))
+                    await self.guard(action)
+                return [ft.IconButton(ft.Icons.VIEW_IN_AR,tooltip='Visualizar',on_click=preview)]
             if stage['operation']!='retrieve_structures':return []
             results=StageResults(self,run['project_id'],run_id,stage,True)
             return PDBActions(results,True,on_saved=lambda item,saved:
                 form.apply_pdb_reviews({item['path']:saved})).actions({'path':str(path),'name':path.name})
-        compound_references=None
-        if pending['configuration']['operation'] in ('retrieve_pubchem','docking_vina','docking_dock6'):
-            from biomolexplorer.pubchem_retrieval import reference_choices
-            compound_references={}
-            for item in run['stages']:
-                if item['status']!='succeeded':continue
-                for filename in item.get('artifacts',[]):
-                    path=self.store.scoped_path(project['id'],filename)
-                    if path.suffix.lower()=='.csv':compound_references[str(path)]=await self.call(reference_choices,[path])
-            for asset in assets:
-                if asset['kind'] not in ('compounds','other'):continue
-                path=await self.call(self.store.asset_path,token,project['id'],asset['id'])
-                compound_references['asset:'+asset['id']]=await self.call(reference_choices,[path])
-            if self.token!=token or self.current is not project:return
-        if run_id in getattr(self,'_cancelled_run_ids',set()):return
-        reviews={}
-        if pending['configuration']['operation']=='redocking':
-            from biomolexplorer.result_files import ResultFiles
-            reviews=await self.call(ResultFiles(self.store).pdb_review_statuses,token,project['id'],run_id)
-            if self.token!=token or self.current is not project or run_id in getattr(self,'_cancelled_run_ids',set()):return
-        form=FileSelection(run,pending,assets,state=drafts.get(key),file_actions=file_actions,
-                           compound_references=compound_references,page=self.page)
-        if reviews:form.apply_pdb_reviews(reviews)
+        from .file_selection import selection_file_state
+        cached=getattr(self,'_selection_preparation',None)
+        if cached and cached[1].done() and (cached[1].cancelled() or cached[1].exception()):self._selection_preparation=None
+        prepared=await asyncio.shield(self.prepare_pending_inputs(run,pending))
+        fresh_files=await asyncio.to_thread(selection_file_state,prepared['paths'])
+        if prepared['assets']!=assets or fresh_files!=prepared['file_state'] or prepared['files_before']!=prepared['file_state']:
+            self._selection_preparation=None
+            prepared=await asyncio.shield(self.prepare_pending_inputs(run,pending))
+        if prepared['files_before']!=prepared['file_state']:
+            raise ValueError('Os resultados foram alterados. Revise a confirmação antes de salvar.')
+        if self.token!=token or self.current is not project or run_id in getattr(self,'_cancelled_run_ids',set()):return
+        if getattr(self,'selection_dialog_key',None)==key and getattr(self,'selection_dialog',None) and self.selection_dialog.open:return
+        form=FileSelection(run,pending,prepared['assets'],state=drafts.get(key),file_actions=file_actions,
+            compound_references=prepared['compound_references'],page=self.page,prepared=prepared)
+        if prepared['reviews']:form.apply_pdb_reviews(prepared['reviews'])
         inactive=False
         def remember():drafts[key]=form.state()
         def dismiss(e=None):
@@ -1606,7 +1724,7 @@ class WorkspaceUI(ProjectTools):
         async def apply(e):
             if inactive or self.token!=token or self.current is not project:return
             updated=form.read()
-            if updated['operation']=='redocking':
+            if updated['operation'] in ('redocking','dynamics_dock6'):
                 dismiss()
                 await self.open_stage_dialog(pending['id'],waiting_run_id=run_id,configuration=updated)
                 return
@@ -1631,15 +1749,15 @@ class WorkspaceUI(ProjectTools):
             dismiss()
             await self.open_stage_dialog(pending['id'],waiting_run_id=run_id,configuration=updated)
         dialog=ft.AlertDialog(modal=True,title=verbatim(text(self.message('run.selection.title',stage=self.tr(pending['name']) if pending['name'] in default_stage_names() else pending['name']),22)),
-            content=ft.Container(content=form.control,width=min(860,(self.page.width or 1160)-100),
-                                 height=max(300,min(580,(self.page.height or 900)-250))),
+            content=ft.Container(content=form.control,**selection_dialog_size(self.page,
+                pending['configuration']['operation']=='redocking')),
             actions=[ft.TextButton(self.message('run.selection.later'),on_click=dismiss),
                      ft.TextButton(self.message('run.selection.configure'),on_click=self.event_action(configure)),
-                     button(self.message('run.selection.redocking' if pending['configuration']['operation']=='redocking' else 'run.selection.continue'),self.event_action(apply,configuration_dialog=lambda:dialog),True)])
+                     button(self.message('run.selection.redocking' if pending['configuration']['operation']=='redocking' else 'run.selection.continue'),self.event_action(apply,configuration_dialog=lambda:dialog,processing_title='Aplicando configuração…'),True)])
         self.selection_dialog_key=key
+        redocking=pending['configuration']['operation']=='redocking'
         dialog._redocking_selection=redocking
         self.selection_dialog=dialog
-        self.auto_selection_key=key
         self.editing_stage=True
         def dismissed(e):
             if not inactive and self.selection_dialog is dialog:
@@ -1673,10 +1791,7 @@ class WorkspaceUI(ProjectTools):
                     await self.draw_project()
                 if run['status']=='awaiting_input' and self.current and self.current['id']==run['project_id'] and self.current['role']!='viewer':
                     pending=next(s for s in run['stages'] if s['status']=='awaiting_input')
-                    key=(run_id,pending['id'])
-                    if getattr(self,'auto_selection_key',None)!=key and not getattr(self,'editing_stage',False):
-                        await self.configure_pending(run_id)
-                        self.auto_selection_key=key
+                    if pending.get('pause_reason')!='user':self.prepare_pending_inputs(run,pending)
                 previous = snapshot
                 if self.token == token and self.current_run == run_id and run['status'] not in ('queued','running','awaiting_input'):
                     failures=sum(s.get('redocking_failures',0) for s in run['stages'])

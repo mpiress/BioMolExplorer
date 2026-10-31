@@ -1,0 +1,58 @@
+[
+  {
+    "family": "Evaluate ADMET",
+    "compound": "PUBCHEM72757",
+    "smiles": "O=C1COc2ccccc2N1",
+    "seconds": 7.704565292980988,
+    "details": {
+      "vina_completed": 2,
+      "docking_failures": 0,
+      "vina_reused": 0,
+      "vina_failures": 0,
+      "vina_attempts": 1,
+      "excluded_records": 0
+    },
+    "artifacts": [
+      "/tmp/biomol-vina-bbb-replay/workspace/projects/c5d21afd2abb428e8229420f10d4ac14/validation-native/6/outputs/MeuAlvo/Vina/6ZWI_LEA_605A_PUBCHEM72757.lig.pdbqt",
+      "/tmp/biomol-vina-bbb-replay/workspace/projects/c5d21afd2abb428e8229420f10d4ac14/validation-native/6/outputs/MeuAlvo/Vina/6ZWI_QRH_604A_PUBCHEM72757.lig.pdbqt",
+      "/tmp/biomol-vina-bbb-replay/workspace/projects/c5d21afd2abb428e8229420f10d4ac14/validation-native/6/outputs/MeuAlvo/Vina/vina_execution.json",
+      "/tmp/biomol-vina-bbb-replay/workspace/projects/c5d21afd2abb428e8229420f10d4ac14/validation-native/6/outputs/Molecules/PUBCHEM72757.lig.pdbqt",
+      "/tmp/biomol-vina-bbb-replay/workspace/projects/c5d21afd2abb428e8229420f10d4ac14/validation-native/6/outputs/Molecules/Prepared/PUBCHEM72757.lig.pdbqt",
+      "/tmp/biomol-vina-bbb-replay/workspace/projects/c5d21afd2abb428e8229420f10d4ac14/validation-native/6/outputs/Molecules/Prepared/compounds.csv",
+      "/tmp/biomol-vina-bbb-replay/workspace/projects/c5d21afd2abb428e8229420f10d4ac14/validation-native/6/outputs/docking_results.csv",
+      "/tmp/biomol-vina-bbb-replay/workspace/projects/c5d21afd2abb428e8229420f10d4ac14/validation-native/6/outputs/receptors/6ZWI_A.noH.pdb"
+    ],
+    "scores": [
+      -6.59,
+      -6.576
+    ]
+  },
+  {
+    "family": "ADMET",
+    "compound": "CHEMBL58983",
+    "smiles": "Cc1cc(O)cc(/C=C/c2ccc(O)cc2)c1",
+    "seconds": 16.027182273042854,
+    "details": {
+      "vina_completed": 2,
+      "docking_failures": 0,
+      "vina_reused": 0,
+      "vina_failures": 0,
+      "vina_attempts": 1,
+      "excluded_records": 0
+    },
+    "artifacts": [
+      "/tmp/biomol-vina-bbb-replay/workspace/projects/c5d21afd2abb428e8229420f10d4ac14/validation-native/3/outputs/MeuAlvo/Vina/6ZWI_LEA_605A_CHEMBL58983.lig.pdbqt",
+      "/tmp/biomol-vina-bbb-replay/workspace/projects/c5d21afd2abb428e8229420f10d4ac14/validation-native/3/outputs/MeuAlvo/Vina/6ZWI_QRH_604A_CHEMBL58983.lig.pdbqt",
+      "/tmp/biomol-vina-bbb-replay/workspace/projects/c5d21afd2abb428e8229420f10d4ac14/validation-native/3/outputs/MeuAlvo/Vina/vina_execution.json",
+      "/tmp/biomol-vina-bbb-replay/workspace/projects/c5d21afd2abb428e8229420f10d4ac14/validation-native/3/outputs/Molecules/CHEMBL58983.lig.pdbqt",
+      "/tmp/biomol-vina-bbb-replay/workspace/projects/c5d21afd2abb428e8229420f10d4ac14/validation-native/3/outputs/Molecules/Prepared/CHEMBL58983.lig.pdbqt",
+      "/tmp/biomol-vina-bbb-replay/workspace/projects/c5d21afd2abb428e8229420f10d4ac14/validation-native/3/outputs/Molecules/Prepared/compounds.csv",
+      "/tmp/biomol-vina-bbb-replay/workspace/projects/c5d21afd2abb428e8229420f10d4ac14/validation-native/3/outputs/docking_results.csv",
+      "/tmp/biomol-vina-bbb-replay/workspace/projects/c5d21afd2abb428e8229420f10d4ac14/validation-native/3/outputs/receptors/6ZWI_A.noH.pdb"
+    ],
+    "scores": [
+      -8.334,
+      -8.329
+    ]
+  }
+]

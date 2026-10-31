@@ -1,3 +1,4 @@
+from .pair_table import PairTable
 """Explicit redocking selection and preparation beside input sources."""
 import copy
 from types import SimpleNamespace
@@ -11,8 +12,8 @@ class RedockingPairs:
     def __init__(self, form):
         self.form = form
         self.rows = []
-        self.table=ft.DataTable(columns=[ft.DataColumn(ft.Text(t)) for t in ('PDB','Ligante','Número do resíduo','Cadeia','Ações')],rows=[],column_spacing=36,heading_row_color='#F1F5F9',data_row_min_height=56,data_row_max_height=64,divider_thickness=.5)
-        self.box = ft.Row([self.table],scroll=ft.ScrollMode.AUTO,on_size_change=self.resize)
+        self.pair_table=PairTable(('PDB','Ligante','Número do resíduo','Cadeia','Ações'),form.ui.page)
+        self.table=self.pair_table.table;self.box=self.pair_table.control
         self.preparation=form.preparation_settings
         self.summary = ft.Text()
         self.available = ft.Dropdown(label='PDB / ligante / resíduo / cadeia disponíveis',
@@ -27,18 +28,13 @@ class RedockingPairs:
             ft.TextButton('Adicionar par selecionado', on_click=self.choose, disabled=not form.writable),
             self.select_all_button,
             ft.TextButton('Informar par manualmente', on_click=lambda e:self.open_editor(), disabled=not form.writable),
-            self.summary, self.box], spacing=18, data='pairs')
+            self.summary, self.box], spacing=18, data='pairs',
+            horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
         for record in form.stage['parameters'].get('pdb_codes') or []:
             self.add(record, update=False)
         self.refresh()
 
-    def resize(self,e):
-        # Fill the available card width; preserve readable columns and horizontal
-        # scrolling on small viewports. Avoid updates when layout is unchanged.
-        width=max(680,round(e.width))
-        if self.table.width!=width:
-            self.table.width=width
-            self.form.ui.page.update()
+    def resize(self,e):self.pair_table.resize(e)
 
     def candidates(self):
         editor = self.form.input_editors['base_input_path']
@@ -61,8 +57,7 @@ class RedockingPairs:
             previous=getattr(self,'_selection_signature',())
             for entry in list(self.rows):
                 if previous and pair_key([f.value for f in entry[0]]) in previous and pair_key([f.value for f in entry[0]]) not in signature:
-                    self.rows.remove(entry);self.box.controls.remove(entry[-1])
-                    self.preparation_panels.pop(id(entry[-1]),None)
+                    self.rows.remove(entry);self.table.rows.remove(entry[-1])
             selected={pair_key([f.value for f in entry[0]]) for entry in self.rows}
             for record in self.records:
                 if pair_key(record) not in selected:self.add(record,update=False)
@@ -147,6 +142,7 @@ class RedockingPairs:
         self.preparation.sync(inactive=not self.form.field_controls['prepare_complex'].value)
 
     def read(self):
+        candidates={pair_key(record):record for record in self.candidates()}
         records = []; settings = {}
         shared=self.preparation.read()
         for fields, original, (has_cofactors, cofactors), options, _ in self.rows:

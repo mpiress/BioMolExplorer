@@ -43,18 +43,9 @@ def export_receptor_pdbqt(prepared,records):
         run_command(['obabel','-imol2',str(source),'-opdbqt','-O',str(destination),'-xr'],cwd=str(prepared))
 
 
-def prepare_candidates(dataset, destination, config=None, ph=7.4, engines='both'):
-    if engines not in ('vina','dock6','both'):
-        raise ValueError('Selecione Vina, DOCK6 ou ambos para a saída de preparação.')
-    config=config or {}
-    validate_preparation_settings(config)
-    options=dict(DEFAULTS,**config.get('ligand',{}))
-    destination=Path(destination);destination.mkdir(parents=True,exist_ok=True)
-    from .preparation_failures import CURRENT_REPORT,PreparationFailures
-    report=CURRENT_REPORT.get() or PreparationFailures()
-    inputs=read_compounds(dataset);rows=[]
+def _prepare_one(original,dataset,destination,options,ph,engines,formats,cache,owned):
+    import time
     from .diagnostics import event,get_logger
-    from .progress import report_progress
     logger=get_logger('scientific_tools')
     started=time.monotonic()
     row=dict(original);code=row['molecule_chembl_id']
@@ -93,7 +84,6 @@ def prepare_candidates(dataset, destination, config=None, ph=7.4, engines='both'
         if not reused:
             with tempfile.TemporaryDirectory(prefix='bme-prepare-') as folder:
                 event(logger,'ligand.preparation.started','Preparando ligante externo (não o receptor).',compound_identifier=code)
-                report_progress(None,row_number-2,len(inputs),key='preparation.ligand',arguments={'code':code,'index':row_number-1,'total':len(inputs)})
                 work=Path(folder)
                 step_started=time.monotonic()
                 if pose:
@@ -132,7 +122,7 @@ def prepare_candidates(dataset, destination, config=None, ph=7.4, engines='both'
                     validate_prepared_ligand(output,format)
                     row['prepared_'+format]=str(output.resolve())
                 import json
-                row['preparation_metadata']=json.dumps(dict(backend='legacy_chimera',charge_method=method,ph=ph,minimization=options['minimize']),sort_keys=True)
+                row['preparation_metadata']=json.dumps(dict(backend='legacy_chimera',charge_method={'gas':'gasteiger','am1':'am1bcc'}.get(method,method),ph=ph,minimization=options['minimize']),sort_keys=True)
                 cache.save(key,row,formats)
         row['conformer_file']=row['prepared_mol2'] if engines!='vina' else row['prepared_pdbqt']
         row.pop('pose_file',None);row.pop('conformer_index',None)

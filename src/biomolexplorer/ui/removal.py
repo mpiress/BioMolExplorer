@@ -1,4 +1,5 @@
 """Visible, single-flight feedback for destructive confirmation dialogs."""
+import asyncio
 from .processing import processing
 
 
@@ -26,7 +27,8 @@ class RemovalProgress:
             self.completed = result is not False
 
         try:
-            await self.ui.guard(execute)
+            async with processing(self.ui,self.title,'Aguarde a conclusão da remoção dos dados.',immediate=True):
+                await self.ui.guard(execute)
         finally:
             self.running = False
             if not self.completed:

@@ -15,7 +15,7 @@ def icon_button(**kwargs):
     label=kwargs.get('tooltip','Ação')
     return ft.Semantics(container=True,label=label,button=True,on_tap=None if kwargs.get('disabled') else kwargs.get('on_click'),disabled=kwargs.get('disabled',False),exclude_semantics=True,content=ft.IconButton(**kwargs))
 
-COLORS={'Entradas':'#2563EB','Recuperação':'#0D9488','Análise':'#7C3AED','Docking':'#D97706','Dinâmica Molecular':'#BE185D'}
+from .pipeline_palette import COLORS
 
 class FlowCanvas:
     def __init__(self,ui,writable):

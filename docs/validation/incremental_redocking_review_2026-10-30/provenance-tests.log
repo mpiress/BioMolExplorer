@@ -1,0 +1,13 @@
+[15:34:05] PYRROLE: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[15:34:05] PYRROLE: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[15:34:05] Can't kekulize mol.  Unkekulized atoms: 0 1 2 3 4
+[15:34:05] Can't kekulize mol.  Unkekulized atoms: 0 1 2 3 4
+[15:34:05] sanitize [15:34:05] PYRROLE: [15:34:18] SMILES Parse Error: syntax error while parsing: invalid
+[15:34:18] SMILES Parse Error: check for mistakes around position 1:
+[15:34:18] invalid
+[15:34:18] ^
+[15:34:18] SMILES Parse Error: Failed parsing SMILES 'invalid' for input: 'invalid'
+----------------------------------------------------------------------
+Ran 52 tests in 34.259s
+
+OK

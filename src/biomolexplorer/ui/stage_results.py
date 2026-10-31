@@ -15,7 +15,7 @@ class StageResults:
         self.ui,self.project_id,self.run_id,self.stage=ui,project_id,run_id,stage
         self.token=ui.token;self.active=True;self.loaded=False;self.expanded=False;self.sequence=0
         self.loading_results=False
-        self.writable=writable;self.child=None
+        self.writable=writable;self.child=None;self.checkpoint_children=[]
         self.service=ResultFiles(ui.store)
         self.root=ft.Column([ft.Text('Expanda para consultar os resultados.',size=13,color='#64748B')],spacing=20)
         self.loading=ft.Container(visible=False)
@@ -26,6 +26,7 @@ class StageResults:
 
     def close(self):
         self.active=False;self.sequence+=1
+        for child in self.checkpoint_children:child.close()
         if hasattr(self,'graph_files'):self.graph_files.active=False
         if self.child:
             if hasattr(self.child,'close'):self.child.close()
@@ -43,7 +44,25 @@ class StageResults:
         self.root.controls=[ft.Text('Carregando resultados…',size=13)]
         self.ui.page.update()
         try:
-            operation=self.stage['operation']
+            parts=self.stage.get('_result_sources',[])
+            if parts:
+                for child in self.checkpoint_children:child.close()
+                self.checkpoint_children=[]
+                active=any(r['status'] in ('queued','running','awaiting_input') for r in await self.ui.call(self.ui.store.list_runs,self.token,self.project_id))
+                if not self.valid():return
+                controls=[ft.Text('Resultados preservados em checkpoints distintos. Cada arquivo mantém sua origem e versão de processamento.',size=13,color='#64748B')]
+                for part in parts:
+                    child=StageResults(self.ui,self.project_id,part['publication_run_id'],dict(part,_checkpoint_subset=True),self.writable)
+                    self.checkpoint_children.append(child)
+                    await child.load()
+                    if not self.valid():return
+                    controls.append(child.root)
+                    if self.writable:
+                        async def remove_part(e,rid=part['publication_run_id']):
+                            if self.valid():await self.ui.guard(lambda:self.ui.remove_stage_results(self.project_id,rid,self.stage['id']))
+                        controls.append(ft.TextButton('Remover resultados deste conjunto',icon=ft.Icons.DELETE_OUTLINE,icon_color='#B91C1C',disabled=active,on_click=remove_part))
+                self.root.controls=controls;self.loaded=True;self.ui.page.update();return
+            operation='checkpoint_subset' if self.stage.get('_checkpoint_subset') else self.stage['operation']
             if self.stage.get('outputs_removed') and not self.stage.get('artifacts'):
                 self.root.controls=[ft.Text('Resultados excluídos. Execute o bloco para gerar novamente. O histórico e os logs foram preservados.')]
                 self.loaded=True;self.ui.page.update();return
@@ -130,6 +149,8 @@ class StageResults:
             if not self.valid():return
             active=any(r['status'] in ('queued','running','awaiting_input') for r in await self.ui.call(self.ui.store.list_runs,self.token,self.project_id))
             if not self.valid():return
+            if self.stage.get('_checkpoint_subset'):
+                allowed=set(self.stage.get('artifacts',[]));files=[item for item in files if item['path'] in allowed]
             async def remove(item):
                 await self.ui.call(self.service.remove,self.token,self.project_id,self.run_id,self.stage['id'],item['path'])
                 self.stage['artifacts']=[p for p in self.stage.get('artifacts',[]) if p!=item['path']]

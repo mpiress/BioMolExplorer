@@ -69,6 +69,13 @@ class InputEditor:
         for origin,mapping in catalog.items():
             if origin.startswith('asset:'):compound_references[origin]={code:label for values in mapping.values() for code,label in values.items()}
         def file_actions(item,path):
+            if self.stage['operation']=='dynamics_dock6':
+                async def preview(e):
+                    async def action():
+                        selected=await self.ui.call(self.ui.store.asset_path,self.ui.token,self.ui.current['id'],item['asset_id']) if item.get('asset_id') else path
+                        await self.ui.preview_artifact(self.ui.current['id'],str(selected))
+                    await self.ui.guard(action)
+                return [ft.IconButton(ft.Icons.VIEW_IN_AR,tooltip='Visualizar',on_click=preview)]
             if self.stage['operation']!='redocking' or item.get('operation')!='retrieve_structures' or not item.get('run_id'):return []
             from .stage_results import StageResults
             from .pdb_results import PDBActions
@@ -109,8 +116,20 @@ class InputEditor:
     def source_options(self):
         options=[ft.DropdownOption(key='',text='Conectar no canvas / selecionar arquivo')]
         options += [stage_control(ft.DropdownOption(key='stage:'+s['id'],text=s['name']),s,'text') for s in self.ui.current['pipeline'] if compatible(s,self.stage,self.field['name'])]
+        preferred=set(preferred_receptors(a['name'] for a in self.assets if prepared_receptor(a['name'])))
+        selected_assets={r.get('asset') for r in self.initial_references if r.get('asset')}
+        from biomolexplorer.flow import artifact_types
+        def accepted_asset(asset):
+            if self.stage['operation']=='dynamics_dock6':
+                from pathlib import Path
+                formats={'.pdb'} if self.field['name']=='base_input_path' else {'.csv','.mol2','.pdbqt','.sdf'}
+                typed=bool(artifact_types({asset['kind']}) & self.expected)
+                legacy=asset['kind']=='other' and asset['id'] in selected_assets
+                return Path(asset['name']).suffix.lower() in formats and (typed or legacy)
+            return bool(artifact_types({asset['kind']}) & self.expected) or asset['kind']=='other' and self.stage['operation']!='graphs'
         options += [verbatim(ft.DropdownOption(key='asset:'+a['id'],text=a['name'])) for a in self.assets
-            if (a['kind'] in self.expected or (a['kind']=='other' and self.stage['operation']!='graphs'))
+            if (not self.is_target or not prepared_receptor(a['name']) or a['name'] in preferred or a['id'] in selected_assets)
+            and accepted_asset(a)
             and (self.stage['operation'] in ('prepare_structures','docking_vina','docking_dock6') or not self.is_target or prepared_receptor(a['name']))
             and (not self.is_ligand or ligand_input_file(a['name']))
             and (self.stage['operation'] not in ('docking_vina','docking_dock6') or self.field['name']!='base_input_path'
@@ -188,6 +207,8 @@ class InputEditor:
         if self.stage['operation'] in ('docking_vina','docking_dock6') and self.is_ligand:
             compound=ft.Dropdown(label='Composto para docking (opcional)',value=ref.get('compound_id',''),
                 options=[],disabled=not self.writable,enable_filter=True,enable_search=True)
+            from .compound_choice import CompoundChoice
+            compound_picker=CompoundChoice(compound,self.ui.page)
             self.compound_fields[id(source)]=compound
             def sync_compounds(reset=False):
                 if reset:compound.value=''
@@ -197,11 +218,8 @@ class InputEditor:
                     if (selector.value=='auto' or source.value and source.value.startswith('asset:')
                             or matches_selector(path,selector.value)):
                         records.update(values)
-                compound.options=[ft.DropdownOption(key='',text='Todos os compostos')]+[
-                    verbatim(ft.DropdownOption(key=code,text=code)) for code in sorted(records)]
-                if compound.value and compound.value not in records:
-                    compound.options.append(verbatim(ft.DropdownOption(key=compound.value,text=compound.value)))
-                compound.visible=bool(source.value and (source.value.startswith('asset:') or selector.value!='auto'))
+                compound_picker.set_records(records)
+                compound.visible=compound_picker.control.visible=bool(source.value and (source.value.startswith('asset:') or selector.value!='auto'))
                 compound.disabled=not self.writable or not records
                 compound.helper=None if records else 'Execute a origem para listar os compostos disponíveis.'
             source_version=0
@@ -218,7 +236,7 @@ class InputEditor:
             source.on_select=compound_source_changed
             selector.on_select=compound_file_changed
             compound.on_select=lambda e:self.changed()
-            row.controls.append(compound)
+            row.controls.append(compound_picker.control)
             sync_compounds()
         item=(source,selector,row)
         def remove(e):self.rows.remove(item);self.compound_fields.pop(id(source),None);self.box.controls.remove(row);self.changed()
@@ -246,6 +264,8 @@ class InputEditor:
             self.assets[:]=fresh
             if self.stage['operation']=='retrieve_pubchem' or self.is_ligand and self.stage['operation'] in ('docking_vina','docking_dock6'):
                 from biomolexplorer.pubchem_retrieval import reference_choices
+                if self.stage['operation']!='retrieve_pubchem':
+                    from biomolexplorer.docking_inputs import compound_identifiers as reference_choices
                 attribute='pubchem_references' if self.stage['operation']=='retrieve_pubchem' else 'docking_compounds'
                 if not hasattr(self.ui,attribute):setattr(self.ui,attribute,{})
                 for asset in ids:
@@ -259,12 +279,12 @@ class InputEditor:
             self.changed()
         await self.ui.guard(action)
 
-    def read(self):
+    def read(self,validate=True):
         if self.selection:
             picker=self.selection.pickers[self.field['name']]
-            selected=self.selection.selected_references(self.selection.rows[self.field['name']])
+            selected=self.selection.selected_references(self.selection.rows[self.field['name']],validate=validate)
             if selected:return pack(selected)
-            if picker.touched:raise ValueError('Selecione ao menos um arquivo para esta entrada.')
+            if picker.touched:return None
             return pack(self.initial_references if self.selection_signature==[(('stage:'+r['stage']) if 'stage' in r else ('asset:'+r['asset']),r.get('selector','auto')) for r in self.initial_references] else self.connection_references())
         if self.stage['operation'] in ('prepare_structures','docking_vina','docking_dock6') and self.field['name']=='base_input_path':
             modes=[self.prepared_source(source.value,selector.value) for source,selector,_ in self.rows if source.value]

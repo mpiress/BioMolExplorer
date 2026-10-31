@@ -40,7 +40,10 @@ def ligand_charging(script,phase):
         'finally:\n    replyobj.info = original_info\n')
     # Native minimize defaults to running DockPrep AGAIN, which can add H and
     # replace the explicitly selected charges. Minimize the already prepared graph.
-    tail=re.sub(r'^(minimize spec #0)(.*)$',r'\1\2 prep false',phase['tail'],flags=re.M)
+    def prepared_minimize(match):
+        options=re.sub(r'\s+prep\s+(?:true|false)\b','',match[2],flags=re.I)
+        return match[1]+options+' prep false'
+    tail=re.sub(r'^(minimize spec #0)(.*)$',prepared_minimize,phase['tail'],flags=re.M)
     script.write_text('open '+str(phase['intermediate'])+'\nopen '+str(helper)+'\n'+tail.lstrip('\n'))
     report=phase['output'].with_suffix('.preparation.json')
     hydrogen_report=phase['intermediate'].with_suffix('.preparation.json')

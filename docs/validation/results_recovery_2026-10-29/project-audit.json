@@ -1,0 +1,142 @@
+{
+  "selected_md_pairs": [
+    {
+      "receptor": "4M0E_A.noH.pdb",
+      "ligand": "CHEMBL1179697 · 4M0E_A"
+    }
+  ],
+  "stages": [
+    {
+      "stage": "ACHE",
+      "operation": "retrieve_compounds",
+      "artifacts": 593,
+      "reused_from": "15577f2d9cb84a1391ca0c9d414c037d",
+      "producer_version": "49c18e4ccdae662bee7c66c295aae1a7ae1f4284f1282bc22e0ba9c09df47b4e",
+      "policy": "verified_completed_request_v1"
+    },
+    {
+      "stage": "BCHE",
+      "operation": "retrieve_compounds",
+      "artifacts": 498,
+      "reused_from": "15577f2d9cb84a1391ca0c9d414c037d",
+      "producer_version": "49c18e4ccdae662bee7c66c295aae1a7ae1f4284f1282bc22e0ba9c09df47b4e",
+      "policy": "verified_completed_request_v1"
+    },
+    {
+      "stage": "BACE1",
+      "operation": "retrieve_compounds",
+      "artifacts": 173,
+      "reused_from": "15577f2d9cb84a1391ca0c9d414c037d",
+      "producer_version": "49c18e4ccdae662bee7c66c295aae1a7ae1f4284f1282bc22e0ba9c09df47b4e",
+      "policy": "verified_completed_request_v1"
+    },
+    {
+      "stage": "AChE PDB",
+      "operation": "retrieve_structures",
+      "artifacts": 10,
+      "reused_from": "15577f2d9cb84a1391ca0c9d414c037d",
+      "producer_version": "49c18e4ccdae662bee7c66c295aae1a7ae1f4284f1282bc22e0ba9c09df47b4e",
+      "policy": "verified_completed_request_v1"
+    },
+    {
+      "stage": "BChE PDB",
+      "operation": "retrieve_structures",
+      "artifacts": 23,
+      "reused_from": "15577f2d9cb84a1391ca0c9d414c037d",
+      "producer_version": "49c18e4ccdae662bee7c66c295aae1a7ae1f4284f1282bc22e0ba9c09df47b4e",
+      "policy": "verified_completed_request_v1"
+    },
+    {
+      "stage": "BACE1 PDB",
+      "operation": "retrieve_structures",
+      "artifacts": 13,
+      "reused_from": "15577f2d9cb84a1391ca0c9d414c037d",
+      "producer_version": "49c18e4ccdae662bee7c66c295aae1a7ae1f4284f1282bc22e0ba9c09df47b4e",
+      "policy": "verified_completed_request_v1"
+    },
+    {
+      "stage": "ADMET",
+      "operation": "admet",
+      "artifacts": 78,
+      "reused_from": "15577f2d9cb84a1391ca0c9d414c037d",
+      "producer_version": "90d916f6ccbebefc6b39506e0ea3b6fca8ab2a9ded303acf1d8257f5d363f1e5",
+      "policy": "verified_completed_request_v1"
+    },
+    {
+      "stage": "Run redocking",
+      "operation": "redocking",
+      "artifacts": 551,
+      "reused_from": "15577f2d9cb84a1391ca0c9d414c037d",
+      "producer_version": "f4295fbe300eb121a6e9b2708a1860c2802d945f00229870ba05e9078664a0d4",
+      "policy": "verified_completed_request_v1"
+    },
+    {
+      "stage": "Retrieve PubChem",
+      "operation": "retrieve_pubchem",
+      "artifacts": 14,
+      "reused_from": "15577f2d9cb84a1391ca0c9d414c037d",
+      "producer_version": "16b270e9d6c412bfde7211998a2246170be6f0f595d961fdf2e17c02256319e9",
+      "policy": "verified_completed_request_v1"
+    },
+    {
+      "stage": "Generate fingerprints",
+      "operation": "fingerprints",
+      "artifacts": 3,
+      "reused_from": "15577f2d9cb84a1391ca0c9d414c037d",
+      "producer_version": "8abf2f9efce9cb969d5210770245b283790968379322b591db30b86b7b1ad72e",
+      "policy": "verified_completed_request_v1"
+    },
+    {
+      "stage": "Docking with Vina",
+      "operation": "docking_vina",
+      "artifacts": 1064,
+      "reused_from": "15577f2d9cb84a1391ca0c9d414c037d",
+      "producer_version": "7305453dc23752cb51b2f410d66e2301805b8efd50c5f8e88517695499cea9e2",
+      "policy": "verified_completed_request_v1"
+    },
+    {
+      "stage": "Calculate similarity",
+      "operation": "similarity",
+      "artifacts": 3,
+      "reused_from": "15577f2d9cb84a1391ca0c9d414c037d",
+      "producer_version": "951d60b41620038b8a2d9cf8a229740937492b41ab49be7c7cfc68cb38df7e0d",
+      "policy": "verified_completed_request_v1"
+    },
+    {
+      "stage": "Docking with DOCK6",
+      "operation": "docking_dock6",
+      "artifacts": 2255,
+      "reused_from": "15577f2d9cb84a1391ca0c9d414c037d",
+      "producer_version": "7305453dc23752cb51b2f410d66e2301805b8efd50c5f8e88517695499cea9e2",
+      "policy": "verified_completed_request_v1"
+    },
+    {
+      "stage": "Filter by graphs",
+      "operation": "graphs",
+      "artifacts": 204,
+      "reused_from": "15577f2d9cb84a1391ca0c9d414c037d",
+      "producer_version": "a673134359fc652976e193f38ab9b5772280a1fafdbf1257b2e1506abf1e0bcc",
+      "policy": "verified_completed_request_v1"
+    },
+    {
+      "stage": "Docking consensus",
+      "operation": "consensus",
+      "artifacts": 927,
+      "reused_from": "15577f2d9cb84a1391ca0c9d414c037d",
+      "producer_version": "7305453dc23752cb51b2f410d66e2301805b8efd50c5f8e88517695499cea9e2",
+      "policy": "verified_completed_request_v1"
+    },
+    {
+      "stage": "Amber Score with DOCK6",
+      "operation": "dynamics_dock6",
+      "new_work": true
+    }
+  ],
+  "reused_stages": 15,
+  "artifacts": 6409,
+  "unique_files": 6409,
+  "elapsed_seconds": 5.892297090031207,
+  "database_mode": "read-only",
+  "scientific_jobs_started": 0,
+  "project_files_written": 0
+}

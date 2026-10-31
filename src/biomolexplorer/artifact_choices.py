@@ -50,13 +50,12 @@ def choices(item):
                 or p.stem.endswith(('_FULL','_MOLS','_SIMS')))]
     if item['operation']=='retrieve_structures':
         files=[p for p in files if p.suffix.lower()=='.pdb']
-    if item['operation'] in ('docking_vina','docking_dock6') and not item.get('configuration',{}).get('provided_results'):
-        files=[p for p in files if p.name=='docking_results.csv' or
-               item['operation']=='docking_vina' and p.suffix=='.pdbqt' and p.parent.name=='Vina' or
-               item['operation']=='docking_dock6' and p.name.endswith('_scored.mol2') and p.parent.name in ('flex','rigid')]
+    if item['operation'] in ('docking_vina','docking_dock6','consensus') and not item.get('configuration',{}).get('provided_results'):
+        files=consolidated_docking_tables(files,item['operation'])
     if item['operation']=='graphs' and not item.get('configuration',{}).get('provided_results'):
         from .graph_exports import molecular_files
         files=molecular_files(files)
+    if item['operation']=='redocking':files=redocking_receptors(files)
     result=set()
     for p in files:
         parts=p.parts
@@ -68,3 +67,23 @@ def choices(item):
         elif p.suffix.lower() in ('.csv','.pdb','.pdbqt','.mol2','.txt'):
             result.add(p.name)
     return result
+
+
+def consolidated_docking_tables(paths,operation=None):
+    """Final full compound score tables, excluding contexts and pose intermediates."""
+    tables=[]
+    for path in dict.fromkeys(Path(p) for p in paths):
+        if path.suffix.lower()!='.csv' or path.parent.name in ('context','poses','Prepared','inputs','.inputs'):continue
+        fields=columns(path)
+        docking={'molecule_chembl_id','engine','score','conformer_file'}<=fields
+        consensus={'molecule_chembl_id','vina','dock6'}<=fields
+        if (operation!='consensus' and docking) or (operation not in ('docking_vina','docking_dock6') and consensus):tables.append(path)
+    return tables
+
+
+def redocking_receptors(paths):
+    """Public redocking handoffs expose receptors, never crystal ligands."""
+    from .docking_inputs import preferred_receptors,prepared_receptor
+    from .md_inputs import receptor_input_files
+    paths=[Path(p) for p in paths]
+    return list(dict.fromkeys([*preferred_receptors(p for p in paths if prepared_receptor(p)),*receptor_input_files(paths)]))

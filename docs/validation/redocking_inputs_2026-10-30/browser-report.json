@@ -1,0 +1,74 @@
+[
+  {
+    "width": 1440,
+    "mode": "top",
+    "selected": 104,
+    "offset": 0,
+    "next_disabled": false,
+    "rows": 25,
+    "pairs": null
+  },
+  {
+    "width": 1440,
+    "mode": "bottom",
+    "selected": 104,
+    "offset": 0,
+    "next_disabled": false,
+    "rows": 25,
+    "pairs": null
+  },
+  {
+    "width": 1440,
+    "mode": "next",
+    "selected": 104,
+    "offset": 25,
+    "next_disabled": false,
+    "rows": 25,
+    "pairs": null
+  },
+  {
+    "width": 1440,
+    "mode": "repair",
+    "selected": 106,
+    "offset": 0,
+    "next_disabled": false,
+    "rows": 25,
+    "pairs": 175
+  },
+  {
+    "width": 1024,
+    "mode": "top",
+    "selected": 106,
+    "offset": 0,
+    "next_disabled": false,
+    "rows": 25,
+    "pairs": null
+  },
+  {
+    "width": 1024,
+    "mode": "bottom",
+    "selected": 106,
+    "offset": 0,
+    "next_disabled": false,
+    "rows": 25,
+    "pairs": null
+  },
+  {
+    "width": 360,
+    "mode": "top",
+    "selected": 106,
+    "offset": 0,
+    "next_disabled": false,
+    "rows": 25,
+    "pairs": null
+  },
+  {
+    "width": 360,
+    "mode": "bottom",
+    "selected": 106,
+    "offset": 0,
+    "next_disabled": false,
+    "rows": 25,
+    "pairs": null
+  }
+]

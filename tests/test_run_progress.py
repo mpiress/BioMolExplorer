@@ -142,8 +142,13 @@ class RunFeedbackTests(unittest.TestCase):
         self.ui = object.__new__(WorkspaceUI)
         self.ui.token = 'session'
         self.ui.current = {'id': 'project', 'role': 'editor'}
-        self.ui.page = SimpleNamespace(height=900, update=lambda: None, show_dialog=lambda d: self.dialogs.append(d))
         self.dialogs = []
+        def show_dialog(dialog):
+            if dialog in self.dialogs and dialog.open:
+                raise RuntimeError('Dialog is already opened')
+            dialog.open = True
+            self.dialogs.append(dialog)
+        self.ui.page = SimpleNamespace(height=900, update=lambda: None, show_dialog=show_dialog)
         self.ui.draw_project = AsyncMock()
         self.ui.cancel_run = AsyncMock()
         self.run = {'id': 'run', 'project_id': 'project', 'status': 'queued', 'created': 100, 'updated': 100,
@@ -186,7 +191,6 @@ class RunFeedbackTests(unittest.TestCase):
         self.run['stages'][0].update(status='failed', log_path='/private/log')
         self.progress.update(self.run)
         self.progress.show()
-        self.progress.dismissed(None)
         self.assertTrue(self.progress.is_open)
         self.assertIn('HTTP 500', self.progress.error.value)
         self.assertTrue(self.progress.log.visible)
@@ -240,15 +244,66 @@ class RunFeedbackTests(unittest.TestCase):
         self.assertTrue(self.progress.is_open)
         self.assertEqual(self.progress.heading.value, 'Pipeline concluído')
 
-    def test_reopen_waits_for_flutter_to_finish_removing_the_previous_dialog(self):
+    def test_follow_reopens_without_waiting_for_client_dismissal(self):
         self.progress.show()
+        old_dialog = self.progress.dialog
         asyncio.run(self.progress.dismiss())
         self.progress.show()
-        self.assertTrue(self.progress.reopen_requested)
+        self.assertTrue(self.progress.is_open)
+        self.assertFalse(self.progress.closing)
+        self.assertEqual(len(self.dialogs), 2)
+        old_dialog.on_dismiss(None)
+        self.assertTrue(self.progress.is_open)
+        self.progress.show()
+        self.assertEqual(len(self.dialogs), 2)
+        self.ui.cancel_run.assert_not_called()
+
+    def test_follow_link_handles_rapid_clicks_without_duplicate_panels(self):
+        async def clicks():
+            await asyncio.gather(self.progress.follow(), self.progress.follow())
+        asyncio.run(clicks())
+        self.assertTrue(self.progress.is_open)
         self.assertEqual(len(self.dialogs), 1)
+        self.ui.cancel_run.assert_not_called()
+        self.ui.draw_project.assert_not_called()
+
+    def test_repeated_follow_cycles_preserve_run_and_ignore_old_events(self):
+        original_run = json.loads(json.dumps(self.run))
+        old_dialogs = []
+        for _ in range(20):
+            asyncio.run(self.progress.follow())
+            self.assertTrue(self.progress.dialog.open)
+            old_dialogs.append(self.progress.dialog)
+            asyncio.run(self.progress.dismiss())
+        asyncio.run(self.progress.follow())
+        for dialog in reversed(old_dialogs):
+            dialog.on_dismiss(None)
+            self.assertIsNone(dialog.content)
+            self.assertEqual(dialog.actions, [])
+        self.assertTrue(self.progress.is_open)
+        self.assertTrue(self.progress.dialog.open)
+        self.assertEqual(self.run, original_run)
+        self.ui.cancel_run.assert_not_called()
+
+    def test_follow_recovers_after_configuration_closed_an_already_closed_panel(self):
+        self.progress.show()
+        asyncio.run(self.progress.dismiss())
         self.progress.dismissed(None)
+        self.progress.closing = True  # configuration flow closes the panel again
+        self.progress.show()
         self.assertTrue(self.progress.is_open)
         self.assertEqual(len(self.dialogs), 2)
+        self.ui.cancel_run.assert_not_called()
+
+    def test_late_dismissal_after_session_change_does_not_reopen_panel(self):
+        self.progress.show()
+        old_dialog = self.progress.dialog
+        asyncio.run(self.progress.dismiss())
+        self.ui.token = 'other-session'
+        self.progress.show()
+        old_dialog.on_dismiss(None)
+        self.assertFalse(self.progress.is_open)
+        self.assertEqual(len(self.dialogs), 1)
 
     def test_completed_run_does_not_clear_a_new_run_started_during_refresh(self):
         self.ui.current_run = 'run'

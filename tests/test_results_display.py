@@ -58,7 +58,7 @@ class ResultsDisplayTests(unittest.TestCase):
         async def guard(action):await action()
         async def save_file(**kwargs):saved.append(kwargs)
         return SimpleNamespace(token=self.token,current=self.store.project(self.token,self.pid),store=self.store,
-            page=SimpleNamespace(update=lambda:None,show_dialog=dialogs.append,width=1440),call=call,guard=guard,
+            page=SimpleNamespace(update=lambda:None,show_dialog=dialogs.append,width=1440,height=900),call=call,guard=guard,
             picker=SimpleNamespace(save_file=save_file),dialogs=dialogs,saved=saved,notify=lambda s:None,
             service=SimpleNamespace(dock6_path=None))
 
@@ -190,12 +190,12 @@ class ResultsDisplayTests(unittest.TestCase):
         run['stages'].append(dict(id=imported['id'],name=imported['name'],operation='import_results',
             configuration=imported,status='succeeded',artifacts=[str(asset)],provided=True))
         with self.store.connect() as db:db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(run['stages']),self.rid))
-        self.assertEqual(self.service.remove_project_results(self.token,self.pid),3)
+        self.assertEqual(self.service.remove_project_results(self.token,self.pid),{'files_removed':3,'stages_cleared':2,'links_reset':0})
         self.assertTrue(asset.exists());self.assertFalse(self.compounds.exists());self.assertFalse(self.admet_csv.exists())
         stages=self.store.get_run(self.token,self.rid)['stages']
         self.assertEqual(stages[-1]['artifacts'],[str(asset)])
         event=self.store.history(self.token,self.pid)[0]
-        self.assertEqual(event['action'],'remove_project_results')
+        self.assertEqual(event['action'],'remove_all_results')
         self.store.rollback(self.token,self.pid,event['id'])
         self.assertTrue(self.compounds.exists());self.assertTrue(self.admet_csv.exists())
 
@@ -364,6 +364,8 @@ class ResultsDisplayTests(unittest.TestCase):
     @unittest.skipIf(StageResults is None,'Install ui extra')
     def test_runs_view_keeps_open_stages_and_refreshes_changed_manifests(self):
         from biomolexplorer.ui.app import WorkspaceUI
+        with self.store.connect() as db:
+            db.execute('UPDATE projects SET pipeline=? WHERE id=?',(json.dumps([self.retrieval,self.admet]),self.pid))
         fake=self.ui();ui=object.__new__(WorkspaceUI);ui.__dict__.update(fake.__dict__)
         ui.current_run=ui.run_progress=None;ui.polling=SimpleNamespace(done=lambda:False)
         asyncio.run(ui.runs_view(True))
@@ -383,6 +385,8 @@ class ResultsDisplayTests(unittest.TestCase):
     def test_delete_all_refreshes_cards_without_success_or_reuse_badges(self):
         from biomolexplorer.ui.app import WorkspaceUI
         from test_frontend_navigation import walk
+        with self.store.connect() as db:
+            db.execute('UPDATE projects SET pipeline=? WHERE id=?',(json.dumps([self.retrieval,self.admet]),self.pid))
         fake=self.ui();ui=object.__new__(WorkspaceUI);ui.__dict__.update(fake.__dict__)
         ui.current_run=ui.run_progress=None;ui.polling=SimpleNamespace(done=lambda:False)
         asyncio.run(ui.runs_view(True))
@@ -393,7 +397,9 @@ class ResultsDisplayTests(unittest.TestCase):
         self.service.remove_project_results(self.token,self.pid)
         view=asyncio.run(ui.runs_view(True))
         values=[c.value for c in walk(view) if isinstance(c,ft.Text)]
-        self.assertEqual(values.count('Resultados excluídos · execute o bloco para gerar novamente'),2)
+        from biomolexplorer.i18n import RuntimeMessages
+        badges=[c.subtitle.value for c in walk(view) if isinstance(c,ft.ExpansionTile) and isinstance(c.subtitle,ft.Text)]
+        self.assertEqual(badges.count(RuntimeMessages('pt')('run.status.cleared')),2)
         self.assertNotIn('Reaproveitado',values)
         self.assertFalse(old.active)
         result=ui.stage_results[key];self.assertTrue(result.expanded)

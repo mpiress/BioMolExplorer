@@ -1,0 +1,6 @@
+...........................Executing <Task finished name='Task-23' coro=<CleanupCallbackTests.test_failed_removal_leaves_data_and_restores_retry() done, defined at /home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_runs_pipeline_controls.py:156> result=None created at /home/michel/progs/miniconda3/envs/BioMolExplorer/lib/python3.12/asyncio/runners.py:100> took 0.111 seconds
+...............................
+----------------------------------------------------------------------
+Ran 58 tests in 17.941s
+
+OK

@@ -25,6 +25,29 @@ def ligand_input_file(path):
     return path.suffix.lower() in ('.csv','.sdf','.mol2','.pdbqt') and '.dockprep.' not in path.name and '.noH.' not in path.name
 
 
+def compound_identifiers(paths):
+    """Index display IDs without running chemistry on every UI selection.
+
+    The execution adapter still validates the actual rows/SMILES. Only records
+    lacking an ID need chemical normalization here to reproduce their USER ID.
+    """
+    from .input_validation import ALIASES,_code
+    from .molecule_quality import _validated_row
+    result={}
+    for path in paths:
+        if Path(path).suffix.lower()!='.csv':continue
+        with Path(path).open(encoding='utf-8-sig',newline='') as stream:
+            for original in csv.DictReader(stream):
+                row={ALIASES.get(k,k):v for k,v in original.items()}
+                if 'canonical_smiles' not in row:continue
+                code=row.get('molecule_chembl_id')
+                if not code:
+                    try:_,code,_=_validated_row(row,'compounds')
+                    except (ValueError,TypeError,KeyError):continue
+                if _code(code):result.setdefault(code,'')
+    return result
+
+
 def compound_codes(path):
     from .molecule_quality import _validated_row
     codes=set()

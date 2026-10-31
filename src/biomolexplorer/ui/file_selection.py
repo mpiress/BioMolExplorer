@@ -16,18 +16,21 @@ from biomolexplorer.input_validation import columns
 from .localization import verbatim, stage_control
 
 
-def compatible_file(path, kinds):
+def compatible_file(path, kinds, headers=None):
     path = Path(path)
+    def file_columns(path):
+        return headers[str(path)] if headers is not None and str(path) in headers else columns(path)
     required = {'compounds': {'canonical_smiles'}, 'chembl': {'canonical_smiles'},
                 'fingerprints': {'fingerprint', 'molecule_chembl_id'},
                 'similarity': {'source', 'target', 'value'}}
     for kind in kinds:
+        if kind=='scores' and path.suffix.lower()=='.csv' and {'molecule_chembl_id','vina','dock6'}<=file_columns(path):return True
         if kind=='receptor_pdb' and path.suffix.lower()=='.pdb':return True
-        if kind=='molecular_poses' and path.suffix.lower()=='.mol2' and ligand_input_file(path):return True
+        if kind=='molecular_poses' and path.suffix.lower() in ('.mol2','.pdbqt','.sdf') and ligand_input_file(path):return True
         if kind=='dynamics' and path.suffix.lower() in ('.nc','.prmtop','.rst7','.json','.csv'):return True
-        if kind in required and path.suffix.lower() == '.csv' and required[kind] <= columns(path):
+        if kind in required and path.suffix.lower() == '.csv' and required[kind] <= file_columns(path):
             return True
-        if kind in ('vina','dock6') and path.suffix=='.csv' and {'engine','score','conformer_file'}<=columns(path):return True
+        if kind in ('vina','dock6') and path.suffix=='.csv' and {'engine','score','conformer_file'}<=file_columns(path):return True
         if kind == 'structures' and path.suffix.lower() in ('.pdb','.cif','.mmcif') and path.name.count('.') == 1:
             return True
         if kind == 'prepared_structures' and prepared_receptor(path):
@@ -54,11 +57,63 @@ def selection_dialog_size(page,redocking=False):
                 height=max(140,min(760 if redocking else 580,height-reserve)))
 
 
+def selection_file_state(paths):
+    """Cheap freshness check; never hashes or mutates scientific outputs."""
+    result=[]
+    for value in paths:
+        path=Path(value)
+        try:
+            stat=path.stat();stamp=(stat.st_size,stat.st_mtime_ns,stat.st_ctime_ns)
+        except OSError:stamp=None
+        result.append((str(path),stamp))
+    return result
+
+
+def prepare_selection_data(store,token,run,pending,assets):
+    """Prepare only data in a worker thread; no dialogs, controls or writes."""
+    operation=pending['configuration']['operation'];pid=run['project_id']
+    paths=list(dict.fromkeys(p for item in run['stages'] for p in item.get('artifacts',[])))
+    asset_paths={asset['id']:store.asset_path(token,pid,asset['id']) for asset in assets
+                 if operation in ('retrieve_pubchem','docking_vina','docking_dock6') and asset['kind'] in ('compounds','other')}
+    paths+=list(asset_paths.values());before=selection_file_state(paths)
+    data=dict(assets=assets,paths=paths,files_before=before,records={},metadata={},reviews={},compound_references=None,outputs={})
+    from biomolexplorer.result_origins import ResultOrigins
+    data['origins']=ResultOrigins(run['stages'],run.get('id'))
+    data['headers']={str(p):columns(p) for p in paths if Path(p).suffix.lower()=='.csv'}
+    for item in run['stages']:
+        if item['status']!='succeeded':continue
+        data['records'][item['id']]=artifact_records(item,run.get('id'))
+        data['outputs'][item['id']]=produced_files(item)
+        for record in data['records'][item['id']]:
+            data['origins'].describe(record['path'],item['id'],run.get('id'))
+        if operation=='redocking':
+            from biomolexplorer.redocking_config import metadata_records
+            data['metadata'][item['id']]=metadata_records(item.get('artifacts',[]))
+    if operation=='redocking':
+        from biomolexplorer.result_files import ResultFiles
+        data['reviews']=ResultFiles(store).pdb_review_statuses(token,pid,run['id'])
+    if operation in ('retrieve_pubchem','docking_vina','docking_dock6'):
+        from biomolexplorer.pubchem_retrieval import reference_choices
+        from biomolexplorer.docking_inputs import compound_identifiers
+        read_references=reference_choices if operation=='retrieve_pubchem' else compound_identifiers
+        connected={r.get('stage') for r in sources(pending['configuration'].get('bindings',{}).get('base_selected_mols',{}))}
+        references={};data['compound_references']=references
+        for item in run['stages']:
+            if item['status']!='succeeded' or operation!='retrieve_pubchem' and item['id'] not in connected:continue
+            for filename in data['outputs'].get(item['id'],[]):
+                path=store.scoped_path(pid,filename)
+                if path.suffix.lower()=='.csv':references[str(path)]=read_references([path])
+        for identifier,path in asset_paths.items():references['asset:'+identifier]=read_references([path])
+    data['file_state']=selection_file_state(paths)
+    return data
+
+
 class FileSelection:
-    def __init__(self, run, pending, assets=(), state=None, file_actions=None, compound_references=None, page=None, writable=True):
+    def __init__(self, run, pending, assets=(), state=None, file_actions=None, compound_references=None, page=None, writable=True, prepared=None):
+        self.prepared=prepared or {}
         self.stage = pending['configuration']
         from biomolexplorer.result_origins import ResultOrigins
-        origin_labels=ResultOrigins(run['stages'],run.get('id'))
+        origin_labels=self.prepared.get('origins') or ResultOrigins(run['stages'],run.get('id'))
         self.rows = {}
         self.pickers = {}
         self.extras = {}
@@ -111,6 +166,7 @@ class FileSelection:
                         value=any(r.get('asset')==ref['asset'] for r in configured))
                     verbatim(check,'label')
                     rows.append((check, copy.deepcopy(ref)))
+                    if file_actions and self.stage['operation']=='dynamics_dock6':self.extras[id(check)]=file_actions({'asset_id':ref['asset']},Path(asset_names.get(ref['asset'],'')))
 
                     self.add_docking_choice(field,check,ref,(compound_references or {}).get('asset:'+ref['asset'],{}),controls,page)
                     continue
@@ -122,9 +178,28 @@ class FileSelection:
                 files = list(dict.fromkeys(Path(p) for p in item['artifacts']))
                 if self.stage['operation']=='redocking':
                     from biomolexplorer.redocking_config import metadata_records
-                    self.redocking_metadata[item['id']]=metadata_records(files)
-                catalog={r['path']:r for r in artifact_records(item,run.get('id'))}
-                matching = [p for p in produced_files(item) if compatible_file(p, kinds)]
+                    self.redocking_metadata[item['id']]=(self.prepared['metadata'][item['id']]
+                        if item['id'] in self.prepared.get('metadata',{}) else metadata_records(files))
+                records=(self.prepared['records'][item['id']] if item['id'] in self.prepared.get('records',{})
+                         else artifact_records(item,run.get('id')))
+                catalog={r['path']:r for r in records}
+                outputs=(self.prepared['outputs'][item['id']] if item['id'] in self.prepared.get('outputs',{}) else produced_files(item))
+                matching = [p for p in outputs if compatible_file(p,kinds,self.prepared.get('headers'))]
+                if item.get('operation')=='redocking':
+                    from biomolexplorer.artifact_choices import redocking_receptors
+                    allowed=set(redocking_receptors(files)) if kinds & {'structures','prepared_structures','receptor_pdb'} else set()
+                    matching=[p for p in matching if p in allowed]
+                if self.stage['operation']=='dynamics_dock6':
+                    if field=='base_input_path':
+                        from biomolexplorer.md_inputs import receptor_input_files
+                        matching=receptor_input_files(matching)
+                    else:
+                        from biomolexplorer.molecular_roles import small_molecule_file
+                        matching=[p for p in matching if small_molecule_file(p)]
+                if item.get('operation') in ('docking_vina','docking_dock6','consensus') and not item.get('configuration',{}).get('provided_results') and not kinds<={'structures','receptor_pdb','prepared_structures'}:
+                    from biomolexplorer.artifact_choices import consolidated_docking_tables
+                    allowed=set(consolidated_docking_tables(files,item['operation']))
+                    matching=[p for p in matching if p in allowed]
                 if item.get('operation') in ('retrieve_compounds','expand_similar_compounds') and not item.get('configuration',{}).get('provided_results'):
                     from biomolexplorer.artifact_choices import choices
                     allowed=choices(item)
@@ -132,7 +207,7 @@ class FileSelection:
                 if self.stage['operation'] in ('prepare_structures','docking_vina','docking_dock6') and field=='base_input_path' and any(prepared_receptor(p) for p in files):
                     matching=preferred_receptors(p for p in matching if prepared_receptor(p))
                 if self.stage['operation'] in ('docking_vina','docking_dock6') and field=='base_selected_mols':
-                    matching=[p for p in files if ligand_input_file(p) and
+                    matching=[p for p in matching if ligand_input_file(p) and
                         (p.suffix!='.csv' or {'molecule_chembl_id','canonical_smiles'}<=columns(p))]
                 if item.get('operation') in ('docking_vina','docking_dock6'):
                     tables=[p for p in matching if p.name=='docking_results.csv']
@@ -188,15 +263,27 @@ class FileSelection:
                     self.extras[id(check)]=actions
                     records={}
                     if self.stage['operation'] in ('docking_vina','docking_dock6') and field=='base_selected_mols':
-                        from biomolexplorer.pubchem_retrieval import reference_choices
-                        records=(compound_references or {}).get(str(path),{}) if compound_references is not None else reference_choices([path])
+                        from biomolexplorer.docking_inputs import compound_identifiers
+                        records=(compound_references or {}).get(str(path),{}) if compound_references is not None else compound_identifiers([path])
                     self.add_docking_choice(field,check,reference,records,controls,page)
                 if not matching:
                     controls.append(ft.Text('Esta origem não produziu arquivos compatíveis com esta entrada.', color='#B91C1C'))
             for saved in configured:
                 if saved.get('selector','auto')=='auto':continue
                 if not any(flag.value and all((True if saved.get('artifact_id') else matches_selector(ref.get('selector','auto'),v)) if k=='selector' else ref.get(k)==v for k,v in saved.items() if k!='compound_id') for flag,ref in rows):
-                    rows.append((SimpleNamespace(label=saved.get('selector',asset_names.get(saved.get('asset'),'Arquivo indisponível')),value=True,on_change=None,available=False),copy.deepcopy(saved)))
+                    flag=SimpleNamespace(label=saved.get('selector',asset_names.get(saved.get('asset'),'Arquivo indisponível')),value=True,on_change=None,available=False)
+                    producer=completed.get(saved.get('stage'),{})
+                    if producer.get('operation') in ('docking_vina','docking_dock6','consensus'):
+                        # Keep a previously confirmed pose usable without offering
+                        # intermediate poses again in the primary source catalog.
+                        from biomolexplorer.artifacts import validate_reference
+                        try:
+                            path=Path(validate_reference(saved,producer.get('artifacts',[])))
+                            if path.is_file() and compatible_file(path,kinds) and (self.stage['operation']!='dynamics_dock6' or field=='base_input_path' or ligand_input_file(path)):
+                                flag.available=True;flag.legacy_selection=True;flag.physical_file=str(path)
+                                self.extras[id(flag)]=file_actions(producer,path) if file_actions else []
+                        except (OSError,ValueError,TypeError):pass
+                    rows.append((flag,copy.deepcopy(saved)))
             self.rows[field] = rows
             origins={}
             for ref in sources(group):
@@ -205,6 +292,9 @@ class FileSelection:
                     origins['stage:'+ref['stage']]=origin.get('name',ref['stage'])
                 elif 'asset' in ref:origins['asset:'+ref['asset']]=asset_names.get(ref['asset'],'Arquivo enviado')
             picker_class=ArtifactPicker
+            if self.stage['operation']=='dynamics_dock6':
+                from .molecular_files import MolecularFilePicker
+                picker_class=MolecularFilePicker
             if self.stage['operation']=='redocking' and field=='base_input_path':
                 from .redocking_files import RedockingFilePicker
                 picker_class=RedockingFilePicker
@@ -236,7 +326,8 @@ class FileSelection:
             for rows in self.rows.values():
                 for check,_ in rows:check.on_change=refresh
             refresh();controls.extend([self.selection_mode,self.compound_id])
-        self.control = ft.Column(controls, spacing=12, scroll=ft.ScrollMode.AUTO)
+        self.control = ft.Column(controls, spacing=12, scroll=ft.ScrollMode.AUTO,
+            horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
         if self.stage['operation']=='redocking':
             self.processing.content_padding=ft.Padding.symmetric(horizontal=16,vertical=18)
             self.control.spacing=20
@@ -252,18 +343,17 @@ class FileSelection:
 
     def add_docking_choice(self,field,check,ref,records,controls,page):
         if self.stage['operation'] not in ('docking_vina','docking_dock6') or field!='base_selected_mols':return
+        from .compound_choice import CompoundChoice
         choice=ft.Dropdown(label='Composto para docking (opcional)',value=ref.get('compound_id',''),
-            options=[ft.DropdownOption(key='',text='Todos os compostos')]+[
-                verbatim(ft.DropdownOption(key=code,text=code)) for code in sorted(records)],
             enable_filter=True,enable_search=True,visible=bool(check.value),disabled=not records)
-        if choice.value and choice.value not in records:
-            choice.options.append(verbatim(ft.DropdownOption(key=choice.value,text=choice.value)))
+        picker=CompoundChoice(choice,page);picker.set_records(records)
+        picker.control.visible=bool(check.value)
         self.compound_fields[id(check)]=choice
         def changed(e):
-            choice.visible=bool(check.value)
+            choice.visible=picker.control.visible=bool(check.value)
             if e is not None and page:page.update()
         check.on_change=changed
-        self.extras.setdefault(id(check),[]).append(choice)
+        self.extras.setdefault(id(check),[]).append(picker.control)
 
     def selected_references(self,rows,validate=True):
         refs=[]

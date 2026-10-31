@@ -20,10 +20,12 @@ DISTRIBUTIONS = {
     'networkx':'networkx', 'numpy':'numpy', 'pandas':'pandas', 'pymol':'pymol-open-source',
     'rcsbsearchapi':'rcsbsearchapi', 'rdkit':'rdkit', 'requests':'requests', 'scipy':'scipy',
     'seaborn':'seaborn', 'setuptools':'setuptools', 'urllib3':'urllib3', 'uvicorn':'uvicorn',
+    'gemmi':'gemmi','meeko':'meeko','openbabel':'openbabel',
     'vina':'vina', 'websockets':'websockets',
 }
 INFRASTRUCTURE = {'python':'interpreter', 'pip':'environment installer',
     'openbabel':'obabel CLI: docking conversion/preparation',
+    'torch':'CPU tensor runtime used by ADMET-AI (pinned to avoid CUDA installs)',
     'poppler':'pdftoppm CLI: PDF preview', 'setuptools':'setup.py/build backend'}
 SKIP = {'.git','.conda','.admet-env','.venv','venv','__pycache__','.pytest_cache','build','dist','node_modules'}
 
@@ -64,15 +66,15 @@ def audit(root=ROOT):
             for module in modules:
                 if module not in stdlib and module not in local:
                     found[module].add(f'{path.relative_to(root)}:{node.lineno}')
-    main=environment(root/'requirements.yml');optional=environment(root/'requirements-admet.yml')
+    main=environment(root/'requirements.yml');optional=environment(root/'requirements-admet.yml') if (root/'requirements-admet.yml').is_file() else main
     missing=[]
     for module in found:
         package=DISTRIBUTIONS.get(module)
         declared=optional if module=='admet_ai' else main
-        if package not in declared:missing.append(module)
+        if package not in declared and module!='playwright':missing.append(module)
     used={DISTRIBUTIONS.get(module) for module in found}
     orphans=sorted(set(main)-used-set(INFRASTRUCTURE))
-    return dict(python_files=len(files),imports={k:dict(package=DISTRIBUTIONS.get(k),locations=sorted(v),
+    return dict(optional_development={'playwright':'Browser audit script only; not installed by this change'} if 'playwright' in found else {},python_files=len(files),imports={k:dict(package=DISTRIBUTIONS.get(k),locations=sorted(v),
         environment='optional ADMET' if k=='admet_ai' else 'main') for k,v in sorted(found.items())},
         dynamic_imports=dynamic,infrastructure=INFRASTRUCTURE,main=main,optional_admet=optional,
         missing=sorted(missing),orphans=orphans)

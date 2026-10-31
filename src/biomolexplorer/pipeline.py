@@ -21,10 +21,14 @@ from .operations import OPERATIONS, validate_operation
 from .templates import validate_templates, materialize_templates
 from .workspace import AccessDenied
 from .diagnostics import get_logger, log_context, event, diagnose_exception
-from .stage_cache import artifact_manifest, manifest_matches, implementation_digest, input_manifests, stage_key, path_manifest, operation_digest
+from .stage_cache import file_digest, artifact_manifest, manifest_matches, implementation_digest, input_manifests, stage_key, path_manifest, operation_digest
 from .bindings import sources as input_sources, dependencies as stage_dependencies, asset_references
 
 ACTIVE_RUNS = ('queued', 'running', 'awaiting_input')
+
+
+class RunPaused(Exception):
+    pass
 
 
 def execution_context(stages):
@@ -104,6 +108,7 @@ def failed_redocking_receptor(reference, results):
 def requires_curation(stage):
     stage=configured_inputs(stage)
     if stage['operation']=='consensus' or stage.get('provided_results'):return False
+    if stage['operation']=='dynamics_dock6' and not stage['parameters'].get('selected_pairs'):return True
     if not stage_dependencies(stage):return False
     if stage['operation']=='redocking' and stage['parameters'].get('pdb_codes'):return False
     refs=[ref for group in stage.get('bindings',{}).values() for ref in input_sources(group)]
@@ -305,7 +310,9 @@ class PipelineService:
             raise ValueError('Confirme a invalidação dos resultados antes de salvar esta alteração.')
         user = self.store.user(token)
         stages = [execution_stage(stage,'curated') for stage in project['pipeline']]
-        order = validate_pipeline(stages)
+        from .execution_order import ordered
+        validate_pipeline(stages)
+        order=ordered(stages,self.store.execution_order(token,project_id)['order'])
         by_id = {stage['id']:stage for stage in stages}
         if not stages:
             raise ValueError('Adicione uma etapa antes de executar.')
@@ -383,7 +390,7 @@ class PipelineService:
                 db.execute('INSERT INTO runs VALUES (?,?,?,?,?,?,?,NULL)',
                            (run_id,project_id,user['id'],'queued',json.dumps(snapshot),time.time(),time.time()))
             event = threading.Event()
-            self._active[run_id] = {'event': event, 'manager': None, 'job_id': None, 'reuse_results': reuse_results}
+            self._active[run_id] = {'event': event, 'manager': None, 'job_id': None, 'reuse_results': reuse_results,'stages':snapshot,'pause_event':threading.Event()}
             try:
                 self._executor.submit(self._run, run_id, project_id, user['id'], snapshot)
             except Exception:
@@ -551,27 +558,64 @@ class PipelineService:
         return (directory or self.store.project_dir(project_id)/'.input-cache'/key)/field
 
     def _materialize_docking_compounds(self, project_id, stage, field, refs, results, directory):
-        from .docking_data import input_records,copy_input_records
-        from .molecule_quality import sanitize_csv
-        selected=[];available=[];rows=[];best={}
+        selected=[];available=[];selections=[]
         for ref in refs:
             files,companions=self._docking_sources(project_id,[ref],results)
+            selections.append((ref,files,companions))
+            selected.extend(files);available.extend(companions)
+        # Receptor-independent normalized tables are shared by all combinations.
+        # Pose-bearing inputs keep the original path-preserving materialization.
+        pose_fields={'conformer_file','pose_file','vina_pose','dock6_pose','prepared_pdbqt','prepared_mol2'}
+        from .input_validation import columns
+        plain=all(Path(p).suffix.lower()=='.csv' and not columns(p)&pose_fields for p in selected)
+        if plain:
+            from .calculation_cache import CalculationCache,identity,copy_artifact
+            from .stage_cache import file_digest,implementation_digest
+            from rdkit import rdBase
+            root=self.store.project_dir(project_id)/'.input-cache'
+            cache=CalculationCache('docking-compound-tables',root)
+            def source_state():
+                return [(str(p),file_digest(p),ref.get('compound_id')) for ref,files,_ in selections for p in files]
+            contents=source_state()
+            key=identity(['normalized-compounds-v1',implementation_digest(),rdBase.rdkitVersion,contents])
+            normalized=root/'docking-compounds'/key/'compounds.csv'
+            with cache.locked(key):
+                if cache.restore(key,{'table':normalized}) is None:
+                    from tempfile import TemporaryDirectory
+                    with TemporaryDirectory(prefix='docking-table-',dir=root) as work:
+                        ready=self._write_docking_compounds(selections,Path(work))
+                        if source_state()!=contents:
+                            raise ValueError('Os resultados foram alterados. Revise a confirmação antes de salvar.')
+                        copy_artifact(ready,normalized)
+                        cache.remember(key,{'table':normalized})
+                if source_state()!=contents:
+                    raise ValueError('Os resultados foram alterados. Revise a confirmação antes de salvar.')
+            destination=Path(directory)/field if directory is not None else normalized.parent
+            if destination!=normalized.parent:copy_artifact(normalized,destination/'compounds.csv')
+            return destination,'compounds',list(dict.fromkeys(selected))
+        selected=list(dict.fromkeys(selected));available=list(dict.fromkeys(available))
+        destination=self._docking_destination(project_id,stage,field,available,directory)
+        path=self._write_docking_compounds(selections,destination)
+        return destination,path.stem,selected
+
+    @staticmethod
+    def _write_docking_compounds(selections,destination):
+        from .docking_data import input_records,copy_input_records
+        from .molecule_quality import sanitize_csv
+        best={}
+        for ref,files,companions in selections:
             records=input_records(files,companions)
             if ref.get('compound_id'):
                 records=[r for r in records if r['molecule_chembl_id']==ref['compound_id']]
                 if not records:raise ValueError('O composto selecionado não está no arquivo de entrada do docking.')
-            selected.extend(files);available.extend(companions);rows.extend(records)
-        selected=list(dict.fromkeys(selected));available=list(dict.fromkeys(available))
-        def docking_score(row):
-            value=row.get('score')
-            return float(value) if value not in (None,'') else float('inf')
-        for row in rows:
-            code=row['molecule_chembl_id']
-            if code not in best or docking_score(row)<docking_score(best[code]):best[code]=row
-        destination=self._docking_destination(project_id,stage,field,available,directory)
+            for row in records:
+                code=row['molecule_chembl_id'];value=row.get('score')
+                score=float(value) if value not in (None,'') else float('inf')
+                previous=best.get(code);old=previous.get('score') if previous else None
+                if previous is None or score<(float(old) if old not in (None,'') else float('inf')):best[code]=row
         path=copy_input_records(list(best.values()),destination)
         sanitize_csv(path,path)
-        return destination,path.stem,selected
+        return path
 
     def _materialize_scores(self, project_id, stage, field, refs, results, directory):
         from .docking_data import score_input_records,copy_input_records
@@ -1101,10 +1145,12 @@ class PipelineService:
         if stage['operation']=='consensus':stage['input_processing']='merge'
         if stage.get('input_processing')!='individual' and stage['operation']!='fingerprints' or stage.get('provided_results') or stage['operation']=='import_results':
             return self._execute_single(run_id,project_id,user_id,item,stages,run_dir,results,state)
-        artifacts=[];inputs={};excluded=0;redocking_failures=0;redocking_reused=0;excluded_inputs={}
-        item['batches']=[]
+        artifacts=[];inputs={};excluded=0;redocking_failures=0;redocking_reused=0;docking_failures=0;excluded_inputs={}
+        completed_batches=list(item.get('batches',[]))
+        processed_batches=[]
         for index,(variant,label) in enumerate(self._work_units(project_id,stage,results),1):
             if state['event'].is_set():raise InterruptedError('Execução cancelada.')
+            if state.get('pause_event') and state['pause_event'].is_set():raise RunPaused()
             slug=re.sub(r'[^A-Za-z0-9_.+-]','_',label)[:90].strip('.') or 'entrada'
             directory=run_dir/stage['id']/'individual'/f'{index:03d}_{slug}'
             item['input_files']={}
@@ -1113,15 +1159,17 @@ class PipelineService:
             item.pop('skip_reason',None)
             software=implementation_digest()+':'+str(self.worker_python or os.sys.executable)
             key=self._cache_key(project_id,user_id,variant,results,software,pipeline=execution_context(stages))
-            cached=self._cached_batch(project_id,stage['id'],key,user_id,software,variant) if state.get('reuse_results',True) else None
+            cached=next((dict(batch,reused_from_run=run_id) for batch in completed_batches if batch.get('cache_key')==key and batch.get('status')=='succeeded' and manifest_matches(batch.get('artifact_manifest',{}))),None)
+            if cached is None:
+                cached=self._cached_batch(project_id,stage['id'],key,user_id,software,variant,results) if state.get('reuse_results',True) else None
             try:
                 if cached:
                     produced=cached['artifacts']
                     if cached.get('skip_reason'):item['skip_reason']=cached['skip_reason']
-                    for field in ('input_files','input_manifest','processing_runtime','artifact_context','log_path','excluded_records','redocking_failures','redocking_reused'):
+                    for field in ('input_files','input_manifest','processing_runtime','artifact_context','log_path','excluded_records','redocking_failures','redocking_reused','docking_failures'):
                         item[field]=copy.deepcopy(cached.get(field,{} if field in ('input_files','input_manifest','artifact_context') else 0 if field.endswith(('records','failures','reused')) else None))
                 else:produced=self._execute_single(run_id,project_id,user_id,item,stages,run_dir,results,state,variant,directory)
-            except (AccessDenied,InterruptedError):raise
+            except (AccessDenied,InterruptedError,RunPaused):raise
             except Exception as exc:raise RuntimeError(f'Arquivo {index} ({label}): {exc}') from exc
             batch=dict(label=label,artifacts=produced,input_files=copy.deepcopy(item.get('input_files',{})),
                        artifact_context=copy.deepcopy(item.get('artifact_context',{})),
@@ -1133,9 +1181,13 @@ class PipelineService:
                        adopted_processing_version=cached.get('adopted_processing_version') if cached else None,
                        producer_software=cached.get('producer_software') if cached else software,
                        reused_from_run=cached.get('reused_from_run') if cached else None,
+                       reuse_kind=cached.get('reuse_kind') if cached else None,
+                       reuse_provenance=copy.deepcopy(cached.get('reuse_provenance')) if cached else None,
                        skip_reason=item.get('skip_reason'),
-                       excluded_records=item.get('excluded_records',0),redocking_failures=item.get('redocking_failures',0),redocking_reused=item.get('redocking_reused',0))
-            item['batches'].append(batch)
+                       excluded_records=item.get('excluded_records',0),redocking_failures=item.get('redocking_failures',0),redocking_reused=item.get('redocking_reused',0),docking_failures=item.get('docking_failures',0))
+            processed_batches.append(batch)
+            processed_keys={b['cache_key'] for b in processed_batches}
+            item['batches']=processed_batches+[b for b in completed_batches if b.get('cache_key') not in processed_keys]
             for field,paths in batch['input_files'].items():inputs.setdefault(field,[]).extend(paths)
             if stage['operation'] in ('fingerprints','prepare_structures'):
                 from .result_state import digest
@@ -1149,6 +1201,7 @@ class PipelineService:
             artifacts.extend(produced)
             item['artifacts']=list(artifacts)
             self._update(run_id,'running',stages)
+        item['batches']=processed_batches
         item['input_files']={f:list(dict.fromkeys(paths)) for f,paths in inputs.items()}
         item['input_manifest']={b['cache_key']:b.get('input_manifest',{}) for b in item['batches']}
         item['processing_runtime']={b['cache_key']:b.get('processing_runtime') for b in item['batches']}
@@ -1161,7 +1214,7 @@ class PipelineService:
         item.pop('current_batch',None)
         return artifacts
 
-    def _cached_batch(self,project_id,stage_id,key,user_id=None,software=None,unit=None):
+    def _cached_batch(self,project_id,stage_id,key,user_id=None,software=None,unit=None,results=None):
         """Completed batches survive later failures, cancellation and restarts."""
         with self.store.connect() as db:
             rows=db.execute("SELECT id,stages FROM runs WHERE project_id=? AND status NOT IN ('queued','running','awaiting_input') ORDER BY created DESC",(project_id,)).fetchall()
@@ -1185,6 +1238,9 @@ class PipelineService:
                     if batch.get('status')!='succeeded':continue
                     if batch.get('redocking_failures'):continue
                     if batch.get('cache_key')!=key:
+                        if unit is not None and results is not None:
+                            from .published_results import verify,adopted
+                            if verify(self.store,project_id,unit,batch,snapshot,results):return adopted(batch,row[0])
                         batch=self._fingerprint_component(batch,unit,software,key)
                         if batch is None:continue
                     if not batch.get('artifacts'):
@@ -1418,7 +1474,8 @@ class PipelineService:
             previous=db.execute('SELECT id,stages,status FROM runs WHERE project_id=? ORDER BY created DESC',(project_id,)).fetchall()
         latest_redocking_seen=False
         for run_id,encoded,run_status in previous:
-            if run_status in ACTIVE_RUNS:continue
+            # A committed succeeded stage may be shared within the active run;
+            # pending/running stages are excluded by the candidate predicate.
             snapshot=json.loads(encoded)
             old=next((s for s in snapshot if (s['id']==stage['id'] or
                       s.get('operation')==stage['operation'] and s.get('cache_key')==key)
@@ -1541,13 +1598,27 @@ class PipelineService:
             configuration['input_processing']=previous['input_processing']
         return configuration
 
-    def _reuse_stage(self, project_id, user_id, stage, results, software, stages):
-        with self.store.connect() as db:
-            histories=db.execute('SELECT stages FROM runs WHERE project_id=? ORDER BY created DESC',(project_id,)).fetchall()
+    def _reuse_stage(self, project_id, user_id, stage, results, software, stages,history=None):
+        if history is None:
+            from .published_results import histories
+            history=histories(self.store,project_id)
+        histories=[dict(id=run_id,stages=snapshot) for run_id,snapshot in history]
+        from .published_results import retained_configuration,compatible_configuration,adopted
+        from .result_state import digest
         for row in histories:
-            for old in json.loads(row['stages']):
+            snapshot=row['stages']
+            for old in snapshot:
+                if old['id']!=stage['id']:continue
+                configuration=retained_configuration(self.store,project_id,stage,old,snapshot,results)
+                if configuration is not None:
+                    cached=adopted(old,row['id'])
+                    key=digest(dict(policy='published_result_v1',request=cached['reuse_provenance']['request_signature'],
+                        artifacts=cached['artifact_manifest'],source_run_id=cached['reused_from_run']))
+                    return configuration,key,cached
+        for row in histories:
+            for old in row['stages']:
                 if old['id']!=stage['id'] or old['status']!='succeeded' or not old.get('artifacts'):continue
-                configuration=self._reuse_configuration(stage,old['configuration'])
+                configuration=compatible_configuration(stage,old,row['stages'],results)
                 if configuration is None:continue
                 try:
                     key=self._cache_key(project_id,user_id,execution_stage(configuration,'curated'),results,software,pipeline=execution_context(stages))
@@ -1577,12 +1648,15 @@ class PipelineService:
 
     def _run(self, run_id, project_id, user_id, stages):
         state = self._active[run_id]
+        state['stages']=stages
         results = {s['id']:s['artifacts'] for s in stages if s['status']=='succeeded'}
         try:
             from .stage_cache import runtime_packages
             operation_digest.cache_clear();runtime_packages.cache_clear()
             software=implementation_digest() + ':' + str(self.worker_python or os.sys.executable)
             state['cache_software']=software
+            from .published_results import histories
+            published_history=histories(self.store,project_id) if state.get('reuse_results',True) else []
             run_dir = self.store.project_dir(project_id) / 'runs' / run_id
             run_dir.mkdir(parents=True,exist_ok=True)
             self._update(run_id,'running',stages)
@@ -1593,6 +1667,7 @@ class PipelineService:
                 self.store._require_user(user_id,project_id,'editor')
                 if item['status'] in ('skipped','succeeded','failed'):
                     continue
+                if state.get('pause_event') and state['pause_event'].is_set():raise RunPaused()
                 stage = configured_inputs(item['configuration'])
                 item['configuration']=stage
                 dependencies = stage_dependencies(stage)
@@ -1628,7 +1703,7 @@ class PipelineService:
                     item.update(requires_curation=True,curation_confirmed=False,
                         selection_notice='Os arquivos selecionados anteriormente não estão disponíveis. Revise as entradas usando os conjuntos atuais.')
                 else:item.pop('selection_notice',None)
-                reusable=self._reuse_stage(project_id,user_id,stage,results,software,stages) if state.get('reuse_results',True) and not missing_selection else None
+                reusable=self._reuse_stage(project_id,user_id,stage,results,software,stages,published_history) if state.get('reuse_results',True) and not missing_selection else None
                 if reusable:
                     stage,key,cached=reusable
                     item.update(configuration=stage,curation_confirmed=True)
@@ -1637,6 +1712,7 @@ class PipelineService:
                     message=f'Configure o bloco “{item["name"]}” e escolha os arquivos de entrada para continuar o pipeline.'
                     with self._lock:
                         if state['event'].is_set():raise InterruptedError('Execução cancelada.')
+                        if state.get('pause_event') and state['pause_event'].is_set():raise RunPaused()
                         self._update(run_id,'awaiting_input',stages,message)
                         self._active.pop(run_id,None)
                     return
@@ -1649,6 +1725,9 @@ class PipelineService:
                         key=self._cache_key(project_id,user_id,stage,results,software,pipeline=execution_context(stages))
                         cached=self._cached_stage(project_id,user_id,stage,key,software) if state.get('reuse_results',True) else None
                     if cached:
+                        if cached.get('reuse_kind')=='published_result':
+                            event(get_logger('backend'),'stage.results_preserved','Resultados concluídos preservados sem reprocessamento.',
+                                project_id=project_id,run_id=run_id,stage_id=stage['id'],configuration=cached.get('reuse_provenance'))
                         artifacts=cached['artifacts']
                         item.update(reused=True,reused_from_run=cached['reused_from_run'],
                                     artifact_manifest=cached['artifact_manifest'])
@@ -1677,10 +1756,13 @@ class PipelineService:
                             if name in cached:item[name]=cached[name]
                     if cached and cached.get('batches'):item['batches']=cached['batches']
                     if cached and cached.get('pdb_reviews'):item['pdb_reviews']=copy.deepcopy(cached['pdb_reviews'])
+                    if cached:
+                        for name in ('reuse_kind','reuse_provenance','publication_run_id'):
+                            if name in cached:item[name]=copy.deepcopy(cached[name])
                     if state['event'].is_set():
                         raise InterruptedError('Execução cancelada.')
                     self.store._require_user(user_id,project_id,'editor')
-                except (AccessDenied,InterruptedError):
+                except (AccessDenied,InterruptedError,RunPaused):
                     raise
                 except Exception as exc:
                     get_logger('backend').exception('Pipeline stage failed: %s', exc, extra={'event': 'stage.failed',
@@ -1693,12 +1775,20 @@ class PipelineService:
                 if item.get('skip_reason'):item['error']=item['skip_reason']
                 else:results[stage['id']] = artifacts
                 self._update(run_id,'running',stages)
+            for entry in stages:entry.pop('pause_requested',None)
             failed = [item for item in stages if item['status'] == 'failed']
             if failed:
                 error = '\n'.join(f'{item["name"]}: {item["error"]}' for item in failed)
                 self._update(run_id,'failed',stages,error)
             else:
                 self._update(run_id,'succeeded',stages)
+        except RunPaused:
+            pending=next((s for s in stages if s['status'] in ('running','queued','awaiting_input')),None)
+            for entry in stages:entry.pop('pause_requested',None)
+            if pending:
+                pending.update(status='awaiting_input',pause_reason='user',error=None)
+                self._update(run_id,'awaiting_input',stages,'Execução pausada. Analise os resultados e continue quando desejar.')
+            else:self._update(run_id,'succeeded',stages)
         except Exception as exc:
             get_logger('backend').exception('Pipeline failed: %s', exc, extra={'event': 'pipeline.failed', 'run_id': run_id, 'project_id': project_id, **diagnose_exception(exc)})
             cancelled = state['event'].is_set() or isinstance(exc,InterruptedError)
@@ -1761,10 +1851,41 @@ class PipelineService:
         run = self.store.get_run(token,run_id)
         self.store.project(token,run['project_id'],'editor')
         user = self.store.user(token)
+        if run['status']!='awaiting_input':raise ValueError('Esta execução não está aguardando seleção de arquivos.')
+        stages=run['stages'];pending=next(s for s in stages if s['status']=='awaiting_input')
+        if configuration.get('id')!=pending['id'] or configuration.get('operation')!=pending['operation']:
+            raise ValueError('Configure o bloco indicado pela execução.')
+        if not stage_dependencies(configuration).issubset({s['id'] for s in stages if s['status']=='succeeded'}):
+            raise ValueError('Escolha arquivos de blocos já concluídos nesta execução.')
+        if not configuration.get('enabled',True) or configuration.get('provided_results'):
+            raise ValueError('Mantenha este bloco ativo e selecione suas entradas para executá-lo.')
+        candidate=[configuration if s is pending else s['configuration'] for s in stages]
+        validate_pipeline(candidate)
+        # Native/chemical input validation can be expensive. It must not prevent
+        # cancel, pause or monitoring of this or another run.
+        validated_snapshot=json.dumps(stages,sort_keys=True)
+        context=[dict(c,_execution_batches=s.get('batches',[])) for c,s in zip(candidate,stages)]
+        for group in configuration.get('bindings',{}).values():
+            if any('stage' in ref and ref.get('selector','auto')=='auto' for ref in input_sources(group)):
+                raise ValueError('Escolha explicitamente os arquivos de entrada deste bloco antes de continuar.')
+        self._validate_parameters(run['project_id'],configuration,partial=True)
+        results={s['id']:s['artifacts'] for s in stages if s['status']=='succeeded'}
+        if configuration['operation'] in ('fingerprints', 'similarity', 'graphs'):
+            self._validate_analysis_selection(run['project_id'],configuration,results,context)
+        elif configuration.get('input_processing') in ('individual','both'):
+            for variant,_ in self._variants(run['project_id'],configuration,results):
+                with self.store.connect() as db:
+                    current=db.execute('SELECT status FROM runs WHERE id=?',(run_id,)).fetchone()
+                if current is None or current[0]!='awaiting_input':
+                    raise ValueError('Esta execução não está aguardando seleção de arquivos.')
+                self._resolve(run['project_id'],user['id'],variant,results,cache_only=True,pipeline=context)
+        else:self._resolve(run['project_id'],user['id'],configuration,results,cache_only=True,pipeline=context)
         with self._lock:
             if self._closed:raise RuntimeError('A aplicação está sendo encerrada.')
             run = self.store.get_run(token,run_id)
             if run['status']!='awaiting_input':raise ValueError('Esta execução não está aguardando seleção de arquivos.')
+            if json.dumps(run['stages'],sort_keys=True)!=validated_snapshot:
+                raise ValueError('Os resultados foram alterados. Revise a confirmação antes de salvar.')
             stages = run['stages']
             pending = next(s for s in stages if s['status']=='awaiting_input')
             if configuration.get('id')!=pending['id'] or configuration.get('operation')!=pending['operation']:
@@ -1780,25 +1901,15 @@ class PipelineService:
             proposed=[configuration if s['id']==configuration['id'] else s for s in saved]
             if self.store.result_removal_plan(token,run['project_id'],proposed)['affected']:
                 raise ValueError('Confirme a invalidação dos resultados antes de salvar esta alteração.')
-            context=[dict(c,_execution_batches=s.get('batches',[])) for c,s in zip(candidate,stages)]
-            for group in configuration.get('bindings',{}).values():
-                if any('stage' in ref and ref.get('selector','auto')=='auto' for ref in input_sources(group)):
-                    raise ValueError('Escolha explicitamente os arquivos de entrada deste bloco antes de continuar.')
-            self._validate_parameters(run['project_id'],configuration,partial=True)
-            results={s['id']:s['artifacts'] for s in stages if s['status']=='succeeded'}
-            if configuration['operation'] in ('fingerprints', 'similarity', 'graphs'):
-                self._validate_analysis_selection(run['project_id'],configuration,results,context)
-            elif configuration.get('input_processing') in ('individual','both'):
-                for variant,_ in self._variants(run['project_id'],configuration,results):
-                    self._resolve(run['project_id'],user['id'],variant,results,cache_only=True,pipeline=context)
-            else:self._resolve(run['project_id'],user['id'],configuration,results,cache_only=True,pipeline=context)
             # Curated input choices are durable project configuration, rather
             # than a run-only override that would look like a later edit.
             if proposed!=saved:
                 self.store.save_pipeline(token,run['project_id'],proposed,project['revision'])
+            pending.pop('pause_reason',None)
+            pending.pop('pause_requested',None)
             pending.update(configuration=copy.deepcopy(configuration),name=configuration['name'],input_mode='curated',
                            status='queued',curation_confirmed=True,error=None)
-            state={'event':threading.Event(),'manager':None,'job_id':None,'reuse_results':pending.get('reuse_results',True)}
+            state={'event':threading.Event(),'manager':None,'job_id':None,'reuse_results':pending.get('reuse_results',True),'stages':stages,'pause_event':threading.Event()}
             self._active[run_id]=state
             try:
                 self._update(run_id,'queued',stages)
@@ -1808,6 +1919,48 @@ class PipelineService:
                 pending.update(status='awaiting_input',curation_confirmed=False)
                 self._update(run_id,'awaiting_input',stages,'Não foi possível continuar. Tente novamente.')
                 raise
+        return self.store.get_run(token,run_id)
+
+    def pause(self,token,run_id):
+        run=self.store.get_run(token,run_id)
+        self.store.project(token,run['project_id'],'editor')
+        with self._lock:
+            state=self._active.get(run_id)
+            if state is not None:
+                state.setdefault('pause_event',threading.Event()).set()
+                current=next((s for s in state.get('stages',[]) if s['status'] in ('running','queued')),None)
+                if current:current['pause_requested']=True
+                # Never resurrect a run that completed concurrently, or replace
+                # scientific checkpoints with the callback's older snapshot.
+                with self.store.connect() as db:
+                    db.execute('BEGIN IMMEDIATE')
+                    row=db.execute('SELECT status,stages FROM runs WHERE id=?',(run_id,)).fetchone()
+                    if row and row['status'] in ('queued','running'):
+                        saved=json.loads(row['stages'])
+                        pending=next((s for s in saved if s['status'] in ('running','queued')),None)
+                        if pending:
+                            pending['pause_requested']=True
+                            db.execute('UPDATE runs SET stages=?,error=?,updated=? WHERE id=?',
+                                (json.dumps(saved),'Pausa solicitada. A operação atual será concluída antes da pausa.',time.time(),run_id))
+        return self.store.get_run(token,run_id)
+
+    def continue_run(self,token,run_id):
+        run=self.store.get_run(token,run_id);self.store.project(token,run['project_id'],'editor');user=self.store.user(token)
+        with self._lock:
+            if self._closed:raise RuntimeError('A aplicação está sendo encerrada.')
+            run=self.store.get_run(token,run_id)
+            if run['status']!='awaiting_input' or run_id in self._active:raise ValueError('A execução não está pausada para análise.')
+            stages=run['stages'];pending=next((s for s in stages if s.get('pause_reason')=='user'),None)
+            if pending is None:raise ValueError('Configure as entradas do próximo bloco antes de continuar.')
+            pending.pop('pause_reason',None);pending.update(status='queued',error=None)
+            state=dict(event=threading.Event(),manager=None,job_id=None,reuse_results=pending.get('reuse_results',True),stages=stages,pause_event=threading.Event())
+            self._active[run_id]=state
+            try:
+                self._update(run_id,'queued',stages)
+                self._executor.submit(self._run,run_id,run['project_id'],user['id'],stages)
+            except BaseException:
+                self._active.pop(run_id,None);pending.update(status='awaiting_input',pause_reason='user')
+                self._update(run_id,'awaiting_input',stages);raise
         return self.store.get_run(token,run_id)
 
     def cancel(self, token, run_id):

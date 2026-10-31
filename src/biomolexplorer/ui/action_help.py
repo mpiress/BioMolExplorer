@@ -4,6 +4,7 @@ import flet as ft
 from .feedback import close_dialog
 
 ACTION_HELP = {
+    'order': ('Ordem de execução', 'Organize a prioridade dos blocos respeitando as dependências.', 'Mover um bloco leva seus dependentes. A ordem é salva para as próximas execuções.'),
     'projects': ('Meus projetos', 'Volte à lista dos projetos acessíveis à sua conta.',
         'Busque por nome ou descrição, consulte projetos arquivados e aceite ou recuse convites. Abra um projeto para continuar seu estudo.'),
     'import': ('Importar projeto', 'Continue um estudo exportado do BioMolExplorer.',

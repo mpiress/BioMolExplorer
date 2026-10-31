@@ -33,4 +33,39 @@ class TrajectoryAnalysisTests(unittest.TestCase):
             with self.assertRaises(ValueError):analyze_frames(frames,self.info,self.masks,.01)
 
 
+
+class FinalStateCompatibilityTests(unittest.TestCase):
+    def test_chimera_histidine_variants_follow_explicit_hydrogens_without_moving_atoms(self):
+        from pathlib import Path
+        import tempfile
+        from biomolexplorer.md_inputs import normalize_receptor_variants
+        def atom(index,name,residue):
+            return f'ATOM  {index:5d} {name:>4s} HIS A{residue:4d}    {index:8.3f}{1.:8.3f}{2.:8.3f}  1.00 20.00           H\n'
+        text=atom(1,'HD1',1)+atom(2,'HE2',2)+atom(3,'HD1',3)+atom(4,'HE2',3)+atom(5,'N',4)+'END\n'
+        with tempfile.TemporaryDirectory() as folder:
+            source=Path(folder)/'source.pdb';target=Path(folder)/'rec.pdb';source.write_text(text)
+            changes=normalize_receptor_variants(source,target)
+            output=target.read_text().splitlines()
+            self.assertEqual([line[17:20] for line in output[:-1]],['HID','HIE','HIP','HIP','HIS'])
+            self.assertEqual([line[30:54] for line in output[:-1]],[line[30:54] for line in text.splitlines()[:-1]])
+            self.assertEqual(source.read_text(),text)
+            self.assertEqual(len(changes),3)
+
+    def test_static_analysis_never_invents_a_trajectory_or_rmsf(self):
+        from pathlib import Path
+        import tempfile
+        from unittest.mock import patch
+        from biomolexplorer.md_analysis import analyze_final_state
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            info=dict(natom=1,masses=np.array([1.]),names=['H'])
+            with patch('biomolexplorer.md_analysis.selection',return_value=(info,{})),patch('biomolexplorer.md_analysis.coordinates',return_value=np.zeros((1,3))):
+                data=analyze_final_state(root)
+            self.assertEqual(data['summary']['hydrogen_atoms'],1)
+            self.assertNotIn('final_ligand_rmsd',data['summary'])
+            self.assertNotIn('rmsf',data)
+            self.assertNotIn('series',data)
+            self.assertIn('No trajectory or RMSF',data['unavailable'])
+
+
 if __name__=='__main__':unittest.main()

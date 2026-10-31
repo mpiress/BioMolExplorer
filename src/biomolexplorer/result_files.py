@@ -266,53 +266,6 @@ class ResultFiles:
         if journal:journal.finish()
         return len(backups)
 
-    def remove_project_results(self,token,pid):
-        """Atomically remove every computed result while preserving user inputs."""
-        backups=[]
-        try:
-            with self.store.change(token,pid,'editor','remove_project_results','Todos os resultados do projeto removidos') as db:
-                if db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running','awaiting_input')",(pid,)).fetchone():
-                    raise ValueError('Aguarde a execução terminar antes de remover arquivos.')
-                rows=db.execute('SELECT id,stages FROM runs WHERE project_id=?',(pid,)).fetchall()
-                decoded=[(run_id,json.loads(encoded)) for run_id,encoded in rows]
-                # Imported/provided files belong to the project input library,
-                # even when they are exposed as stage artifacts.
-                result_paths={str(self.store.scoped_path(pid,name))
-                    for _,stages in decoded for item in stages
-                    if item.get('operation')!='import_results' and not item.get('provided')
-                    and not item.get('configuration',{}).get('provided_results')
-                    for name in item.get('artifacts',[])}
-                protected={str(self.store.scoped_path(pid,row[0])) for row in
-                    db.execute('SELECT path FROM assets WHERE project_id=?',(pid,)).fetchall()}
-                protected.update(str(self.store.scoped_path(pid,name))
-                    for _,stages in decoded for item in stages
-                    if item.get('operation')=='import_results' or item.get('provided')
-                    or item.get('configuration',{}).get('provided_results')
-                    for name in item.get('artifacts',[]))
-                paths=result_paths-protected
-                backup_dir=self.store.project_dir(pid)/'.history'/'.removed'
-                backup_dir.mkdir(parents=True,exist_ok=True)
-                for filename in sorted(paths):
-                    path=Path(filename)
-                    if path.is_file():
-                        backup=backup_dir/uuid4().hex
-                        path.replace(backup);backups.append((path,backup))
-                for run_id,stages in decoded:
-                    changed=False
-                    for item in stages:
-                        computed=(item.get('operation')!='import_results' and not item.get('provided')
-                            and not item.get('configuration',{}).get('provided_results'))
-                        if computed and result_paths.intersection(item.get('artifacts',[])):
-                            item['artifacts']=[p for p in item['artifacts'] if p not in result_paths]
-                            item['outputs_removed']=True;item['curated_at']=time.time();changed=True
-                    if changed:db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(stages),run_id))
-        except Exception:
-            for path,backup in reversed(backups):
-                if backup.exists():backup.replace(path)
-            raise
-        for _,backup in backups:self._cleanup_backup(backup)
-        return len(backups)
-
     @staticmethod
     def _shared_paths(db,pid,owner):
         protected={r[0] for r in db.execute('SELECT path FROM assets WHERE project_id=?',(pid,))}

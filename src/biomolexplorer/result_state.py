@@ -127,7 +127,7 @@ def fingerprint_units(batch):
     return units
 
 
-@lru_cache(maxsize=2048)
+@lru_cache(maxsize=16384)
 def _file_digest(path,stamp):
     from .stage_cache import file_digest
     return file_digest(path)

@@ -1,0 +1,15 @@
+.......................[RDKit] ERROR:[19:25:27] SMILES Parse Error: syntax error while parsing: not-a-molecule
+[RDKit] ERROR:[19:25:27] SMILES Parse Error: check for mistakes around position 3:
+[RDKit] ERROR:[19:25:27] not-a-molecule
+[RDKit] ERROR:[19:25:27] ~~^
+[RDKit] ERROR:[19:25:27] SMILES Parse Error: Failed parsing SMILES 'not-a-molecule' for input: 'not-a-molecule'
+[RDKit] ERROR:[19:25:28] SMILES Parse Error: syntax error while parsing: not-a-molecule
+[RDKit] ERROR:[19:25:28] SMILES Parse Error: check for mistakes around position 3:
+[RDKit] ERROR:[19:25:28] not-a-molecule
+[RDKit] ERROR:[19:25:28] ~~^
+[RDKit] ERROR:[19:25:28] SMILES Parse Error: Failed parsing SMILES 'not-a-molecule' for input: 'not-a-molecule'
+................
+----------------------------------------------------------------------
+Ran 39 tests in 21.913s
+
+OK

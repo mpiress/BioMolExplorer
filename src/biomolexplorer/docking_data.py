@@ -133,12 +133,13 @@ def prepare_ligands(dataset, destination, format, ph=7.4, charge_type='gas', cen
 
 def input_records(selected, available):
     """Keep identities from result tables when individual poses are selected."""
+    selected=list(map(Path,selected))
     allowed={Path(p).resolve() for p in available}
     metadata={}
     def table_rows(path):
         rows=read_compounds(path)
         for row in rows:
-            for key in ('conformer_file','pose_file','prepared_pdbqt','prepared_mol2'):
+            for key in ('conformer_file','pose_file','vina_pose','dock6_pose','prepared_pdbqt','prepared_mol2'):
                 pose=row.get(key)
                 if not pose:continue
                 resolved=(Path(pose) if Path(pose).is_absolute() else Path(path).parent/pose).resolve()
@@ -146,16 +147,19 @@ def input_records(selected, available):
                 row[key]=str(resolved)
         return rows
     from .input_validation import columns
-    for path in available:
-        if Path(path).suffix.lower()=='.csv' and {'molecule_chembl_id','canonical_smiles'}<=columns(path):
-            rows=read_compounds(path)
-            for row in rows:
-                for key in ('conformer_file','pose_file','vina_pose','dock6_pose','prepared_pdbqt','prepared_mol2'):
-                    pose=row.get(key)
-                    if not pose:continue
-                    resolved=(Path(pose) if Path(pose).is_absolute() else Path(path).parent/pose).resolve()
-                    if resolved not in allowed:raise ValueError('A conformação não pertence aos arquivos autorizados da entrada.')
-                    metadata[resolved]=dict(row,conformer_file=str(resolved))
+    # CSV inputs already carry their identities. Auxiliary tables are needed
+    # only when resolving standalone poses, never for unrelated CSV inputs.
+    if any(path.suffix.lower()!='.csv' for path in selected):
+        for path in available:
+            if Path(path).suffix.lower()=='.csv' and {'molecule_chembl_id','canonical_smiles'}<=columns(path):
+                rows=read_compounds(path)
+                for row in rows:
+                    for key in ('conformer_file','pose_file','vina_pose','dock6_pose','prepared_pdbqt','prepared_mol2'):
+                        pose=row.get(key)
+                        if not pose:continue
+                        resolved=(Path(pose) if Path(pose).is_absolute() else Path(path).parent/pose).resolve()
+                        if resolved not in allowed:raise ValueError('A conformação não pertence aos arquivos autorizados da entrada.')
+                        metadata[resolved]=dict(row,conformer_file=str(resolved))
     result=[]
     for path in map(Path,selected):
         if path.suffix=='.csv':result.extend(table_rows(path));continue

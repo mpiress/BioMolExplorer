@@ -1,0 +1,41 @@
+[
+  {
+    "pair": "4M0E/1YL/604/A",
+    "engine": "AutoDock Vina 1.2.5",
+    "rmsd": 0.19444205894228248,
+    "score": -11.998,
+    "seconds": 12.15697700198507,
+    "completed": 1,
+    "failures": []
+  },
+  {
+    "pair": "6ZWI_QRH_604A",
+    "completed": 1,
+    "failed": [],
+    "rmsd": 4.625932676228653,
+    "score": -8.513,
+    "seconds": 72.15325514000142,
+    "engine": "AutoDock Vina 1.2.5"
+  },
+  {
+    "pair": "6QAA_HUN_613A",
+    "completed": 1,
+    "failed": [],
+    "rmsd": 6.965525198124999,
+    "score": -9.356,
+    "seconds": 102.50402337900596,
+    "engine": "AutoDock Vina 1.2.5"
+  },
+  {
+    "pair": "4M0E/1YL/604/A",
+    "engine": "DOCK6 6.11",
+    "protocol": "rigid",
+    "rmsd": 0.2777062673984522,
+    "score": -47.111782,
+    "seconds": 156.66455624700757,
+    "details": {
+      "redocking_failures": 0,
+      "redocking_succeeded": 1
+    }
+  }
+]

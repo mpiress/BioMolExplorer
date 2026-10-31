@@ -38,6 +38,14 @@ class PipelinePngTests(unittest.TestCase):
         # The connection is drawn in the large empty region between nodes.
         self.assertTrue(any(image.getpixel((image.width//2,y))==(13,148,136) for y in range(image.height)))
 
+    def test_molecular_dynamics_category_exports_with_shared_palette(self):
+        from biomolexplorer.catalog import TITLES
+        from biomolexplorer.ui.pipeline_palette import COLORS
+        self.assertTrue({v[2] for v in TITLES.values()}<=set(COLORS))
+        md=next(k for k,v in TITLES.items() if v[2]=='Dinâmica Molecular')
+        image=Image.open(io.BytesIO(render_pipeline([new_stage(md)])))
+        self.assertEqual(image.format,'PNG')
+
     def test_large_flow_has_bounded_memory_and_empty_flow_exports(self):
         stages=self.stages();stages[-1]['position']={'x':11000,'y':39000}
         image=Image.open(io.BytesIO(render_pipeline(stages)))

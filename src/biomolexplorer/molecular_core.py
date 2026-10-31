@@ -268,7 +268,7 @@ class MolecularPreparationCore:
             tool=engine.name,configuration=key,reused=reused)
         prepared=PreparedMolecule(molecule,values,metadata)
         if minimize:
-            from .amber_preparation import minimize_ligand
+            from .chimera_minimization import minimize_ligand
             with preparation_workspace(self.cache.root) as work:
-                prepared=minimize_ligand(prepared,work,self.ambertools_path,self.ambertools_env)
+                prepared=minimize_ligand(prepared,work,cache_directory=self.cache.root.parent)
         return prepared

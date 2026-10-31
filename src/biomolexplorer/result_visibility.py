@@ -35,6 +35,7 @@ def retained(current,previous):
 def project_run(run,pipeline):
     """Hide removed inputs and their derived outputs; archives remain immutable."""
     if run['status'] in ('queued','running','awaiting_input'):return run
+    original_files={item['id']:set(item.get('artifacts',[])) for item in run['stages']}
     run=copy.deepcopy(run);current={s['id']:s for s in pipeline};removed=set()
     for item in run['stages']:
         stage=current.get(item['id']);previous=item.get('configuration')
@@ -42,7 +43,7 @@ def project_run(run,pipeline):
         # Curation has already rewritten the authoritative artifact list and
         # tables transactionally. Comparing its old selection hides surviving
         # redocking pairs after removal of a failed sibling.
-        if item.get('outputs_removed'):continue
+        if item.get('outputs_removed') or item.get('dependency_obsolete'):continue
         if stage is None and not (item.get('project_stage') or item.get('selection_removed')):continue
         old_files=set(item.get('artifacts',[]))
         if item.get('batches'):
@@ -74,5 +75,40 @@ def project_run(run,pipeline):
             if missing:removed.update(missing);changed=True
     for item in run['stages']:
         item['artifact_records']=[r for r in item.get('artifact_records',[]) if r['path'] in item.get('artifacts',[])]
-        if not item.get('artifacts') and item.get('status')=='succeeded':item['results_stale']=True
+        if not item.get('artifacts') and item.get('status')=='succeeded' and original_files.get(item['id'],set()).intersection(removed):item['results_stale']=True
     return run
+
+
+def consolidated_run(runs,pipeline,available,*,valid_result=None):
+    """Read-only latest execution plus verified published results, once per block.
+
+    Each displayed result retains its real producer run ID for authorization,
+    downloads, molecular scenes and provenance. No history row is rewritten.
+    """
+    if not runs:return None
+    latest=copy.deepcopy(runs[0]);current={s['id']:s for s in latest['stages']}
+    published={s['id']:s for s in available};entries=[]
+    for config in pipeline:
+        identifier=config['id'];execution=current.get(identifier);saved=published.get(identifier)
+        execution_intact=not execution or not execution.get('artifacts') or valid_result is None or valid_result(execution)
+        if execution and execution_intact and execution.get('artifacts') and (execution.get('status')=='succeeded' or not saved or set(saved.get('artifacts',[]))<=set(execution['artifacts'])) and not execution.get('results_stale') and not execution.get('dependency_obsolete'):
+            entry=copy.deepcopy(execution);producer=latest['id']
+        elif saved:
+            entry=copy.deepcopy(saved);producer=saved['publication_run_id']
+            entry['reused']=True
+        elif execution:
+            entry=copy.deepcopy(execution);producer=latest['id']
+        else:
+            entry=dict(id=identifier,name=config['name'],operation=config['operation'],configuration=config,
+                status='skipped',artifacts=[],error=None)
+            producer=latest['id']
+        if execution and not execution_intact:
+            entry['_integrity_notice']='Os arquivos de resultado foram alterados ou estão ausentes. Consulte o histórico ou execute novamente.'
+            if not saved:
+                entry.update(artifacts=[],artifact_manifest={},results_stale=True,dependency_obsolete=True)
+        entry['name']=config['name'];entry['_result_run_id']=producer
+        if execution and producer!=latest['id']:
+            entry['_execution_status']=execution['status']
+        entries.append(entry)
+    latest['stages']=entries
+    return latest

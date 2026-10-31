@@ -59,7 +59,7 @@ class ViewerNavigationTests(unittest.TestCase):
         simulations=RedockingResults(self.f.store).simulations(self.f.token,self.f.pid,self.f.rid,self.f.sid)
         with patch.object(self.f.viewers,'_result_spec',side_effect=AssertionError('Eager scene load')):
             table=RedockingResultsTable(r,simulations)
-        button=table.table.rows[0].cells[6].content
+        button=table.table.rows[0].cells[-3].content
         self.assertIsNone(button.on_click)
         self.assertEqual(button.url.target.value,'_blank')
         self.assertTrue(button.url.url.startswith('http://localhost:9000'+PREFIX+'/'))
@@ -71,7 +71,7 @@ class ViewerNavigationTests(unittest.TestCase):
         from biomolexplorer.ui.redocking_results import RedockingResultsTable
         ui=self.ui(web=False);r=SimpleNamespace(ui=ui,token=self.f.token,project_id=self.f.pid,run_id=self.f.rid,stage={'id':self.f.sid},valid=lambda:True,writable=False)
         table=RedockingResultsTable(r,RedockingResults(self.f.store).simulations(self.f.token,self.f.pid,self.f.rid,self.f.sid))
-        button=table.table.rows[0].cells[6].content
+        button=table.table.rows[0].cells[-3].content
         self.assertIsNone(button.url);self.assertIsNotNone(button.on_click)
 
     def test_stale_project_does_not_reserve_a_link(self):

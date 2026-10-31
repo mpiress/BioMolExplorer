@@ -79,8 +79,8 @@ def run(root,dock,prefix,charge_only=False):
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--dock6',required=True);parser.add_argument('--ambertools',default='');parser.add_argument('--output',required=True);parser.add_argument('--charge-only',action='store_true');args=parser.parse_args()
-    with tempfile.TemporaryDirectory(prefix='bme-method-equivalence-') as folder:result=run(Path(folder),Path(args.dock6),args.ambertools,args.charge_only)
+    parser=argparse.ArgumentParser();parser.add_argument('--dock6',required=True);parser.add_argument('--output',required=True);parser.add_argument('--charge-only',action='store_true');args=parser.parse_args()
+    with tempfile.TemporaryDirectory(prefix='bme-method-equivalence-') as folder:result=run(Path(folder),Path(args.dock6),'',args.charge_only)
     write_json(result,Path(args.output))
     if not all(row['within_tolerances'] for row in result['results']):raise SystemExit(1)
 

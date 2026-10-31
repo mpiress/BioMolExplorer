@@ -24,6 +24,7 @@ MESSAGES={
     'submit':('Preparando execução…','Validando o pipeline e organizando os dados de entrada. Aguarde um instante.'),
     'resume':('Continuando execução…','Validando a seleção e preparando o próximo bloco. Aguarde um instante.'),
     'cancel':('Cancelando execução…','Interrompendo os processos e atualizando o estado da execução. Aguarde um instante.'),
+    'available_results':('Verificando resultados preservados…','Validando os arquivos concluídos e suas origens. Aguarde um instante.'),
     'existing_results':('Verificando resultados…','Identificando os cálculos que podem ser reaproveitados. Aguarde um instante.'),
     'read_file':('Carregando arquivo…','Lendo os dados solicitados. Aguarde um instante.'),
     'read_bytes':('Preparando download…','Lendo o arquivo para download. Aguarde um instante.'),

@@ -17,7 +17,7 @@ cd BioMolExplorer
 
 Without Git, use **Code → Download ZIP**, extract the archive and open a terminal inside the extracted folder. The [installation and configuration guide](installation.md) explains downloading, external tools and paths.
 
-**Configure UCSF Chimera, Open Babel and Vina in the main scientific environment.** DOCK6 is required for its stages. Separate AmberTools is used only by dynamics protocols requiring it; follow the installation guide.
+**Configure UCSF Chimera, Open Babel and Vina in the main scientific environment.** DOCK6 is required for its stages. Amber Score uses only the native DOCK6 6.11 bundle; no external AmberTools environment is required.
 
 1. Create the scientific environment from the downloaded source code root.
 2. Activate the environment and install the interface.
@@ -281,21 +281,29 @@ The DOCK6 **Footprint** button opens an integrated popup showing per-residue Van
 
 After connecting Vina and DOCK6 results, consensus runs automatically in the pipeline without file confirmation or additional parameters. The table shows compound code, Vina score, DOCK6 score and normalized score (0 to 1). Click a column header to toggle ascending and descending order across the complete table before pagination. The normalized score averages the two engines’ min-max normalizations; higher values rank better. The CSV also retains z-score and min-max. Each row has **3D Vina**, **3D DOCK6** and **Remove** buttons per row. Consensus uses the original scores from both engines without requiring receptor, reference ligand or pose files. Available structural files are optional visualization attachments; missing files do not block computation. Singleton or constant scores normalize to zero. Removal requires editing permission, is audited and affects subsequent inputs; completed analyses are not recalculated. Each batch summary is authoritative, preventing deleted rows from returning from auxiliary tables.
 
-### Molecular dynamics with DOCK6 and AmberTools
+### Native Amber Score · DOCK6 6.11
 
-Candidate preparation now supports automatic backend selection and distinct Vina/DOCK6 charge policies, preserving Antechamber methodology for DOCK6. See [molecular preparation and backends](molecular_preparation.md) for native paths, minimization fallback, caching and special systems.
+Under **Molecular Dynamics**, **Amber Score · DOCK6** runs native Amber Score only. It does not run conventional molecular dynamics or invoke an external AmberTools environment. UCSF Chimera continues to prepare docking/redocking inputs. AMBER components distributed within Chimera and DOCK6 remain required parts of those tools.
 
-**Dynamics with DOCK6** receives PDB receptors and MOL2 poses and builds explicit pairs. **AMBER Score (DOCK6)** performs preparation and implicit-solvent refinement; **AMBER Score + sander trajectory** adds minimization, a NetCDF trajectory and, when enabled, `cpptraj` RMSD, RMSF, radius-of-gyration and hydrogen-bond analyses. The movable region, cycles, temperature, time step, output stride and seed are part of the run's scientific identity.
+1. Connect receptor PDB files and ligand 3D poses, then explicitly select pairs.
+2. Configure pre/post minimization, internal refinement steps, temperature, implicit GB solvent (1/2/5), cutoff and movable region.
+3. Enable preservation of input charges to use Chimera-prepared MOL2 charges. DOCK6 supplies GAFF typing, topologies and complex preparation; receptor force field is ff94. No silent substitution for ff14SB/GAFF2 occurs.
+4. Inspect the four energy terms, structures, logs and `protocol.json`. Valid pairs reuse checkpoints; individual failures preserve other pairs.
 
-Pairs must now be explicitly selected; no Cartesian product runs by default. Compatible compound stages, Vina/DOCK6 poses, SDF, PDBQT and CSV are accepted. CSV rows must reference a 3D pose through `pose_file`, `conformer_file`, `prepared_mol2` or `prepared_pdbqt`; SMILES alone cannot define a bound pose and fails only that pair. Open Babel converts coordinate-bearing poses. Review chemistry and receptor correspondence before interpreting a result.
+Native refinement uses a fixed 0.001 ps step, Langevin (gamma 2), without RATTLE constraints. The `nothing` mode evaluates energy without moving atoms. Explicit solvent boxes, pressure, conventional heating/equilibration and trajectory controls are unavailable because they are not Amber Score 6.11 parameters. Implicit solvent is not a water box.
 
-The per-pair responsive panel separates protein-backbone RMSD and ligand-heavy-atom RMSD after protein fitting (no ligand refitting), aligned C-alpha RMSF, mass-weighted gyration radius, interface-only hydrogen-bond counts and occupancy, LCPO SASA, ligand/site COM distance and residue contact occupancy (4 Å). The static site comprises protein residues within 5 Å of the ligand in the first saved frame. RMSD uses that saved frame as reference. `analysis.json` consolidates series, masks and definitions; `protocol.json` records parameters, input/tool hashes and force fields. At least two frames are required. The default sander mask `:1` moves only the first residue; check multi-residue ligands and do not interpret a frozen protein's RMSF as flexibility.
+When DOCK6 writes a final complex, results include backbone/ligand RMSD against the prepared initial complex after backbone alignment, initial/final mass-weighted complex radius of gyration, and hydrogen atom count. **Hydrogen atom count is not hydrogen-bond count.** Plots are structural comparisons, not time series. RMSF, hydrogen-bond occupancy and equilibrium claims are unavailable without a trajectory. Energy-only mode reports unavailable final-structure metrics explicitly.
 
-The tested DOCK6 helpers use **ff94 and GAFF**, not ff14SB/GAFF2. Parameterization errors involving cofactors, waters or metals require review; nothing should be silently removed. This short implicit-solvent refinement has no validated equilibration stage and is neither production MD nor a binding-free-energy estimate. Compare equivalent receptors and protocols without definitive affinity ranking. Separate receptor, ligand and complex preparation checkpoints use the shared content-addressed SQLite index, independently of temperature/duration; disabling reuse forces computation. Native topology/coordinate/trajectory formats remain necessary. Method references: [RMSD](https://amberhub.chpc.utah.edu/rmsd/), [RMSF](https://amberhub.chpc.utah.edu/atomicfluct-rmsf/), [hydrogen bonds](https://amberhub.chpc.utah.edu/hbond/), [LCPO SASA](https://amberhub.chpc.utah.edu/surf/).
+Historical `dock6_sander` protocols require explicit reconfiguration; earlier results remain readable and are never relabeled as native calculations. Missing parameters for metals, cofactors or unusual residues require explicit resolution, without deleting components or approximating scores.
 
-Each pair has a stable identifier derived from receptor and ligand identity. `dynamics_results.json` is the primary index, `dynamics_results.csv` is its summary, and `pairs/<id>/` contains that calculation's files. Complete, intact pairs are reused; changed, corrupt or failed pairs are recalculated independently. One failed pair does not discard the others. Check DOCK6, `sander` and `cpptraj` in the installation guide before using trajectories.
+```bash
+PYTHONPATH=src python scripts/validate_native_structures.py \
+  --dock6 /path/to/dock6 --steps 2 \
+  --output /tmp/amber_score_validation.json
+```
 
-The comparison action provides a descriptive table grouped by receptor-content hash, protocol and tools, without affinity ranking. Compare only rows within the same group. Failures retain a `failed_stage` and Amber helper logs with missing-parameter details. Successful runs remove local helper-script copies and the transient charge file; set `BIOMOL_MD_DEBUG=1` to preserve these. Native topology, scientific inputs, logs, trajectory and analysis outputs are retained.
+This short check uses the installed 1LGU example and is not scientific acceptance for every system.
+
 
 ## 12. Explore results and navigate graphs
 

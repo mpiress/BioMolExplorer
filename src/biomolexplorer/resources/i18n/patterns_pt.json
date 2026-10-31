@@ -515,5 +515,12 @@
   "Preparing ligand {0} ({1}/{2}).": "Preparando ligante {0} ({1}/{2}).",
   "Preparando ligante {0} ({1}/{2}).": "Preparando ligante {0} ({1}/{2}).",
   "Não foi possível obter a definição CCD do ligante {0}.": "Não foi possível obter a definição CCD do ligante {0}.",
-  "Could not retrieve the CCD definition for ligand {0}.": "Não foi possível obter a definição CCD do ligante {0}."
+  "Could not retrieve the CCD definition for ligand {0}.": "Não foi possível obter a definição CCD do ligante {0}.",
+  "{0} / {1} pares selecionados": "{0} / {1} pares selecionados",
+  "{0} pares de dinâmica · {1} falhas": "{0} pares de dinâmica · {1} falhas",
+  "Exibindo pares {0}–{1} de {2}.": "Exibindo pares {0}–{1} de {2}.",
+  "Showing files {0}–{1} of {2}. Search by target or use More files.": "Exibindo arquivos {0}–{1} de {2}. Pesquise pelo alvo ou use Mais arquivos.",
+  "{0} available in this search · {1} selected · Page {2}": "{0} disponíveis nesta busca · {1} selecionados · Página {2}",
+  "{0} file(s) added.": "{0} arquivo(s) adicionado(s).",
+  "{0} file(s) removed.": "{0} arquivo(s) removido(s)."
 }

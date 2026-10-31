@@ -1,3 +1,5 @@
+> Registro histórico. As instruções de ambiente/protocolos desta validação foram substituídas pela [revisão de Amber Score nativo de 2026-10-29](native_amber_score_2026-10-29/README.md). Não representam as opções atuais da aplicação.
+
 # AmberTools isolated-environment validation — 2026-10-24
 
 - Main runtime: `BioMolExplorer`, Python 3.12.3. Imports verified: RDKit, Open Babel, Meeko, Vina, Gemmi, NumPy and Pandas.

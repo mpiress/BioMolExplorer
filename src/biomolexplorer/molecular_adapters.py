@@ -89,7 +89,7 @@ class Dock6Adapter:
 
 
 class AM1BCCEngine:
-    name='antechamber'
+    name='Chimera bundled Antechamber'
     method='am1bcc'
     def __init__(self,prefix='',environment=''):
         self.prefix=prefix;self.environment=environment
@@ -98,6 +98,9 @@ class AM1BCCEngine:
         if hasattr(self,'_identity'):return self._identity
         root=self.tool.parent.parent
         files={name:file_digest(root/'bin'/name) for name in ('antechamber','sqm','am1bcc','atomtype','bondtype') if (root/'bin'/name).is_file()}
+        library=root.parent.parent/'lib'
+        for pattern in ('libgfortran.so*','libquadmath.so*','libgcc_s.so*'):
+            files.update({str(p):file_digest(p) for p in sorted(library.glob(pattern)) if p.is_file()})
         data=root/'dat/antechamber'
         files.update({str(p.relative_to(root)):file_digest(p) for p in sorted(data.rglob('*')) if p.is_file()})
         self._identity=dict(engine=self.name,method=self.method,files=files,protocol=dict(j=5,acdoctor=False,qm_theory='AM1' if self.method=='am1bcc' else None))
@@ -249,10 +252,9 @@ class AmberAdapter:
         from .storage import write_json
         directory=Path(directory);directory.mkdir(parents=True,exist_ok=True)
         cache=CalculationCache('amber-ligand-adapter',directory)
-        tools={name:amber_tool(name,self.prefix,environment=self.environment) for name in ('antechamber','parmchk2','tleap')}
-        root=tools['tleap'].parent.parent
-        library=root/'dat/leap'
-        recipe=dict(molecule=Chem.MolToMolBlock(prepared.molecule),charges=prepared.partial_charges.tolist(),
+        root,tools=self._tools()
+        library=root/'parameters/leap'
+        recipe=dict(coordinates=prepared.coordinates.tolist(),molecule=Chem.MolToMolBlock(prepared.molecule),charges=prepared.partial_charges.tolist(),
             atom_names=prepared.atom_names,
             forcefield=forcefield,tools={name:file_digest(path) for name,path in tools.items()},
             parameters={str(p.relative_to(library)):file_digest(p) for p in sorted(library.rglob('*')) if p.is_file() and (forcefield in p.name)},
@@ -274,18 +276,18 @@ class AmberAdapter:
         return targets
 
     def _compute(self,prepared,directory,forcefield):
-        if forcefield not in ('gaff','gaff2'):raise ValueError('Select GAFF or GAFF2 explicitly.')
+        if forcefield!='gaff':raise ValueError('Bundled DOCK6 6.11 supports GAFF here; GAFF2 is not silently substituted.')
         directory=Path(directory);directory.mkdir(parents=True,exist_ok=True)
-        tool=amber_tool('antechamber',self.prefix,environment=self.environment)
+        root,tools=self._tools()
         Dock6Adapter().export(prepared,directory/'ligand.mol2')
-        write_text('\n'.join(str(float(v)) for v in prepared.partial_charges)+'\n',directory/'charges.dat')
-        run_amber_tool('antechamber',['-i','ligand.mol2','-fi','mol2','-o','ligand.gaff.mol2','-fo','mol2',
-            '-at',forcefield,'-c','rc','-cf','charges.dat','-nc',str(Chem.GetFormalCharge(prepared.molecule)),'-an','n','-du','n','-s','2','-pf','y'],
-            cwd=directory,prefix=self.prefix,environment=self.environment)
+        write_text('\n'.join(' '.join(str(float(v)) for v in prepared.partial_charges[i:i+8]) for i in range(0,len(prepared.partial_charges),8))+'\n',directory/'charges.dat')
+        self._run(root,tools,'antechamber',['-i','ligand.mol2','-fi','mol2','-o','ligand.gaff.mol2','-fo','mol2',
+            '-at',forcefield,'-c','rc','-cf','charges.dat','-nc',str(Chem.GetFormalCharge(prepared.molecule)),'-du','n','-s','2','-pf','y'],
+            cwd=directory)
         validate_charges(prepared.molecule,read_mapped_charges(directory/'ligand.gaff.mol2',prepared.molecule))
-        run_amber_tool('parmchk2',['-i','ligand.gaff.mol2','-f','mol2','-o','ligand.frcmod','-s','2' if forcefield=='gaff2' else '1'],cwd=directory,prefix=self.prefix,environment=self.environment)
+        self._run(root,tools,'parmchk',['-i','ligand.gaff.mol2','-f','mol2','-o','ligand.frcmod','-p',str(root/'parameters/leap/parm/gaff.dat')],cwd=directory)
         write_text(f'source leaprc.{forcefield}\nloadamberparams ligand.frcmod\nx=loadmol2 ligand.gaff.mol2\ncheck x\nsaveamberparm x ligand.prmtop ligand.inpcrd\nquit\n',directory/'leap.in')
-        run_amber_tool('tleap',['-f','leap.in'],cwd=directory,prefix=self.prefix,environment=self.environment)
+        self._run(root,tools,'teLeap',['-f','leap.in'],cwd=directory)
         from .md_analysis import topology
         info=topology(directory/'ligand.prmtop')
         if info['natom']!=prepared.molecule.GetNumAtoms() or info['names']!=prepared.atom_names or not np.allclose(info['charges'],prepared.partial_charges,atol=1e-4,rtol=0):
@@ -293,3 +295,15 @@ class AmberAdapter:
         for name in ('ligand.frcmod','ligand.inpcrd'):
             if not (directory/name).is_file() or not (directory/name).stat().st_size:raise ValueError('Incomplete Amber parameterization: '+name)
         return {name:directory/name for name in ('ligand.gaff.mol2','ligand.frcmod','ligand.prmtop','ligand.inpcrd')}
+
+    def _tools(self):
+        from .md_engine import tools
+        from .md_config import validate_settings
+        return tools('', '', validate_settings({}))
+
+    def _run(self,root,tools,name,args,cwd):
+        import os
+        env=dict(os.environ);env.pop('AMBERHOME',None)
+        env['DOCK_HOME']=str(root);env['PATH']=str(root/'bin')+os.pathsep+env.get('PATH','')
+        if name=='teLeap':args=['-I'+str(root/'parameters/leap'/part) for part in ('prep','lib','parm','cmd')]+args
+        return run_command([str(tools[name]),*args],cwd=cwd,env=env)

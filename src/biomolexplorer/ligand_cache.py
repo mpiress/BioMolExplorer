@@ -95,17 +95,7 @@ class LigandCache:
                          Path(destination) / 'cache' / 'ligand-preparation')
         self.root.mkdir(parents=True, exist_ok=True)
         self.reuse = os.environ.get('BIOMOL_REUSE_PREPARATIONS', '1') != '0'
-        self.amber_identities={}
-        if backend=='python':
-            from rdkit import rdBase
-            from openbabel import openbabel as ob
-            software=dict(rdkit=rdBase.rdkitVersion,openbabel=ob.OBReleaseVersion(),
-                files={name:file_digest(Path(__file__).with_name(name)) for name in ('molecular_core.py','molecular_adapters.py','amber_preparation.py','docking_preparation.py','visualizations.py','molecular_parsing.py')})
-            for name in ('meeko','gemmi'):
-                try:software[name]=importlib.metadata.version(name)
-                except importlib.metadata.PackageNotFoundError:software[name]=None
-        else:software=preparation_identity()
-        self.identity = hashlib.sha256(json.dumps(software, sort_keys=True).encode()).hexdigest()
+        self.identity=hashlib.sha256(json.dumps(preparation_identity(),sort_keys=True).encode()).hexdigest()
 
     def key(self, row, dataset, options, ph, engines):
         pose = row.get('conformer_file') or row.get('pose_file')
@@ -118,26 +108,6 @@ class LigandCache:
                              index=int(row.get('conformer_index') or 1))
         request = dict(version=1, code=row['molecule_chembl_id'], structure=structure,
                        options=options, ph=float(ph), engines=engines, software=self.identity)
-        if options.get('preparation_backend')=='python':
-            from .molecular_core import charge_strategy
-            strategy=charge_strategy(options['charge_type'],engines,options.get('vina_charge_policy','fast'),options.get('minimize',True))
-            request['charge_strategy']=strategy
-            # Native exporters use an engine-independent LIG title. Compound
-            # labels belong to the current CSV/filename, not the chemistry:
-            # identical structures under different IDs may share one export.
-            request.pop('code',None)
-        else:strategy={}
-        if options.get('preparation_backend')=='python' and options.get('minimize',True):
-            from .amber_preparation import parameterization_identity
-            parameter_key=('minimization',options.get('ambertools_path',''),options.get('ambertools_env',''))
-            if parameter_key not in self.amber_identities:self.amber_identities[parameter_key]=parameterization_identity(parameter_key[1],environment=parameter_key[2])
-            request['minimization']=self.amber_identities[parameter_key]
-        if strategy.get('engine')=='antechamber':
-            from .molecular_adapters import AM1BCCEngine,AntechamberGasteigerEngine
-            engine=AM1BCCEngine if strategy['effective']=='am1bcc' else AntechamberGasteigerEngine
-            engine_key=(options.get('ambertools_path',''),strategy['effective'],options.get('ambertools_env',''))
-            if engine_key not in self.amber_identities:self.amber_identities[engine_key]=engine(engine_key[0],engine_key[2]).identity()
-            request['amber']=self.amber_identities[engine_key]
         return hashlib.sha256(json.dumps(request, sort_keys=True, allow_nan=False).encode()).hexdigest()
 
     @contextmanager

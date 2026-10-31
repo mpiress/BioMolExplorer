@@ -1,0 +1,4 @@
+[15:11:54] HUN: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[15:11:54] Can't kekulize mol.  Unkekulized atoms: 2 3 4 5 6 18 19 20 22
+[15:11:54] Can't kekulize mol.  Unkekulized atoms: 2 3 4 5 6 18 19 20 22
+[15:11:54] sanitize [15:11:54] HUN: {"pair": "6QAA/HUN/613/A", "atoms": 66, "formal_charge": 1, "preparation": {"net_charge": 1, "charge_source": "validated hydrogenated observed molecular graph", "charge_method": "am1", "validated_graph_preserved": true, "partial_charge_sum": 1.0011999999999999, "minimization_preparation": "already prepared; no repeated DockPrep"}, "seconds": 27.340318178990856}

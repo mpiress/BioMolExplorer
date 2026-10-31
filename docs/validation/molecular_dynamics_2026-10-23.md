@@ -1,3 +1,5 @@
+> Registro histórico. As instruções de ambiente/protocolos desta validação foram substituídas pela [revisão de Amber Score nativo de 2026-10-29](native_amber_score_2026-10-29/README.md). Não representam as opções atuais da aplicação.
+
 # Validação do bloco de dinâmica — 2026-10-23
 
 ## Causas e correções

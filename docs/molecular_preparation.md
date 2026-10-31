@@ -23,8 +23,7 @@ estruturas selecionadas. As opções não são apagadas durante a migração.
 
 Chimera pode usar utilitários fornecidos em sua própria distribuição para
 AM1-BCC. O aplicativo não encaminha docking/redocking ao ambiente separado
-BioMolExplorer-AmberTools. Esse ambiente continua disponível para os protocolos
-de dinâmica que o exigem.
+AmberTools externo. O Amber Score nativo usa apenas os utilitários distribuídos com DOCK6 6.11.
 
 ## Entrada e exportação
 

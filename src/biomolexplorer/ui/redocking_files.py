@@ -19,12 +19,15 @@ class RedockingFilePicker(ArtifactPicker):
         for field in (self.target,self.review_filter):
             field.content_padding=ft.Padding.symmetric(horizontal=16,vertical=18)
             field.expand=True
+        self.unavailable_hint=ft.Text(
+            'Há seleções indisponíveis nas saídas atuais. Filtre por Indisponíveis para revisá-las ou removê-las; adicione as estruturas desejadas em Adicionar PDBs à seleção.',
+            size=12,color='#B45309',visible=False)
         self.overview=ft.Text(size=13,color='#475569')
         self.table=ft.DataTable(columns=[ft.DataColumn(ft.Text(label)) for label in
             ('PDB / arquivo','Alvo / origem','Ligantes selecionados','Revisão','Ações')],rows=[],
             column_spacing=20,data_row_min_height=64,data_row_max_height=64,
             heading_row_color='#EFF6FF',border=ft.Border.all(1,'#E2E8F0'),border_radius=12)
-        self.table_host=ft.Container(content=ft.Row([self.table],scroll=ft.ScrollMode.AUTO),
+        self.table_host=ft.Container(content=ft.Row([self.table],scroll=ft.ScrollMode.ALWAYS),
             on_size_change=self.resize_table,size_change_interval=100)
         super().__init__(rows,origins,page,extras,writable)
         for control in self.control.controls:
@@ -34,8 +37,10 @@ class RedockingFilePicker(ArtifactPicker):
         self.search.label='Pesquisar PDB, alvo ou ligante'
         self.search.disabled=False
         self.search.content_padding=ft.Padding.symmetric(horizontal=16,vertical=18)
-        original[6].spacing=24
-        original[6].alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+        selected_header=original[7]
+        pagination=original[10]
+        selected_header.spacing=24
+        selected_header.alignment=ft.MainAxisAlignment.SPACE_BETWEEN
         self.add_panel=ft.ExpansionTile(title=ft.Text('Adicionar PDBs à seleção'),
             subtitle=ft.Text('Escolha uma origem e adicione arquivos individualmente ou em lote.',size=12),
             expanded=not any(flag.value for flag,_ in rows),maintain_state=True,
@@ -51,13 +56,14 @@ class RedockingFilePicker(ArtifactPicker):
         self.control.horizontal_alignment=ft.CrossAxisAlignment.STRETCH
         self.selected.horizontal_alignment=ft.CrossAxisAlignment.STRETCH
         self.control.controls=[ft.Container(original[1],padding=ft.Padding.symmetric(vertical=8)),self.add_panel,
-            ft.Column([original[6],
+            ft.Column([selected_header,
                 ft.Text('Organize os PDBs por alvo e revise os ligantes sem perder a seleção. Verde indica uma revisão salva, não a validação da preparação.',size=12,color='#64748B')],spacing=12),
             ft.Container(self.overview,padding=16,bgcolor='#F8FAFC',border_radius=12),
+            self.unavailable_hint,self.feedback,
             ft.Container(filters,padding=ft.Padding.symmetric(vertical=8)),
             ft.Row([ft.TextButton('Remover desta visualização',on_click=self.remove_view,disabled=not writable),
                 self.count],alignment=ft.MainAxisAlignment.SPACE_BETWEEN,spacing=24,wrap=True),
-            self.selected,original[9]]
+            self.selected,pagination]
 
     def resize_table(self,event):
         width=max(1,int(event.width))
@@ -84,7 +90,8 @@ class RedockingFilePicker(ArtifactPicker):
 
     def group(self,flag,ref):
         origin=self.origin(ref)
-        label=getattr(flag,'target_label',None) or self.origins.get(origin,origin)
+        label=getattr(flag,'target_label',None)
+        if not label or label in ('Estruturas','Structures'):label=self.origins.get(origin,origin)
         return origin+'|'+label,label
 
     def origin_label(self,flag,ref):
@@ -121,7 +128,9 @@ class RedockingFilePicker(ArtifactPicker):
             verbatim(ft.DropdownOption(key=key,text=f'{label} · {done}/{total} '+self.translate('revisados')+f' · {origin}'),'text')
             for key,(label,total,done,origin) in sorted(groups.items(),key=lambda item:(item[1][0].casefold(),item[0]))]
         if self.target.value not in {'all',*groups}:self.target.value='all'
-        self.overview.value=f'{selected} PDBs selecionados · {len(groups)} alvos/origens · {reviewed} revisados · {selected-reviewed-unavailable} a revisar · {unavailable} indisponíveis'
+        self.unavailable_hint.visible=bool(unavailable)
+        self.overview.value=self.translate('{selected} PDBs selecionados · {groups} alvos/origens · {reviewed} revisados · {pending} a revisar · {unavailable} indisponíveis').format(
+            selected=selected,groups=len(groups),reviewed=reviewed,pending=selected-reviewed-unavailable,unavailable=unavailable)
         chosen=self.selected_rows()
         self.offset=min(self.offset,max(0,((len(chosen)-1)//self.PAGE_SIZE)*self.PAGE_SIZE))
         compact,widths=self.table_layout()
@@ -158,7 +167,8 @@ class RedockingFilePicker(ArtifactPicker):
         self.selected.controls=[self.table_host] if chosen else [
             ft.Text('Nenhum PDB selecionado corresponde aos filtros.' if selected else 'Nenhum arquivo selecionado.',size=12,color='#64748B')]
         start=self.offset+1 if chosen else 0
-        self.count.value=f'{start}–{min(self.offset+self.PAGE_SIZE,len(chosen))} de {len(chosen)} PDBs nesta visualização'
+        self.count.value=self.translate('{start}–{end} de {total} PDBs nesta visualização').format(
+            start=start,end=min(self.offset+self.PAGE_SIZE,len(chosen)),total=len(chosen))
         self.previous.disabled=self.offset==0;self.next.disabled=self.offset+self.PAGE_SIZE>=len(chosen)
         if not selected and hasattr(self,'add_panel'):self.add_panel.expanded=True
 

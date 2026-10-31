@@ -71,6 +71,7 @@ class Docking():
         self.nprocess       = worker_count()
         self.centers        = None
         self.logpath        = self.path + '/logs/'
+        self._chimera_ligand_settings={}
         self.logger         = LoggerManager.get_logger(self.__class__.__name__, log_file='logs/docking.log')
         self.mol_filename   = mol_filename
 

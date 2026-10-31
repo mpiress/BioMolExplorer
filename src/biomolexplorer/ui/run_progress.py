@@ -43,35 +43,59 @@ class RunProgress:
         self.badge = ft.Container(bgcolor='#EAF1FF', padding=14, border_radius=12,
             content=ft.Row([self.badge_emblem,
                 ft.Container(self.badge_text, expand=True),
-                ft.TextButton(self.messages('run.action.follow'), on_click=lambda e: self.show())]))
+                ft.TextButton(self.messages('run.action.follow'), on_click=self.follow)]))
         self.minimize = ft.TextButton(self.messages('run.action.minimize'), on_click=self.dismiss)
         self.cancel = ft.TextButton(self.messages('run.action.cancel'), on_click=self.request_cancel)
+        self.pause = ft.TextButton(self.messages('run.action.pause'),on_click=self.request_pause)
+        self.resume = ft.TextButton(self.messages('run.action.resume'),on_click=self.request_resume)
         self.log = ft.TextButton(self.messages('run.action.log'), on_click=self.open_log)
         self.results = ft.TextButton(self.messages('run.action.results'), on_click=self.open_results)
         self.configure = ft.TextButton(self.messages('run.action.configure'), on_click=self.configure_pending)
-        self.dialog = ft.AlertDialog(modal=True, title=self.heading,
-            content=ft.Container(width=600, height=max(220, min(420, 260 + len(run['stages']) * 34, (ui.page.height or 900) - 260)),
+        self.dialog = self._new_dialog()
+        self.update(run)
+
+    def _new_dialog(self):
+        dialog = ft.AlertDialog(modal=True, title=self.heading,
+            content=ft.Container(width=600, height=max(220, min(420, 260 + len(self.run['stages']) * 34, (self.ui.page.height or 900) - 260)),
                 content=ft.Column([self.message_semantics, self.timing, self.count, self.rows,
                                    self.error_semantics, self.hint], spacing=18, scroll=ft.ScrollMode.AUTO)),
-            actions=[self.configure, self.log, self.cancel, self.minimize, self.results],
-            on_dismiss=self.dismissed)
-        self.update(run)
+            actions=[self.resume,self.configure,self.pause, self.log, self.cancel, self.minimize, self.results],
+            )
+        dialog.on_dismiss = lambda e: self.dismissed(e, dialog)
+        return dialog
 
     def valid(self):
         return (self.ui.token == self.token and self.ui.current is not None
                 and self.ui.current['id'] == self.project_id
                 and getattr(self.ui, 'run_progress', None) is self)
 
+    async def follow(self, e=None):
+        # Keep UI lifecycle changes on the event loop, including rapid clicks.
+        async def action():
+            self.show()
+        await self.ui.guard(action)
+
     def show(self):
         if not self.valid():
             return
+        if self.is_open and self.dialog.open:
+            return
         if self.closing:
-            self.reopen_requested = True
-        elif not self.is_open:
-            self.ui.page.show_dialog(self.dialog)
-            self.is_open = True
+            # Flet retains a closed dialog until its client dismissal arrives.
+            # A fresh envelope can open immediately; late events belong only
+            # to the old envelope and must not reset the current panel.
+            self.dialog.title = None
+            self.dialog.content = None
+            self.dialog.actions = []
+            self.dialog = self._new_dialog()
+        self.ui.page.show_dialog(self.dialog)
+        self.is_open = True
+        self.closing = False
+        self.reopen_requested = False
 
-    def dismissed(self,e):
+    def dismissed(self,e,dialog=None):
+        if dialog is not None and dialog is not self.dialog:
+            return
         self.is_open = False
         self.closing = False
         if self.reopen_requested:
@@ -103,6 +127,19 @@ class RunProgress:
                 raise
         await self.ui.guard(action)
 
+    async def request_pause(self,e):
+        if not self.valid() or self.ui.current['role']=='viewer' or self.run['status'] not in ('queued','running') or self.pause.disabled:return
+        self.pause.disabled=True;self.ui.page.update()
+        try:await self.ui.guard(lambda:self.ui.pause_run(self.run['id']))
+        finally:
+            self.update(self.run);self.ui.page.update()
+
+    async def request_resume(self,e):
+        if not self.valid() or self.ui.current['role']=='viewer' or self.run['status']!='awaiting_input' or not any(s.get('pause_reason')=='user' for s in self.run['stages']) or self.resume.disabled:return
+        self.resume.disabled=True;self.ui.page.update()
+        try:await self.ui.guard(lambda:self.ui.continue_paused_run(self.run['id']))
+        finally:self.resume.disabled=False;self.ui.page.update()
+
     async def open_log(self, e):
         if not self.valid():
             return
@@ -126,7 +163,9 @@ class RunProgress:
         active = run['status'] in ACTIVE
         waiting = run['status'] == 'awaiting_input'
         current = next((s for s in run['stages'] if s['status'] == 'running'), None) if active else None
-        heading_key = 'run.heading.' + run['status']
+        manually_paused=waiting and any(s.get('pause_reason')=='user' for s in run['stages'])
+        pause_requested=any(s.get('pause_requested') for s in run['stages'])
+        heading_key = 'run.heading.' + ('paused' if manually_paused else run['status'])
         self.heading.value = m(heading_key if heading_key in m.catalog else 'run.heading.default')
         phase = (current or {}).get('progress') or {}
         key = phase.get('message_key')
@@ -162,22 +201,26 @@ class RunProgress:
             'external' if current and current['operation'] in ('retrieve_compounds', 'retrieve_pubchem',
                 'expand_similar_compounds', 'retrieve_structures', 'retrieve_zinc') else
             'active' if active else 'done')
-        self.hint.value = m('run.hint.' + hint)
+        self.hint.value = m('run.hint.paused' if manually_paused else 'run.hint.pause_requested' if pause_requested else 'run.hint.'+hint)
         self.rows.controls = [ft.Row([ft.Icon(ft.Icons.CHECK_CIRCLE if s['status'] == 'succeeded' else
                 ft.Icons.ERROR_OUTLINE if s['status'] == 'failed' else ft.Icons.TIMELAPSE,
                 color='#15803D' if s['status'] == 'succeeded' else '#B91C1C' if s['status'] == 'failed' else '#64748B', size=19),
             stage_control(ft.Text(s['name'], expand=True), s),
-            verbatim(ft.Text(m('run.status.' + ('reused' if s.get('reused') else 'provided' if s.get('provided') else s['status'])), size=12))], spacing=10) for s in run['stages']]
+            verbatim(ft.Text(m('run.status.' + ('paused' if s.get('pause_reason')=='user' else 'reused' if s.get('reused') else 'provided' if s.get('provided') else s['status'])), size=12))], spacing=10) for s in run['stages']]
         self.log.visible = any(s.get('log_path') for s in run['stages'])
         self.cancel.visible = active and self.ui.current is not None and self.ui.current['role'] != 'viewer'
+        writable=self.ui.current is not None and self.ui.current['role']!='viewer'
+        self.pause.visible=run['status'] in ('queued','running') and writable
+        self.pause.disabled=any(s.get('pause_requested') for s in run['stages'])
+        self.resume.visible=waiting and any(s.get('pause_reason')=='user' for s in run['stages']) and writable
         self.cancel.disabled = self.cancel_pending
         self.configure.visible = waiting and self.ui.current is not None and self.ui.current['role'] != 'viewer'
         self.minimize.content = m('run.action.minimize' if active else 'run.action.close')
-        self.results.visible = not active
-        self.badge_text.value = f"{m('run.status.' + run['status'])} · {name if current else self.count.value} · {elapsed(run['created'], end)}"
+        self.results.visible = not active or manually_paused
+        self.badge_text.value = f"{m('run.status.' + ('paused' if manually_paused else run['status']))} · {name if current else self.count.value} · {elapsed(run['created'], end)}"
         # Already rendered from this run's session catalog: never reverse-translate
         # the composite strings, their filenames or user-selected stage names.
         for control in (self.heading, self.message, self.message_semantics, self.timing, self.count,
                 self.error, self.error_semantics, self.hint, self.badge_text, self.minimize,
-                self.cancel, self.log, self.results, self.configure):
+                self.cancel, self.log, self.results, self.configure,self.pause,self.resume):
             verbatim(control)

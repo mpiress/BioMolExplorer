@@ -1,0 +1,114 @@
+[14:30:28] MOL1: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[14:30:28] MOL1: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[14:30:40] SMILES Parse Error: syntax error while parsing: invalid
+[14:30:40] SMILES Parse Error: check for mistakes around position 1:
+[14:30:40] invalid
+[14:30:40] ^
+[14:30:40] SMILES Parse Error: Failed parsing SMILES 'invalid' for input: 'invalid'
+[14:30:40] SMILES Parse Error: syntax error while parsing: invalid
+[14:30:40] SMILES Parse Error: check for mistakes around position 1:
+[14:30:40] invalid
+[14:30:40] ^
+[14:30:40] SMILES Parse Error: Failed parsing SMILES 'invalid' for input: 'invalid'
+======================================================================
+FAIL: test_every_guided_form_translates_without_changing_configuration (test_localization.LocalizationCoverageTests.test_every_guided_form_translates_without_changing_configuration) (operation='retrieve_compounds')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_localization.py", line 146, in test_every_guided_form_translates_without_changing_configuration
+    if isinstance(value,str):self.assertFalse(re.search(r'[ãõçáéíóúêô]',value),value)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: <re.Match object; span=(21, 22), match='é'> is not false : MOL identifica as moléculas recuperadas e SIM os novos similares. Selecione os conjuntos no próximo bloco; use merge ou Individual + ALL quando desejar analisá-los juntos.
+
+======================================================================
+FAIL: test_every_guided_form_translates_without_changing_configuration (test_localization.LocalizationCoverageTests.test_every_guided_form_translates_without_changing_configuration) (operation='retrieve_pubchem')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_localization.py", line 146, in test_every_guided_form_translates_without_changing_configuration
+    if isinstance(value,str):self.assertFalse(re.search(r'[ãõçáéíóúêô]',value),value)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: <re.Match object; span=(14, 15), match='ç'> is not false : Limiar da seleção. A unidade e a faixa dependem do método escolhido.
+
+======================================================================
+FAIL: test_every_guided_form_translates_without_changing_configuration (test_localization.LocalizationCoverageTests.test_every_guided_form_translates_without_changing_configuration) (operation='expand_similar_compounds')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_localization.py", line 146, in test_every_guided_form_translates_without_changing_configuration
+    if isinstance(value,str):self.assertFalse(re.search(r'[ãõçáéíóúêô]',value),value)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: <re.Match object; span=(14, 15), match='ç'> is not false : Limiar da seleção. A unidade e a faixa dependem do método escolhido.
+
+======================================================================
+FAIL: test_every_guided_form_translates_without_changing_configuration (test_localization.LocalizationCoverageTests.test_every_guided_form_translates_without_changing_configuration) (operation='prepare_structures')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_localization.py", line 146, in test_every_guided_form_translates_without_changing_configuration
+    if isinstance(value,str):self.assertFalse(re.search(r'[ãõçáéíóúêô]',value),value)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: <re.Match object; span=(19, 20), match='ç'> is not false : pH usado na preparação e protonação molecular.
+
+======================================================================
+FAIL: test_every_guided_form_translates_without_changing_configuration (test_localization.LocalizationCoverageTests.test_every_guided_form_translates_without_changing_configuration) (operation='admet')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_localization.py", line 146, in test_every_guided_form_translates_without_changing_configuration
+    if isinstance(value,str):self.assertFalse(re.search(r'[ãõçáéíóúêô]',value),value)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: <re.Match object; span=(17, 18), match='ó'> is not false : Como marcar a hipótese de pesquisa
+
+======================================================================
+FAIL: test_every_guided_form_translates_without_changing_configuration (test_localization.LocalizationCoverageTests.test_every_guided_form_translates_without_changing_configuration) (operation='fingerprints')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_localization.py", line 146, in test_every_guided_form_translates_without_changing_configuration
+    if isinstance(value,str):self.assertFalse(re.search(r'[ãõçáéíóúêô]',value),value)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: <re.Match object; span=(48, 49), match='õ'> is not false : Comprimento do vetor Morgan em bits. Afeta colisões e a representação usada na similaridade.
+
+======================================================================
+FAIL: test_every_guided_form_translates_without_changing_configuration (test_localization.LocalizationCoverageTests.test_every_guided_form_translates_without_changing_configuration) (operation='similarity')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_localization.py", line 146, in test_every_guided_form_translates_without_changing_configuration
+    if isinstance(value,str):self.assertFalse(re.search(r'[ãõçáéíóúêô]',value),value)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: <re.Match object; span=(14, 15), match='ç'> is not false : Limiar da seleção. A unidade e a faixa dependem do método escolhido.
+
+======================================================================
+FAIL: test_every_guided_form_translates_without_changing_configuration (test_localization.LocalizationCoverageTests.test_every_guided_form_translates_without_changing_configuration) (operation='redocking')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_localization.py", line 146, in test_every_guided_form_translates_without_changing_configuration
+    if isinstance(value,str):self.assertFalse(re.search(r'[ãõçáéíóúêô]',value),value)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: <re.Match object; span=(15, 16), match='é'> is not false : Individual mantém os conjuntos separados. Merge reúne as entradas selecionadas sem duplicar moléculas. Individual + ALL também produz a análise do conjunto completo. Resultados válidos já calculados são reaproveitados.
+
+======================================================================
+FAIL: test_every_guided_form_translates_without_changing_configuration (test_localization.LocalizationCoverageTests.test_every_guided_form_translates_without_changing_configuration) (operation='docking_vina')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_localization.py", line 146, in test_every_guided_form_translates_without_changing_configuration
+    if isinstance(value,str):self.assertFalse(re.search(r'[ãõçáéíóúêô]',value),value)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: <re.Match object; span=(5, 6), match='ç'> is not false : Esforço de busca do Vina. Valores maiores ampliam a amostragem e o custo computacional.
+
+======================================================================
+FAIL: test_every_guided_form_translates_without_changing_configuration (test_localization.LocalizationCoverageTests.test_every_guided_form_translates_without_changing_configuration) (operation='docking_dock6')
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_localization.py", line 146, in test_every_guided_form_translates_without_changing_configuration
+    if isinstance(value,str):self.assertFalse(re.search(r'[ãõçáéíóúêô]',value),value)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: <re.Match object; span=(29, 30), match='í'> is not false : Densidade de pontos da superfície molecular para a preparação DOCK6.
+
+======================================================================
+FAIL: test_literal_validation_messages_have_translations_in_both_directions (test_localization.LocalizationCoverageTests.test_literal_validation_messages_have_translations_in_both_directions)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_localization.py", line 170, in test_literal_validation_messages_have_translations_in_both_directions
+    self.assertTrue(Translator('en')(message)!=message or message in known_english,
+AssertionError: False is not true : admet.py:178: Execute a avaliação ADMET antes de exportar.
+
+----------------------------------------------------------------------
+Ran 48 tests in 22.828s
+
+FAILED (failures=11)

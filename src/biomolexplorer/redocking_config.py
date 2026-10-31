@@ -15,7 +15,7 @@ def effective_preparation(parameters, records=None):
     if common is not None:
         validate_preparation_settings(common)
         return {pair_key(r):copy.deepcopy(common) for r in records or []}
-    return copy.deepcopy(parameters.get('preparation_pairs') or {})
+    return {key:copy.deepcopy(value) for key,value in (parameters.get('preparation_pairs') or {}).items() if key in {pair_key(r) for r in records or []}}
 
 
 def shared_preparation(parameters):
@@ -198,14 +198,15 @@ def metadata_records(paths):
     return records
 
 
-def validate_structure_pairs(folder, records, settings, prepared=False, engine='vina'):
+def validate_structure_pairs(folder, records, settings, prepared=False, engine='vina',prepared_directory=None):
     """Validate actual selected residues before running any external engine."""
     import csv
     import math
     folder = Path(folder)
     validate_pairs(records, settings)
     if prepared:
-        centers_file = folder / 'Prepared' / 'centers.csv'
+        prepared_root=Path(prepared_directory) if prepared_directory is not None else folder/'Prepared'
+        centers_file = prepared_root / 'centers.csv'
         if not centers_file.is_file():
             raise ValueError('Os complexos preparados precisam do arquivo centers.csv.')
         with centers_file.open(encoding='utf-8-sig', newline='') as stream:
@@ -216,7 +217,7 @@ def validate_structure_pairs(folder, records, settings, prepared=False, engine='
             names=(f'{code}_{chain}.dockprep.pdbqt',f'{identity}.lig.pdbqt') if engine=='vina' else (
                 f'{code}_{chain}.dockprep.mol2',f'{code}_{chain}.noH.pdb',f'{identity}.lig.mol2')
             for filename in names:
-                path = folder / 'Prepared' / filename
+                path = prepared_root / filename
                 if not path.is_file() or not path.stat().st_size:
                     raise ValueError(f'Arquivo preparado ausente ou sem átomos: {filename}')
                 if path.suffix=='.mol2':

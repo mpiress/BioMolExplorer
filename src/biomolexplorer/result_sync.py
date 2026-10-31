@@ -67,6 +67,8 @@ def pair_removals(entry,current):
 
 def plan(db,pid,pipeline,project_root=None):
     pipeline=copy.deepcopy(pipeline)
+    stored=db.execute('SELECT pipeline FROM projects WHERE id=?',(pid,)).fetchone()
+    baseline={s['id']:s for s in json.loads(stored[0])} if stored else {}
     current={s['id']:s for s in pipeline};runs=[];candidates=set();protected=set();affected=0;lost_owners={}
     changed_blocks={};active_conflicts=set();signatures={};selection_owners=set()
     def discard(item,lost):
@@ -100,6 +102,11 @@ def plan(db,pid,pipeline,project_root=None):
                 try:valid=row_asset is not None and input_digest(row_asset[0])==sha
                 except OSError:valid=False
                 if not valid:changed_assets.add(asset)
+            # A downstream edit must not reconcile unrelated historical requests.
+            # Disk changes still require explicit confirmation independently.
+            before=baseline.get(item['id'])
+            if new is not None and before is not None and signature(before)==signature(new) and not changed_inputs and not changed_assets:
+                continue
             removed=bool(new is None or incompatible(config,new) or changed_inputs or changed_assets or any(not retained(r,new) for r in refs(config)))
             if not removed:continue
             if new is None or removed_axes(config,new) or any(not retained(r,new) for r in refs(config)):
