@@ -236,7 +236,7 @@ class IncrementalRedockingTests(unittest.TestCase):
 
 class SchedulerIncrementalTests(unittest.TestCase):
     """Exercise the real store and scheduler, with only scientific engines mocked."""
-    def test_verified_legacy_pairs_are_migrated_before_adding_a_ligand(self):
+    def test_retired_processing_version_recalculates_pairs_without_losing_legacy_results(self):
         import sys
         import test_pipeline_execution as execution
         from biomolexplorer.catalog import new_stage
@@ -274,7 +274,13 @@ class SchedulerIncrementalTests(unittest.TestCase):
             stage['parameters']['pdb_codes']=[['1ABC','LIG',1,'A'],['1ABC','BAD',3,'A']];fixture.save([stage])
             second=fixture.finish_selected(service,service.submit(fixture.token,fixture.project_id))
             self.assertEqual(second['status'],'succeeded',second.get('error'))
-            self.assertEqual(science.docked,[('1ABC','LIG'),('1ABC','BAD')])
+            # A frozen legacy compatibility certificate cannot authorize changed
+            # scientific preparation code. Preserve old bytes, rerun conservatively.
+            from biomolexplorer.stage_cache import operation_digest,manifest_matches
+            certificate=json.loads((RESOURCE_ROOT/'legacy_cache_compatibility.json').read_text())
+            self.assertNotEqual(certificate['operations']['redocking'],operation_digest('redocking'))
+            self.assertEqual(science.docked,[('1ABC','LIG'),('1ABC','LIG'),('1ABC','BAD')])
+            self.assertTrue(manifest_matches(old['artifact_manifest']))
 
     def test_scheduler_passes_verified_seeds_and_results_table_accumulates(self):
         import test_pipeline_execution as execution

@@ -17,7 +17,7 @@ cd BioMolExplorer
 
 Sem Git, use **Code → Download ZIP**, extraia o arquivo e abra um terminal na pasta extraída. O [guia de instalação e configuração](installation.md) detalha o download, as ferramentas externas e os caminhos.
 
-**Configure UCSF Chimera, Open Babel e Vina no ambiente científico principal.** DOCK6 é necessário para seus blocos. O ambiente AmberTools separado é usado apenas pelos protocolos de dinâmica que o exigem; consulte o guia de instalação.
+**Configure UCSF Chimera, Open Babel e Vina no ambiente científico principal.** DOCK6 é necessário para seus blocos. Amber Score usa apenas o bundle nativo do DOCK6 6.11; não é necessário um ambiente AmberTools externo.
 
 1. Na raiz do código baixado, crie o ambiente científico.
 2. Ative o ambiente e instale a interface.
@@ -287,21 +287,29 @@ O botão **Footprint** do DOCK6 abre um popup integrado com o gráfico das energ
 
 Após conectar os resultados Vina e DOCK6, o consenso segue automaticamente na execução do pipeline, sem confirmação de arquivos ou parâmetros adicionais. A tabela apresenta código do composto, score Vina, score DOCK6 e score normalizado (0 a 1). Clique no cabeçalho de uma coluna para alternar a ordenação crescente e decrescente; a ordenação considera toda a tabela antes da paginação. O score normalizado é a média das normalizações min-max dos dois motores, e valores maiores indicam posições melhores no ranking. O CSV também preserva z-score e min-max. Há botões **3D Vina**, **3D DOCK6** e **Remover** em cada linha. O consenso usa os scores originais dos dois motores, sem exigir receptor, ligante de referência ou pose. Arquivos estruturais disponíveis são anexos opcionais para visualização e sua ausência não bloqueia o cálculo. Para um composto ou scores constantes, as normalizações são zero. A remoção exige permissão de edição, fica registrada e afeta próximas entradas; não recalcula análises já concluídas. As tabelas principais de cada lote são usadas sem reintroduzir linhas removidas a partir das tabelas auxiliares.
 
-### Dinâmica molecular com DOCK6 e AmberTools
+### Amber Score nativo · DOCK6 6.11
 
-O preparo de candidatos possui seleção automática de backend e políticas distintas de carga para Vina e DOCK6, com preservação do método Antechamber no DOCK6. Consulte [preparação molecular e backends](molecular_preparation.md) para opções nativas, fallback de minimização, cache e sistemas especiais.
+Na categoria **Dinâmica Molecular**, o bloco **Amber Score · DOCK6** executa exclusivamente a pontuação nativa Amber Score. Não executa dinâmica molecular convencional nem chama um ambiente AmberTools externo. UCSF Chimera continua responsável pelo preparo nos blocos de docking/redocking. Os componentes AMBER distribuídos com Chimera e DOCK6 fazem parte dessas ferramentas e continuam necessários.
 
-**Dinâmica com DOCK6** recebe receptores PDB e compostos de etapas compatíveis, incluindo poses DOCK6 e Vina, MOL2, SDF, PDBQT e tabelas CSV. Selecione explicitamente os pares na configuração: nenhum produto cartesiano é executado por padrão. Uma tabela deve apontar para uma pose 3D (`pose_file`, `conformer_file`, `prepared_mol2` ou `prepared_pdbqt`); SMILES sozinho não define uma posição de ligação e causa uma falha explicativa apenas naquele par. Conversões de poses usam Open Babel e preservam coordenadas; confirme quimicamente os tipos, protonação e associação ao receptor.
+1. Conecte os receptores PDB e poses 3D dos ligantes; selecione os pares explicitamente.
+2. Configure minimização antes/depois, passos do refinamento interno, temperatura, solvente implícito GB (1/2/5), corte e região móvel.
+3. Ative a preservação de cargas para usar as cargas MOL2 preparadas pelo Chimera. O DOCK6 gera sua própria tipagem GAFF, topologias e complexo; proteína ff94. Não há substituição silenciosa por ff14SB/GAFF2.
+4. Execute e inspecione as quatro contribuições energéticas, estruturas, logs e `protocol.json`. Pares íntegros reutilizam os checkpoints; falhas não descartam os demais pares.
 
-**AMBER Score (DOCK6)** prepara e refina separadamente receptor, ligante e complexo em solvente implícito. **AMBER Score + trajetória sander** acrescenta minimização e uma trajetória NetCDF independente. O protocolo não possui uma etapa de equilibração validada: não interprete esse refinamento curto como dinâmica de produção ou energia livre de ligação. Os helpers da instalação DOCK6 testada usam **ff94 e GAFF**, não ff14SB/GAFF2; não se anuncia uma atualização de campo de força que não ocorreu. Não remova silenciosamente cofatores, águas ou metais: erros de parametrização precisam ser resolvidos antes de interpretar o resultado.
+O refinamento nativo usa passo fixo de 0.001 ps, Langevin (gamma 2), sem restrições RATTLE. O modo `nothing` calcula energia sem mover átomos. Não há caixa explícita, pressão, aquecimento/equilibração convencional ou controles de trajetória nessa interface, pois não são parâmetros do Amber Score 6.11. Os parâmetros do solvente implícito não equivalem a uma caixa de água.
 
-O painel por par apresenta RMSD do backbone e do ligante (ajuste à proteína, sem reajustar o ligante), RMSF C-alfa em torno da média alinhada, raio de giro ponderado por massa, ligações H exclusivamente da interface com ocupância, SASA LCPO, distância entre centros de massa do ligante e sítio inicial e contatos por resíduo (4 Å). O sítio inicial inclui resíduos até 5 Å do ligante no primeiro quadro salvo. A referência de RMSD é esse primeiro quadro, não necessariamente a pose inicial. `analysis.json` consolida séries, máscaras, ocupâncias e definições; `protocol.json` registra parâmetros, hashes das ferramentas e entradas, campos de força e restrições. São necessários ao menos dois quadros. A máscara sander padrão `:1` mantém apenas o primeiro resíduo móvel: verifique-a, sobretudo em ligantes multirresíduo; RMSF de proteína congelada não informa sua flexibilidade. Compare métricas somente em protocolos e receptores equivalentes, sem ranking definitivo de afinidade.
+Quando o DOCK6 grava o complexo final, são apresentados RMSD de backbone e ligante em relação ao complexo preparado inicial, após ajuste do backbone; raio de giro do complexo ponderado por massa (inicial/final); e contagem de átomos de hidrogênio. **Contagem de hidrogênios não é contagem de ligações H.** Gráficos mostram comparações estruturais, não evolução temporal. Não se produz RMSF, ocupância de ligações H ou inferência de equilíbrio sem trajetória. No modo energia apenas, a ausência de estrutura final é informada.
 
-Cada par possui um identificador estável derivado do receptor e do ligante. `dynamics_results.json` é o índice principal, `dynamics_results.csv` é o resumo e `pairs/<id>/` contém os arquivos daquele cálculo. Pares concluídos e íntegros são reutilizados; pares alterados, corrompidos ou com falha são recalculados isoladamente. Falhar um par não descarta os demais. Verifique DOCK6, `sander` e `cpptraj` conforme o guia de instalação antes de usar trajetórias.
+Protocolos históricos `dock6_sander` exigem reconfiguração explícita; resultados anteriores permanecem legíveis e não são relabelados como cálculo nativo. Metais, cofatores ou resíduos sem parâmetros compatíveis devem ser resolvidos explicitamente; não são removidos nem aproximados para forçar um score.
 
-O índice SQLite compartilhado valida hashes antes do reuso e deduplica artefatos por conteúdo. Preparações de receptor, ligante e complexo têm checkpoints próprios, independentes dos parâmetros de temperatura e duração; falhar o ligante não descarta o receptor concluído. Desativar o reuso força novo processamento. As séries numéricas ficam consolidadas, mas topologias, coordenadas e trajetória continuam em formatos nativos necessários às ferramentas. Referências dos métodos: [RMSD](https://amberhub.chpc.utah.edu/rmsd/), [RMSF](https://amberhub.chpc.utah.edu/atomicfluct-rmsf/), [ligações H](https://amberhub.chpc.utah.edu/hbond/) e [SASA LCPO](https://amberhub.chpc.utah.edu/surf/).
+```bash
+PYTHONPATH=src python scripts/validate_native_structures.py \
+  --dock6 /caminho/dock6 --steps 2 \
+  --output /tmp/amber_score_validation.json
+```
 
-**Comparar pares por receptor e protocolo** abre uma tabela descritiva, agrupada por hash do receptor, parâmetros e ferramentas. Compare apenas linhas do mesmo grupo; a tabela não produz ranking de afinidade. Os logs identificam a fase da falha (`failed_stage`), preservando saídas dos helpers AMBER para diagnóstico de parâmetros ausentes. Após sucesso, cópias locais dos scripts auxiliares e o arquivo transitório de cargas são removidos; `BIOMOL_MD_DEBUG=1` os preserva para depuração. Topologias, entradas científicas, logs, trajetória e análises não são removidos.
+Este teste curto usa o exemplo 1LGU da instalação e não representa validação de todos os sistemas científicos.
+
 
 ## 12. Explorar resultados e navegar pelos grafos
 

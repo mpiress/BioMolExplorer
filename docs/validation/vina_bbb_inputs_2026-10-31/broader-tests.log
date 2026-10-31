@@ -1,0 +1,29 @@
+................................................................F...........[12:36:15] CID1: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[12:36:15] CID1: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[12:36:15] CID1: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[12:36:15] CID1: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+.....[12:36:16] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[12:36:16] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+..........................[12:36:26] DEPRECATION WARNING: please use MorganGenerator
+[12:36:26] DEPRECATION WARNING: please use MorganGenerator
+[12:36:26] DEPRECATION WARNING: please use MorganGenerator
+[12:36:26] DEPRECATION WARNING: please use MorganGenerator
+[12:36:26] DEPRECATION WARNING: please use MorganGenerator
+[12:36:26] DEPRECATION WARNING: please use MorganGenerator
+[12:36:26] DEPRECATION WARNING: please use MorganGenerator
+[12:36:26] DEPRECATION WARNING: please use MorganGenerator
+[12:36:26] DEPRECATION WARNING: please use MorganGenerator
+..........................
+======================================================================
+FAIL: test_both_engines_accept_actual_poses_and_keep_compound_identity (test_docking_interoperability.DockingInteroperabilityTests.test_both_engines_accept_actual_poses_and_keep_compound_identity)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_docking_interoperability.py", line 67, in test_both_engines_accept_actual_poses_and_keep_compound_identity
+    self.assertEqual(convert.call_count,2);generate.assert_not_called()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 0 != 2
+
+----------------------------------------------------------------------
+Ran 133 tests in 102.863s
+
+FAILED (failures=1)

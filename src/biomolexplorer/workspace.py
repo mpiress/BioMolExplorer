@@ -56,6 +56,9 @@ class WorkspaceStore:
                     user_id TEXT, actor_name TEXT NOT NULL, actor_email TEXT NOT NULL, action TEXT NOT NULL,
                     summary TEXT NOT NULL, created REAL NOT NULL, has_before INTEGER NOT NULL);
                 CREATE INDEX IF NOT EXISTS history_project ON project_history(project_id,created);
+                CREATE TABLE IF NOT EXISTS block_ids(project_id TEXT REFERENCES projects(id),stage_id TEXT NOT NULL,block_id TEXT NOT NULL,PRIMARY KEY(project_id,stage_id));
+                CREATE TABLE IF NOT EXISTS execution_preferences(project_id TEXT PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
+                    stage_ids TEXT NOT NULL,confirmed INTEGER NOT NULL,updated REAL NOT NULL);
                 CREATE TABLE IF NOT EXISTS result_file_transactions(id TEXT PRIMARY KEY,project_id TEXT NOT NULL);
             ''')
 
@@ -289,6 +292,19 @@ class WorkspaceStore:
         finish(moved)
         if journal:journal.finish()
         return self.project(token, project_id)
+
+    def execution_order(self,token,project_id):
+        from .execution_order import read
+        return read(self,token,project_id)
+
+    def save_execution_order(self,token,project_id,order):
+        from .execution_order import save
+        return save(self,token,project_id,order)
+
+    def available_results(self,token,project_id,*,include_checkpoints=False):
+        project=self.project(token,project_id)
+        from .published_results import catalog
+        return list(catalog(self,project_id,project['pipeline'],include_checkpoints=include_checkpoints).values())
 
     def result_removal_plan(self,token,project_id,stages):
         self.project(token,project_id,'editor')

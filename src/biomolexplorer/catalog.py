@@ -22,7 +22,7 @@ TITLES = {
  'docking_vina': ('Docking com Vina', 'Execute a seleção de compostos contra receptores preparados.', 'Docking'),
  'docking_dock6': ('Docking com DOCK6', 'Refine conformações e obtenha scores e footprints.', 'Docking'),
  'consensus': ('Consenso de docking', 'Combine resultados Vina e DOCK6.', 'Docking'),
- 'dynamics_dock6': ('Dinâmica com Dock6','Refine pares receptor–ligante com AMBER Score e gere trajetórias com AmberTools.','Dinâmica Molecular'),
+ 'dynamics_dock6': ('Amber Score · DOCK6','Refine poses receptor–ligante com o Amber Score nativo do DOCK6 6.11 em solvente implícito.','Dinâmica Molecular'),
 }
 LABELS = {
  'redocking_engine':'Motor de redocking',
@@ -123,8 +123,6 @@ def field_label(operation, key):
     if operation=='dynamics_dock6':
         if key=='base_input_path':return 'Receptores PDB para dinâmica'
         if key=='base_selected_mols':return 'Compostos para dinâmica'
-        if key=='ambertools_path':return 'Instalação AmberTools (opcional; pasta com bin/)'
-        if key=='ambertools_env':return 'Ambiente Conda AmberTools (padrão: BioMolExplorer-AmberTools)'
     if operation=='retrieve_zinc' and key=='download_workers':return 'Downloads simultâneos'
     if operation=='retrieve_zinc' and key=='base_input_path':return 'Lista de downloads das tranches ZINC'
     if operation=='prepare_structures':

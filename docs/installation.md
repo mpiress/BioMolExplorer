@@ -26,7 +26,7 @@ A pasta do código é diferente da pasta de cada projeto de pesquisa. Você esco
 | UCSF Chimera | 1.17, opcional | Fallback legado escolhido explicitamente | [Downloads de versões anteriores da UCSF](https://www.cgl.ucsf.edu/chimera/olddownload.html) e [instruções de instalação](https://www.cgl.ucsf.edu/chimera/docs/UsersGuide/installation.html) |
 | DOCK6 | 6.11 | Docking, refinamento e cálculo de scores, com seus programas auxiliares | [Página oficial DOCK 6](https://dock.compbio.ucsf.edu/DOCK_6/index.htm), [notas da versão 6.11](https://dock.compbio.ucsf.edu/DOCK_6/new_in_6.11.txt) e manual incluído na distribuição |
 
-Instale UCSF Chimera 1.17, Open Babel e Vina para a preparação/redocking; instale DOCK6 6.11 para seus blocos de docking. AmberTools separado é opcional para protocolos de dinâmica, não para preparar docking. ChimeraX não interpreta os scripts Chimera.
+Instale UCSF Chimera 1.17, Open Babel e Vina para a preparação/redocking; instale DOCK6 6.11 para seus blocos de docking. Não é necessário ambiente AmberTools separado. ChimeraX não interpreta os scripts Chimera.
 
 Instale o Chimera com o instalador adequado ao sistema. Para DOCK6, siga as instruções da distribuição 6.11, compile também os programas auxiliares e mantenha a instalação completa, incluindo `bin/` e `parameters/`. Execute os testes fornecidos pelo DOCK6 conforme seu manual.
 
@@ -94,13 +94,7 @@ O redocking com preparação verifica Chimera, Open Babel e Vina. Com entradas j
 
 **Preparar para docking** usa Chimera para receptores, ligantes, cargas `gas`/`am1` e minimização. Open Babel converte os formatos de Vina e DOCK6. Não é necessário configurar um ambiente AmberTools nesses blocos. Consulte [preparação molecular](molecular_preparation.md).
 
-**Dinâmica com DOCK6** usa o AMBER Score e os utilitários AMBER incluídos na instalação completa do DOCK6. O protocolo `DOCK6 + sander` requer também `sander`; a análise opcional da trajetória requer `cpptraj`. Instale-os em ambiente isolado, pois o AmberTools atual conflita com as bibliotecas nativas de Open Babel/PyMOL do worker principal:
-
-```bash
-conda env create -f requirements-ambertools.yml
-```
-
-Nenhuma ativação adicional é necessária. O bloco usa **Ambiente Conda AmberTools** = `BioMolExplorer-AmberTools` por padrão. Informe **Instalação AmberTools** apenas para substituir o ambiente por uma raiz explícita.
+**Amber Score · DOCK6** requer instalação completa do DOCK6 **6.11**, incluindo seus helpers AMBER e biblioteca de parâmetros. Não usa ambiente AmberTools separado, sander ou cpptraj. Consulte a seção Amber Score nativo no [manual](user_manual.md).
 
 Consulte [Configuração do redocking](redocking_configuration.md) para seleção de pares, cofatores, entradas preparadas, diagnóstico e resultados.
 

@@ -41,4 +41,43 @@ class DashboardTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(dialogs),2)
 
 
+
+class NativeSettingsTests(unittest.TestCase):
+    def form(self,stage,language):
+        from biomolexplorer.ui.guided import GuidedForm
+        from biomolexplorer.ui.localization import LocalizedPage
+        from test_frontend_navigation import Page
+        ui=SimpleNamespace(current={'pipeline':[stage]},service=SimpleNamespace(dock6_path=None),page=LocalizedPage(Page(),language))
+        return GuidedForm(ui,stage,[],True),ui
+
+    def test_native_block_is_available_and_english_form_preserves_settings(self):
+        import re
+        import flet as ft
+        from biomolexplorer.catalog import TITLES,new_stage
+        from biomolexplorer.ui.localization import Translator,LocalizedPage
+        from test_frontend_navigation import walk
+        stage=new_stage('dynamics_dock6');form,ui=self.form(stage,'en')
+        self.assertEqual(Translator('en')(TITLES['dynamics_dock6'][2]),'Molecular Dynamics')
+        original=form.read();ui.page.localize(form.layout())
+        self.assertEqual(form.read(),original)
+        self.assertEqual(original['parameters']['amber_score_type'],'dock6')
+        for control in walk(form.controls):
+            if getattr(control,'_biomol_verbatim',False) is True:continue
+            for attr in LocalizedPage._labels+(('value',) if isinstance(control,ft.Text) else ()):
+                value=getattr(control,attr,None)
+                if isinstance(value,str):self.assertFalse(re.search(r'[ãõçáéíóúêô]',value),value)
+
+    def test_legacy_protocol_requires_explicit_choice_and_drops_obsolete_fields_only_on_apply(self):
+        from biomolexplorer.catalog import new_stage
+        stage=new_stage('dynamics_dock6')
+        stage['parameters'].update(amber_score_type='dock6_sander',md_heating_steps=17,ambertools_path='/legacy')
+        form,ui=self.form(stage,'pt')
+        with self.assertRaises(ValueError):form.read()
+        form.field_controls['amber_score_type'].value='dock6'
+        result=form.read()
+        self.assertNotIn('md_heating_steps',result['parameters'])
+        self.assertNotIn('ambertools_path',result['parameters'])
+        self.assertEqual(stage['parameters']['amber_score_type'],'dock6_sander')
+
+
 if __name__=='__main__':unittest.main()

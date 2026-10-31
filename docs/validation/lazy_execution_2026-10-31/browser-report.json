@@ -1,0 +1,104 @@
+[
+  {
+    "width": 1440,
+    "offset": 0,
+    "rows": 25,
+    "count": "1\u201325 of 50 filtered pairs \u00b7 50 total \u00b7 Page 1/2",
+    "next_disabled": false,
+    "next_rect": {
+      "x": 1301.9837646484375,
+      "y": 419,
+      "width": 88.015625,
+      "height": 32,
+      "top": 419,
+      "right": 1389.9993896484375,
+      "bottom": 451,
+      "left": 1301.9837646484375
+    }
+  },
+  {
+    "width": 1440,
+    "offset": 25,
+    "rows": 25,
+    "count": "26\u201350 of 50 filtered pairs \u00b7 50 total \u00b7 Page 2/2",
+    "next_disabled": true,
+    "next_rect": {
+      "x": 1301.9837646484375,
+      "y": 419,
+      "width": 88.015625,
+      "height": 32,
+      "top": 419,
+      "right": 1389.9993896484375,
+      "bottom": 451,
+      "left": 1301.9837646484375
+    }
+  },
+  {
+    "width": 1024,
+    "offset": 0,
+    "rows": 25,
+    "count": "1\u201325 of 50 filtered pairs \u00b7 50 total \u00b7 Page 1/2",
+    "next_disabled": false,
+    "next_rect": {
+      "x": 887.9837646484375,
+      "y": 369,
+      "width": 88.015625,
+      "height": 32,
+      "top": 369,
+      "right": 975.9993896484375,
+      "bottom": 401,
+      "left": 887.9837646484375
+    }
+  },
+  {
+    "width": 1024,
+    "offset": 25,
+    "rows": 25,
+    "count": "26\u201350 of 50 filtered pairs \u00b7 50 total \u00b7 Page 2/2",
+    "next_disabled": true,
+    "next_rect": {
+      "x": 887.9837646484375,
+      "y": 369,
+      "width": 88.015625,
+      "height": 32,
+      "top": 369,
+      "right": 975.9993896484375,
+      "bottom": 401,
+      "left": 887.9837646484375
+    }
+  },
+  {
+    "width": 360,
+    "offset": 0,
+    "rows": 25,
+    "count": "1\u201325 of 50 filtered pairs \u00b7 50 total \u00b7 Page 1/2",
+    "next_disabled": false,
+    "next_rect": {
+      "x": 223.98379516601562,
+      "y": 472,
+      "width": 88.015625,
+      "height": 32,
+      "top": 472,
+      "right": 311.9994201660156,
+      "bottom": 504,
+      "left": 223.98379516601562
+    }
+  },
+  {
+    "width": 360,
+    "offset": 25,
+    "rows": 25,
+    "count": "26\u201350 of 50 filtered pairs \u00b7 50 total \u00b7 Page 2/2",
+    "next_disabled": true,
+    "next_rect": {
+      "x": 223.98379516601562,
+      "y": 472,
+      "width": 88.015625,
+      "height": 32,
+      "top": 472,
+      "right": 311.9994201660156,
+      "bottom": 504,
+      "left": 223.98379516601562
+    }
+  }
+]

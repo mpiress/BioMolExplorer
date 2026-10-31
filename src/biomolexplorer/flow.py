@@ -21,15 +21,15 @@ OUTPUTS = {
     'retrieve_pubchem': {'compounds'},
     'retrieve_compounds': {'compounds','chembl'}, 'expand_similar_compounds': {'compounds'},
     'retrieve_zinc': {'compounds'}, 'retrieve_structures': {'structures'},
-    'prepare_structures': {'prepared_structures','compounds','receptor_pdb','molecular_poses'}, 'redocking': {'structures','prepared_structures','redocking','receptor_pdb','molecular_poses'},
+    'prepare_structures': {'prepared_structures','compounds','receptor_pdb','molecular_poses'}, 'redocking': {'structures','prepared_structures','redocking','receptor_pdb'},
     'admet': {'compounds'}, 'fingerprints': {'fingerprints','compounds'}, 'similarity': {'similarity'},
-    'graphs': {'compounds'}, 'docking_vina': {'vina','compounds'}, 'docking_dock6': {'dock6','compounds','molecular_poses','receptor_pdb'}, 'consensus': {'scores','compounds'},
+    'graphs': {'compounds'}, 'docking_vina': {'vina','compounds','molecular_poses','receptor_pdb'}, 'docking_dock6': {'dock6','compounds','molecular_poses','receptor_pdb'}, 'consensus': {'scores','compounds'},
 }
 INPUTS = {
-    'dynamics_dock6': {'base_input_path':{'structures','receptor_pdb'},'base_selected_mols':{'compounds','molecular_poses','vina','dock6'}},
+    'dynamics_dock6': {'base_input_path':{'receptor_pdb'},'base_selected_mols':{'compounds','molecular_poses'}},
     'retrieve_pubchem': {'base_input_path':{'compounds'}},
     'expand_similar_compounds': {'base_input_path':{'chembl'}},
-    'retrieve_zinc': {'base_input_path':{'zinc_urls','other'}},
+    'retrieve_zinc': {'base_input_path':{'zinc_urls'}},
     'admet': {'base_input_path':{'compounds'}}, 'fingerprints': {'base_input_path':{'compounds'}},
     'similarity': {'base_input_path':{'fingerprints'}},
     'graphs': {'similarity_path':{'similarity'}},
@@ -50,13 +50,23 @@ def input_types(stage, field):
 
 
 def output_types(stage):
+    """Declared data types and narrow semantic aliases; no wildcard outputs."""
     if stage.get('provided_results'):
-        return {stage['provided_results']['kind']}
-    if stage['operation']=='import_results':
-        params=stage['parameters']
-        types=params.get('asset_types')
-        return {types.get(asset,params.get('kind','other')) for asset in params.get('asset_ids',[])} if types else {params.get('kind','other')}
-    return OUTPUTS[stage['operation']]
+        result={stage['provided_results']['kind']}
+    elif stage['operation']=='import_results':
+        params=stage['parameters'];types=params.get('asset_types') or {}
+        values=[types.get(asset,params.get('kind','other')) for asset in params.get('asset_ids',[])] if types else [params.get('kind','other')]
+        result={value for value in values if isinstance(value,str)}
+    else:result=set(OUTPUTS.get(stage['operation'],()))
+    return artifact_types(result)
+
+
+def artifact_types(kinds):
+    """Semantic roles shared by graph outputs and uploaded-file selectors."""
+    result=set(kinds)
+    if 'structures' in result:result.add('receptor_pdb')
+    if result & {'vina','dock6'}:result.add('molecular_poses')
+    return result
 
 
 def input_ports(stage):
@@ -65,12 +75,14 @@ def input_ports(stage):
         return []
     if operation=='retrieve_pubchem' and stage['parameters'].get('reference_source')=='manual':return []
     fields={f['name']:f for f in operation_fields(operation)}
-    return [{'field':field,'label':field_label(operation,field) if field=='base_input_path' else PORT_LABELS[field], 'types':input_types(stage,field),
+    return [{'field':field,'label':'Receptores' if operation=='dynamics_dock6' and field=='base_input_path' else field_label(operation,field) if field=='base_input_path' else PORT_LABELS[field], 'types':input_types(stage,field),
              'required': fields[field]['required'] or operation in ('retrieve_pubchem','expand_similar_compounds','consensus') or operation=='prepare_structures' and field=='base_selected_mols'}
             for field,types in INPUTS.get(operation,{}).items()]
 
 
 def compatible(source,target,field):
+    if target.get('provided_results') or target['operation']=='import_results':return False
+    if target['operation']=='retrieve_pubchem' and target['parameters'].get('reference_source')=='manual':return False
     if source['operation']=='prepare_structures' and target['operation'] in ('docking_vina','docking_dock6'):
         engine='vina' if target['operation']=='docking_vina' else 'dock6'
         if source['parameters'].get('docking_engines','both') not in ('both',engine):return False

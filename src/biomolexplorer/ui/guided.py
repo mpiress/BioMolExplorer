@@ -94,7 +94,7 @@ class GuidedForm:
             for k in KINDS:self.readers[k]=lambda k=k:self.fingerprint_choice.value==k
         for field in operation_fields(stage['operation']):
             key=field['name']; value=stage['parameters'].get(key,field['default'])
-            if stage['operation']=='dynamics_dock6' and key not in ('base_input_path','base_selected_mols','dock6_app_path','ambertools_path','ambertools_env'):continue
+            if stage['operation']=='dynamics_dock6' and key not in ('base_input_path','base_selected_mols','dock6_app_path'):continue
             if stage['operation']=='admet':
                 from biomolexplorer.admet_config import PARAMETERS
                 if key in PARAMETERS:continue
@@ -253,7 +253,9 @@ class GuidedForm:
         if parameters: sections.append(card('Parâmetros','Ajuste as opções da etapa. Os filtros específicos estão abaixo.',parameters))
         for control in self.controls[2:]:
             if not isinstance(control,ft.ExpansionTile): continue
-            control.controls=[ft.Container(padding=ft.Padding.only(left=24,right=24,top=20,bottom=28),content=fields(control.controls))]
+            if not getattr(control,'_guided_fields_wrapped',False):
+                control.controls=[ft.Container(padding=ft.Padding.only(left=24,right=24,top=20,bottom=28),content=fields(control.controls))]
+                control._guided_fields_wrapped=True
             control.bgcolor=control.collapsed_bgcolor='#FFFFFF'
             control.tile_padding=24
             control.text_color=control.collapsed_text_color='#172B4D'
@@ -614,6 +616,8 @@ class GuidedForm:
                 result['parameters'].pop('pdb_code',None)
         if result['operation']=='dynamics_dock6':
             from biomolexplorer.md_config import validate_settings
+            if result['parameters'].get('amber_score_type')=='dock6':
+                for key in ('ambertools_path','ambertools_env','md_time_step','trajectory_stride','md_heating_steps','md_equilibration_steps','random_seed','md_movable_mask','analyze_trajectory'):result['parameters'].pop(key,None)
             validate_settings(result['parameters'])
         validate_templates(result.get('templates',{}))
         if result['operation']=='similarity':

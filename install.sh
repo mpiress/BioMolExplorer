@@ -12,7 +12,6 @@ fi
 
 ANACONDA_INSTALLER="./apps/Anaconda.sh"
 CONDA_ENV_NAME="BioMolExplorer"
-AMBERTOOLS_ENV_NAME="BioMolExplorer-AmberTools"
 INSTALL_DIR="$HOME/progs"
 
 #Aplicações baixadas / existêntes na pasta apps
@@ -53,12 +52,6 @@ install_anaconda() {
         fi
     fi
 
-    if conda env list | awk '{print $1}' | grep -qx "$AMBERTOOLS_ENV_NAME"; then
-        echo "O ambiente Conda '$AMBERTOOLS_ENV_NAME' foi criado com sucesso."
-    else
-        echo "Criando ambiente AmberTools isolado..."
-        conda env create --file=requirements-ambertools.yml -y
-    fi
 
 }
 

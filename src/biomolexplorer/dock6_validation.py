@@ -43,7 +43,7 @@ def validate_mol2(path, *, connected=True, scored=False, sanitize=True):
     for atom in mol.GetAtoms():
         if atom.GetAtomicNum()==15 and atom.GetFormalCharge()==2 and sum(b.GetBondTypeAsDouble() for b in atom.GetBonds())==5:
             atom.SetFormalCharge(0)
-    Chem.SanitizeMol(mol)
+    if sanitize:Chem.SanitizeMol(mol)
     if connected and len(Chem.GetMolFrags(mol))!=1:
         raise ValueError('O ligante MOL2 contém fragmentos desconectados; revise a topologia da pose e os contraíons antes do docking flexível.')
     if scored:

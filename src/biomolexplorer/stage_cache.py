@@ -1,4 +1,6 @@
 """Content-based reuse of project stage results, independent of canvas positions."""
+import sys
+import shutil
 import hashlib
 import json
 import os
@@ -120,7 +122,7 @@ def operation_digest(operation):
         helpers=['molecular_parsing.py','molecule_quality.py','input_validation.py','storage.py']
         if operation=='fingerprints':helpers+=['molecular_cache.py']
         for name in helpers:digest.update((SOURCE_ROOT/'biomolexplorer'/name).read_bytes())
-        return digest.hexdigest()
+        return compatible_processing_digest(digest.hexdigest())
     pending=[spec.module] if spec else []
     pending+=['biomolexplorer.input_validation','biomolexplorer.molecule_quality']
     infrastructure={'workspace','pipeline','jobs','stage_cache','result_sync','clear_results',
@@ -130,6 +132,7 @@ def operation_digest(operation):
     visited=set();digest=hashlib.sha256(b'operation-contract-v2')
     while pending:
         module=pending.pop()
+        if operation!='dynamics_dock6' and module in {'biomolexplorer.md_inputs','biomolexplorer.md_engine','biomolexplorer.md_analysis','biomolexplorer.md_config','biomolexplorer.md_cache','biomolexplorer.md_results'}:continue
         if module.startswith('biomolexplorer.ui.') or module.startswith('biomolexplorer.') and module.split('.')[1] in infrastructure:continue
         if module in visited:continue
         visited.add(module);path=SOURCE_ROOT.joinpath(*module.split('.')).with_suffix('.py')
@@ -138,6 +141,8 @@ def operation_digest(operation):
         data=path.read_bytes();digest.update(module.encode());digest.update(data)
         tree=ast.parse(data)
         for node in ast.walk(tree):
+            # MD-specific validation cannot change retrieval, fingerprints or docking science.
+            if module=='biomolexplorer.input_validation' and isinstance(node,ast.ImportFrom) and (node.module or '')=='md_inputs' and operation!='dynamics_dock6':continue
             names=[]
             if isinstance(node,ast.Import):names=[a.name for a in node.names]
             elif isinstance(node,ast.ImportFrom):
@@ -146,8 +151,11 @@ def operation_digest(operation):
                 names=[base]+[base+'.'+a.name for a in node.names]
             pending.extend(sorted(n for n in names if n.split('.')[0] in ('biomolexplorer','wrappers','kernel','caad','crawlers')))
     version=digest.hexdigest()
-    # Audited routing-only changes may retain the previous scientific contract.
-    # Later source changes produce another raw hash and cannot inherit approval.
+    return compatible_processing_digest(version)
+
+
+def compatible_processing_digest(version):
+    """Only exact, audited routing-only changes retain a scientific contract."""
     compatibility=RESOURCE_ROOT/'processing_compatibility.json'
     if compatibility.is_file():
         return json.loads(compatibility.read_text()).get('aliases',{}).get(version,version)

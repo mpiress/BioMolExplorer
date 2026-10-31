@@ -1,0 +1,74 @@
+[
+  {
+    "width": 1440,
+    "operation": "retrieve_compounds",
+    "stable": true,
+    "actions_visible": true
+  },
+  {
+    "width": 1440,
+    "operation": "admet",
+    "stable": true,
+    "actions_visible": true
+  },
+  {
+    "width": 1440,
+    "operation": "redocking",
+    "stable": true,
+    "actions_visible": true
+  },
+  {
+    "width": 1440,
+    "operation": "dynamics_dock6",
+    "stable": true,
+    "actions_visible": true
+  },
+  {
+    "width": 1024,
+    "operation": "retrieve_compounds",
+    "stable": true,
+    "actions_visible": true
+  },
+  {
+    "width": 1024,
+    "operation": "admet",
+    "stable": true,
+    "actions_visible": true
+  },
+  {
+    "width": 1024,
+    "operation": "redocking",
+    "stable": true,
+    "actions_visible": true
+  },
+  {
+    "width": 1024,
+    "operation": "dynamics_dock6",
+    "stable": true,
+    "actions_visible": true
+  },
+  {
+    "width": 360,
+    "operation": "retrieve_compounds",
+    "stable": true,
+    "actions_visible": true
+  },
+  {
+    "width": 360,
+    "operation": "admet",
+    "stable": true,
+    "actions_visible": true
+  },
+  {
+    "width": 360,
+    "operation": "redocking",
+    "stable": true,
+    "actions_visible": true
+  },
+  {
+    "width": 360,
+    "operation": "dynamics_dock6",
+    "stable": true,
+    "actions_visible": true
+  }
+]

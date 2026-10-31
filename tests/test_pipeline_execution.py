@@ -84,6 +84,8 @@ class PipelineExecutionTests(unittest.TestCase):
                 calls.append((operation,dict(parameters)))
                 artifact = self.config.workspace / 'compounds.csv'
                 artifact.write_text('molecule_chembl_id,canonical_smiles\nCHEMBL1,CCO\n')
+                if operation=='admet':
+                    artifact.write_text('molecule_chembl_id,canonical_smiles,BBB,HIA,ADMET_selected\nCHEMBL1,CCO,True,True,True\n')
                 failed = operation in fail_operations
                 self.job = {'id':uuid4().hex,'status':'failed' if failed else 'succeeded',
                     'log_path':str(self.config.workspace / 'execution.log'), 'progress':None,

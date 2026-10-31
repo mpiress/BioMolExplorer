@@ -1,0 +1,2 @@
+/tmp/biomol-chimera-dock6-acceptance-h4v6uznq
+{"root": "/tmp/biomol-chimera-dock6-acceptance-h4v6uznq", "energies": {"amber_score": -2.798773, "complex_energy": -5083.032536, "receptor_contribution": 5000.287625, "ligand_contribution": 79.946138}, "analysis": {"initial_complex_rg": 16.465162483352533, "final_complex_rg": 16.465714144359225, "hydrogen_atoms": 1315, "final_protein_backbone_rmsd": 1.4910245018623785e-14, "final_ligand_rmsd": 0.49137286288785964}, "preparation_seconds": 1.06920694001019, "amber_score_seconds": 7.211348075012211}

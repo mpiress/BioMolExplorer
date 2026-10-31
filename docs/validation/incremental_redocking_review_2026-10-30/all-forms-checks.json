@@ -1,0 +1,242 @@
+[
+  {
+    "width": 1440,
+    "operation": "import_results",
+    "actions_visible": true
+  },
+  {
+    "width": 1440,
+    "operation": "retrieve_compounds",
+    "actions_visible": true
+  },
+  {
+    "width": 1440,
+    "operation": "retrieve_pubchem",
+    "actions_visible": true
+  },
+  {
+    "width": 1440,
+    "operation": "expand_similar_compounds",
+    "actions_visible": true
+  },
+  {
+    "width": 1440,
+    "operation": "retrieve_structures",
+    "actions_visible": true
+  },
+  {
+    "width": 1440,
+    "operation": "retrieve_zinc",
+    "actions_visible": true
+  },
+  {
+    "width": 1440,
+    "operation": "prepare_structures",
+    "actions_visible": true
+  },
+  {
+    "width": 1440,
+    "operation": "admet",
+    "actions_visible": true
+  },
+  {
+    "width": 1440,
+    "operation": "fingerprints",
+    "actions_visible": true
+  },
+  {
+    "width": 1440,
+    "operation": "similarity",
+    "actions_visible": true
+  },
+  {
+    "width": 1440,
+    "operation": "graphs",
+    "actions_visible": true
+  },
+  {
+    "width": 1440,
+    "operation": "redocking",
+    "actions_visible": true
+  },
+  {
+    "width": 1440,
+    "operation": "docking_vina",
+    "actions_visible": true
+  },
+  {
+    "width": 1440,
+    "operation": "docking_dock6",
+    "actions_visible": true
+  },
+  {
+    "width": 1440,
+    "operation": "consensus",
+    "actions_visible": true
+  },
+  {
+    "width": 1440,
+    "operation": "dynamics_dock6",
+    "actions_visible": true
+  },
+  {
+    "width": 1024,
+    "operation": "import_results",
+    "actions_visible": true
+  },
+  {
+    "width": 1024,
+    "operation": "retrieve_compounds",
+    "actions_visible": true
+  },
+  {
+    "width": 1024,
+    "operation": "retrieve_pubchem",
+    "actions_visible": true
+  },
+  {
+    "width": 1024,
+    "operation": "expand_similar_compounds",
+    "actions_visible": true
+  },
+  {
+    "width": 1024,
+    "operation": "retrieve_structures",
+    "actions_visible": true
+  },
+  {
+    "width": 1024,
+    "operation": "retrieve_zinc",
+    "actions_visible": true
+  },
+  {
+    "width": 1024,
+    "operation": "prepare_structures",
+    "actions_visible": true
+  },
+  {
+    "width": 1024,
+    "operation": "admet",
+    "actions_visible": true
+  },
+  {
+    "width": 1024,
+    "operation": "fingerprints",
+    "actions_visible": true
+  },
+  {
+    "width": 1024,
+    "operation": "similarity",
+    "actions_visible": true
+  },
+  {
+    "width": 1024,
+    "operation": "graphs",
+    "actions_visible": true
+  },
+  {
+    "width": 1024,
+    "operation": "redocking",
+    "actions_visible": true
+  },
+  {
+    "width": 1024,
+    "operation": "docking_vina",
+    "actions_visible": true
+  },
+  {
+    "width": 1024,
+    "operation": "docking_dock6",
+    "actions_visible": true
+  },
+  {
+    "width": 1024,
+    "operation": "consensus",
+    "actions_visible": true
+  },
+  {
+    "width": 1024,
+    "operation": "dynamics_dock6",
+    "actions_visible": true
+  },
+  {
+    "width": 360,
+    "operation": "import_results",
+    "actions_visible": true
+  },
+  {
+    "width": 360,
+    "operation": "retrieve_compounds",
+    "actions_visible": true
+  },
+  {
+    "width": 360,
+    "operation": "retrieve_pubchem",
+    "actions_visible": true
+  },
+  {
+    "width": 360,
+    "operation": "expand_similar_compounds",
+    "actions_visible": true
+  },
+  {
+    "width": 360,
+    "operation": "retrieve_structures",
+    "actions_visible": true
+  },
+  {
+    "width": 360,
+    "operation": "retrieve_zinc",
+    "actions_visible": true
+  },
+  {
+    "width": 360,
+    "operation": "prepare_structures",
+    "actions_visible": true
+  },
+  {
+    "width": 360,
+    "operation": "admet",
+    "actions_visible": true
+  },
+  {
+    "width": 360,
+    "operation": "fingerprints",
+    "actions_visible": true
+  },
+  {
+    "width": 360,
+    "operation": "similarity",
+    "actions_visible": true
+  },
+  {
+    "width": 360,
+    "operation": "graphs",
+    "actions_visible": true
+  },
+  {
+    "width": 360,
+    "operation": "redocking",
+    "actions_visible": true
+  },
+  {
+    "width": 360,
+    "operation": "docking_vina",
+    "actions_visible": true
+  },
+  {
+    "width": 360,
+    "operation": "docking_dock6",
+    "actions_visible": true
+  },
+  {
+    "width": 360,
+    "operation": "consensus",
+    "actions_visible": true
+  },
+  {
+    "width": 360,
+    "operation": "dynamics_dock6",
+    "actions_visible": true
+  }
+]

@@ -67,7 +67,7 @@ class MDResultsTable:
         child=FileTable(self.ui,r.project_id,files,preview=preview);self.children.append(child)
         def finish(e):child.active=False;close_dialog(self.ui.page,dialog)
         summary=data.get('analysis',{}).get('summary',{})
-        labels={'frames':('Quadros',''),'simulation_duration_ps':('Duração simulada','ps'),
+        labels={'initial_complex_rg':('Raio de giro inicial do complexo','Å'),'final_complex_rg':('Raio de giro final do complexo','Å'),'hydrogen_atoms':('Átomos de hidrogênio',''),'frames':('Quadros',''),'simulation_duration_ps':('Duração simulada','ps'),
             'mean_protein_backbone_rmsd':('RMSD médio do backbone','Å'),
             'final_protein_backbone_rmsd':('RMSD final do backbone','Å'),
             'mean_ligand_rmsd':('RMSD médio do ligante','Å'),
@@ -86,7 +86,7 @@ class MDResultsTable:
         definitions=data.get('analysis',{}).get('definitions',{})
         protocol=data.get('protocol',{})
         contents=[ft.Text('Refinamento curto em solvente implícito. Não equivale a produção equilibrada nem a energia livre de ligação.'),
-            ft.Text('Máscara móvel sander: '+str(protocol.get('settings',{}).get('md_movable_mask','—'))),
+            ft.Text(data.get('analysis',{}).get('unavailable','')),
             ft.ResponsiveRow(cards),
             ft.ExpansionTile(title=ft.Text('Definições e interpretação'),controls=[verbatim(ft.Text(name+': '+value)) for name,value in definitions.items()]),
             child.build()]
@@ -100,7 +100,7 @@ class MDResultsTable:
         energy=data.get('energies',{})
         if energy:
             contents.insert(-1,ft.ExpansionTile(title=ft.Text('Energias · kcal/mol · não são energia livre'),controls=[verbatim(ft.Text(f'{k}: {v:.5g}')) for k,v in energy.items() if isinstance(v,(int,float))]))
-        sections={'RMSD':('protein_backbone_rmsd','protein_rmsd','ligand_rmsd'),
+        sections={'Comparação estrutural inicial / final':('structural_rmsd','structural_rg'),'RMSD':('protein_backbone_rmsd','protein_rmsd','ligand_rmsd'),
             'RMSF':('rmsf',),'Ligações H · interface':('hydrogen_bonds',),
             'Raio de giro':('complex_rg','protein_rg'),'SASA':('sasa',),
             'Distância ligante–sítio':('ligand_site_distance',),'Energia potencial sander':('trajectory_energy',)}

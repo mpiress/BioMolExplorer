@@ -1,78 +1,48 @@
+"""Preparation must never discover standalone AmberTools/Conda tools."""
 import os
 from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
 
-from biomolexplorer.preparation_tools import (
-    amber_command, conda_executable, resolve_amber_tool, run_amber_tool,
-)
+from biomolexplorer.preparation_tools import resolve_amber_tool,run_amber_tool
 from biomolexplorer.processes import ScientificToolError
 
 
-class AmberToolsExecutionTests(unittest.TestCase):
-    def executable(self,root,name,text='#!/bin/sh\nexit 0\n'):
-        path=Path(root)/'bin'/name;path.parent.mkdir(parents=True,exist_ok=True)
-        path.write_text(text);path.chmod(0o755)
-        return path
+class BundledPreparationTests(unittest.TestCase):
+    def installation(self,folder):
+        root=Path(folder)/'Chimera installation';binary=root/'bin/chimera'
+        binary.parent.mkdir(parents=True);binary.write_text('#!/bin/sh\n');binary.chmod(0o755)
+        tool=root/'bin/amber18/bin/antechamber';tool.parent.mkdir(parents=True)
+        tool.write_text('#!/bin/sh\n');tool.chmod(0o755)
+        return root,binary,tool
 
-    def test_conda_executable_prefers_conda_exe(self):
+    def test_external_prefix_and_environment_cannot_override_chimera(self):
         with tempfile.TemporaryDirectory() as folder:
-            executable=self.executable(folder,'conda')
-            with patch.dict(os.environ,{'CONDA_EXE':str(executable)},clear=True):
-                self.assertEqual(conda_executable(),executable.resolve())
+            root,binary,tool=self.installation(folder)
+            with patch('biomolexplorer.preparation_tools.shutil.which',return_value=str(binary)),patch.dict(os.environ,AMBERHOME='/external',BIOMOL_AMBERTOOLS_ENV='external'):
+                result=resolve_amber_tool('antechamber','/external','external')
+            self.assertEqual(result.executable,tool.resolve())
+            self.assertEqual(result.prefix,root/'bin/amber18')
 
-    def test_constructs_named_environment_command_without_shell(self):
+    def test_no_conda_or_path_fallback_when_chimera_is_missing(self):
+        with patch('biomolexplorer.preparation_tools.shutil.which',return_value=None):
+            with self.assertRaisesRegex(ScientificToolError,'Chimera'):resolve_amber_tool('antechamber')
+
+    def test_external_md_and_topology_protocols_are_rejected(self):
         with tempfile.TemporaryDirectory() as folder:
-            root=Path(folder);conda=self.executable(root,'conda')
-            environment=root/'envs'/'amber env';self.executable(environment,'antechamber')
-            with patch('biomolexplorer.preparation_tools.conda_executable',return_value=conda), \
-                 patch('biomolexplorer.preparation_tools._conda_environments',return_value=[environment]):
-                command,resolved=amber_command('antechamber',['-i','input with spaces.mol2'],environment='amber env')
-            self.assertEqual(command[:5],[str(conda.resolve()),'run','--no-capture-output','-n','amber env'])
-            self.assertEqual(command[5],str((environment/'bin'/'antechamber').resolve()))
-            self.assertEqual(command[-2:],['-i','input with spaces.mol2'])
-            self.assertEqual(resolved.environment,'amber env')
+            root,binary,tool=self.installation(folder)
+            with patch('biomolexplorer.preparation_tools.shutil.which',return_value=str(binary)):
+                for name in ('sander','cpptraj','tleap'):
+                    with self.subTest(name=name),self.assertRaisesRegex(ScientificToolError,'retired'):resolve_amber_tool(name)
 
-    def test_missing_conda_has_clear_error(self):
-        with patch('biomolexplorer.preparation_tools.conda_executable',return_value=None), \
-             patch('biomolexplorer.preparation_tools.shutil.which',return_value=None):
-            with self.assertRaisesRegex(ScientificToolError,'Conda could not be located') as raised:
-                resolve_amber_tool('tleap',environment='isolated')
-        self.assertEqual(raised.exception.error_code,'CONDA_NOT_FOUND')
-
-    def test_missing_configured_environment_has_clear_error(self):
+    def test_execution_sets_only_child_environment_and_uses_absolute_program(self):
         with tempfile.TemporaryDirectory() as folder:
-            conda=self.executable(folder,'conda')
-            with patch('biomolexplorer.preparation_tools.conda_executable',return_value=conda), \
-                 patch('biomolexplorer.preparation_tools._conda_environments',return_value=[]):
-                with self.assertRaisesRegex(ScientificToolError,'"missing" was not found') as raised:
-                    resolve_amber_tool('tleap',environment='missing')
-        self.assertEqual(raised.exception.error_code,'AMBER_ENV_NOT_FOUND')
-
-    def test_missing_tool_in_existing_environment_has_clear_error(self):
-        with tempfile.TemporaryDirectory() as folder:
-            root=Path(folder);conda=self.executable(root,'conda');environment=root/'envs'/'amber'
-            (environment/'conda-meta').mkdir(parents=True)
-            with patch('biomolexplorer.preparation_tools.conda_executable',return_value=conda), \
-                 patch('biomolexplorer.preparation_tools._conda_environments',return_value=[environment]):
-                with self.assertRaisesRegex(ScientificToolError,'"cpptraj" is unavailable'):
-                    resolve_amber_tool('cpptraj',environment='amber')
-
-    def test_explicit_execution_preserves_working_directory_with_spaces(self):
-        with tempfile.TemporaryDirectory() as folder:
-            root=Path(folder);installation=root/'Amber Tools';work=root/'working directory';work.mkdir()
-            self.executable(installation,'probe','#!/bin/sh\npwd > observed.txt\n')
-            self.assertTrue(run_amber_tool('probe',cwd=work,prefix=installation))
-            self.assertEqual((work/'observed.txt').read_text().strip(),str(work.resolve()))
-
-    def test_failed_external_execution_reports_failure(self):
-        with tempfile.TemporaryDirectory() as folder:
-            root=Path(folder);self.executable(root,'broken','#!/bin/sh\necho relevant-error >&2\nexit 7\n')
-            with self.assertRaisesRegex(ScientificToolError,'relevant-error') as raised:
-                run_amber_tool('broken',cwd=root,prefix=root)
-        self.assertEqual(raised.exception.error_code,'TOOL_EXIT_FAILED')
-        self.assertIn('working_directory=',raised.exception.action)
-
-
-if __name__=='__main__':unittest.main()
+            root,binary,tool=self.installation(folder)
+            original=dict(os.environ)
+            with patch('biomolexplorer.preparation_tools.shutil.which',return_value=str(binary)),patch('biomolexplorer.preparation_tools.run_command',return_value=True) as run:
+                self.assertTrue(run_amber_tool('antechamber',['-i','input with spaces.mol2'],cwd=folder))
+            self.assertEqual(run.call_args.args[0],[str(tool),'-i','input with spaces.mol2'])
+            self.assertEqual(run.call_args.kwargs['env']['AMBERHOME'],str(root/'bin/amber18'))
+            self.assertEqual(run.call_args.kwargs['env']['LD_LIBRARY_PATH'].split(os.pathsep)[0],str(root/'lib'))
+            self.assertEqual(dict(os.environ),original)

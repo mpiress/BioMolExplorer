@@ -15,7 +15,7 @@ def best_rmsd_by_target(rows):
     best={}
     for row in rows:
         value=row.get('rmsd')
-        if row.get('status')=='preparation_failed' or not isinstance(value,(int,float)) or not math.isfinite(value):continue
+        if row.get('status','succeeded')!='succeeded' or not isinstance(value,(int,float)) or not math.isfinite(value):continue
         for target in row.get('targets',[]):best[target]=min(best.get(target,math.inf),value)
     return best
 

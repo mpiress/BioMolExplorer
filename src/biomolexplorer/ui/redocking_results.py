@@ -5,6 +5,7 @@ from biomolexplorer.i18n import RuntimeMessages
 from .runtime_messages import session_language
 from biomolexplorer.redocking_results import RedockingResults, best_rmsd_by_target
 from .removal import RemovalProgress
+from .processing import save_file
 from .feedback import close_dialog
 from .file_table import FileTable
 from .localization import verbatim
@@ -79,9 +80,12 @@ class RedockingResultsTable:
     def redraw(self):
         rows = []
         filtered=self.filtered()
+        last=max(0,(len(filtered)-1)//self.limit*self.limit)
+        self.offset=min(max(0,self.offset),last)
         minima=best_rmsd_by_target(self.simulations)
         for simulation in filtered[self.offset:self.offset+self.limit]:
-            failed=simulation.get('status')=='preparation_failed'
+            unsupported=simulation.get('status')=='UNSUPPORTED'
+            failed=simulation.get('status','succeeded')!='succeeded'
             async def view(e, key=simulation['id']):
                 if self.valid():
                     await self.ui.guard(lambda: self.open(key))
@@ -96,21 +100,24 @@ class RedockingResultsTable:
             if unsupported:action=ft.TextButton('Ver classificação',on_click=view)
             elif failed:action=ft.Row([ft.TextButton('Ver erro',on_click=view),
                 ft.IconButton(ft.Icons.DELETE_OUTLINE,tooltip='Excluir falha e complexo de origem',on_click=remove,disabled=not self.results.writable)])
+            status_label='Não suportado neste backend' if unsupported else 'Falha na execução' if failed and simulation.get('failed_step','').startswith(('Redocking','Docking','RMSD')) else 'Falha na preparação' if failed else 'Concluído'
             best=not failed and any(math.isclose(simulation['rmsd'],minima[t],rel_tol=0,abs_tol=1e-9) for t in simulation.get('targets',[]) if t in minima)
             rows.append(ft.DataRow(color='#FEF2F2' if failed else '#DCFCE7' if self.highlight.value and best else None,cells=[ft.DataCell(verbatim(ft.Text(value))) for value in values] + [
-                ft.DataCell(ft.Text('Falha na preparação' if failed else 'Concluído',
+                ft.DataCell(ft.Text(status_label,
                     color='#B91C1C' if failed else '#15803D',tooltip=simulation.get('error') or None)),
                 ft.DataCell(ft.Text('—' if failed else f"{simulation['rmsd']:.3f}")),
                 ft.DataCell(self.view_button(simulation,overlay,failed)),
                 ft.DataCell(ft.TextButton('Resíduos',icon=ft.Icons.SCIENCE_OUTLINED,on_click=contacts,disabled=failed)),
                 ft.DataCell(action)]))
         self.table.rows = rows
-        self.count.value = self.messages('redocking.count',shown=len(filtered),total=len(self.simulations),page=self.offset//self.limit+1)
+        self.count.value = self.messages('redocking.count',shown=len(rows),total=len(self.simulations),
+            start=self.offset+1 if rows else 0,end=self.offset+len(rows),filtered=len(filtered),
+            page=self.offset//self.limit+1,pages=max(1,(len(filtered)+self.limit-1)//self.limit))
         self.previous.disabled = self.offset == 0
         self.next.disabled = self.offset+self.limit >= len(filtered)
-        failures=sum(s.get('status')=='preparation_failed' for s in self.simulations)
+        failures=sum(s.get('status','succeeded')!='succeeded' for s in self.simulations)
         self.warning.visible=bool(failures)
-        self.warning.value=f'{failures} complexos ignorados por falha de preparação. Consulte as linhas destacadas.'
+        self.warning.value=self.messages('redocking.failures',count=failures)
 
     def move(self, direction):
         if not self.valid():
@@ -120,8 +127,15 @@ class RedockingResultsTable:
         self.ui.page.update()
 
     def build(self):
-        return ft.Column([ft.Row([self.target_filter,self.search,self.highlight,self.export],wrap=True,spacing=20,run_spacing=16),self.count,self.warning, ft.Row([self.table], scroll=ft.ScrollMode.AUTO),
-            ft.Row([self.previous, self.next], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)], spacing=16)
+        # Keep navigation above long pages and inside the available width. The
+        # wide scientific table scrolls internally rather than pushing Next
+        # beyond the workspace's right edge.
+        from .settings_layout import grid
+        return ft.Column([grid([self.target_filter,self.search,self.highlight,self.export]),
+            self.count,self.warning,
+            ft.Row([self.previous,self.next],wrap=True,alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            ft.Row([self.table],scroll=ft.ScrollMode.ALWAYS)],spacing=16,
+            horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
 
     async def download_summary(self,e):
         async def action():
@@ -159,6 +173,16 @@ class RedockingResultsTable:
                 ft.TextButton('Excluir complexo',on_click=remove)])
         progress=RemovalProgress(self.ui,dialog,'Removendo complexo…')
         self.ui.page.show_dialog(dialog)
+
+    def view_url(self,key):
+        if not self.valid() or not getattr(self.ui.page,'web',False):return None
+        r=self.results
+        return self.ui.docking_view_url(r.project_id,r.run_id,r.stage['id'],'redocking',key,r.token)
+
+    def view_button(self,simulation,callback,failed=False):
+        url=self.view_url(simulation['id']) if not failed else None
+        return ft.TextButton('3D',icon=ft.Icons.VIEW_IN_AR,disabled=failed,
+            on_click=None if url else callback,url=ft.Url(url,target=ft.UrlTarget.BLANK) if url else None)
 
     async def overlay(self,key):
         if self.valid():

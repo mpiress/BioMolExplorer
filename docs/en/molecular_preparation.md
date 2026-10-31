@@ -16,9 +16,7 @@ chains and cofactors remain associated with the selected structures.
   charge templates; gas/am1 controls nonstandard components and ligands.
 
 Chimera may invoke utilities bundled with its own distribution for AM1-BCC.
-The application does not route docking/redocking to the separate
-BioMolExplorer-AmberTools environment. That environment remains available to
-molecular-dynamics protocols requiring it.
+No block uses a standalone AmberTools environment. Native Amber Score uses the utilities bundled with DOCK6 6.11.
 
 ChEMBL, PubChem, ZINC and uploaded compounds follow the same preparation route.
 RDKit may generate an initial SMILES conformer; Open Babel converts formats.

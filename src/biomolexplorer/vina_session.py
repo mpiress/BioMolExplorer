@@ -54,6 +54,7 @@ class VinaSessions:
         receptor = path('receptor')
         ligand = path('ligand')
         compound_identifier = ligand.name.removesuffix('.lig.pdbqt').removesuffix('.pdbqt')
+        fields=dict(compound_identifier=compound_identifier,receptor_file=str(receptor),ligand_file=str(ligand))
         # Invalid floating-point geometry can make the native Vina library call
         # abort(3), bypassing Python exception handling.  Validate at the last
         # safe boundary as well as when the preparation/cache is produced.

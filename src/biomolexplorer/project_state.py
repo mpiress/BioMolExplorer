@@ -71,6 +71,8 @@ def snapshot(store, db, project_id):
     edits=[dict(r) for r in db.execute('SELECT * FROM compound_edits WHERE project_id=?',(project_id,))] if db.execute("SELECT 1 FROM sqlite_master WHERE name='compound_edits'").fetchone() else []
     state = translate({'project': project, 'assets': assets, 'runs': runs, 'members': members, 'edits':edits}, str(root), '@project')
     state.update(files=files, directories=directories)
+    preference=db.execute('SELECT stage_ids,confirmed,updated FROM execution_preferences WHERE project_id=?',(project_id,)).fetchone()
+    state['execution_preferences']=dict(order=json.loads(preference[0]),confirmed=bool(preference[1]),updated=preference[2]) if preference else None
     state['block_registry']=[dict(id=row[0],block_id=row[1]) for row in db.execute(
         'SELECT stage_id,block_id FROM block_ids WHERE project_id=?',(project_id,))]
     return state
@@ -115,6 +117,10 @@ def restore_database(store, db, project_id, state, owner=None):
     root = store.project_dir(project_id,db)
     state = translate(state, '@project', str(root))
     project = state['project']
+    db.execute('DELETE FROM execution_preferences WHERE project_id=?',(project_id,))
+    preference=state.get('execution_preferences')
+    if preference:
+        db.execute('INSERT INTO execution_preferences VALUES(?,?,?,?)',(project_id,json.dumps(preference['order']),int(preference['confirmed']),preference['updated']))
     for item in state.get('block_registry',project['pipeline']):
         if item.get('block_id'):
             db.execute('INSERT OR IGNORE INTO block_ids VALUES (?,?,?)',(project_id,item['id'],item['block_id']))

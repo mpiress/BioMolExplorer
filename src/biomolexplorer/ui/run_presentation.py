@@ -11,6 +11,7 @@ STATES={
     'failed':('#B91C1C','#FEF2F2',ft.Icons.ERROR_OUTLINE),
     'running':('#2563EB','#EFF6FF',ft.Icons.PLAY_CIRCLE_OUTLINE),
     'awaiting_input':('#B45309','#FFFBEB',ft.Icons.EDIT_OUTLINED),
+    'paused':('#64748B','#F1F5F9',ft.Icons.PAUSE_CIRCLE_OUTLINE),
     'queued':('#2563EB','#EFF6FF',ft.Icons.SCHEDULE),
     'skipped':('#B45309','#FFFBEB',ft.Icons.SKIP_NEXT),
     'cancelled':('#64748B','#F1F5F9',ft.Icons.STOP_CIRCLE_OUTLINED),
@@ -38,13 +39,14 @@ def outcome_overview(run,actions,language='pt'):
     messages=RuntimeMessages(language)
     stages=run['stages']
     cleared=any(s.get('outputs_removed') for s in stages) and all(s.get('outputs_removed') or s.get('provided') or s.get('operation')=='import_results' for s in stages)
-    display_status='cleared' if cleared and run['status'] not in ACTIVE else run['status']
+    paused=run['status']=='awaiting_input' and any(s.get('pause_reason')=='user' for s in stages)
+    display_status='paused' if paused else 'cleared' if cleared and run['status'] not in ACTIVE else run['status']
     color,background,_=STATES.get(display_status,STATES['interrupted'])
-    completed=sum(s['status']=='succeeded' and not s.get('outputs_removed') for s in stages)
+    completed=sum(s['status']=='succeeded' and not any(s.get(key) for key in ('outputs_removed','results_stale','dependency_obsolete')) for s in stages)
     total=sum(s.get('configuration',{}).get('enabled',True) for s in stages)
     files=len({str(p) for s in stages for p in s.get('artifacts',[])})
-    reused=sum(s['status']=='succeeded' and not s.get('outputs_removed') and bool(s.get('reused')) for s in stages)
-    description=messages('run.overview.'+('cleared' if display_status=='cleared' else 'succeeded' if run['status']=='succeeded' else 'active' if run['status'] in ACTIVE else 'stopped'))
+    reused=sum(s['status']=='succeeded' and not any(s.get(key) for key in ('outputs_removed','results_stale','dependency_obsolete')) and bool(s.get('reused')) for s in stages)
+    description=messages('run.overview.'+('paused' if paused else 'cleared' if display_status=='cleared' else 'succeeded' if run['status']=='succeeded' else 'active' if run['status'] in ACTIVE else 'stopped'))
     metrics=[(messages('run.metric.completed'),f'{completed} / {total}'),(messages('run.metric.files'),str(files)),
         (messages('run.metric.reused'),str(reused))]
     if run['status'] not in ACTIVE:

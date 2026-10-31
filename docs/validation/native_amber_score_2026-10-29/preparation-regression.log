@@ -1,0 +1,8 @@
+.....[19:22:14] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+.......................................[19:22:55] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[19:22:56] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+.............
+----------------------------------------------------------------------
+Ran 57 tests in 42.718s
+
+OK

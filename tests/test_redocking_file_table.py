@@ -41,6 +41,52 @@ class RedockingTableTests(unittest.TestCase):
         buttons[-1].on_click(None)
         self.assertFalse(flag.value)
 
+    def test_selected_table_occurs_once_and_all_pages_are_accessible(self):
+        rows=[(SimpleNamespace(value=True,label=f'{i:04d}.pdb',available=True,on_change=None),
+               {'stage':'source','selector':f'{i:04d}.pdb'}) for i in range(61)]
+        picker=RedockingFilePicker(rows,{'stage:source':'Target'},SimpleNamespace(width=800,update=Mock()))
+        # Controls must have one parent: duplicate selected columns broke Flutter
+        # layout and replaced the navigation row after the first 25 results.
+        self.assertEqual(sum(c is picker.selected for c in picker.control.controls),1)
+        navigation=next(c for c in picker.control.controls if picker.next in (getattr(c,'controls',[]) or []))
+        self.assertIn(picker.previous,navigation.controls)
+        seen=[]
+        while True:
+            seen.extend(row.cells[0].content.controls[0].value for row in picker.table.rows)
+            if picker.next.disabled:break
+            picker.next.on_click(None)
+        self.assertEqual(len(seen),61)
+        self.assertEqual(len(set(seen)),61)
+        self.assertTrue(all(flag.value for flag,_ in rows))
+
+    def test_obsolete_selections_can_be_removed_without_losing_current_inputs(self):
+        rows=[(SimpleNamespace(value=True,label=f'{i:04d}.pdb',available=i>=30,on_change=None),
+               {'stage':'source','selector':f'{i:04d}.pdb'}) for i in range(61)]
+        picker=RedockingFilePicker(rows,{'stage:source':'Target'},SimpleNamespace(width=360,update=Mock()))
+        picker.review_filter.value='unavailable';picker.filter_changed()
+        self.assertEqual(len(picker.selected_rows()),30)
+        picker.remove_view()
+        self.assertEqual(sum(flag.value for flag,_ in rows),31)
+        self.assertTrue(all(flag.value==flag.available for flag,_ in rows))
+        picker.review_filter.value='all';picker.filter_changed()
+        self.assertEqual(len(picker.selected_rows()),31)
+        picker.resize_table(SimpleNamespace(width=248))
+        self.assertGreater(picker.table.width,248)
+        self.assertEqual(picker.table_host.content.scroll,ft.ScrollMode.ALWAYS)
+
+    def test_current_and_unavailable_files_share_source_group_without_generic_target(self):
+        from biomolexplorer.ui.localization import Translator
+        rows=[(SimpleNamespace(value=True,label=f'{i}.pdb',available=i==0,on_change=None,
+            **({'target_label':'Estruturas'} if i==0 else {})),
+            {'stage':'source','selector':f'{i}.pdb'}) for i in range(2)]
+        picker=RedockingFilePicker(rows,{'stage:source':'BACE1 PDB'},
+            SimpleNamespace(width=800,update=Mock(),translator=Translator('en')))
+        self.assertEqual(picker.group(*rows[0]),picker.group(*rows[1]))
+        self.assertIn('1 targets/sources',picker.overview.value)
+        self.assertIn('1 unavailable',picker.overview.value)
+        self.assertIn('of 2 PDBs',picker.count.value)
+        self.assertTrue(picker.unavailable_hint.visible)
+
     def test_large_selection_filters_targets_reviews_and_search_without_losing_files(self):
         updates=[];rows=[]
         for i in range(5000):

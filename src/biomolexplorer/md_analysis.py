@@ -1,5 +1,4 @@
 """Topology-defined, streaming analysis of an implicit-solvent Amber trajectory."""
-import math
 from pathlib import Path
 import re
 
@@ -46,7 +45,7 @@ def topology(path):
                        for i in range(0,len(values),3)])
 
 
-def selection(directory):
+def selection(directory,require_protein=True):
     directory=Path(directory)
     total=topology(directory/'rec.lig.1.prmtop');lig=topology(directory/'lig.1.prmtop');rec=topology(directory/'rec.prmtop')
     for prefix,info in [('rec.lig.1',total),('lig.1',lig),('rec',rec)]:
@@ -65,7 +64,7 @@ def selection(directory):
         np.array([total['labels'][r] in PROTEIN for r in total['residue']]))
     backbone=np.array([i for i in protein if total['names'][i] in ('N','CA','C','O')],dtype=int)
     ca=np.array([i for i in protein if total['names'][i]=='CA'],dtype=int)
-    if len(ligand)==0 or len(backbone)<3 or len(ca)==0:
+    if len(ligand)==0 or require_protein and (len(backbone)<3 or len(ca)==0):
         raise ValueError('Trajectory analysis requires ligand heavy atoms and a protein backbone with C-alpha atoms.')
     return total,dict(ligand=ligand,protein=protein,backbone=backbone,ca=ca,
                       ligand_mask=f':1-{lig["nres"]}',protein_mask=':'+','.join(str(r+1) for r in sorted(set(total['residue'][protein]))))
@@ -143,54 +142,34 @@ def analyze_frames(sequence,info,masks,interval_ps):
         masks={name:value.tolist() if isinstance(value,np.ndarray) else value for name,value in masks.items()})
 
 
-def run(directory,settings,found,env,ambertools_path='',ambertools_env=''):
+
+def coordinates(path,count):
+    lines=Path(path).read_text().splitlines()
+    try:
+        if int(lines[1].split()[0])!=count:raise ValueError()
+        values=[float(line[i:i+12]) for line in lines[2:2+(3*count+5)//6] for i in range(0,len(line),12) if line[i:i+12].strip()]
+        result=np.asarray(values).reshape(count,3)
+        if not np.isfinite(result).all():raise ValueError()
+    except (ValueError,IndexError):raise ValueError('Invalid Amber coordinate count or non-finite coordinates: '+Path(path).name) from None
+    return result
+
+
+def analyze_final_state(directory):
     from .md_engine import plot
-    from .preparation_tools import run_amber_tool
-    from .storage import write_text
-    directory=Path(directory);info,masks=selection(directory)
-    data=analyze_frames(frames(directory/'trajectory.nc'),info,masks,settings['trajectory_stride']*settings['md_time_step'])
-    data['summary']['simulation_duration_ps']=settings['amber_score_md_steps']*settings['md_time_step']
-    # Explicit donor/acceptor masks restrict counts and occupancy to the
-    # receptor-ligand interface, excluding internal protein/ligand H bonds.
-    commands=['parm rec.lig.1.prmtop','trajin trajectory.nc']
-    for name,donor,acceptor in [('pl',masks['protein_mask'],masks['ligand_mask']),('lp',masks['ligand_mask'],masks['protein_mask'])]:
-        commands.append(f'hbond {name} donormask {donor} acceptormask {acceptor} dist 3.0 angle 135 out hb_{name}.dat avgout hb_{name}_avg.dat printatomnum')
-    commands+=['surf SASA out sasa.dat','run','quit']
-    write_text('\n'.join(commands)+'\n',directory/'analysis.in')
-    run_amber_tool('cpptraj',['-i','analysis.in'],cwd=directory,env=env,
-        prefix=ambertools_path,environment=ambertools_env)
-    def columns(name):
-        rows=[]
-        for line in (directory/name).read_text().splitlines():
-            if not line.strip() or line.lstrip().startswith('#'):continue
-            values=[float(v) for v in line.split()]
-            if not all(math.isfinite(v) for v in values):raise ValueError('Non-finite cpptraj analysis: '+name)
-            rows.append(values)
-        if len(rows)!=data['summary']['frames']:raise ValueError('Analysis frame count does not match trajectory: '+name)
-        return rows
-    counts=[columns('hb_'+name+'.dat') for name in ('pl','lp')]
-    for index,row in enumerate(data['series']):row['hydrogen_bonds']=counts[0][index][1]+counts[1][index][1]
-    hbonds=[]
-    for name in ('pl','lp'):
-        for line in (directory/('hb_'+name+'_avg.dat')).read_text().splitlines():
-            if not line.strip() or line.lstrip().startswith('#'):continue
-            cells=line.split()
-            if len(cells)<5:raise ValueError('Incomplete cpptraj hydrogen-bond occupancy.')
-            occupancy=float(cells[4])
-            if not math.isfinite(occupancy) or not 0<=occupancy<=1:raise ValueError('Invalid hydrogen-bond occupancy.')
-            hbonds.append(dict(acceptor=cells[0],hydrogen=cells[1],donor=cells[2],occupancy=occupancy))
-    data['hbonds']=sorted(hbonds,key=lambda r:r['occupancy'],reverse=True)
-    data['summary']['mean_hydrogen_bonds']=float(np.mean([row['hydrogen_bonds'] for row in data['series']]))
-    data['summary']['most_persistent_hbonds']=data['hbonds'][:10]
-    if (directory/'sasa.dat').is_file():
-        for row,values in zip(data['series'],columns('sasa.dat')):row['sasa']=values[1]
-        data['summary']['mean_sasa']=float(np.mean([row['sasa'] for row in data['series']]))
-    else:data['sasa_unavailable']='cpptraj surf did not produce SASA; inspect its log and topology atom types.'
-    data['definitions'].update(hydrogen_bonds='Protein-ligand only, donor-acceptor <=3 Angstrom and D-H-A >=135 degrees; cpptraj geometric criteria',
-                               sasa='Complex solvent-accessible surface area, cpptraj LCPO surf, Angstrom squared')
-    for name in data['series'][0]:
-        if name in ('frame','time_ps'):continue
-        plot(directory/(name+'.png'),[r['time_ps'] for r in data['series']],[r[name] for r in data['series']],name,'Time (ps)', 'Angstrom²' if name=='sasa' else 'Count' if name=='hydrogen_bonds' else 'Angstrom')
-    plot(directory/'rmsf.png',[r['residue'] for r in data['rmsf']],[r['rmsf'] for r in data['rmsf']],'Protein C-alpha RMSF','Amber residue','Angstrom')
-    write_json(data,directory/'analysis.json')
-    return data['summary']
+    directory=Path(directory);info,masks=selection(directory,require_protein=False)
+    initial=coordinates(directory/'rec.lig.1.inpcrd',info['natom'])
+    final_path=directory/'rec.lig.1.final_pose.amber.restart'
+    if not final_path.is_file():
+        data=dict(version=2,summary=dict(initial_complex_rg=radius(initial,info['masses']),hydrogen_atoms=int(np.count_nonzero(info['masses']<2.5))),
+            definitions=dict(initial_complex_rg='Mass-weighted radius of gyration of the prepared initial complex only.',hydrogen_atoms='Hydrogen/isotope atom count inferred from topology masses below 2.5 u; not hydrogen bonds.'),
+            unavailable='Native DOCK6 did not write a final complex; structural comparison is unavailable. No trajectory or RMSF is produced.')
+    else:
+        final=coordinates(final_path,info['natom'])
+        fitted=fit_frame(final,initial,masks['backbone']) if len(masks['backbone'])>=3 else None
+        rms=lambda mask:float(np.sqrt(np.mean(np.sum((fitted[mask]-initial[mask])**2,axis=1))))
+        summary=dict(initial_complex_rg=radius(initial,info['masses']),final_complex_rg=radius(final,info['masses']),hydrogen_atoms=int(np.count_nonzero(info['masses']<2.5)))
+        if fitted is not None:summary.update(final_protein_backbone_rmsd=rms(masks['backbone']),final_ligand_rmsd=rms(masks['ligand']))
+        data=dict(version=2,summary=summary,definitions=dict(final_ligand_rmsd='Heavy atoms versus prepared initial complex after protein-backbone fit; no ligand refitting or symmetry correction.',final_protein_backbone_rmsd='Protein N/CA/C/O atoms versus prepared initial complex after rigid backbone fit.',complex_rg='Mass-weighted radius of gyration of all complex atoms, initial/final structures only.',hydrogen_atoms='Hydrogen/isotope atom count inferred from topology masses below 2.5 u; not hydrogen bonds.'),unavailable='No native trajectory: RMSF, time series, hydrogen-bond occupancy and equilibrium claims are unavailable.')
+        if fitted is not None:plot(directory/'structural_rmsd.png',[0,1],[summary['final_protein_backbone_rmsd'],summary['final_ligand_rmsd']],'Initial versus final structure RMSD','0: backbone · 1: ligand','Angstrom')
+        plot(directory/'structural_rg.png',[0,1],[summary['initial_complex_rg'],summary['final_complex_rg']],'Complex radius of gyration','0: initial · 1: final','Angstrom')
+    write_json(data,directory/'analysis.json');return data

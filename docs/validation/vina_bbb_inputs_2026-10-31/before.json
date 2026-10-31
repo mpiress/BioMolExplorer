@@ -1,0 +1,73 @@
+{
+  "bbb_files": [
+    {
+      "file": "/home/michel/Downloads/Alzheimer/runs/d5250afecb2c4a04aae1426ddc37699b/838570dd6e44465a9851672434f526c5/individual/001_B01__chembl__mol/.biomolexplorer/jobs/9ddbfc0d7f274894bcc502f5cf18afa7/artifacts/B04__admet__bbb-pos.csv",
+      "rows": 6,
+      "bytes": 32005
+    },
+    {
+      "file": "/home/michel/Downloads/Alzheimer/runs/d5250afecb2c4a04aae1426ddc37699b/838570dd6e44465a9851672434f526c5/individual/002_B01__chembl__sim/.biomolexplorer/jobs/8a6b31431d7643619865a8356a93d6f9/artifacts/B04__admet__bbb-pos.csv",
+      "rows": 28,
+      "bytes": 150773
+    },
+    {
+      "file": "/home/michel/Downloads/Alzheimer/runs/d5250afecb2c4a04aae1426ddc37699b/838570dd6e44465a9851672434f526c5/individual/003_B02__chembl__mol/.biomolexplorer/jobs/c6426ea0da6e48f8be5f443b096e0503/artifacts/B04__admet__bbb-pos.csv",
+      "rows": 7,
+      "bytes": 34087
+    },
+    {
+      "file": "/home/michel/Downloads/Alzheimer/runs/d5250afecb2c4a04aae1426ddc37699b/838570dd6e44465a9851672434f526c5/individual/004_B02__chembl__sim/.biomolexplorer/jobs/64623c1e4c4f45acab472c5f4cee4d4e/artifacts/B04__admet__bbb-pos.csv",
+      "rows": 89,
+      "bytes": 458472
+    },
+    {
+      "file": "/home/michel/Downloads/Alzheimer/runs/d5250afecb2c4a04aae1426ddc37699b/838570dd6e44465a9851672434f526c5/individual/005_B03__chembl__mol/.biomolexplorer/jobs/288c53f28b864d9a87b433537cb78704/artifacts/B04__admet__bbb-pos.csv",
+      "rows": 13,
+      "bytes": 70001
+    },
+    {
+      "file": "/home/michel/Downloads/Alzheimer/runs/d5250afecb2c4a04aae1426ddc37699b/838570dd6e44465a9851672434f526c5/individual/006_B03__chembl__sim/.biomolexplorer/jobs/f4fc5653394c41a3ad89d0beb018eb46/artifacts/B04__admet__bbb-pos.csv",
+      "rows": 40,
+      "bytes": 206957
+    },
+    {
+      "file": "/home/michel/Downloads/Alzheimer/runs/d5250afecb2c4a04aae1426ddc37699b/963059b3deb2448c896274c5ff8c6067/individual/001_B05__pubchem__compounds/.biomolexplorer/jobs/79a9afce5734429b88e900491dadcf8d/artifacts/ACHE_B05__pubchem__compounds_PUBCHEM_BBB+.csv",
+      "rows": 3362,
+      "bytes": 7715469
+    },
+    {
+      "file": "/home/michel/Downloads/Alzheimer/runs/d5250afecb2c4a04aae1426ddc37699b/963059b3deb2448c896274c5ff8c6067/individual/002_B05__pubchem__compounds/.biomolexplorer/jobs/6571853e2a3f4e419cea44b5cc51aba8/artifacts/ACHE_B05__pubchem__compounds_PUBCHEM_BBB+.csv",
+      "rows": 7504,
+      "bytes": 17606774
+    },
+    {
+      "file": "/home/michel/Downloads/Alzheimer/runs/d5250afecb2c4a04aae1426ddc37699b/963059b3deb2448c896274c5ff8c6067/individual/003_B05__pubchem__compounds/.biomolexplorer/jobs/52dbf2789a564b0bb53873338adcb506/artifacts/BCHE_B05__pubchem__compounds_PUBCHEM_BBB+.csv",
+      "rows": 2490,
+      "bytes": 5407138
+    },
+    {
+      "file": "/home/michel/Downloads/Alzheimer/runs/d5250afecb2c4a04aae1426ddc37699b/963059b3deb2448c896274c5ff8c6067/individual/004_B05__pubchem__compounds/.biomolexplorer/jobs/05675072c83e477cbf7fe0004d590835/artifacts/BCHE_B05__pubchem__compounds_PUBCHEM_BBB+.csv",
+      "rows": 21648,
+      "bytes": 48268589
+    },
+    {
+      "file": "/home/michel/Downloads/Alzheimer/runs/d5250afecb2c4a04aae1426ddc37699b/963059b3deb2448c896274c5ff8c6067/individual/005_B05__pubchem__compounds/.biomolexplorer/jobs/5c977d09a08a469396dbbc4f3d590ebe/artifacts/BACE1_B05__pubchem__compounds_PUBCHEM_BBB+.csv",
+      "rows": 3690,
+      "bytes": 8357676
+    },
+    {
+      "file": "/home/michel/Downloads/Alzheimer/runs/d5250afecb2c4a04aae1426ddc37699b/963059b3deb2448c896274c5ff8c6067/individual/006_B05__pubchem__compounds/.biomolexplorer/jobs/43825c5876e149a8af64b1964e881169/artifacts/BACE1_B05__pubchem__compounds_PUBCHEM_BBB+.csv",
+      "rows": 8659,
+      "bytes": 19270342
+    }
+  ],
+  "total_rows": 47536,
+  "baseline": {
+    "selected": "/home/michel/Downloads/Alzheimer/runs/d5250afecb2c4a04aae1426ddc37699b/963059b3deb2448c896274c5ff8c6067/individual/001_B05__pubchem__compounds/.biomolexplorer/jobs/79a9afce5734429b88e900491dadcf8d/artifacts/ACHE_B05__pubchem__compounds_PUBCHEM_BBB+.csv",
+    "selected_rows": 3362,
+    "seconds": 11.524542630999349,
+    "table_reads": 49,
+    "rows_read": 446560
+  },
+  "writes_to_original": 0
+}

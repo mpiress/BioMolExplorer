@@ -108,9 +108,17 @@
   "redocking.filter.all": "Todos os alvos",
   "redocking.filter.search": "Buscar alvo, PDB ou ligante",
   "redocking.highlight": "Destacar melhores RMSDs por alvo",
-  "redocking.count": "{shown} de {total} pares · Página {page}",
+  "redocking.count": "{start}–{end} de {filtered} pares filtrados · {total} no total · Página {page}/{pages}",
   "redocking.export": "Baixar tabela RMSD",
   "run.status.cleared": "Resultados limpos",
   "run.overview.cleared": "Os resultados gerados e as seleções foram limpos. As conexões e os arquivos de origem foram preservados.",
-  "run.status.historical": "Resultado histórico · dependências alteradas"
+  "run.status.historical": "Resultado histórico · dependências alteradas",
+  "run.heading.paused": "Execução pausada",
+  "run.status.paused": "Pausada",
+  "run.hint.paused": "Analise os resultados e configure as entradas antes de continuar. Os cálculos concluídos serão preservados.",
+  "run.hint.pause_requested": "A operação atual será concluída antes da pausa. Você poderá continuar depois.",
+  "run.overview.paused": "A execução está pausada para análise. Os resultados concluídos permanecem disponíveis.",
+  "run.action.pause": "Pausar execução",
+  "run.action.resume": "Continuar execução",
+  "redocking.failures": "{count} complexos com falha. Consulte os diagnósticos nas linhas destacadas."
 }

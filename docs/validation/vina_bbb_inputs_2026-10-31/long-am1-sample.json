@@ -1,0 +1,40 @@
+{
+  "reason": "Manual validation stop: AM1 computation active, not a pipeline/UI deadlock. No scientific failure classification assigned.",
+  "processes": [
+    [
+      "983433",
+      "983431",
+      "04:11",
+      "1.4",
+      "python"
+    ],
+    [
+      "984653",
+      "983433",
+      "00:15",
+      "2.6",
+      "python2.7"
+    ],
+    [
+      "984666",
+      "984653",
+      "00:14",
+      "0.0",
+      "antechamber"
+    ],
+    [
+      "984671",
+      "984666",
+      "00:14",
+      "0.0",
+      "sh"
+    ],
+    [
+      "984672",
+      "984671",
+      "00:14",
+      "100",
+      "sqm"
+    ]
+  ]
+}

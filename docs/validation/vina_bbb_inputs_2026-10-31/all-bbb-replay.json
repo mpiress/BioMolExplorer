@@ -1,0 +1,528 @@
+{
+  "original_files": 980,
+  "configuration_unchanged": true,
+  "cases": [
+    {
+      "iteration": 0,
+      "seconds": 20.21236470597796,
+      "reads": 12,
+      "rows_read": 47536,
+      "batches": [
+        {
+          "label": "6ZWI_A.dockprep + B04__admet__bbb-pos",
+          "rows": 6,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/a7c22d43ca74bfc9d104c0c1b028b70ada60dbeae6eeeff40890d0e9d6f67651/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + B04__admet__bbb-pos",
+          "rows": 28,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/115c677674842d9aa8ad4d8443f0a29342c7d45b59c4696f75a1796f69566cc7/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + B04__admet__bbb-pos",
+          "rows": 7,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/492ff57dbc508d8f3c8a9f15160a2fe5592ecefbf19fbffe290d7a7b6591a5bb/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + B04__admet__bbb-pos",
+          "rows": 89,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/b5f4238e902ff77cafe9be7cb007707c63ab078fc613c570ed9cf566539be738/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + B04__admet__bbb-pos",
+          "rows": 13,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/72b7e3d613528c105a745d8b1d7742e05cac18677d3fdc44861c174232ea2c8d/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + B04__admet__bbb-pos",
+          "rows": 40,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/150c610be746af36cdffe89655c4794a4cb9bef75ed8302d42237713f223ae11/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + ACHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 3362,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/e6f945758565b15fc04c8fc03ee37751d14adce7e87a49bd9a461c69909c8c59/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + ACHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 7504,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/e0d9dc6a230d77e6944c1fdbac833d74b8078bc51b5cb1896c15ef0e34dd749e/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + BCHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 2490,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/13a9c2c56a323e48bd28bdb7b91fa816346482fe5dd9157318986a25b6f5daaf/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + BCHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 21648,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/91018a519421f9a9296da4f7ada9397f3e5fb2cf6f6b3043bd8158f8967407a2/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + BACE1_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 3690,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/5789e8bb679e803744d27a65eda5c45880ffc0a82527f56982ae5226b7675652/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + BACE1_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 8659,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/d4405ae7760f64bdd4798cca871fb07759233aca59495dd184cb26520050ab55/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + B04__admet__bbb-pos",
+          "rows": 6,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/a7c22d43ca74bfc9d104c0c1b028b70ada60dbeae6eeeff40890d0e9d6f67651/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + B04__admet__bbb-pos",
+          "rows": 28,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/115c677674842d9aa8ad4d8443f0a29342c7d45b59c4696f75a1796f69566cc7/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + B04__admet__bbb-pos",
+          "rows": 7,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/492ff57dbc508d8f3c8a9f15160a2fe5592ecefbf19fbffe290d7a7b6591a5bb/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + B04__admet__bbb-pos",
+          "rows": 89,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/b5f4238e902ff77cafe9be7cb007707c63ab078fc613c570ed9cf566539be738/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + B04__admet__bbb-pos",
+          "rows": 13,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/72b7e3d613528c105a745d8b1d7742e05cac18677d3fdc44861c174232ea2c8d/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + B04__admet__bbb-pos",
+          "rows": 40,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/150c610be746af36cdffe89655c4794a4cb9bef75ed8302d42237713f223ae11/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + ACHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 3362,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/e6f945758565b15fc04c8fc03ee37751d14adce7e87a49bd9a461c69909c8c59/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + ACHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 7504,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/e0d9dc6a230d77e6944c1fdbac833d74b8078bc51b5cb1896c15ef0e34dd749e/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + BCHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 2490,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/13a9c2c56a323e48bd28bdb7b91fa816346482fe5dd9157318986a25b6f5daaf/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + BCHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 21648,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/91018a519421f9a9296da4f7ada9397f3e5fb2cf6f6b3043bd8158f8967407a2/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + BACE1_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 3690,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/5789e8bb679e803744d27a65eda5c45880ffc0a82527f56982ae5226b7675652/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + BACE1_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 8659,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/d4405ae7760f64bdd4798cca871fb07759233aca59495dd184cb26520050ab55/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + B04__admet__bbb-pos",
+          "rows": 6,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/a7c22d43ca74bfc9d104c0c1b028b70ada60dbeae6eeeff40890d0e9d6f67651/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + B04__admet__bbb-pos",
+          "rows": 28,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/115c677674842d9aa8ad4d8443f0a29342c7d45b59c4696f75a1796f69566cc7/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + B04__admet__bbb-pos",
+          "rows": 7,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/492ff57dbc508d8f3c8a9f15160a2fe5592ecefbf19fbffe290d7a7b6591a5bb/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + B04__admet__bbb-pos",
+          "rows": 89,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/b5f4238e902ff77cafe9be7cb007707c63ab078fc613c570ed9cf566539be738/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + B04__admet__bbb-pos",
+          "rows": 13,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/72b7e3d613528c105a745d8b1d7742e05cac18677d3fdc44861c174232ea2c8d/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + B04__admet__bbb-pos",
+          "rows": 40,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/150c610be746af36cdffe89655c4794a4cb9bef75ed8302d42237713f223ae11/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + ACHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 3362,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/e6f945758565b15fc04c8fc03ee37751d14adce7e87a49bd9a461c69909c8c59/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + ACHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 7504,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/e0d9dc6a230d77e6944c1fdbac833d74b8078bc51b5cb1896c15ef0e34dd749e/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + BCHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 2490,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/13a9c2c56a323e48bd28bdb7b91fa816346482fe5dd9157318986a25b6f5daaf/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + BCHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 21648,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/91018a519421f9a9296da4f7ada9397f3e5fb2cf6f6b3043bd8158f8967407a2/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + BACE1_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 3690,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/5789e8bb679e803744d27a65eda5c45880ffc0a82527f56982ae5226b7675652/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + BACE1_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 8659,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/d4405ae7760f64bdd4798cca871fb07759233aca59495dd184cb26520050ab55/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        }
+      ]
+    },
+    {
+      "iteration": 1,
+      "seconds": 6.587515852006618,
+      "reads": 0,
+      "rows_read": 0,
+      "batches": [
+        {
+          "label": "6ZWI_A.dockprep + B04__admet__bbb-pos",
+          "rows": 6,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/a7c22d43ca74bfc9d104c0c1b028b70ada60dbeae6eeeff40890d0e9d6f67651/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + B04__admet__bbb-pos",
+          "rows": 28,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/115c677674842d9aa8ad4d8443f0a29342c7d45b59c4696f75a1796f69566cc7/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + B04__admet__bbb-pos",
+          "rows": 7,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/492ff57dbc508d8f3c8a9f15160a2fe5592ecefbf19fbffe290d7a7b6591a5bb/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + B04__admet__bbb-pos",
+          "rows": 89,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/b5f4238e902ff77cafe9be7cb007707c63ab078fc613c570ed9cf566539be738/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + B04__admet__bbb-pos",
+          "rows": 13,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/72b7e3d613528c105a745d8b1d7742e05cac18677d3fdc44861c174232ea2c8d/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + B04__admet__bbb-pos",
+          "rows": 40,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/150c610be746af36cdffe89655c4794a4cb9bef75ed8302d42237713f223ae11/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + ACHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 3362,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/e6f945758565b15fc04c8fc03ee37751d14adce7e87a49bd9a461c69909c8c59/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + ACHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 7504,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/e0d9dc6a230d77e6944c1fdbac833d74b8078bc51b5cb1896c15ef0e34dd749e/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + BCHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 2490,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/13a9c2c56a323e48bd28bdb7b91fa816346482fe5dd9157318986a25b6f5daaf/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + BCHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 21648,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/91018a519421f9a9296da4f7ada9397f3e5fb2cf6f6b3043bd8158f8967407a2/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + BACE1_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 3690,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/5789e8bb679e803744d27a65eda5c45880ffc0a82527f56982ae5226b7675652/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "6ZWI_A.dockprep + BACE1_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 8659,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/d4405ae7760f64bdd4798cca871fb07759233aca59495dd184cb26520050ab55/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5a8c5e31f0ae69bedb1ba5e446a4f6785e2f9ffa409faa1943d47fcf981dd301/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + B04__admet__bbb-pos",
+          "rows": 6,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/a7c22d43ca74bfc9d104c0c1b028b70ada60dbeae6eeeff40890d0e9d6f67651/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + B04__admet__bbb-pos",
+          "rows": 28,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/115c677674842d9aa8ad4d8443f0a29342c7d45b59c4696f75a1796f69566cc7/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + B04__admet__bbb-pos",
+          "rows": 7,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/492ff57dbc508d8f3c8a9f15160a2fe5592ecefbf19fbffe290d7a7b6591a5bb/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + B04__admet__bbb-pos",
+          "rows": 89,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/b5f4238e902ff77cafe9be7cb007707c63ab078fc613c570ed9cf566539be738/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + B04__admet__bbb-pos",
+          "rows": 13,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/72b7e3d613528c105a745d8b1d7742e05cac18677d3fdc44861c174232ea2c8d/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + B04__admet__bbb-pos",
+          "rows": 40,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/150c610be746af36cdffe89655c4794a4cb9bef75ed8302d42237713f223ae11/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + ACHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 3362,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/e6f945758565b15fc04c8fc03ee37751d14adce7e87a49bd9a461c69909c8c59/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + ACHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 7504,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/e0d9dc6a230d77e6944c1fdbac833d74b8078bc51b5cb1896c15ef0e34dd749e/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + BCHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 2490,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/13a9c2c56a323e48bd28bdb7b91fa816346482fe5dd9157318986a25b6f5daaf/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + BCHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 21648,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/91018a519421f9a9296da4f7ada9397f3e5fb2cf6f6b3043bd8158f8967407a2/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + BACE1_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 3690,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/5789e8bb679e803744d27a65eda5c45880ffc0a82527f56982ae5226b7675652/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "4M0E_A.dockprep + BACE1_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 8659,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/d4405ae7760f64bdd4798cca871fb07759233aca59495dd184cb26520050ab55/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/4180ec042303270e9865f4f30f457b10ab02883a02250cfa19b8d46fc954e462/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + B04__admet__bbb-pos",
+          "rows": 6,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/a7c22d43ca74bfc9d104c0c1b028b70ada60dbeae6eeeff40890d0e9d6f67651/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + B04__admet__bbb-pos",
+          "rows": 28,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/115c677674842d9aa8ad4d8443f0a29342c7d45b59c4696f75a1796f69566cc7/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + B04__admet__bbb-pos",
+          "rows": 7,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/492ff57dbc508d8f3c8a9f15160a2fe5592ecefbf19fbffe290d7a7b6591a5bb/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + B04__admet__bbb-pos",
+          "rows": 89,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/b5f4238e902ff77cafe9be7cb007707c63ab078fc613c570ed9cf566539be738/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + B04__admet__bbb-pos",
+          "rows": 13,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/72b7e3d613528c105a745d8b1d7742e05cac18677d3fdc44861c174232ea2c8d/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + B04__admet__bbb-pos",
+          "rows": 40,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/150c610be746af36cdffe89655c4794a4cb9bef75ed8302d42237713f223ae11/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + ACHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 3362,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/e6f945758565b15fc04c8fc03ee37751d14adce7e87a49bd9a461c69909c8c59/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + ACHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 7504,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/e0d9dc6a230d77e6944c1fdbac833d74b8078bc51b5cb1896c15ef0e34dd749e/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + BCHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 2490,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/13a9c2c56a323e48bd28bdb7b91fa816346482fe5dd9157318986a25b6f5daaf/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + BCHE_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 21648,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/91018a519421f9a9296da4f7ada9397f3e5fb2cf6f6b3043bd8158f8967407a2/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + BACE1_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 3690,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/5789e8bb679e803744d27a65eda5c45880ffc0a82527f56982ae5226b7675652/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        },
+        {
+          "label": "2IQG_A.dockprep + BACE1_B05__pubchem__compounds_PUBCHEM_BBB+",
+          "rows": 8659,
+          "dataset": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/docking-compounds/d4405ae7760f64bdd4798cca871fb07759233aca59495dd184cb26520050ab55/compounds.csv",
+          "receptor": null,
+          "receptor_folder": "/tmp/biomol-vina-bbb-atomic-replay/workspace/projects/f2cd998ea1c241adb8250da3f4162608/.input-cache/5b5a77e06b3554c52ad32ee2552ffb02daf427a61e0418f481a3f06a53ad9e8d/base_input_path"
+        }
+      ]
+    }
+  ],
+  "variants": 36,
+  "original_files_unchanged": true
+}

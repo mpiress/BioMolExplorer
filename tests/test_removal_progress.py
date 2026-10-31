@@ -58,13 +58,16 @@ class RemovalProgressTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(ui.errors)
 
     async def test_project_wide_removal_requires_confirmation_and_visible_progress(self):
-        ui=self.ui();ui.store=object();ui.draw_project=AsyncMock()
+        ui=self.ui();ui.current['role']='owner'
+        ui.store=SimpleNamespace(project=AsyncMock(return_value=dict(ui.current,pipeline=[])))
+        ui.draw_project=AsyncMock();ui.save_draft=AsyncMock(return_value=True);ui.close_project_views=Mock()
+        ui.clear_all_results=lambda **kwargs:WorkspaceUI.clear_all_results(ui,**kwargs)
         entered,release=asyncio.Event(),asyncio.Event()
         async def slow(*args):entered.set();await release.wait()
         mutation=AsyncMock(side_effect=slow)
         with patch('biomolexplorer.result_files.ResultFiles') as service:
             service.return_value.remove_project_results=mutation
-            await WorkspaceUI.remove_all_results(ui,'project')
+            await WorkspaceUI.remove_all_results(ui)
             dialog=ui.dialogs[-1]
             self.assertIn('todos',dialog.title.value.lower())
             await self.exercise_slow_removal(ui,dialog,dialog.actions[-1].on_click,entered,release,mutation)

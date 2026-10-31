@@ -36,7 +36,7 @@ class MDContractTests(unittest.TestCase):
         self.assertTrue(compatible(new_stage('docking_vina'),stage,'base_selected_mols'))
         self.assertTrue(compatible(new_stage('prepare_structures'),stage,'base_input_path'))
     def test_invalid_settings_rejected_including_nonfinite_and_empty(self):
-        for key,value in [('amber_score_md_steps',0),('amber_score_temperature',math.nan),
+        for key,value in [('amber_score_md_steps',-1),('amber_score_temperature',math.nan),
                 ('amber_score_minimization_rmsgrad',''),('amber_score_gb_model',3),('md_time_step',.01),
                 ('amber_score_md_steps',True),('md_movable_mask',"':1\n"),('selected_pairs',['invalid'])]:
             with self.subTest(key=key),self.assertRaises(ValueError):validate_settings({key:value})
@@ -187,22 +187,11 @@ class NativeMDTests(unittest.TestCase):
             self.assertLess(abs(float(charges.sum())-round(float(charges.sum()))),.01)
             self.assertTrue(math.isfinite(result['amber_score']))
 
-    @unittest.skipUnless(Path('/tmp/biomol-md-validation/bin/sander').is_file(),'isolated AmberTools not installed')
-    def test_native_sander_and_separate_interface_analysis(self):
-        from biomolexplorer.md_engine import tools,run_pair
-        settings=dict(DEFAULTS,amber_score_type='dock6_sander',amber_score_before_md_minimization_cycles=1,
-            amber_score_md_steps=20,trajectory_stride=5,amber_score_after_md_minimization_cycles=1,use_existing_ligand_charges=True)
-        root,found=tools('/home/michel/progs/dock6','/tmp/biomol-md-validation',settings)
-        example=root/'install/test/amber_score_1lgu'
-        with tempfile.TemporaryDirectory(prefix='bme-md-sander-') as folder:
-            result=run_pair(dict(receptor={'path':str(example/'1lgu.pdb')},ligand={'path':str(example/'lig.mol2')}),Path(folder),root,found,settings)
-            data=json.loads((Path(folder)/'analysis.json').read_text())
-            self.assertEqual(data['summary']['frames'],4)
-            self.assertAlmostEqual(data['summary']['simulation_duration_ps'],.02)
-            for key in ('protein_backbone_rmsd','ligand_rmsd','hydrogen_bonds','sasa'):
-                self.assertTrue(all(math.isfinite(r[key]) for r in data['series']))
-            self.assertTrue(all(0<=r['occupancy']<=1 for r in data['hbonds']))
-            self.assertTrue(math.isfinite(result['sander_mean_potential_energy']))
+    def test_external_md_protocol_is_rejected_without_execution(self):
+        from biomolexplorer.md_engine import tools
+        with patch('subprocess.run',side_effect=AssertionError('An external process must not start')):
+            with self.assertRaisesRegex(ValueError,'Only native'):
+                tools('/home/michel/progs/dock6','',dict(DEFAULTS,amber_score_type='dock6_sander'))
 
     def test_native_amber_with_preserved_charges_generates_finite_energies(self):
         from biomolexplorer.md_engine import tools,run_pair
@@ -212,6 +201,14 @@ class NativeMDTests(unittest.TestCase):
             result=run_pair(dict(receptor={'path':str(example/'1lgu.pdb')},ligand={'path':str(example/'lig.mol2')}),Path(folder),root,found,settings)
             self.assertTrue(all(math.isfinite(v) for v in result.values()))
             self.assertTrue((Path(folder)/'energies.png').is_file())
+            data=json.loads((Path(folder)/'analysis.json').read_text())
+            self.assertTrue(math.isfinite(data['summary']['final_ligand_rmsd']))
+            self.assertNotIn('rmsf',data)
+            self.assertIn('No native trajectory',data['unavailable'])
+            self.assertFalse((Path(folder)/'trajectory.nc').exists())
+            protocol=json.loads((Path(folder)/'protocol.json').read_text())
+            self.assertIsNone(protocol['refinement']['constraints'])
+            self.assertFalse(protocol['refinement']['trajectory_available'])
             self.assertTrue((Path(folder)/'rec.lig.1.final_pose.amber.restart').is_file())
     def test_native_parameter_checkpoints_survive_temperature_change(self):
         from biomolexplorer.md_engine import tools,run_pair

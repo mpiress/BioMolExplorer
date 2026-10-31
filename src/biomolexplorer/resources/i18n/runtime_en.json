@@ -108,9 +108,17 @@
   "redocking.filter.all": "All targets",
   "redocking.filter.search": "Search target, PDB or ligand",
   "redocking.highlight": "Highlight best RMSDs per target",
-  "redocking.count": "{shown} of {total} pairs · Page {page}",
+  "redocking.count": "{start}–{end} of {filtered} filtered pairs · {total} total · Page {page}/{pages}",
   "redocking.export": "Download RMSD table",
   "run.status.cleared": "Results cleared",
   "run.overview.cleared": "Generated results and input selections were cleared. Connections and source files are preserved.",
-  "run.status.historical": "Historical result · dependencies changed"
+  "run.status.historical": "Historical result · dependencies changed",
+  "run.heading.paused": "Execution paused",
+  "run.status.paused": "Paused",
+  "run.hint.paused": "Review results and configure inputs before continuing. Completed calculations are preserved.",
+  "run.hint.pause_requested": "The current operation will finish before pausing. You can continue later.",
+  "run.overview.paused": "Execution is paused for review. Completed results remain available.",
+  "run.action.pause": "Pause Run",
+  "run.action.resume": "Resume Run",
+  "redocking.failures": "{count} failed complexes. Review diagnostics in the highlighted rows."
 }

@@ -731,8 +731,8 @@
             <h2 class="text-4xl font-black mt-3">Run the workspace in your scientific environment</h2>
             <p class="text-slate-300 mt-6 max-w-3xl leading-relaxed">Download the <a href="https://github.com/mpiress/BioMolExplorer" class="text-emerald-300 underline">GitHub project</a> using Git or Code → Download ZIP, then open a terminal in the source code folder. The Python package requires Python 3.12 or newer.</p>
             <div class="mt-6 rounded-2xl border border-amber-400/40 bg-amber-400/10 p-6">
-                <p class="font-bold text-amber-200">Standard preparation: configure AmberTools. DOCK6 is required for its docking protocols.</p>
-                <p class="text-slate-300 mt-3">Python/Gemmi selects structures; ff14SB/GAFF and AmberTools prepare and minimize receptors and ligands. Vina uses Meeko and DOCK6 receives assigned MOL2 charges. Chimera 1.17 is optional, used only for explicitly selected legacy or special-system protocols. <a href="docs/en/chimera_migration.html" class="text-emerald-300 underline">Scientific changes and validation limits</a>.</p>
+                <p class="font-bold text-amber-200">Standard preparation: configure UCSF Chimera. DOCK6 6.11 is required for its docking and native Amber Score protocols.</p>
+                <p class="text-slate-300 mt-3">UCSF Chimera 1.17 prepares receptors and ligands, assigns gas/AM1-BCC charges and performs minimization. Vina and DOCK6 receive the prepared inputs. Under Molecular Dynamics, native DOCK6 6.11 Amber Score refines poses in implicit solvent without conventional MD or an external AmberTools environment. <a href="docs/en/chimera_migration.html" class="text-emerald-300 underline">Scientific changes and validation limits</a>.</p>
                 <p class="mt-3"><a href="docs/en/installation.html" class="text-emerald-300 underline">Installation and executable checks (English)</a> · <a href="docs/pt/installation.html" class="text-emerald-300 underline">Instalação e verificação (Português)</a></p>
             </div>
             <div class="grid lg:grid-cols-2 gap-8 mt-10">
@@ -752,7 +752,7 @@ biomolexplorer-ui --web --dock6-path /path/to/dock6-6.11</code></pre>
   --data-dir ./workspace-data \
   --worker-python /path/to/python \
   --dock6-path /path/to/dock6-6.11</code></pre>
-                    <p class="text-slate-300 mt-5">Create the isolated <code>requirements-ambertools.yml</code> environment and configure its root in preparation settings or <code>BIOMOL_AMBERTOOLS_PATH</code>. Standard preparation needs antechamber, parmchk2 and tleap; minimization also needs sander. Do not inject that environment's libraries into the main Python process. Vina and DOCK6 are required by their respective protocols; pass the complete DOCK6 root, containing bin/ and parameters/, to --dock6-path. Molecular surfaces use native Python SES, without standalone DMS. Chimera is only needed for explicit legacy execution.</p>
+                    <p class="text-slate-300 mt-5">Configure classic UCSF Chimera, Open Babel and the chosen docking engine on the worker. Native Amber Score requires the complete DOCK6 6.11 root, including its bundled AMBER utilities and parameter library; no standalone AmberTools, sander or cpptraj is used. Molecular surfaces use native Python SES, without standalone DMS. See the manual for scientific limits and supported structural metrics.</p>
                 </div>
             </div>
             <p class="text-slate-300 mt-8">Use the <a href="docs/en/frontend.html" class="text-emerald-300 underline">workspace guide</a> for accounts and pipelines, or the <a href="docs/en/backend_usage.html" class="text-emerald-300 underline">backend guide</a> for CLI usage and parameters. The current executor uses a local Linux backend, SQLite and a bounded queue; see <a href="docs/en/architecture.html#limitations-and-evolution" class="text-emerald-300 underline">deployment and scientific limitations</a>.</p>

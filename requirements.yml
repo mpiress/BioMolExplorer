@@ -1,5 +1,6 @@
 # Active Chimera preparation: docs/chimera_migration.md.
 # Chimera is required by molecular preparation protocols.
+# Native Amber Score uses the DOCK6 6.11 bundle; no standalone AmberTools environment.
 # Native DMS surface port: docs/dms_migration.md (NumPy + SciPy; no DMS executable).
 name: BioMolExplorer
 channels:
@@ -21,14 +22,11 @@ dependencies:
   - requests=2.34.2
   - matplotlib=3.10.9
   - pillow=12.3.0
-  # pdftoppm is invoked by pdf_preview.py; this is not a Python import.
   - poppler=24.04.0
   - scipy=1.17.1
   - urllib3=2.7.0
-  # Build backend used by setup.py and pyproject.toml.
   - setuptools=83.0.0
   - pip:
-    # Python ligand adapter; Gemmi is imported by Meeko, including ligand APIs.
     - meeko>=0.7.1,<0.8
     - gemmi>=0.7,<0.8
     - rcsbsearchapi==1.6.0
@@ -40,6 +38,3 @@ dependencies:
     - --extra-index-url https://download.pytorch.org/whl/cpu
     - torch==2.8.0+cpu
     - admet-ai==2.0.1
-# Optional admet_ai imports run in an isolated environment because ADMET-AI 2
-# requires newer RDKit than the scientific protocol above. See requirements-admet.yml
-# and scripts/setup_admet_ai.py (the existing CPU-only installer).

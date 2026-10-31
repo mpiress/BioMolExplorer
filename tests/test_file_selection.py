@@ -4,7 +4,7 @@ import copy
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from biomolexplorer.catalog import new_stage
 from biomolexplorer.pipeline import PipelineService
@@ -36,7 +36,10 @@ class FileSelectionTests(unittest.TestCase):
             def submit(manager,operation,parameters):
                 job=super().submit(operation,parameters)
                 if operation=='retrieve_compounds':
-                    extra=manager.config.workspace/'chosen_MOLS.csv'
+                    original=Path(job['result']['artifacts'][0])
+                    canonical=original.with_name('B01__chembl__compounds.csv')
+                    original.rename(canonical);job['result']['artifacts'][0]=str(canonical)
+                    extra=manager.config.workspace/'B01__chembl__mol.csv'
                     extra.write_text('molecule_chembl_id,canonical_smiles\nCHEMBL2,CCC\n')
                     report=manager.config.workspace/'report.csv'
                     report.write_text('status\nok\n')
@@ -168,14 +171,14 @@ class FileSelectionTests(unittest.TestCase):
                     for child in getattr(control,'controls',[]) or []:yield from walk(child)
                 dropdowns=[c for c in walk(settings.content) if isinstance(c,ft.Dropdown)]
                 selected=next(c for c in dropdowns if c.label=='Resultado usado nesta entrada')
-                self.assertEqual(selected.value,'B01__chembl__compounds.csv')
+                self.assertEqual(selected.value,Path(run['stages'][0]['artifacts'][0]).name)
                 self.assertEqual(next(c for c in dropdowns if c.label=='Como processar os arquivos selecionados?').value,'merge')
                 self.assertEqual(self.store.get_run(self.token,run['id'])['status'],'awaiting_input')
                 asyncio.run(settings.actions[-1].on_click(None))
                 finished=self.wait(run)
                 self.assertEqual(finished['status'],'succeeded',finished['error'])
                 stored=self.store.project(self.token,self.project_id)['pipeline'][1]
-                self.assertEqual(stored['bindings']['base_input_path']['selector'],'B01__chembl__compounds.csv')
+                self.assertEqual(stored['bindings']['base_input_path']['selector'],Path(run['stages'][0]['artifacts'][0]).name)
                 self.assertEqual(stored['input_processing'],'merge')
             finally:service.close()
 
@@ -194,7 +197,7 @@ class FileSelectionTests(unittest.TestCase):
         draft=reopened.read(require_selection=False)
         self.assertEqual(draft['bindings']['base_input_path'],{'stage':source['id'],'selector':'auto'})
 
-    def test_poller_automatically_opens_once_for_each_pending_stage(self):
+    def test_poller_prepares_pending_stages_without_opening_configuration(self):
         dialogs=[]
         page=SimpleNamespace(update=lambda:None,show_dialog=dialogs.append)
         ui=WorkspaceUI(page,None,None)
@@ -207,10 +210,12 @@ class FileSelectionTests(unittest.TestCase):
                        {'id':'run','project_id':'project','status':'succeeded','stages':[]}])
         ui.store=SimpleNamespace(get_run=lambda *args:next(responses))
         async def local_call(function,*args):return function(*args)
-        ui.call=local_call;ui.configure_pending=AsyncMock()
+        ui.call=local_call;ui.configure_pending=AsyncMock();ui.prepare_pending_inputs=Mock()
         with patch('biomolexplorer.ui.app.asyncio.sleep',new=AsyncMock()):
             asyncio.run(ui.poll_runs())
-        self.assertEqual(ui.configure_pending.await_count,2)
+        ui.configure_pending.assert_not_awaited()
+        self.assertEqual(ui.prepare_pending_inputs.call_count,3)
+        self.assertEqual(dialogs,[])
         self.assertIsNone(ui.current_run)
 
     def test_prepared_selection_keeps_only_one_chain_and_its_metadata(self):

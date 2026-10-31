@@ -1,0 +1,22 @@
+Separate unresolved legacy fixture: test_docking_interoperability.DockingInteroperabilityTests.test_both_engines_accept_actual_poses_and_keep_compound_identity
+Reason: patches docking_data.convert_structure, but preparation uses docking_preparation.convert_structure; fixture contains literal pose A/pose B, not molecular structures.
+............................................................................[12:39:30] CID1: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[12:39:30] CID1: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[12:39:30] CID1: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[12:39:30] CID1: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+.....[12:39:31] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[12:39:31] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+..........................[12:39:41] DEPRECATION WARNING: please use MorganGenerator
+[12:39:41] DEPRECATION WARNING: please use MorganGenerator
+[12:39:41] DEPRECATION WARNING: please use MorganGenerator
+[12:39:41] DEPRECATION WARNING: please use MorganGenerator
+[12:39:41] DEPRECATION WARNING: please use MorganGenerator
+[12:39:41] DEPRECATION WARNING: please use MorganGenerator
+[12:39:41] DEPRECATION WARNING: please use MorganGenerator
+[12:39:41] DEPRECATION WARNING: please use MorganGenerator
+[12:39:41] DEPRECATION WARNING: please use MorganGenerator
+..........................
+----------------------------------------------------------------------
+Ran 133 tests in 102.457s
+
+OK

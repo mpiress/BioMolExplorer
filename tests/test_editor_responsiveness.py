@@ -67,8 +67,8 @@ class EditorResponsivenessTests(unittest.TestCase):
             path=self.store.project_dir(self.pid)/'compounds.csv'
             path.write_text('molecule_chembl_id,canonical_smiles\nCHEMBL1,CCO\n')
             item=dict(source,status='succeeded',artifacts=[str(path)])
-            from biomolexplorer.pubchem_retrieval import reference_choices
-            with patch.object(self.store,'list_runs',return_value=[dict(id='r',stages=[item])]), patch('biomolexplorer.pubchem_retrieval.reference_choices',wraps=reference_choices) as reader:
+            from biomolexplorer.docking_inputs import compound_identifiers
+            with patch.object(self.store,'list_runs',return_value=[dict(id='r',stages=[item])]), patch('biomolexplorer.docking_inputs.compound_identifiers',wraps=compound_identifiers) as reader:
                 await self.ui.open_stage_dialog(vina['id'])
                 reader.assert_not_called()
                 dialog=self.page.dialogs[-1]
@@ -98,7 +98,7 @@ class EditorResponsivenessTests(unittest.TestCase):
             await catalog.load('source')
             self.assertEqual(set(catalog.references['source'][str(path)]),{'CHEMBL999'})
             self.assertEqual(len(self.ui._compound_reference_cache),1)
-            with patch('biomolexplorer.pubchem_retrieval.reference_choices',return_value={'id':'CCO'}):
+            with patch('biomolexplorer.docking_inputs.compound_identifiers',return_value={'id':'CCO'}):
                 for index in range(40):
                     extra=path.with_name(f'{index}.csv');extra.write_text('test')
                     catalog.paths['source']=[extra];await catalog.load('source')

@@ -1,3 +1,5 @@
+> Registro histórico. As instruções de ambiente/protocolos desta validação foram substituídas pela [revisão de Amber Score nativo de 2026-10-29](native_amber_score_2026-10-29/README.md). Não representam as opções atuais da aplicação.
+
 # Retorno à preparação exclusiva com UCSF Chimera
 
 Validação local em 26/10/2026. Docking e redocking normalizam configurações

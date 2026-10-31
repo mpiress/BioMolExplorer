@@ -1,6 +1,4 @@
-"""DOCK6 AMBER-score adapter with isolated preparation and optional AmberTools MD."""
-import csv
-import hashlib
+"""Native DOCK6 6.11 Amber Score with isolated, bundled preparation."""
 import json
 import math
 import os
@@ -8,27 +6,28 @@ from pathlib import Path
 import re
 import shlex
 import shutil
+import subprocess
 
-from .md_config import DEFAULTS,validate_settings
-from .md_inputs import validate_structure
+from .md_config import validate_settings
+from .md_inputs import validate_structure,normalize_receptor_variants
 from .processes import run_command,ScientificToolError
 from .stage_cache import file_digest
 from .storage import write_json,write_text
 
 
 def tools(dock6_app_path,ambertools_path,settings,ambertools_env=''):
+    settings=validate_settings(settings)
     from .docking_tools import dock6_root
     root=dock6_root(dock6_app_path)
     if not root:raise ValueError('Configure a instalação DOCK6 antes da dinâmica.')
     needed=['dock6','prepare_amber.pl','amberize_receptor','amberize_ligand','amberize_complex','tleap','teLeap','antechamber','parmchk']
     found={name:root/'bin'/name for name in needed}
-    if settings['amber_score_type']=='dock6_sander':
-        from .preparation_tools import amber_tool
-        for name in ['sander']+(['cpptraj'] if settings['analyze_trajectory'] else []):
-            found[name]=amber_tool(name,ambertools_path,environment=ambertools_env)
     for name,path in found.items():
         if not path.is_file() or name!='prepare_amber.pl' and not os.access(path,os.X_OK):
             raise ScientificToolError('Ferramenta DOCK6 indisponível: '+name,'TOOL_NOT_FOUND','Verifique a instalação DOCK6 e suas ferramentas AMBER.')
+    version=subprocess.run([str(found['dock6']),'-h'],capture_output=True,text=True,check=True,timeout=10)
+    if not re.search(r'\bDOCK v6\.11\b',version.stdout or ''):
+        raise ValueError('Amber Score requires DOCK6 6.11; the selected executable reports a different or unknown version.')
     return root,found
 
 
@@ -145,60 +144,8 @@ def plot(path,x,y,title,xlabel,ylabel):
     figure.tight_layout();figure.savefig(path,dpi=140)
 
 
-def trajectory(directory,found,settings,env,ambertools_path='',ambertools_env=''):
-    from .preparation_tools import run_amber_tool
-    steps=settings['amber_score_md_steps'];stride=settings['trajectory_stride']
-    mask=settings['md_movable_mask']
-    movable=", ibelly=1, bellymask='"+mask+"'" if mask else ''
-    cycles=settings['amber_score_before_md_minimization_cycles']
-    source='rec.lig.1.final_pose.amber.restart'
-    if not (directory/source).exists():source='rec.lig.1.inpcrd'
-    if cycles:
-        write_text(f"Complex minimization\n&cntrl imin=1, maxcyc={cycles}, ncyc={min(cycles,10)}, ntb=0, igb={settings['amber_score_gb_model']}, gbsa=1, cut={settings['amber_score_nonbonded_cutoff']}, ntpr=1{movable}, /\n",directory/'min.in')
-        run_amber_tool('sander',['-O','-i','min.in','-p','rec.lig.1.prmtop','-c',source,'-r','min.rst7','-o','min.out'],cwd=directory,env=env,prefix=ambertools_path,environment=ambertools_env)
-        source='min.rst7'
-    common=(f"ntb=0, igb={settings['amber_score_gb_model']}, gbsa=1, "
-            f"cut={settings['amber_score_nonbonded_cutoff']}, ntt=3, gamma_ln=2., "
-            f"dt={settings['md_time_step']}, ntc=2, ntf=2{movable}")
-    temperature=settings['amber_score_temperature']
-    write_text(f"Implicit-solvent heating\n&cntrl imin=0, irest=0, ntx=1, {common}, "
-               f"tempi=0., temp0={temperature}, nstlim={settings['md_heating_steps']}, "
-               f"ig={settings['random_seed']}, ntpr={max(1,min(stride,settings['md_heating_steps']))}, ntwx=0, /\n",
-               directory/'heat.in')
-    run_amber_tool('sander',['-O','-i','heat.in','-p','rec.lig.1.prmtop','-c',source,
-        '-r','heat.rst7','-o','heat.out'],cwd=directory,env=env,prefix=ambertools_path,environment=ambertools_env)
-    write_text(f"Implicit-solvent equilibration\n&cntrl imin=0, irest=1, ntx=5, {common}, "
-               f"tempi={temperature}, temp0={temperature}, nstlim={settings['md_equilibration_steps']}, "
-               f"ig=-1, ntpr={max(1,min(stride,settings['md_equilibration_steps']))}, ntwx=0, /\n",
-               directory/'equil.in')
-    run_amber_tool('sander',['-O','-i','equil.in','-p','rec.lig.1.prmtop','-c','heat.rst7',
-        '-r','equil.rst7','-o','equil.out'],cwd=directory,env=env,prefix=ambertools_path,environment=ambertools_env)
-    write_text(f"Implicit-solvent production trajectory\n&cntrl imin=0, irest=1, ntx=5, {common}, "
-               f"tempi={temperature}, temp0={temperature}, nstlim={steps}, ig=-1, "
-               f"ntpr={stride}, ntwx={stride}, ioutfm=1, /\n",directory/'md.in')
-    run_amber_tool('sander',['-O','-i','md.in','-p','rec.lig.1.prmtop','-c','equil.rst7',
-        '-r','trajectory.rst7','-x','trajectory.nc','-o','md.out'],cwd=directory,env=env,prefix=ambertools_path,environment=ambertools_env)
-    if not (directory/'trajectory.nc').is_file() or not (directory/'trajectory.nc').stat().st_size:raise ValueError('sander não produziu uma trajetória.')
-    values=[]
-    # Amber also prints averaged/RMS sections with NSTEP headers. They are
-    # statistics, not additional frames or the final instantaneous energy.
-    output=re.split(r'A\s+V\s+E\s+R\s+A\s+G\s+E\s+S',(directory/'md.out').read_text(),maxsplit=1)[0]
-    for match in re.finditer(r'\bNSTEP\s*=\s*(\d+).*?TIME\(PS\)\s*=\s*(\S+).*?\bEPtot\s*=\s*(\S+)',output,re.S):
-        step=int(match[1])
-        time_value,energy=map(float,match.groups()[1:])
-        if not all(math.isfinite(v) for v in (time_value,energy)):raise ValueError('Energias sander não finitas.')
-        if step>0 and step%stride==0:values.append((time_value,energy))
-    if not values:raise ValueError('sander não produziu energias potenciais válidas.')
-    with (directory/'trajectory_energy.csv').open('w',newline='') as stream:
-        writer=csv.writer(stream);writer.writerow(['time_ps','potential_energy_kcal_mol']);writer.writerows(values)
-    plot(directory/'trajectory_energy.png',[r[0] for r in values],[r[1] for r in values],'Energia potencial · trajetória sander','Tempo (ps)','kcal/mol')
-    if settings['analyze_trajectory']:
-        from .md_analysis import run
-        run(directory,settings,found,env,ambertools_path,ambertools_env)
-    return dict(sander_final_potential_energy=values[-1][1],sander_mean_potential_energy=sum(v[1] for v in values)/len(values))
-
-
 def run_pair(pair,directory,root,found,settings,ambertools_path='',ambertools_env=''):
+    settings=validate_settings(settings)
     directory=Path(directory);directory.mkdir(parents=True,exist_ok=True)
     def phase(name):
         write_json(dict(stage=name),directory/'progress.json')
@@ -206,7 +153,8 @@ def run_pair(pair,directory,root,found,settings,ambertools_path='',ambertools_en
         event(get_logger('scientific_tools'),'dynamics.phase','Etapa da dinâmica: '+name,
             compound_identifier=pair['ligand'].get('name'),configuration=pair.get('id'))
     phase('input_validation')
-    receptor=validate_structure(pair['receptor']['path'],'receptor');shutil.copy2(receptor,directory/'rec.pdb')
+    receptor=validate_structure(pair['receptor']['path'],'receptor')
+    normalized_variants=normalize_receptor_variants(receptor,directory/'rec.pdb')
     ligand=pair['ligand'];source=Path(ligand['path'])
     if source.suffix.lower()=='.csv':
         row=ligand.get('compound',{})
@@ -241,21 +189,19 @@ def run_pair(pair,directory,root,found,settings,ambertools_path='',ambertools_en
                     existing_charges=True;charge_origin='verified prepared AM1-BCC'
     env=prepare(directory,root,found,existing_charges)
     from .md_analysis import selection
-    topology,masks=selection(directory)
-    write_json(dict(version=1,settings=settings,software=tool_identity(root,found),
+    topology,masks=selection(directory,require_protein=False)
+    write_json(dict(version=2,settings=settings,software=tool_identity(root,found),
         inputs={kind:dict(name=pair[kind].get('name',Path(pair[kind]['path']).name),identity=pair[kind].get('identity'),
-            source=pair[kind]['path'],sha256=file_digest(directory/filename)) for kind,filename in [('receptor','rec.pdb'),('ligand','lig.mol2')]},
-        preparation=dict(protein_force_field='ff94',ligand_force_field='GAFF',
+            source=pair[kind]['path'],source_sha256=file_digest(pair[kind]['path']),file=filename,sha256=file_digest(directory/filename)) for kind,filename in [('receptor','rec.pdb'),('ligand','lig.mol2')]},
+        preparation=dict(receptor_variant_normalization=normalized_variants,protein_force_field='ff94',ligand_force_field='GAFF',
             charge_method=charge_origin,
             solvent='implicit GB',water_model=None,pressure_control=None,complex_atom_order='ligand first, receptor second',
             atoms=topology['natom'],masks={k:v for k,v in masks.items() if isinstance(v,str)}),
-        trajectory=dict(engine='sander' if settings['amber_score_type']=='dock6_sander' else None,
-            equilibrium_claim=False,production_claim=False,thermostat='Langevin',gamma_ln=2.,
-            constraints='SHAKE bonds involving hydrogen',duration_ps=settings['amber_score_md_steps']*settings['md_time_step'],
-            phases=dict(minimization_cycles=settings['amber_score_before_md_minimization_cycles'],
-                heating_steps=settings['md_heating_steps'],equilibration_steps=settings['md_equilibration_steps'],
-                production_steps=settings['amber_score_md_steps']),
-            warning='Short implicit-solvent refinement, not an equilibrated production simulation or binding free energy.')),
+        refinement=dict(engine='DOCK6 6.11 native Amber Score',
+            equilibrium_claim=False,production_claim=False,trajectory_available=False,
+            thermostat='Langevin',gamma_ln=2.,constraints=None,time_step_ps=.001,
+            duration_ps=0 if settings['amber_score_movable_region']=='nothing' else settings['amber_score_md_steps']*.001,
+            warning='Short implicit-solvent refinement, not conventional MD or binding free energy. No solvent box or trajectory/RMSF is available.')),
         directory/'protocol.json')
     if settings['amber_score_movable_region']=='distance':
         rows=[];active=False
@@ -272,8 +218,8 @@ def run_pair(pair,directory,root,found,settings,ambertools_path='',ambertools_en
     run_command([str(found['dock6']),'-i','amber.in','-o','amber.out','-v'],cwd=directory,env=env)
     result=energies(directory/'amber_scored.mol2')
     plot(directory/'energies.png',list(range(4)),list(result.values()),'AMBER Score · contribuições finais (DOCK6)','0: score · 1: complexo · 2: receptor · 3: ligante','kcal/mol')
-    if settings['amber_score_type']=='dock6_sander':
-        phase('sander_trajectory_analysis');result.update(trajectory(directory,found,settings,env,ambertools_path,ambertools_env))
+    from .md_analysis import analyze_final_state
+    analyze_final_state(directory)
     write_json(dict(units='kcal/mol',receptor_and_ligand_terms='Signed contributions reported by DOCK6',**result),directory/'energies.json')
     phase('completed')
     if os.environ.get('BIOMOL_MD_DEBUG','0')!='1':

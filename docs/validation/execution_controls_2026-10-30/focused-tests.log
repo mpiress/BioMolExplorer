@@ -1,0 +1,5 @@
+Executing <Task finished name='Task-54' coro=<ResidueNavigationTests.test_contact_dialog_uses_the_same_direct_navigation() done, defined at /home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_redocking_viewer_navigation.py:85> result=None created at /home/michel/progs/miniconda3/envs/BioMolExplorer/lib/python3.12/asyncio/runners.py:100> took 0.531 seconds
+----------------------------------------------------------------------
+Ran 79 tests in 39.013s
+
+OK

@@ -81,6 +81,9 @@ def clear_project_results(store,token,pid,*,reset_configuration=True):
             candidates=set()
             for rid,stages in runs:
                 for item in stages:
+                    # Remove All preserves legacy source references as well
+                    # as their bytes; Clear All still resets configuration.
+                    if not reset_configuration and provided(item):continue
                     stages_cleared+=1
                     candidates.update(p for value in item.get('artifacts',[]) if (p:=scoped(value)))
                     stage_root=root/'runs'/rid/item['id']

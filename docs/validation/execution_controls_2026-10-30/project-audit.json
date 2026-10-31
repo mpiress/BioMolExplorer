@@ -1,0 +1,24 @@
+{
+  "redocking": [
+    {
+      "run": "384ffe70b0484994ab021a823aa78efb",
+      "stage": "Run redocking",
+      "simulations": 161,
+      "statuses": {
+        "preparation_failed": 161
+      },
+      "rows_on_first_page": 25,
+      "targets": [
+        "AChE PDB",
+        "BACE1 PDB",
+        "BChE PDB"
+      ],
+      "artifacts": 1542,
+      "missing_files": 0
+    }
+  ],
+  "pipeline_blocks": 17,
+  "png_bytes": 323781,
+  "database_mode": "read-only",
+  "project_files_written": 0
+}

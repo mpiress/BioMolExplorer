@@ -55,7 +55,8 @@ def legacy_indexes(batch,runtime_python=None):
         cache = PairCache(source, root / source.name, [], effective_preparation(parameters),
                           {key: parameters.get(key, value) for key, value in PARAMETERS.items()},
                           template_overrides=configuration.get('templates', {}),runtime_python=runtime_python)
-        yield root / NAME, cache.publish(rows, write=False)
+        data=cache.publish(rows,write=False)
+        if data['entries']:yield root/NAME,data
 
 
 def stage_sources(store, project_id, stage_id, destination, source=None, configuration=None,
@@ -222,16 +223,6 @@ class PairCache:
                         pH=self.parameters['pH'], charge_type=self.parameters['charge_type'],
                         prepare_complex=self.parameters['prepare_complex'], science=self.science,
                         backend=config.get('preparation_backend','auto'),structural_selection=config.get('structure',{}))
-        if self.parameters['prepare_complex'] and config.get('preparation_backend','auto')!='legacy_chimera':
-            from .amber_preparation import parameterization_identity
-            from .structure_selection import component_path
-            prefix=config.get('ambertools_path','')
-            environment=config.get('ambertools_env','')
-            minimize=dict(DEFAULTS,**config.get('receptor',{}))['minimize']
-            key=(prefix,minimize,environment)
-            if key not in self.native_identities:self.native_identities[key]=parameterization_identity(prefix,minimize,environment)
-            receptor['native_protocol']=self.native_identities[key]
-            receptor['cofactor_topologies']={name:file_digest(component_path(name,self.source,config)) for name in config.get('cofactors',[])}
         # Supplied prepared structures are also scientific inputs.
         if not self.parameters['prepare_complex']:
             receptor['prepared'] = file_digest(self.prepared / f'{code}_{chain}.dockprep.{"pdbqt" if self.engine=="vina" else "mol2"}')
@@ -243,12 +234,6 @@ class PairCache:
         if config.get('preparation_backend')=='legacy_chimera':
             from .chimera_charge_repair import local_definition
             pair['chemical_topology']=local_definition(self.source,record[1],config)
-        if self.parameters['prepare_complex'] and config.get('preparation_backend','auto')!='legacy_chimera':
-            pair['chemical_topology']=file_digest(component_path(record[1],self.source,config))
-            if dict(DEFAULTS,**config.get('ligand',{}))['minimize']:
-                key=(prefix,True,environment)
-                if key not in self.native_identities:self.native_identities[key]=parameterization_identity(prefix,True,environment)
-                pair['minimization']=self.native_identities[key]
         if not self.parameters['prepare_complex']:
             pair['prepared'] = file_digest(self.prepared / (self.prefix(record) + ('.lig.pdbqt' if self.engine=='vina' else '.lig.mol2')))
             pair['centers'] = self.centers(record)
@@ -391,7 +376,15 @@ class PairCache:
                 entry=dict(record=record, config=config, receptor_key=receptor_key,
                     pair_key=pkey, row=row, center=self.centers(record),
                     producer_software=self.restored.get(key,{}).get('producer_software'),
-                    files={p.relative_to(self.root).as_posix(): hashes[p] for p in files}))
+                    files={relative(p):hashes[p] for p in files})
+                entry=json.loads(json.dumps(entry,default=lambda v:v.item() if hasattr(v,'item') else str(v),allow_nan=False))
+                if write:
+                    for path in files:
+                        target=self.root/relative(path)
+                        if path.resolve()!=target.resolve():copy_artifact(path,target)
+                    with self.checkpoints.locked(pkey):
+                        self.checkpoints.remember(pkey,{relative(p):p for p in files},entry)
+                entries.append(entry)
             except (OSError, ValueError, KeyError, TypeError):
                 continue
         data = dict(version=1, target=self.source.name, entries=entries)

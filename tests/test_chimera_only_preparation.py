@@ -43,7 +43,8 @@ class ChimeraOnlyConfigurationTests(unittest.TestCase):
                 preparation=form.redocking_pairs.preparation if operation=='redocking' else form.preparation_settings
                 self.assertEqual([o.key for o in preparation.backend.options],['legacy_chimera'])
                 controls=list(walk(preparation.control))
-                self.assertFalse(any(c is preparation.ambertools or c is preparation.ambertools_env or c is preparation.vina_policy for c in controls))
+                self.assertFalse(any(hasattr(preparation,name) for name in ('ambertools','ambertools_env','vina_policy')))
+                self.assertFalse(any('AmberTools' in str(getattr(c,'label','')) for c in controls))
                 for role in ('receptor','ligand'):
                     self.assertEqual([o.key for o in preparation.settings[role]['charge_type'].options],['gas','am1'])
                 self.assertEqual(preparation.read()['preparation_backend'],'legacy_chimera')

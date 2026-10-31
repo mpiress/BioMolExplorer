@@ -32,7 +32,7 @@ class AdmetSettings:
         for name,checkbox in self.catalogs.items():
             alert_controls.append(ft.Container(col={'xs':12,'md':6},content=ft.Row([
                 checkbox,ft.IconButton(icon=ft.Icons.INFO_OUTLINE,icon_size=18,
-                    tooltip=ALERT_CATALOGS[name])],spacing=4)))
+                    tooltip=ALERT_CATALOGS[name],on_click=lambda e,catalog=name:self.show_catalog(catalog))],spacing=4)))
         for key,interval in config['property_limits'].items():self.add_limit(key,interval)
         async def add(e):self.add_limit();self.ui.page.update()
         from biomolexplorer.admet_predictors import predictor_available
@@ -92,6 +92,11 @@ class AdmetSettings:
         self.criteria_summary.value='Critérios ativos: '+(' · '.join(chosen) if chosen else 'Sem restrição de barreiras ou regras.')
         self.violations.disabled=not self.writable or self.fields['rule_set'].value=='none'
         if e is not None:self.ui.page.update()
+
+    def show_catalog(self,name):
+        from .action_help import show_help
+        description=ALERT_CATALOGS[name]
+        show_help(self.ui,name,[ft.Text(description,size=14)],[description])
 
     def backend_changed(self,e):
         if self.fields['prediction_backend'].value=='admet_ai' and not self.available:

@@ -60,7 +60,7 @@ class MolecularCoreTests(unittest.TestCase):
         molecule=Chem.MolFromSmiles('CCO')
         for values in ([0,0],[float('nan')]*3,[float('inf')]*3,[1,0,0]):
             with self.assertRaises(ValueError):validate_charges(molecule,values)
-        with patch('biomolexplorer.amber_preparation.minimize_ligand',side_effect=lambda prepared,*args:prepared) as minimize:
+        with patch('biomolexplorer.chimera_minimization.minimize_ligand',side_effect=lambda prepared,*args,**kwargs:prepared) as minimize:
             self.core.prepare(molecule,minimize=True)
         minimize.assert_called_once()
 
@@ -97,20 +97,20 @@ class MolecularCoreTests(unittest.TestCase):
         np.testing.assert_allclose([[float(r[a:b]) for a,b in ((30,38),(38,46),(46,54))] for r in atoms[:3]],p.coordinates[:3],atol=.00051)
 
 
-@unittest.skipUnless(Path('/tmp/biomol-md-validation/bin/antechamber').is_file(),'AmberTools validation environment not installed')
+@unittest.skipUnless(__import__('shutil').which('chimera'),'Chimera not installed')
 class NativeAmberCoreTests(unittest.TestCase):
     def test_am1bcc_and_gaff_reuse_charges_in_native_tleap(self):
         with tempfile.TemporaryDirectory(prefix='bme-native-core-') as folder:
-            root=Path(folder);core=MolecularPreparationCore(root,'/tmp/biomol-md-validation')
+            root=Path(folder);core=MolecularPreparationCore(root)
             prepared=core.prepare(Chem.MolFromSmiles('CCO'),method='am1')
             self.assertAlmostEqual(float(prepared.partial_charges.sum()),0,places=3)
             with patch('biomolexplorer.molecular_adapters.AM1BCCEngine.calculate',side_effect=AssertionError('Repeated AM1-BCC')):
                 reused=core.prepare(Chem.MolFromSmiles('CCO'),method='am1bcc')
             self.assertTrue(reused.metadata['charge_cache_hit'])
-            files=AmberAdapter('/tmp/biomol-md-validation').parameterize(reused,root/'amber',forcefield='gaff')
+            files=AmberAdapter().parameterize(reused,root/'amber',forcefield='gaff')
             self.assertTrue(all(p.is_file() for p in files.values()))
             with patch('biomolexplorer.molecular_adapters.run_command',side_effect=AssertionError('Repeated parameterization')):
-                again=AmberAdapter('/tmp/biomol-md-validation').parameterize(reused,root/'amber',forcefield='gaff')
+                again=AmberAdapter().parameterize(reused,root/'amber',forcefield='gaff')
             self.assertEqual(set(files),set(again))
 
     @unittest.skipUnless(Path('/home/michel/progs/dock6/install/test/amber_score_1lgu/lig.mol2').is_file(),'DOCK6 example not installed')
@@ -121,7 +121,7 @@ class NativeAmberCoreTests(unittest.TestCase):
         with tempfile.TemporaryDirectory(prefix='bme-charge-md-') as folder:
             root=Path(folder)
             with patch.dict(os.environ,BIOMOL_PREPARATION_CACHE=str(root/'cache/preparations')):
-                core=MolecularPreparationCore(root,'/tmp/biomol-md-validation')
+                core=MolecularPreparationCore(root)
                 settings=dict(DEFAULTS,amber_score_before_md_minimization_cycles=1,amber_score_md_steps=1,amber_score_after_md_minimization_cycles=1)
                 dock,found=tools('/home/michel/progs/dock6','',settings);example=dock/'install/test/amber_score_1lgu'
                 p=core.prepare(example/'lig.mol2',method='am1bcc');Dock6Adapter().export(p,root/'native.mol2')
@@ -134,7 +134,7 @@ class NativeAmberCoreTests(unittest.TestCase):
 
 
 class NativeCandidateIntegrationTests(unittest.TestCase):
-    @unittest.skipUnless(Path('/tmp/biomol-md-validation/bin/antechamber').is_file(),'AmberTools validation environment not installed')
+    @unittest.skipUnless(__import__('shutil').which('chimera'),'Chimera not installed')
     def test_both_exports_incremental_reuse_and_isolated_invalid_chemistry(self):
         try:import meeko
         except ImportError:self.skipTest('Meeko is not installed')
@@ -142,7 +142,7 @@ class NativeCandidateIntegrationTests(unittest.TestCase):
         from biomolexplorer.docking_preparation import prepare_candidates
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder);dataset=root/'input.csv'
-            write_csv(dataset,[dict(molecule_chembl_id=k,canonical_smiles=s) for k,s in [('A','CCO'),('B','C[NH3+]'),('BAD','[Zn+2]')]])
+            write_csv(dataset,[dict(molecule_chembl_id=k,canonical_smiles=s) for k,s in [('A','CCO'),('B','C[NH3+]'),('BAD','not-a-molecule')]])
             options=dict(preparation_backend='python',ambertools_path='/tmp/biomol-md-validation',ligand={'minimize':False,'charge_type':'gas'})
             with patch.dict(os.environ,BIOMOL_PREPARATION_CACHE=str(root/'cache/preparations')):
                 first=read_compounds(prepare_candidates(dataset,root/'first',options,engines='both'))
@@ -156,6 +156,23 @@ class NativeCandidateIntegrationTests(unittest.TestCase):
                 changed=dict(options,ligand={'minimize':False,'charge_type':'am1'})
                 third=read_compounds(prepare_candidates(dataset,root/'changed-model',changed,engines='dock6'))
                 self.assertEqual(json.loads(third[0]['preparation_metadata'])['charge_method'],'am1bcc')
+
+
+
+@unittest.skipUnless(__import__('shutil').which('chimera'),'Chimera not installed')
+class ChimeraMinimizationIntegrationTests(unittest.TestCase):
+    def test_minimization_preserves_graph_charges_and_reuses_completed_result(self):
+        with tempfile.TemporaryDirectory(prefix='biomol-chimera-min-') as folder:
+            root=Path(folder);core=MolecularPreparationCore(root)
+            initial=core.prepare(Chem.MolFromSmiles('CCO'),method='am1bcc')
+            minimized=core.prepare(Chem.MolFromSmiles('CCO'),method='am1bcc',minimize=True)
+            np.testing.assert_allclose(minimized.partial_charges,initial.partial_charges,atol=1e-8)
+            self.assertEqual(minimized.atom_names,initial.atom_names)
+            self.assertTrue(np.isfinite(minimized.coordinates).all())
+            self.assertEqual(minimized.metadata['minimization']['engine'],'Chimera MMTK')
+            with patch('biomolexplorer.chimera_minimization.run_command',side_effect=AssertionError('Minimization repeated')):
+                reused=core.prepare(Chem.MolFromSmiles('CCO'),method='am1bcc',minimize=True)
+            np.testing.assert_allclose(reused.coordinates,minimized.coordinates,atol=1e-8)
 
 
 if __name__=='__main__':unittest.main()

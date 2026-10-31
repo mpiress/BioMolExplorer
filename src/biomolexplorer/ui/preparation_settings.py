@@ -34,13 +34,6 @@ class PreparationSettings:
         self.backend=ft.Dropdown(label='Ferramenta de preparação molecular',value='legacy_chimera',
             tooltip='Chimera aplica hidrogênios, cargas gas/am1 e minimização para Vina e DOCK6.',
             options=[ft.DropdownOption(key='legacy_chimera',text='UCSF Chimera')],disabled=True)
-        self.ambertools=ft.TextField(label='Instalação AmberTools/Antechamber',value=config.get('ambertools_path',''),disabled=not form.writable)
-        self.ambertools_env=ft.TextField(label='Ambiente Conda AmberTools',
-            value=config.get('ambertools_env','BioMolExplorer-AmberTools'),disabled=not form.writable)
-        self.vina_policy=ft.Dropdown(label='Política de cargas no Vina padrão',value=config.get('vina_charge_policy','fast'),
-            tooltip='Rápido: Gasteiger/RDKit para vina/vinardo. Preservar método: respeita a seleção de cargas, incluindo AM1-BCC.',
-            options=[ft.DropdownOption(key='fast',text='Rápido · Gasteiger/RDKit'),
-                ft.DropdownOption(key='preserve',text='Preservar método selecionado')],disabled=not form.writable)
         self.receptor_inactive=False
         self.has_cofactors=ft.Switch(label='Considerar cofatores como parte do receptor',value=bool(config.get('cofactors')),disabled=not form.writable)
         self.cofactors=ft.TextField(label='Cofatores do receptor (códigos separados por vírgula)',value=', '.join(config.get('cofactors',[])))

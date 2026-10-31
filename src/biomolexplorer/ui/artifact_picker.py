@@ -51,7 +51,7 @@ class ArtifactPicker:
     def available_rows(self):
         query=(self.search.value or '').casefold()
         return [(i,flag,ref) for i,(flag,ref) in enumerate(self.rows)
-            if self.origin(ref)==self.source.value and getattr(flag,'available',True)
+            if self.origin(ref)==self.source.value and getattr(flag,'available',True) and not getattr(flag,'legacy_selection',False)
             and query in (self.label(flag)+' '+flag.label).casefold()]
 
     def redraw(self):
@@ -103,7 +103,7 @@ class ArtifactPicker:
         changed=0;callbacks={}
         for i in indices:
             flag,_=self.rows[i]
-            if value and not getattr(flag,'available',True):continue
+            if value and (not getattr(flag,'available',True) or getattr(flag,'legacy_selection',False) and not flag.value):continue
             if flag.value==value:continue
             flag.value=value;changed+=1
             if getattr(flag,'on_change',None):callbacks[id(flag.on_change)]=flag.on_change

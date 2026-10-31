@@ -72,7 +72,7 @@ class DockingConfigurationTests(unittest.TestCase):
             result=prepare_docking_receptor('input','Target','out',['1ABC','LIG',1,'A'],7.4,options,False)
             self.assertEqual(result,str(Path('out/Receptor')))
             self.assertEqual(prepare.call_args.kwargs['pdb_codes'],[['1ABC','LIG',1,'A']])
-            self.assertEqual(prepare.call_args.kwargs['preparation_options'],options)
+            self.assertEqual(prepare.call_args.kwargs['preparation_options'],dict(options,preparation_backend='legacy_chimera'))
 
     def test_ligand_settings_reach_preparation_and_prepared_inputs_are_reused(self):
         with TemporaryDirectory() as folder:

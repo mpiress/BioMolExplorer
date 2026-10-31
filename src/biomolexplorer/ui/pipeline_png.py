@@ -8,7 +8,7 @@ from biomolexplorer.catalog import TITLES
 from .graph_raster import _font
 from .localization import default_stage_names
 
-COLORS = {'Entradas': '#2563EB', 'Recuperação': '#0D9488', 'Análise': '#7C3AED', 'Docking': '#D97706'}
+from .pipeline_palette import COLORS
 MAX_PIXELS = 32_000_000
 
 

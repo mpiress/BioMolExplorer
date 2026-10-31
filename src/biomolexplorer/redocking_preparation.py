@@ -30,9 +30,13 @@ def prepare_pairs(dock,records,settings,charge_type,pH,ready=None,engine='vina')
         try:
             if receptor in failed_receptors:raise ValueError(failed_receptors[receptor])
             validate_structure_pairs(dock.complexpath,[record],{key:settings[key]} if key in settings else {},engine=engine)
-            completed=dock.prepare_for_docking([record],charge_type,pH,True,
-                preparation_pairs=settings,_prepared_receptors=ready,**({'docking_engine':engine} if engine!='vina' else {}))
-            validate_structure_pairs(dock.complexpath,[record],{key:settings[key]} if key in settings else {},prepared=True,engine=engine)
+            with cache.locked(record):
+                receptor_reused,ligand_reused=cache.restore(record)
+                if receptor_reused:ready.add(receptor)
+                completed=[record] if receptor_reused and ligand_reused else dock.prepare_for_docking([record],charge_type,pH,True,
+                    preparation_pairs=settings,_prepared_receptors=ready,**({'docking_engine':engine} if engine!='vina' else {}))
+                validate_structure_pairs(dock.complexpath,[record],{key:settings[key]} if key in settings else {},prepared=True,engine=engine,prepared_directory=dock.outputpath)
+                if not (receptor_reused and ligand_reused):cache.remember(record)
             prepared.extend(completed)
         except Exception as error:
             if not recoverable(error):raise

@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "biomolexplorer"
-version = "0.2.0"
+version = "2.2.0"
 description = "Molecular retrieval and computational drug discovery services"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [dock6, chimera, miniconda]
 
 [project.optional-dependencies]
 admet-ml = ["admet-ai==2.0.1"]

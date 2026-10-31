@@ -1,0 +1,8 @@
+Executing <Task finished name='Task-3' coro=<WorkspaceUI.clear_all_results.<locals>.clear() done, defined at /home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/src/biomolexplorer/ui/app.py:1352> result=None created at /home/michel/progs/miniconda3/envs/BioMolExplorer/lib/python3.12/asyncio/tasks.py:420> took 0.112 seconds
+.....................................................................Executing <Task pending name='Task-199' coro=<LoginLifecycleTests.test_login_button_opens_workspace_with_real_persisted_credentials() running at /home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_login_processing_lifecycle.py:77> cb=[_run_until_complete_cb() at /home/michel/progs/miniconda3/envs/BioMolExplorer/lib/python3.12/asyncio/base_events.py:182] created at /home/michel/progs/miniconda3/envs/BioMolExplorer/lib/python3.12/asyncio/runners.py:100> took 0.474 seconds
+.Executing <Task pending name='Task-204' coro=<LoginLifecycleTests.test_registered_credentials_survive_restart_and_consecutive_workspace_reads() running at /home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_login_processing_lifecycle.py:34> cb=[_run_until_complete_cb() at /home/michel/progs/miniconda3/envs/BioMolExplorer/lib/python3.12/asyncio/base_events.py:182] created at /home/michel/progs/miniconda3/envs/BioMolExplorer/lib/python3.12/asyncio/runners.py:100> took 0.473 seconds
+.....
+----------------------------------------------------------------------
+Ran 75 tests in 18.253s
+
+OK

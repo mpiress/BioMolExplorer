@@ -138,7 +138,7 @@ class VinaReuseTests(unittest.TestCase):
     def test_raw_receptor_conversion_happens_once_per_chain_not_reference_ligand(self):
         from caad.docking import Docking
         obj=object.__new__(Docking)
-        obj.outputpath=str(self.root);obj.complexpath=str(self.root);obj.logger=MagicMock()
+        obj.outputpath=str(self.root);obj.complexpath=str(self.root);obj.logger=MagicMock();obj._chimera_ligand_settings={}
         obj.generate_docking_script=MagicMock();obj.process_in_parallel=MagicMock()
         obj.prepare_on_obabel=MagicMock()
         records=[['1ABC','LIG',1,'A'],['1ABC','LIG',2,'A'],['1ABC','LIG',3,'B']]

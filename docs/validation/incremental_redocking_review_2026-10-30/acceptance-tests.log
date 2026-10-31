@@ -1,0 +1,24 @@
+[15:29:57] PYRROLE: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[15:29:57] PYRROLE: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[15:29:57] Can't kekulize mol.  Unkekulized atoms: 0 1 2 3 4
+[15:29:57] Can't kekulize mol.  Unkekulized atoms: 0 1 2 3 4
+[15:29:57] sanitize [15:29:57] PYRROLE: [15:30:10] SMILES Parse Error: syntax error while parsing: invalid
+[15:30:10] SMILES Parse Error: check for mistakes around position 1:
+[15:30:10] invalid
+[15:30:10] ^
+[15:30:10] SMILES Parse Error: Failed parsing SMILES 'invalid' for input: 'invalid'
+Executing <Task finished name='Task-275' coro=<CleanupCallbackTests.test_failed_removal_leaves_data_and_restores_retry() done, defined at /home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_runs_pipeline_controls.py:158> result=None created at /home/michel/progs/miniconda3/envs/BioMolExplorer/lib/python3.12/asyncio/runners.py:100> took 0.115 seconds
+[15:31:09] DEPRECATION WARNING: please use MorganGenerator
+[15:31:09] DEPRECATION WARNING: please use MorganGenerator
+[15:31:09] DEPRECATION WARNING: please use MorganGenerator
+[15:31:09] DEPRECATION WARNING: please use MorganGenerator
+[15:31:09] DEPRECATION WARNING: please use MorganGenerator
+[15:31:09] DEPRECATION WARNING: please use MorganGenerator
+[15:31:09] DEPRECATION WARNING: please use MorganGenerator
+[15:31:09] DEPRECATION WARNING: please use MorganGenerator
+[15:31:09] DEPRECATION WARNING: please use MorganGenerator
+Executing <Task finished name='Task-342' coro=<ResidueNavigationTests.test_contact_dialog_uses_the_same_direct_navigation() done, defined at /home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_redocking_viewer_navigation.py:85> result=None created at /home/michel/progs/miniconda3/envs/BioMolExplorer/lib/python3.12/asyncio/runners.py:100> took 0.506 seconds
+----------------------------------------------------------------------
+Ran 181 tests in 145.644s
+
+OK

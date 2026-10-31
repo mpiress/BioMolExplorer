@@ -32,28 +32,13 @@ class StructureCache:
         config = chimera_preparation(self.settings.get(pair_key(record), {}))
         software=self.software
         chemistry={}
-        if config.get('preparation_backend','auto')!='legacy_chimera':
-            from .preparation_tools import amber_tool
-            from .structure_selection import component_path
-            from .paths import SOURCE_ROOT
-            minimize=dict(DEFAULTS,**config.get('receptor',{}))['minimize']
-            software_key=(config.get('ambertools_path',''),minimize,config.get('ambertools_env',''))
-            if software_key not in self.native_software:
-                from .amber_preparation import parameterization_identity
-                software={name:file_digest(SOURCE_ROOT/'biomolexplorer'/name) for name in ('native_preparation.py','structure_selection.py','amber_preparation.py','molecular_core.py','molecular_adapters.py')}
-                software['amber']=parameterization_identity(software_key[0],minimize,software_key[2])
-                self.native_software[software_key]=software
-            software=self.native_software[software_key]
-            template=component_path(record[1],self.source,config);chemistry={record[1]:file_digest(template)}
-            cofactor_templates={name:file_digest(component_path(name,self.source,config)) for name in config.get('cofactors',[])}
-        else:
-            if self.software is None:self.software=dict(preparation_identity(),structure_adapter=self.structure_adapter)
-            software=self.software
+        if self.software is None:self.software=dict(preparation_identity(),structure_adapter=self.structure_adapter)
+        software=self.software
         receptor = dict(source=self.hashes[raw], code=code, chain=chain, ph=self.ph, charge_type=self.charge_type,
                         options=dict(DEFAULTS, **config.get('receptor', {})),
                         cofactors=sorted(set(config.get('cofactors', []))), software=software,
                         structural_selection=config.get('structure',{}),backend=config.get('preparation_backend','auto'),
-                        cofactor_templates=cofactor_templates if config.get('preparation_backend','auto')!='legacy_chimera' else {},
+                        cofactor_templates={},
                         templates={k:v for k,v in self.templates.items() if k != 'prepare_ligand.template'})
         rkey = identity(receptor)
         if config.get('preparation_backend')=='legacy_chimera':
@@ -61,16 +46,10 @@ class StructureCache:
             chemistry=local_definition(self.source,record[1],config)
         ligand = dict(receptor=rkey, pair=pair_key(record),
                       options=dict(DEFAULTS, **{'charge_type':self.charge_type, **config.get('ligand', {})}),
+                      ligand_protocol={name:file_digest(Path(__file__).with_name(name)) for name in
+                          ('chimera_preparation.py','ligand_mol2.py','dock6_validation.py')},
                       chemical_templates=chemistry,ligand_chain=config.get('ligand_chain',chain),
                       insertion_code=config.get('ligand_insertion_code',''),template=self.templates['prepare_ligand.template'])
-        if config.get('preparation_backend','auto')!='legacy_chimera' and dict(DEFAULTS,**config.get('ligand',{}))['minimize']:
-            from .amber_preparation import parameterization_identity
-            prefix=config.get('ambertools_path','');environment=config.get('ambertools_env','');key=(prefix,True,environment)
-            if key not in self.native_software:
-                from .paths import SOURCE_ROOT
-                self.native_software[key]={name:file_digest(SOURCE_ROOT/'biomolexplorer'/name) for name in ('native_preparation.py','structure_selection.py','amber_preparation.py','molecular_core.py','molecular_adapters.py')}
-                self.native_software[key]['amber']=parameterization_identity(prefix,True,environment)
-            ligand['amber_minimization']=self.native_software[key]['amber']
         return rkey, identity(ligand)
 
     def locked(self, record):
