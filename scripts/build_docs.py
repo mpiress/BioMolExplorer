@@ -5,10 +5,12 @@ lists, tables, fenced code, emphasis, links and the architecture Mermaid graph.
 Markdown remains the source; do not edit generated HTML pages directly.
 """
 import html
+import json
 import os
 from pathlib import Path
 import re
 import unicodedata
+from urllib.parse import urlsplit, urlunsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 DOCS = ROOT / 'docs'
@@ -60,9 +62,9 @@ LABELS = {
 
 GUIDES += ('molecular_preparation',)
 LABELS['pt']['titles'].append('Preparação molecular e backends')
-LABELS['pt']['summaries'].append('Representação independente de formato, cargas, Meeko, Antechamber, cache e fallback científico.')
+LABELS['pt']['summaries'].append('Preparação ativa com Chimera, opções comuns de receptor/ligante, formatos nativos e reúso verificado.')
 LABELS['en']['titles'].append('Molecular preparation and backends')
-LABELS['en']['summaries'].append('Format-independent graphs, charges, Meeko, Antechamber, caching and scientific fallback.')
+LABELS['en']['summaries'].append('Active Chimera preparation, shared receptor/ligand settings, native formats and verified reuse.')
 
 CSS = '''
 :root{color-scheme:light;--ink:#172b4d;--muted:#526580;--teal:#087f74;--line:#dce5ef;--bg:#f4f7fb}
@@ -212,6 +214,73 @@ def page(title, language, content, home, portal, other):
 <body><header class="top"><a class="brand" href="{home}"><picture><source media="(max-width: 480px)" srcset="{images}new_logo.png"><img src="{images}new_BioMolLogo.png" alt="BioMolExplorer" width="2172" height="724"></picture></a><nav aria-label="{'Navegação' if language=='pt' else 'Navigation'}"><a href="{home}">{labels['home']}</a><a href="{portal}">{labels['docs']}</a><a href="{other}" hreflang="{'en' if language=='pt' else 'pt-BR'}" lang="{'en' if language=='pt' else 'pt-BR'}">{labels['other']}</a></nav></header>{content}<footer class="footer">{labels['footer']}</footer></body></html>'''
 
 
+def build_portal(language, output):
+    """Render the designed portal from documentation-only templates/metadata."""
+    assets = DOCS / 'assets'
+    template = (assets / 'portal.template.html').read_text(encoding='utf-8')
+    translations = json.loads((assets / 'portal-translations.json').read_text(encoding='utf-8'))
+    catalog = json.loads((assets / 'portal-catalog.json').read_text(encoding='utf-8'))
+    cards = []
+    for index, guide in enumerate(GUIDES):
+        metadata = catalog[guide]
+        attrs = {'data-guide': guide, 'data-group': metadata['group'],
+                 'data-search': metadata['search']}
+        for lang in ('pt', 'en'):
+            attrs.update({f'data-title-{lang}': LABELS[lang]['titles'][index],
+                          f'data-desc-{lang}': LABELS[lang]['summaries'][index],
+                          f'data-link-{lang}': f'{lang}/{guide}.html'})
+        attributes = ' '.join(f'{key}="{html.escape(value, quote=True)}"' for key, value in attrs.items())
+        title = html.escape(LABELS[language]['titles'][index])
+        description = html.escape(LABELS[language]['summaries'][index])
+        category = html.escape(translations[language]['category'][metadata['group']])
+        cards.append(f'<article class="doc-card" {attributes}>'
+                     f'<div class="card-top">{metadata["icon"]}<span class="topic-number">{index+1:02d}</span></div>'
+                     f'<p class="card-category">{category}</p><h3 class="card-title">{title}</h3>'
+                     f'<p class="card-desc">{description}</p><div class="card-footer">'
+                     f'<a class="card-link" data-i18n="openGuide" href="{language}/{guide}.html" '
+                     f'lang="{"pt-BR" if language=="pt" else "en"}">{html.escape(translations[language]["openGuide"])}</a>'
+                     f'<span class="language-note">{language.upper()}</span></div></article>')
+    rendered = template.replace('{{DOCS_CATALOG}}', ''.join(cards))
+    rendered = rendered.replace('{{LANG}}', 'pt-BR' if language == 'pt' else 'en')
+    rendered = rendered.replace('{{LANGUAGE}}', language)
+    rendered = rendered.replace('{{TRANSLATIONS}}', json.dumps(translations, ensure_ascii=False).replace('</', r'<\/'))
+    # Localize static HTML too: guide access also works without JavaScript.
+    def translate(match):
+        tag, attrs, key = match[1], match[2], match[3]
+        value = translations[language].get(key)
+        if not isinstance(value, str):
+            return match[0]
+        return f'<{tag}{attrs}>' + (value if 'data-i18n-html=' in attrs else html.escape(value)) + f'</{tag}>'
+    rendered = re.sub(r'<([a-z][a-z0-9]*)([^>]*\bdata-i18n(?:-html)?="([^"]+)"[^>]*)>.*?</\1>',
+                      translate, rendered, flags=re.S)
+    def translate_aria(match):
+        tag = match[0]
+        key = re.search(r'data-i18n-aria="([^"]+)"', tag)[1]
+        value = html.escape(translations[language][key], quote=True)
+        return re.sub(r'aria-label="[^"]*"', lambda _: f'aria-label="{value}"', tag)
+    rendered = re.sub(r'<[^>]+data-i18n-aria="[^"]+"[^>]*>', translate_aria, rendered)
+    rendered = re.sub(r'<title>.*?</title>', '<title>' + ('Documentação' if language=='pt' else 'Documentation') + ' | BioMolExplorer</title>', rendered)
+    rendered = re.sub(r'(<input\b[^>]*\bplaceholder=")[^"]*', lambda m: m[1] + html.escape(translations[language]['searchPlaceholder'], quote=True), rendered)
+    rendered = re.sub(r'(<[^>]*\bid="results-count"[^>]*>).*?(</)', lambda m: m[1]+translations[language]['guideCount'].replace('{n}',str(len(GUIDES)))+m[2], rendered)
+    rendered = re.sub(r'(<button\b[^>]*\bdata-language="(pt|en)"[^>]*>)',
+                      lambda m: re.sub(r'aria-pressed="[^"]*"', f'aria-pressed="{str(m[2]==language).lower()}"', m[1]), rendered)
+    # Quick-start and journey destinations follow the initial portal language.
+    def quick_link(match):
+        tag = match[0]
+        destination = re.search(f'data-quick-{language}="([^"]+)"', tag)[1]
+        return re.sub(r'\bhref="[^"]*"', f'href="{destination}"', tag)
+    rendered = re.sub(r'<a\b[^>]*\bdata-quick-pt="[^"]+"[^>]*>', quick_link, rendered)
+    def relative_link(match):
+        prefix, value = match[1], match[2]
+        url = urlsplit(value)
+        if url.scheme or url.netloc or not url.path:
+            return match[0]
+        path = os.path.relpath(DOCS / url.path, output.parent).replace(os.sep, '/')
+        return prefix + urlunsplit(('', '', path, url.query, url.fragment)) + '"'
+    rendered = re.sub(r'((?:href|src|srcset|data-link-pt|data-link-en|data-quick-pt|data-quick-en)=")([^"]*)"', relative_link, rendered)
+    output.write_text(rendered, encoding='utf-8')
+
+
 def build():
     (DOCS/'assets').mkdir(exist_ok=True)
     (DOCS/'assets/docs.css').write_text(CSS.strip()+'\n',encoding='utf-8')
@@ -226,10 +295,7 @@ def build():
             content = f'<main class="layout"><aside><nav aria-label="{labels["docs"]}">{navigation}</nav><div class="toc"><h2>{labels["contents"]}</h2>{contents}</div></aside><article><a class="source" href="{source_link}">{labels["source"]}</a>{body}</article></main>'
             output.write_text(page(labels['titles'][index],language,content,'../../index.html','../index.html' if language=='en' else 'index.html',f'../{"pt" if language=="en" else "en"}/{guide}.html'),encoding='utf-8')
         portal = DOCS/'index.html' if language=='en' else DOCS/'pt/index.html'
-        prefix = 'en/' if language=='en' else ''
-        cards = ''.join(f'<section class="card"><span class="number">{n+1:02d}</span><h2>{labels["titles"][n]}</h2><p>{labels["summaries"][n]}</p><a href="{prefix}{guide}.html">{labels["read"]} →</a></section>' for n,guide in enumerate(GUIDES))
-        content = f'<main class="portal"><p class="eyebrow">BioMolExplorer · {labels["docs"]}</p><h1>{labels["intro"]}</h1><p class="lead">{labels["description"]}</p><div class="cards">{cards}</div><p class="note">{labels["start"]} <a href="{prefix}{GUIDES[0]}.html">{labels["titles"][0]} →</a></p></main>'
-        portal.write_text(page(labels['docs'],language,content,'../index.html' if language=='en' else '../../index.html','./index.html' if language=='en' else 'index.html','pt/index.html' if language=='en' else '../index.html'),encoding='utf-8')
+        build_portal(language, portal)
     print(f'Built {len(GUIDES)*len(LABELS)} documentation pages and {len(LABELS)} language portals.')
 
 

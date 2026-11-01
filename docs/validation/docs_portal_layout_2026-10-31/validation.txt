@@ -1,0 +1,1 @@
+34 HTML pages: local files, anchors and IDs valid; 15 scientific operations and import documented in both manuals and index

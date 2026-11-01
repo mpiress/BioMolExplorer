@@ -71,12 +71,27 @@ published alongside `index.html`.
 
 ## Revisão documental de 31/10/2026 / Documentation review
 
-[Relatório e limites](validation/documentation_review_2026-10-31/README.md) · [Convenção de nomes](artifact_naming.md) · [Fluxograma atual PNG](../imgs/BioMolExplorer.png) · [Fonte vetorial SVG](../imgs/BioMolExplorer.svg).
+[Relatório e limites](validation/documentation_review_2026-10-31/README.md) · [Convenção de nomes](artifact_naming.md) · [Fluxograma atual PNG](../imgs/BioMolExplorer.png).
 
 O site institucional usa somente CSS/JavaScript locais em `docs/assets/site.*`, sem acessar APIs da aplicação. Relatórios de validação antigos são evidências datadas, não instruções de instalação ou promessas sobre a versão atual. O original `index (Cópia).html`, já presente como arquivo não versionado antes da auditoria, não integra a publicação nem foi modificado.
 
 The institutional site uses only local CSS/JavaScript in `docs/assets/site.*` and does not call application APIs. Historical validation reports are dated evidence, not current installation instructions or capability claims.
 
-O gerador existente mantém um resumo legado do guia molecular citando backends alternativos. Nesta revisão exclusivamente documental, o script foi preservado; após `build_docs.py`, corrija o resumo de `molecular_preparation` nos dois portais para descrever o preparo ativo pelo Chimera. O corpo dos guias é gerado a partir do Markdown atualizado. A divergência do resumo do gerador foi registrada para manutenção futura.
+## Manter o novo portal / Maintaining the new portal
 
-The existing generator retains a legacy summary mentioning alternative preparation backends. This documentation-only review leaves the script untouched; after rebuilding, the molecular_preparation card in both portals must describe the active Chimera preparation. Guide bodies are generated from the updated Markdown. This generator-summary discrepancy is recorded for future maintenance.
+O layout do portal é mantido em `docs/assets/portal.template.html`; categorias, palavras-chave e ícones ficam em `portal-catalog.json`, e os textos da interface em `portal-translations.json`. O registro `GUIDES` e os títulos/resumos bilíngues de `scripts/build_docs.py` fornecem os guias efetivamente publicados. Não edite os portais gerados para mudanças permanentes.
+
+The portal layout lives in `docs/assets/portal.template.html`; `portal-catalog.json` provides categories, keywords and icons, and `portal-translations.json` provides interface translations. The builder's `GUIDES` registry and bilingual titles/summaries supply the published guides. Edit these sources rather than generated portals for permanent changes.
+
+`docs/index.html` abre em inglês; `docs/pt/index.html` abre em português. O seletor PT/EN atualiza os destinos de cartões, acessos rápidos e percursos. `?lang=pt` ou `?lang=en` permite compartilhar a escolha no endereço. Os atalhos para o manual completo abrem os guias, em vez de retornar à própria página. Busca e filtros são locais ao catálogo; os links continuam acessíveis sem JavaScript.
+
+`docs/index.html` defaults to English; `docs/pt/index.html` defaults to Portuguese. PT/EN changes guide, quick-access and learning-path destinations. Share the selected language using `?lang=pt` or `?lang=en`. Full-manual shortcuts open the guides rather than looping back to the portal. Search/filter controls operate locally; guide links remain accessible without JavaScript.
+
+```bash
+python scripts/build_docs.py
+python scripts/validate_docs.py
+```
+
+A geração preserva o novo layout nos dois idiomas e não exige mais correção manual dos resumos após a geração. A validação inclui destinos PT/EN usados dinamicamente e ignora o template, que é fonte e não uma página publicada.
+
+Generation retains the new design in both languages and requires no manual summary patch afterwards. Validation includes dynamic PT/EN destinations and excludes the source template from published-page checks.

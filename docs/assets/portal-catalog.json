@@ -1,0 +1,77 @@
+{
+  "installation": {
+    "group": "start",
+    "search": "setup install configuração setup ambiente chimera dock6 instalar dependências",
+    "icon": "<div class=\"topic-icon green\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><path d=\"M12 3v11m0 0 4-4m-4 4-4-4\"></path><path d=\"M4 17v4h16v-4\"></path></svg></div>"
+  },
+  "user_manual": {
+    "group": "start",
+    "search": "manual tutorial primeiro estudo plataforma operações molecular dynamics dinâmica Amber Score DOCK6 execução lazy pausa cancelamento",
+    "icon": "<div class=\"topic-icon green\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><rect height=\"7\" rx=\"1\" width=\"7\" x=\"3\" y=\"3\"></rect><rect height=\"7\" rx=\"1\" width=\"7\" x=\"14\" y=\"3\"></rect><rect height=\"7\" rx=\"1\" width=\"7\" x=\"3\" y=\"14\"></rect><rect height=\"7\" rx=\"1\" width=\"7\" x=\"14\" y=\"14\"></rect></svg></div>"
+  },
+  "frontend": {
+    "group": "workflows",
+    "search": "workspace Flet interface colaboração projetos pipelines usuários",
+    "icon": "<div class=\"topic-icon blue\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><rect height=\"16\" rx=\"2\" width=\"18\" x=\"3\" y=\"5\"></rect><path d=\"M3 10h18M7 3h4\"></path></svg></div>"
+  },
+  "backend_usage": {
+    "group": "developer",
+    "search": "backend CLI command line scripts python services Amber Score dynamics_dock6 parâmetros API CLI",
+    "icon": "<div class=\"topic-icon blue\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><path d=\"M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5z\"></path><path d=\"M4 19.5V6.5A2.5 2.5 0 0 1 6.5 4\"></path><path d=\"M8 8h8M8 11h7\"></path></svg></div>"
+  },
+  "architecture": {
+    "group": "developer",
+    "search": "architecture code contratos services technical",
+    "icon": "<div class=\"topic-icon blue\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><path d=\"M9 3h6M10 3v6l-6 9a2 2 0 0 0 1.7 3h12.6a2 2 0 0 0 1.7-3l-6-9V3\"></path><path d=\"M7 15h10M10 18h.01M14 17h.01\"></path></svg></div>"
+  },
+  "projects": {
+    "group": "workflows",
+    "search": "projects migration history rollback versions sharing cache incremental persistência resultados Remove All Clear All artifact nomenclatura",
+    "icon": "<div class=\"topic-icon blue\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"9\"></circle><circle cx=\"12\" cy=\"12\" r=\"3\"></circle><path d=\"M12 1v5M12 18v5M1 12h5M18 12h5\"></path></svg></div>"
+  },
+  "pipeline_validation": {
+    "group": "developer",
+    "search": "validation contracts matrix regression testes pipeline",
+    "icon": "<div class=\"topic-icon blue\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><path d=\"M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7Z\"></path><circle cx=\"12\" cy=\"12\" r=\"3\"></circle></svg></div>"
+  },
+  "chimera_migration": {
+    "group": "science",
+    "search": "chimera preparation receptor ligand estruturas preparaçao",
+    "icon": "<div class=\"topic-icon mint\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><rect height=\"6\" rx=\"1\" width=\"8\" x=\"2\" y=\"3\"></rect><rect height=\"6\" rx=\"1\" width=\"8\" x=\"14\" y=\"3\"></rect><rect height=\"6\" rx=\"1\" width=\"8\" x=\"8\" y=\"15\"></rect><path d=\"M6 9v3h12V9M12 12v3\"></path></svg></div>"
+  },
+  "dms_migration": {
+    "group": "developer",
+    "search": "DMS native SES surface UCSF port validation",
+    "icon": "<div class=\"topic-icon blue\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><rect height=\"16\" rx=\"2\" width=\"20\" x=\"2\" y=\"4\"></rect><path d=\"m6 9 3 3-3 3M12 15h5\"></path></svg></div>"
+  },
+  "retrieval": {
+    "group": "science",
+    "search": "retrieval PDB ChEMBL consultas busca dados bioinformática",
+    "icon": "<div class=\"topic-icon mint\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><path d=\"M12 3v11m0 0 4-4m-4 4-4-4\"></path><path d=\"M4 17v4h16v-4\"></path></svg></div>"
+  },
+  "redocking_configuration": {
+    "group": "science",
+    "search": "redocking RMSD docking cofactors receptor ligand",
+    "icon": "<div class=\"topic-icon mint\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><rect height=\"7\" rx=\"1\" width=\"7\" x=\"3\" y=\"3\"></rect><rect height=\"7\" rx=\"1\" width=\"7\" x=\"14\" y=\"3\"></rect><rect height=\"7\" rx=\"1\" width=\"7\" x=\"3\" y=\"14\"></rect><rect height=\"7\" rx=\"1\" width=\"7\" x=\"14\" y=\"14\"></rect></svg></div>"
+  },
+  "logging": {
+    "group": "developer",
+    "search": "logs diagnostics error failure codes monitoring",
+    "icon": "<div class=\"topic-icon blue\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><rect height=\"16\" rx=\"2\" width=\"18\" x=\"3\" y=\"5\"></rect><path d=\"M3 10h18M7 3h4\"></path></svg></div>"
+  },
+  "molecular_viewer": {
+    "group": "results",
+    "search": "viewer 3D interações poses receptor ligand visualization",
+    "icon": "<div class=\"topic-icon violet\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><path d=\"M4 19.5A2.5 2.5 0 0 1 6.5 17H20V4H6.5A2.5 2.5 0 0 0 4 6.5z\"></path><path d=\"M4 19.5V6.5A2.5 2.5 0 0 1 6.5 4\"></path><path d=\"M8 8h8M8 11h7\"></path></svg></div>"
+  },
+  "admet_research": {
+    "group": "science",
+    "search": "ADMET RDKit AI EGG BBB HIA pharmacokinetics",
+    "icon": "<div class=\"topic-icon mint\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><path d=\"M9 3h6M10 3v6l-6 9a2 2 0 0 0 1.7 3h12.6a2 2 0 0 0 1.7-3l-6-9V3\"></path><path d=\"M7 15h10M10 18h.01M14 17h.01\"></path></svg></div>"
+  },
+  "molecular_preparation": {
+    "group": "science",
+    "search": "molecular preparation backend Chimera receptor ligand reuse",
+    "icon": "<div class=\"topic-icon mint\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"9\"></circle><circle cx=\"12\" cy=\"12\" r=\"3\"></circle><path d=\"M12 1v5M12 18v5M1 12h5M18 12h5\"></path></svg></div>"
+  }
+}
