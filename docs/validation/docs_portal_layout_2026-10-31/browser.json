@@ -1,0 +1,118 @@
+{
+  "viewports": [
+    {
+      "width": 1440,
+      "scrollWidth": 1425,
+      "language": "en",
+      "visible": 15,
+      "path": "docs/index.html",
+      "language_switch": true,
+      "search": true,
+      "filters": true,
+      "links": 21
+    },
+    {
+      "width": 1024,
+      "scrollWidth": 1009,
+      "language": "en",
+      "visible": 15,
+      "path": "docs/index.html",
+      "language_switch": true,
+      "search": true,
+      "filters": true,
+      "links": 21
+    },
+    {
+      "width": 768,
+      "scrollWidth": 753,
+      "language": "en",
+      "visible": 15,
+      "path": "docs/index.html",
+      "language_switch": true,
+      "search": true,
+      "filters": true,
+      "links": 21
+    },
+    {
+      "width": 390,
+      "scrollWidth": 375,
+      "language": "en",
+      "visible": 15,
+      "path": "docs/index.html",
+      "language_switch": true,
+      "search": true,
+      "filters": true,
+      "links": 21
+    },
+    {
+      "width": 320,
+      "scrollWidth": 305,
+      "language": "en",
+      "visible": 15,
+      "path": "docs/index.html",
+      "language_switch": true,
+      "search": true,
+      "filters": true,
+      "links": 21
+    },
+    {
+      "width": 1440,
+      "scrollWidth": 1425,
+      "language": "pt-BR",
+      "visible": 15,
+      "path": "docs/pt/index.html",
+      "language_switch": true,
+      "search": true,
+      "filters": true,
+      "links": 21
+    },
+    {
+      "width": 1024,
+      "scrollWidth": 1009,
+      "language": "pt-BR",
+      "visible": 15,
+      "path": "docs/pt/index.html",
+      "language_switch": true,
+      "search": true,
+      "filters": true,
+      "links": 21
+    },
+    {
+      "width": 768,
+      "scrollWidth": 753,
+      "language": "pt-BR",
+      "visible": 15,
+      "path": "docs/pt/index.html",
+      "language_switch": true,
+      "search": true,
+      "filters": true,
+      "links": 21
+    },
+    {
+      "width": 390,
+      "scrollWidth": 375,
+      "language": "pt-BR",
+      "visible": 15,
+      "path": "docs/pt/index.html",
+      "language_switch": true,
+      "search": true,
+      "filters": true,
+      "links": 21
+    },
+    {
+      "width": 320,
+      "scrollWidth": 305,
+      "language": "pt-BR",
+      "visible": 15,
+      "path": "docs/pt/index.html",
+      "language_switch": true,
+      "search": true,
+      "filters": true,
+      "links": 21
+    }
+  ],
+  "guide_opening": true,
+  "no_javascript_fallback": true,
+  "language_deeplink": true,
+  "runtime_errors": []
+}

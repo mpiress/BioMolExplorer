@@ -6,17 +6,18 @@ import ast
 import re
 class Page(HTMLParser):
     def __init__(self,path):
-        super().__init__(convert_charrefs=True);self.path=path;self.ids=set();self.links=[];self.operations=[]
+        super().__init__(convert_charrefs=True);self.path=path;self.ids=set();self.links=[];self.operations=[];self.guides=[]
     def handle_starttag(self,tag,attrs):
         attrs=dict(attrs)
         if 'data-operation' in attrs:self.operations.append(attrs['data-operation'])
+        if 'data-guide' in attrs:self.guides.append(attrs['data-guide'])
         if 'id' in attrs:
             if attrs['id'] in self.ids:raise ValueError(f'Duplicate id {self.path}: {attrs["id"]}')
             self.ids.add(attrs['id'])
-        for attr in ('href','src'):
+        for attr in ('href','src','data-link-pt','data-link-en','data-quick-pt','data-quick-en'):
             if attr in attrs:self.links.append(attrs[attr])
 root=Path(__file__).resolve().parents[1];pages={}
-for p in [root/'index.html',root/'index_doc.html',*(root/'docs').rglob('*.html')]:
+for p in [root/'index.html',root/'index_doc.html',*(p for p in (root/'docs').rglob('*.html') if not p.name.endswith('.template.html'))]:
     page=Page(p);page.feed(p.read_text());pages[p.resolve()]=page
 errors=[]
 for p,page in pages.items():
@@ -27,6 +28,17 @@ for p,page in pages.items():
         if not target.exists():errors.append(f'{p.relative_to(root)}: missing {link}')
         elif u.fragment and target in pages and unquote(u.fragment) not in pages[target].ids:
             errors.append(f'{p.relative_to(root)}: unknown anchor {link}')
+# Check designed catalogs against the documentation registry without running the builder.
+builder=ast.parse((root/'scripts/build_docs.py').read_text())
+guides=[]
+for node in builder.body:
+    if isinstance(node,ast.Assign) and any(getattr(t,'id',None)=='GUIDES' for t in node.targets):
+        guides=list(ast.literal_eval(node.value))
+    elif isinstance(node,ast.AugAssign) and getattr(node.target,'id',None)=='GUIDES':
+        guides.extend(ast.literal_eval(node.value))
+for filename in ('docs/index.html','docs/pt/index.html'):
+    catalog=pages[(root/filename).resolve()].guides
+    if catalog!=guides:errors.append(filename+': catalog must contain each published guide exactly once in registry order')
 # Check documentation against source without importing scientific dependencies.
 registry=ast.parse((root/'src/biomolexplorer/operations.py').read_text())
 operations=next(n.value for n in registry.body if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='OPERATIONS' for t in n.targets))
