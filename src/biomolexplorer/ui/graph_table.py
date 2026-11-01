@@ -4,6 +4,7 @@ import io
 import json
 import flet as ft
 from .processing import save_file
+from biomolexplorer.artifact_naming import download_name
 from .localization import verbatim
 from .table_sort import TableSort
 from biomolexplorer.table_sort import is_numeric,ordered
@@ -89,7 +90,7 @@ class GraphTable:
             if not view.active or view.ui.token!=view.token:return
             data=await view.ui.call(self.csv)
             if view.active and view.ui.token==view.token:
-                await save_file(view.ui,file_name=f'network_{view.mode}_{self.kind.value}.csv',src_bytes=data)
+                await save_file(view.ui,file_name=download_name(view.data.get('dataset_origin',{}),result_type='Graph-'+str(self.kind.value),extension='csv',qualifier=view.mode,operation='graphs'),src_bytes=data)
         await self.explorer.view.ui.guard(action)
 
     def build(self):

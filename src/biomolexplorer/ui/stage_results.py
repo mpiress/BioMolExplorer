@@ -192,9 +192,10 @@ class StageResults:
                     if not self.valid() or sequence!=self.sequence:return
                     data=await self.ui.call(self.service.admet_png if kind=='png' else self.service.admet_csv,
                         self.token,self.project_id,self.run_id,self.stage['id'],filename,subset)
-                    source_name=Path((model.get('admet_report') or {}).get('source_input','')).stem
-                    prefix=source_name+'__' if source_name else ''
-                    name=prefix+Path(filename).stem+('' if subset=='all' else '_'+subset)+('_egg.png' if kind=='png' else '.csv')
+                    category=None if subset=='all' else subset
+                    if kind=='png':category='Figure-'+(category or (model.get('dataset_origin',{}).get('naming',{}).get('result_type') or 'ADMET'))
+                    name=await self.ui.call(self.service.export_name,self.token,self.project_id,self.run_id,self.stage['id'],filename,
+                        result_type=category,extension=kind,qualifier=subset)
                     if self.valid() and sequence==self.sequence:await save_file(self.ui,file_name=name,src_bytes=data)
                 await self.ui.guard(save)
             async def png(e):await download('png')
@@ -213,7 +214,8 @@ class StageResults:
                 async def report(e):
                     import json
                     data=json.dumps(model['admet_report'],ensure_ascii=False,indent=2).encode()
-                    await self.ui.guard(lambda:save_file(self.ui,file_name=Path(filename).stem+'_admet_report.json',src_bytes=data))
+                    name=await self.ui.call(self.service.export_name,self.token,self.project_id,self.run_id,self.stage['id'],filename,result_type='Methods',extension='json')
+                    await self.ui.guard(lambda:save_file(self.ui,file_name=name,src_bytes=data))
                 buttons.append(ft.Button('Baixar critérios e métodos ADMET',icon=ft.Icons.DOWNLOAD,on_click=report))
             self.child=ResultsViewer(self.ui,self.project_id,model,popup=True,actions=buttons)
             self.graph.controls=[self.child.build()];self.ui.page.update()
@@ -242,7 +244,8 @@ class StageResults:
                     if not self.valid() or sequence!=self.sequence:return
                     data=await self.ui.call(self.service.graph_png if kind=='png' else self.service.graph_mcc_csv,
                         self.token,self.project_id,self.run_id,self.stage['id'],filename)
-                    name=Path(filename).name.removesuffix('.biomol-view.json')+('_mcc_apresentacao.png' if kind=='png' else '_mcc.csv')
+                    name=await self.ui.call(self.service.export_name,self.token,self.project_id,self.run_id,self.stage['id'],filename,
+                        result_type='Figure-Graph-LCC' if kind=='png' else 'Edges-LCC',extension=kind)
                     if self.valid() and sequence==self.sequence:await save_file(self.ui,file_name=name,src_bytes=data)
                 await self.ui.guard(save)
             async def png(e):await download('png')

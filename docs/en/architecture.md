@@ -9,6 +9,8 @@ environment configuration and documentation. Scientific method validation and
 external engine execution have a different scope from the architecture
 verification described here.
 
+> Historical problem/treatment sections and dated checks record earlier reviews, not approval of the current release. This documentation audit did not execute scientific algorithms. Current packaging has a TOML limitation documented in installation; pyproject presence does not establish installability.
+
 ## Structure
 
 ```text
@@ -139,6 +141,8 @@ contract for compatibility, including `PUBCHEM<CID>` values. A future schema
 version may adopt `compound_id` with an explicit migration.
 
 ## Artifact flow and identity
+
+Public names use `TG[TARGET]-SRC[SOURCE]-OP[OPERATION]-TYPE-ID[hash].ext`; physical working names described below remain an internal compatibility protocol. IDs and metadata, not filenames, determine identity. See [public names](projects.md#public-names-and-traceability).
 
 Every registered output has a stable block/logical-path `artifact_id`, a per-run `occurrence_id`, SHA-256 manifest, producer, batch, context and the inputs actually consumed. A physical path locates bytes but is not their identity. Names describe scientific content (`docking_results.csv`, `pdb_codes.csv`, `dynamics_results.json`) inside directories already identified by run, block and, when needed, pair, avoiding long IDs in displayed filenames.
 
@@ -346,7 +350,7 @@ Automated integration tests replace external tools at the execution boundary. Fo
 
 `ui/redocking_results.py` presents the paginated RMSD table and per-simulation file dialog. Running or failed stages retain generic artifact inspection. `pdb_view.py` issues temporary access to the PDB/PDBQT/MOL2 viewer; project or session changes invalidate pending actions. Visualization opens in the browser and uses the same 3D component as retrieved PDBs.
 
-See [Logs and diagnostics](logging.md) for the common format, execution context, failure codes, job summary and `python -m biomolexplorer.log_report` command.
+See [Logs and diagnostics](logging.md) for the common format, execution context, failure codes, job summary and `PYTHONPATH=src python -m biomolexplorer.log_report` command.
 
 
 `docking_data.py` preserves compound ID, SMILES and pose in both Vina ↔ DOCK6 directions. `result_tables` uses every batch summary while excluding redundant receptor tables. `DockingResults` and `DockingResultsTable` share pagination, authorized pose previews and audited row removal across both engines and consensus. DOCK6 sphere selection uses the prepared binding-site center, enabling independent candidates without a prior Vina conformation.
@@ -425,3 +429,7 @@ The scheduler retains whole-stage/batch shortcuts and includes scientific tool
 identity in reuse checks. Batches with individual failures are retried through
 per-item reuse rather than treated as wholly complete. The existing reuse
 choice controls these worker checkpoints without adding interface options.
+
+## Current execution and result contract
+
+[DAG order, lazy selection, pause/cancellation, cleanup and incremental reuse](projects.md#execution-lazy-selection-and-result-preservation). [Public names and lineage](projects.md#public-names-and-traceability).

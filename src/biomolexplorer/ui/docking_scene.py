@@ -9,7 +9,7 @@ from .localization import verbatim
 from .table_sort import TableSort
 
 
-async def residue_dialog(ui,pid,spec_loader,valid,open_3d,open_3d_url=None):
+async def residue_dialog(ui,pid,spec_loader,valid,open_3d,open_3d_url=None,naming_context=None):
     if not valid():return
     cutoff=ft.TextField(label='Distância de contato (Å)',value='4',width=190)
     # A scrollable Column still grows to its content unless its parent gives it
@@ -54,7 +54,10 @@ async def residue_dialog(ui,pid,spec_loader,valid,open_3d,open_3d_url=None):
         if not valid():return
         stream=io.StringIO();fields=['resn','resi','icode','chain','pose','reference','pose_atoms','reference_atoms']
         writer=csv.DictWriter(stream,fields,extrasaction='ignore');writer.writeheader();writer.writerows(state['rows'])
-        await save_file(ui,file_name='residue_contacts.csv',src_bytes=stream.getvalue().encode())
+        from biomolexplorer.artifact_naming import download_name
+        filename=download_name(naming_context or {},result_type='ResidueContacts',extension='csv',
+            qualifier=[float(cutoff.value),state['data'].get('name')],operation='docking_vina')
+        await save_file(ui,file_name=filename,src_bytes=stream.getvalue().encode())
     async def download(e):await ui.guard(export)
     async def view(e):
         if valid():await ui.guard(open_3d)

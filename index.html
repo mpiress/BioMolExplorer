@@ -213,6 +213,459 @@
             .site-wordmark { max-width: 40vw; }
         }
         @media(prefers-reduced-motion:reduce) { .pipeline-node { transition: none; } }
+/* Enzyme–ligand structural bioinformatics hero background. */
+        .bioinformatics-hero {
+            isolation:isolate;
+            background:
+                radial-gradient(ellipse at 80% 25%,rgba(6,95,120,.20),transparent 46%),
+                radial-gradient(ellipse at 80% 100%,rgba(14,116,144,.17),transparent 44%),
+                linear-gradient(118deg,#020817 0%,#061528 54%,#0b1a31 100%);
+        }
+        .bioinformatics-hero .bio-hero-art {
+            position:absolute;inset:0;width:100%;height:100%;
+            pointer-events:none;z-index:0;opacity:.84;
+            object-fit:cover;object-position:center center;mask-image:linear-gradient(to right,transparent 0%,rgba(0,0,0,.48) 32%,#000 60%);
+        }
+        @media(max-width:767px){
+            .bioinformatics-hero .bio-hero-art{opacity:.40;mask-image:linear-gradient(to bottom,rgba(0,0,0,.35),#000);}
+        }
+
+
+        /* Original layout retained; only the requested alignment refinements. */
+        .overview-cards { align-content:start; }
+        .overview-cards > div { min-width:0; padding:1.25rem; border-radius:1.15rem; }
+        .overview-cards > div > div { display:flex; flex-direction:column; align-items:flex-start; gap:.75rem; }
+        .overview-cards > div > div > div:last-child { width:100%; }
+        .overview-cards > div h3 { font-size:1rem; line-height:1.35; }
+        .overview-cards > div p { text-align:justify; font-size:.8rem; line-height:1.6; }
+        .feature-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:1.25rem; }
+        .feature-card { padding:1.5rem; }
+        .feature-card h3 { font-size:1.05rem; }
+        .feature-card p { text-align:justify; hyphens:auto; }
+        .feature-icon { width:48px; height:48px; font-size:1.25rem; background:#e0f4ef; color:#087f74; }
+        .feature-card:nth-child(4n+2) .feature-icon { background:#e0f2fe; color:#0369a1; }
+        .feature-card:nth-child(4n+3) .feature-icon { background:#ede9fe; color:#6d28d9; }
+        .feature-card:nth-child(4n+4) .feature-icon { background:#fff1f2; color:#be123c; }
+        @media(min-width:640px) and (max-width:1199px) {
+            .feature-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+            .feature-card:last-child:nth-child(odd) { grid-column:auto; }
+        }
+        @media(max-width:639px) { .feature-grid { grid-template-columns:minmax(0,1fr); } }
+        .scientific-flow { background: linear-gradient(155deg,#fff,#f0f7ff); border:1px solid #d6e4f0; border-radius:28px; overflow:hidden; box-shadow:0 22px 60px rgba(15,23,42,.08); }
+        .scientific-flow img { display:block; width:100%; height:auto; }
+        .scientific-flow figcaption { padding:20px 28px; color:#475569; font-size:14px; line-height:1.8; text-align:justify; }
+        .scientific-flow a:focus-visible { outline:3px solid #0284c7; }
+        .scientific-detail { border-left:4px solid #0ea5e9; padding:18px 22px; background:#f8fafc; border-radius:0 16px 16px 0; }
+        .scientific-detail p { line-height:1.85; }
+        @media(max-width:640px){.scientific-flow figcaption{padding:18px}.scientific-detail{padding:16px}}
+
+        /* Three-column header: brand | centered navigation | right-side action. */
+        .site-header .header-layout {
+            display:grid;
+            grid-template-columns:max-content minmax(0,1fr) max-content;
+            align-items:center;
+            width:100%;
+        }
+        .site-header .header-layout > nav[aria-label="Main navigation"] {
+            grid-column:2;
+            justify-self:center;
+            justify-content:center;
+            margin:0;
+        }
+        .site-header .header-layout > .header-actions {
+            grid-column:3;
+            justify-self:end;
+            margin-left:0;
+        }
+        @media(max-width:1535px) {
+            .site-header .header-layout {
+                grid-template-columns:minmax(0,1fr) max-content;
+            }
+            .site-header .header-layout > .header-actions {grid-column:2;}
+        }
+
+        /* Keep the Documentation action anchored to the right of the header.
+           At intermediate desktop widths, collapse navigation into its menu
+           instead of wrapping the action below the BioMolExplorer logo. */
+        .site-header > div { flex-wrap: nowrap; }
+        .site-header > div > div:first-child { flex-shrink: 0; }
+        .site-header > div > div:last-child { flex-shrink: 0; margin-left: auto; }
+        .site-header nav[aria-label="Main navigation"] { white-space: nowrap; }
+        @media (min-width:1280px) and (max-width:1535px) {
+            .site-header nav[aria-label="Main navigation"] { display: none; }
+            #mobile-menu-toggle { display: inline-flex; }
+            #mobile-navigation:not([hidden]) { display: block; }
+        }
+        @media (min-width:1536px) {
+            .site-header > div { max-width: 1536px; }
+        }
+        @media (max-width:639px) {
+            .site-header > div { gap: 8px; }
+            .site-header > div > div:last-child { gap: 8px; }
+            .site-header .site-cta { white-space: nowrap; }
+        }
+    
+        /* Hero: structural bioinformatics protein–ligand artwork (original site content retained). */
+        .bioinformatics-hero { isolation:isolate; background:#031527; }
+        .bioinformatics-hero .bio-hero-art {
+            position:absolute; inset:0; width:100%; height:100%;
+            object-fit:cover; object-position:center center;
+            opacity:1; mask-image:none; pointer-events:none; z-index:0;
+        }
+        .bioinformatics-hero::after {
+            content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+            background:linear-gradient(90deg,rgba(2,9,25,.30) 0%,rgba(2,9,25,.18) 42%,rgba(2,9,25,.04) 75%,transparent 100%);
+        }
+        .bioinformatics-hero .hero-panel {
+            background:rgba(5,19,38,.42); backdrop-filter:blur(3px);
+            border-color:rgba(94,234,212,.22);
+        }
+        .bioinformatics-hero .hero-panel > .grid > div {
+            background:rgba(4,15,35,.78); border-color:rgba(34,211,238,.16);
+        }
+        @media(max-width:1023px) {
+            .bioinformatics-hero .bio-hero-art { object-position:68% center; }
+            .bioinformatics-hero::after { background:linear-gradient(90deg,rgba(2,9,25,.65),rgba(2,9,25,.36)); }
+        }
+        @media(max-width:639px) {
+            .bioinformatics-hero .bio-hero-art { opacity:.75; object-position:69% center; }
+            .bioinformatics-hero::after { background:rgba(2,9,25,.50); }
+        }
+
+        /* Documentation action: pill-shaped BioMolExplorer emerald-to-cyan gradient. */
+        .site-header .site-cta {
+            color:#f8fafc; white-space:nowrap; border-radius:999px;
+            background:linear-gradient(105deg,#059669 0%,#00c389 45%,#0891b2 100%);
+            border:1px solid rgba(103,232,249,.85);
+            box-shadow:0 5px 24px rgba(0,195,137,.20), inset 0 1px 0 rgba(255,255,255,.14);
+            transition:background .2s,box-shadow .2s,transform .2s;
+        }
+        .site-header .site-cta:hover {
+            background:linear-gradient(105deg,#047857 0%,#10b981 45%,#0284c7 100%);
+            box-shadow:0 8px 28px rgba(0,195,137,.30),inset 0 1px 0 rgba(255,255,255,.18);
+            transform:translateY(-1px);
+        }
+        .site-header .site-cta i { font-size:1.05em; }
+
+        /* Active section indicator: follows scrolling and keyboard navigation. */
+        .site-header nav[aria-label="Main navigation"] a {
+            position:relative; display:inline-flex; align-items:center;
+            padding:14px 0; text-decoration:none;
+            transition:color .2s ease;
+        }
+        .site-header nav[aria-label="Main navigation"] a::after {
+            content:""; position:absolute; left:0; right:0; bottom:3px;
+            height:3px; border-radius:99px;
+            background:linear-gradient(90deg,#00c389,#22d3ee);
+            transform:scaleX(0); transform-origin:center;
+            transition:transform .22s ease;
+        }
+        .site-header nav[aria-label="Main navigation"] a:hover::after,
+        .site-header nav[aria-label="Main navigation"] a[aria-current="location"]::after {
+            transform:scaleX(1);
+        }
+        .site-header nav[aria-label="Main navigation"] a[aria-current="location"] {
+            color:#5eead4; font-weight:650;
+        }
+        .site-header .mobile-nav a[aria-current="location"] {
+            color:#5eead4; background:rgba(16,185,129,.10);
+            box-shadow:inset 3px 0 0 #00c389;
+        }
+        @media(prefers-reduced-motion:reduce) {
+            .site-header .site-cta,.site-header nav[aria-label="Main navigation"] a,
+            .site-header nav[aria-label="Main navigation"] a::after { transition:none; }
+        }
+
+
+        /* Screenshot-matched landing hero: research functions left, protein-ligand artwork right. */
+        .bioinformatics-hero.hero-reference {
+            min-height: min(860px, calc(100svh - 78px));
+            display:flex; align-items:center;
+            background:#031323;
+        }
+        .bioinformatics-hero.hero-reference .bio-hero-art {
+            position:absolute; inset:0; width:100%; height:100%;
+            object-fit:cover; object-position:center center;
+            opacity:1; mask-image:none; pointer-events:none; z-index:0;
+        }
+        .bioinformatics-hero.hero-reference::after {
+            content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+            background:linear-gradient(90deg,rgba(2,12,28,.42) 0%,rgba(2,12,28,.26) 34%,rgba(2,12,28,.03) 55%,transparent 74%);
+        }
+        .hero-reference-container {
+            position:relative; z-index:1;
+            width:100%; max-width:1800px; margin-inline:auto;
+            padding:56px clamp(24px,3.6vw,64px) 80px;
+        }
+        .hero-reference-copy { width:min(100%, 740px); }
+        .hero-reference-heading {
+            color:#f1f5f9; font-size:clamp(2.25rem,2.65vw,3.05rem);
+            font-weight:800; letter-spacing:-.037em; line-height:1.17;
+            text-wrap:balance; margin:0;
+        }
+        .hero-reference-heading span {
+            display:block; width:max-content; max-width:100%;
+            background:linear-gradient(95deg,#00e0a7 0%,#22dfc7 46%,#19c5f2 100%);
+            -webkit-background-clip:text; background-clip:text; color:transparent;
+        }
+        .hero-reference-description {
+            color:#d0e0eb; font-size:clamp(.95rem,1.07vw,1.14rem);
+            line-height:1.48; margin:20px 0 27px;
+            max-width:740px; text-align:left;
+            text-wrap:pretty;
+        }
+        .hero-reference-capabilities {
+            display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+            gap:16px 18px;
+        }
+        .hero-capability {
+            display:flex; align-items:center; gap:17px;
+            min-height:79px; padding:13px 19px;
+            background:rgba(4,27,49,.67);
+            border:1px solid rgba(0,202,219,.56);
+            border-radius:15px;
+            box-shadow:inset 0 1px 0 rgba(89,221,243,.05);
+            backdrop-filter:blur(3px);
+            color:#f2f8ff;
+            text-decoration:none;
+            transition:background .2s ease,border-color .2s ease,transform .2s ease;
+        }
+        .hero-capability:hover,.hero-capability:focus-visible {
+            background:rgba(4,49,68,.84); border-color:#2fead6; transform:translateY(-2px);
+        }
+        .hero-capability-icon {
+            flex:0 0 48px; display:grid; place-items:center;
+            color:#1bdbed; font-size:29px;
+        }
+        .hero-capability-text {display:flex; flex-direction:column; min-width:0; gap:3px;}
+        .hero-capability-text strong {
+            font-size:18px; line-height:1.2; font-weight:750; letter-spacing:-.02em;
+        }
+        .hero-capability-text > span {
+            font-size:13.5px; line-height:1.32; color:#c4d9e5;
+        }
+        /* Center navigation between the real BioMolExplorer logo and the documentation CTA. */
+        .site-header > .header-layout {max-width:1800px; padding-inline:clamp(24px,3.6vw,64px);}
+        .site-header .header-layout > nav[aria-label="Main navigation"] {gap:clamp(13px,1.8vw,30px);}
+        .site-header nav[aria-label="Main navigation"] a {font-weight:600; font-size:14px;}
+        @media(min-width:1280px) {
+            .site-header .header-layout {grid-template-columns:max-content minmax(0,1fr) max-content;}
+            .site-header .header-layout > nav[aria-label="Main navigation"] {display:flex; grid-column:2;}
+            .site-header .header-layout > .header-actions {grid-column:3;}
+            #mobile-menu-toggle {display:none;}
+        }
+        @media(max-width:1279px) {
+            .site-header .header-layout {grid-template-columns:minmax(0,1fr) max-content;}
+            .site-header .header-layout > .header-actions {grid-column:2;}
+            .site-header .header-layout > nav[aria-label="Main navigation"] {display:none;}
+            #mobile-menu-toggle {display:inline-flex;}
+        }
+        @media(max-width:1023px) {
+            .bioinformatics-hero.hero-reference {min-height:0;}
+            .bioinformatics-hero.hero-reference .bio-hero-art {object-position:65% center;opacity:.76;}
+            .bioinformatics-hero.hero-reference::after {background:linear-gradient(90deg,rgba(2,12,28,.88),rgba(2,12,28,.48));}
+            .hero-reference-container {padding-top:72px; padding-bottom:82px;}
+            .hero-reference-copy {width:min(100%,740px);}
+        }
+        @media(max-width:639px) {
+            .bioinformatics-hero.hero-reference .bio-hero-art {object-position:67% center;opacity:.43;}
+            .bioinformatics-hero.hero-reference::after {background:rgba(2,12,28,.52);}
+            .hero-reference-container {padding-top:50px; padding-bottom:58px;}
+            .hero-reference-heading {font-size:clamp(2rem,8.4vw,2.8rem);}
+            .hero-reference-heading span {width:auto;}
+            .hero-reference-description {font-size:15px; line-height:1.6; margin:20px 0 26px;}
+            .hero-reference-capabilities {grid-template-columns:1fr;gap:12px;}
+            .hero-capability {min-height:72px; padding:12px 15px;}
+            .hero-capability-text strong {font-size:16px;}
+            .hero-capability-text > span {font-size:12.5px;}
+            .hero-capability-icon {flex-basis:42px; font-size:25px;}
+        }
+        @media(prefers-reduced-motion:reduce) { .hero-capability {transition:none;} }
+
+
+        /* Molecular informatics: CSS-only computational data field. No bitmap, SVG, canvas or JS. */
+        .bioinformatics-hero.hero-reference {
+          isolation:isolate;
+          background:
+            radial-gradient(ellipse 48% 72% at 86% 43%,rgba(0,149,172,.13),transparent 75%),
+            radial-gradient(ellipse 43% 55% at 7% 94%,rgba(0,176,135,.11),transparent 76%),
+            linear-gradient(118deg,#020b1b 0%,#041628 49%,#061e35 100%);
+        }
+        .bioinformatics-hero.hero-reference::before {
+          content:""; position:absolute; inset:0; z-index:0; pointer-events:none;
+          background:
+            radial-gradient(circle at 77% 35%,rgba(31,211,221,.085) 1px,transparent 1.6px) 0 0 / 29px 29px,
+            linear-gradient(90deg,transparent 0%,rgba(19,110,135,.05) 100%);
+          mask-image:linear-gradient(90deg,transparent 28%,black 90%);
+        }
+        .bioinformatics-hero.hero-reference::after {
+          content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
+          background:linear-gradient(90deg,rgba(2,10,25,.19) 0%,rgba(2,10,25,.12) 45%,transparent 78%);
+        }
+        .data-field {position:absolute;z-index:0;pointer-events:none;top:2%;right:1%;width:52%;height:96%;opacity:.97;overflow:visible;}
+        .data-field-glow {position:absolute;inset:12% 4% 9% 0%;background:radial-gradient(ellipse at 53% 50%,rgba(6,156,181,.13),transparent 63%);filter:blur(17px);}
+        .data-field-ring {position:absolute;left:42%;top:49%;transform:translate(-50%,-50%) rotate(-18deg);border-radius:50%;aspect-ratio:1;border:1px solid rgba(42,212,221,.26);box-shadow:inset 0 0 30px rgba(14,165,233,.025),0 0 22px rgba(14,165,233,.025);}
+        .ring-outer {width:min(76%,660px);border-style:dashed;border-color:rgba(22,196,213,.22);}
+        .ring-middle {width:min(58%,490px);border:1px solid rgba(61,218,216,.42);}
+        .ring-inner {width:min(34%,290px);border:1px dashed rgba(74,240,193,.40);}
+        .data-field-ring::before,.data-field-ring::after {content:"";position:absolute;width:8px;height:8px;border-radius:50%;background:#31e6d0;box-shadow:0 0 16px rgba(45,240,204,.6);}
+        .data-field-ring::before {left:15%;top:13%;}.data-field-ring::after {right:12%;bottom:17%;background:#3cbbef;}
+        .data-field-center {position:absolute;left:42%;top:49%;transform:translate(-50%,-50%);width:94px;height:94px;border-radius:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:1px solid rgba(82,236,217,.43);background:linear-gradient(145deg,rgba(5,64,79,.82),rgba(3,24,48,.94));box-shadow:0 0 50px rgba(4,177,169,.12),inset 0 1px 0 rgba(146,252,231,.12);color:#69f6d5;}
+        .data-field-center span {font-size:30px;font-weight:800;letter-spacing:.09em;line-height:1;}.data-field-center small{font-size:12px;letter-spacing:.22em;color:#87c7d7;margin-top:9px;}
+        .data-field-axis {position:absolute;left:42%;top:49%;height:1px;width:58%;transform-origin:left center;background:linear-gradient(90deg,rgba(29,220,196,.4),rgba(42,191,231,.03));}
+        .axis-a{transform:rotate(-34deg)}.axis-b{transform:rotate(31deg)}
+        .data-field-matrix {position:absolute;top:7%;right:0%;width:47%;padding:18px 19px 20px;border:1px solid rgba(43,180,207,.23);border-radius:18px;background:linear-gradient(140deg,rgba(6,29,54,.79),rgba(5,21,42,.46));box-shadow:0 12px 35px rgba(1,9,24,.17);backdrop-filter:blur(2px);transform:rotate(2deg);}
+        .matrix-label,.signal-head{display:flex;flex-direction:column;gap:4px;margin-bottom:15px;}
+        .matrix-label b,.signal-head b{color:#7be4dc;font-size:10px;letter-spacing:.14em;font-weight:700;}
+        .matrix-label small,.signal-head small{color:#7198b1;font-size:10px;letter-spacing:.03em;}
+        .matrix-bits{display:grid;grid-template-columns:repeat(19,minmax(0,1fr));gap:5px;}
+        .matrix-bits span{aspect-ratio:1;background:rgba(43,103,135,.18);border:1px solid rgba(54,137,171,.11);border-radius:2px;}
+        .matrix-bits span.muted{background:rgba(16,168,202,.29);box-shadow:0 0 5px rgba(4,193,205,.09);}
+        .matrix-bits span.active{background:rgba(29,228,195,.83);box-shadow:0 0 9px rgba(8,221,184,.29);border-color:rgba(83,248,221,.35);}
+        .data-field-signal{position:absolute;bottom:8%;right:1%;width:44%;padding:18px 20px 17px;border:1px solid rgba(46,181,204,.24);border-radius:18px;background:linear-gradient(145deg,rgba(5,34,57,.80),rgba(5,23,44,.55));box-shadow:0 14px 36px rgba(1,9,24,.20);transform:rotate(-2deg);}
+        .signal-bars{height:75px;display:flex;align-items:end;gap:3px;border-bottom:1px solid rgba(70,187,205,.26);background:repeating-linear-gradient(0deg,transparent,transparent 22px,rgba(76,184,211,.07) 23px);}
+        .signal-bars i{flex:1;height:var(--h);background:linear-gradient(0deg,rgba(6,168,185,.24),rgba(34,230,197,.88));border-radius:3px 3px 0 0;}
+        .data-field-chip{position:absolute;left:4%;padding:10px 14px;border-radius:999px;border:1px solid rgba(54,185,204,.26);background:rgba(3,25,45,.64);color:#80b8ca;font:600 10px/1.2 Inter,sans-serif;letter-spacing:.11em;white-space:nowrap;}
+        .data-field-chip span{color:#30d8b9;margin:0 6px;}.chip-top{top:17%;}.chip-bottom{bottom:15%;left:8%;}
+        .data-field-spark{position:absolute;width:7px;height:7px;border-radius:50%;background:#21d9d2;box-shadow:0 0 16px #19b7c3;}.spark-a{top:32%;left:13%;}.spark-b{top:69%;left:72%;background:#45a9e8;}.spark-c{top:77%;left:26%;background:#49e7bc;}
+        .hero-reference-container {position:relative;z-index:2;}
+        .hero-capability{background:rgba(3,22,40,.83);border-color:rgba(32,205,221,.42);}
+        .hero-capability:hover,.hero-capability:focus-visible{background:rgba(7,52,70,.90);border-color:rgba(55,234,213,.78);}
+        @media(max-width:1280px){.data-field{right:-9%;width:60%;opacity:.75}.data-field-matrix{right:5%;}}
+        @media(max-width:1023px){.data-field{right:-18%;width:85%;opacity:.32}.bioinformatics-hero.hero-reference::after{background:linear-gradient(90deg,rgba(2,11,27,.75),rgba(2,11,27,.32));}}
+        @media(max-width:639px){.data-field{right:-80%;width:160%;opacity:.17}.bioinformatics-hero.hero-reference::after{background:rgba(2,11,27,.46);}.data-field-matrix,.data-field-signal,.data-field-chip{display:none;}}
+
+        /* Compact access to every page section, without changing the landing design. */
+        .site-header .nav-more { position:relative; flex:0 0 auto; }
+        .site-header .nav-more > summary {
+            list-style:none; cursor:pointer; position:relative;
+            display:inline-flex; align-items:center; gap:8px;
+            padding:14px 0; color:#cbd5e1; font-size:14px;
+            font-weight:600; line-height:1.5; transition:color .2s ease;
+        }
+        .site-header .nav-more > summary::-webkit-details-marker { display:none; }
+        .site-header .nav-more > summary::after {
+            content:""; position:absolute; bottom:3px; left:0; right:0;
+            height:3px; border-radius:99px;
+            background:linear-gradient(90deg,#00c389,#22d3ee);
+            transform:scaleX(0); transition:transform .2s ease;
+        }
+        .site-header .nav-more[open] > summary,
+        .site-header .nav-more.is-active > summary,
+        .site-header .nav-more > summary:hover { color:#5eead4; }
+        .site-header .nav-more[open] > summary::after,
+        .site-header .nav-more.is-active > summary::after,
+        .site-header .nav-more > summary:hover::after { transform:scaleX(1); }
+        .site-header .nav-more > summary i {font-size:10px; transition:transform .2s ease;}
+        .site-header .nav-more[open] > summary i {transform:rotate(180deg);}
+        .site-header .nav-more > summary:focus-visible {outline:2px solid #22d3ee; outline-offset:5px; border-radius:4px;}
+        .site-header .nav-more-panel {
+            position:absolute; top:calc(100% + 10px); right:-24px;
+            width:min(440px,90vw); display:grid; grid-template-columns:1fr 1fr;
+            gap:20px; padding:22px; border-radius:18px;
+            border:1px solid rgba(45,212,191,.26);
+            background:rgba(5,20,38,.97); backdrop-filter:blur(18px);
+            box-shadow:0 24px 60px rgba(0,0,0,.42); z-index:80;
+        }
+        .site-header .nav-more-column {display:flex; flex-direction:column; align-items:stretch; gap:3px;}
+        .site-header .nav-more-heading {color:#5eead4; font-size:10px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; margin:0 0 9px;}
+        .site-header nav[aria-label="Main navigation"] .nav-more-panel a {
+            display:block; padding:10px 12px; border-radius:9px;
+            font-size:13px; font-weight:500; line-height:1.35;
+            color:#cbd5e1; white-space:normal;
+        }
+        .site-header nav[aria-label="Main navigation"] .nav-more-panel a::after {display:none;}
+        .site-header nav[aria-label="Main navigation"] .nav-more-panel a:hover,
+        .site-header nav[aria-label="Main navigation"] .nav-more-panel a[aria-current="location"] {
+            color:#5eead4; background:rgba(16,185,129,.12);
+        }
+        @media(min-width:1280px) and (max-width:1535px) {
+            .site-header .header-layout > nav[aria-label="Main navigation"] {display:none;}
+            .site-header #mobile-menu-toggle {display:inline-flex;}
+        }
+        @media(prefers-reduced-motion:reduce) {
+            .site-header .nav-more > summary,
+            .site-header .nav-more > summary::after,
+            .site-header .nav-more > summary i {transition:none;}
+        }
+
+        /* Compact carbon tile: matches the original FP/2048 emblem (94 x 94 px). */
+        .data-field-center.periodic-carbon {
+          width:94px;height:94px;box-sizing:border-box;border-radius:19px;
+          display:flex;flex-direction:column;align-items:stretch;justify-content:space-between;
+          padding:6px 7px 5px;gap:0;text-align:center;overflow:hidden;
+          background:linear-gradient(155deg,rgba(7,76,84,.94),rgba(3,29,52,.97) 72%);
+          border:1px solid rgba(103,249,211,.63);
+          box-shadow:0 0 50px rgba(4,177,169,.12),inset 0 1px 0 rgba(146,252,231,.19);
+        }
+        .periodic-carbon .carbon-topline,.periodic-carbon .carbon-bottomline {
+          display:flex;justify-content:space-between;align-items:center;gap:2px;min-width:0;
+        }
+        .periodic-carbon .carbon-topline {color:#c0fff0;line-height:1;}
+        .periodic-carbon .carbon-number {font-size:9px;font-weight:800;letter-spacing:0;line-height:1;}
+        .periodic-carbon .carbon-mass {font-size:7px;font-weight:600;letter-spacing:0;line-height:1;color:#a8d9e5;}
+        .periodic-carbon .carbon-symbol {font-size:30px;font-weight:800;line-height:.91;letter-spacing:-.05em;color:#7bf5cf;text-shadow:0 0 18px rgba(72,246,205,.2);}
+        .periodic-carbon .carbon-name {font-size:9px;font-weight:700;letter-spacing:.01em;line-height:1;color:#e0fff8;}
+        .periodic-carbon .carbon-electrons {font-size:7px;letter-spacing:-.01em;line-height:1;color:#a4d5e1;white-space:nowrap;}
+        .periodic-carbon .carbon-bottomline {
+          flex-direction:column;gap:1px;padding-top:2px;border-top:1px solid rgba(103,249,211,.24);
+          color:#9fd5df;font-size:6.5px;font-weight:600;line-height:1.05;letter-spacing:-.015em;
+          white-space:nowrap;
+        }
+
+        /* Carbon, 94 x 94 px: correct inherited 30 px span rule. */
+        .data-field-center.periodic-carbon span {
+            font-size:7px; font-weight:600; line-height:1.05;
+            letter-spacing:0; white-space:nowrap;
+        }
+        .data-field-center.periodic-carbon .carbon-number {font-size:9px;font-weight:800;}
+        .data-field-center.periodic-carbon .carbon-mass {font-size:7px;font-weight:600;}
+        .data-field-center.periodic-carbon .carbon-symbol {font-size:28px;font-weight:800;line-height:.93;}
+        .data-field-center.periodic-carbon .carbon-name {font-size:8px;font-weight:700;}
+        .data-field-center.periodic-carbon .carbon-electrons {font-size:6.5px;font-weight:500;}
+        .data-field-center.periodic-carbon .carbon-bottomline {
+            display:flex;flex-direction:column;align-items:center;justify-content:center;
+            gap:1px;width:100%;padding-top:3px;box-sizing:border-box;
+            overflow:hidden;
+        }
+        .data-field-center.periodic-carbon .carbon-bottomline span {
+            display:block;max-width:100%;font-size:6px;font-weight:600;
+            letter-spacing:-.015em;line-height:1.12;text-align:center;
+        }
+        /* Benzene: representative carbon-based molecule, pure HTML/CSS. */
+        .carbon-molecule {
+            position:absolute;left:3%;top:61%;width:156px;height:166px;
+            display:flex;flex-direction:column;align-items:center;justify-content:center;
+            opacity:.79;filter:drop-shadow(0 0 18px rgba(11,206,211,.15));
+        }
+        .carbon-molecule .benzene-ring {
+            position:relative;width:110px;height:110px;flex:none;
+            transform:rotate(30deg);
+        }
+        .carbon-molecule .benzene-ring::before,
+        .carbon-molecule .benzene-ring::after {
+            content:"";position:absolute;clip-path:polygon(50% 0,93.3% 25%,93.3% 75%,50% 100%,6.7% 75%,6.7% 25%);
+        }
+        .carbon-molecule .benzene-ring::before {
+            inset:0;background:linear-gradient(140deg,#4df3d7,#0da4dd 90%);
+        }
+        .carbon-molecule .benzene-ring::after {
+            inset:2px;background:#061c32;
+        }
+        .carbon-molecule .benzene-aromatic {
+            position:absolute;inset:28px;border:1.5px solid rgba(53,231,207,.82);
+            border-radius:50%;z-index:1;box-shadow:0 0 11px rgba(18,220,210,.12);
+        }
+        .carbon-molecule .benzene-caption {
+            font:600 10px/1.1 Inter,sans-serif;letter-spacing:.1em;
+            color:#77d6df;text-align:center;margin-top:8px;
+        }
+        .carbon-molecule .benzene-formula {
+            font:500 9px/1.25 Inter,sans-serif;letter-spacing:.13em;
+            color:#5e9eb8;margin-top:3px;
+        }
+        @media(max-width:1023px){.carbon-molecule{left:4%;top:65%;transform:scale(.85);transform-origin:center top;}}
+        @media(max-width:639px){.carbon-molecule{display:none;}}
     </style>
 </head>
 
@@ -220,141 +673,134 @@
     <a href="#main-content" class="skip-link">Skip to content</a>
 
     <header class="site-header sticky top-0 z-50 backdrop-blur-lg">
-        <div class="max-w-7xl mx-auto px-6 py-4 flex flex-wrap gap-4 items-center justify-between">
-            <div class="flex items-center gap-4">
+        <div class="header-layout max-w-7xl mx-auto px-6 py-4 gap-4 items-center">
+            <div class="flex items-center gap-4 shrink-0">
                 <div>
                     <div class="mb-1"><picture><source media="(max-width: 480px)" srcset="imgs/new_logo.png"><img src="imgs/new_BioMolLogo.png" alt="BioMolExplorer" width="2172" height="724" class="site-wordmark"></picture></div>
                 </div>
             </div>
 
-            <nav aria-label="Main navigation" class="hidden xl:flex items-center gap-5 text-sm text-slate-300">
-                <a href="#overview" class="hover:text-cyan-300 transition">Overview</a>
-                <a href="#capabilities" class="hover:text-cyan-300 transition">Capabilities</a>
-                <a href="#pipeline-example" class="hover:text-cyan-300 transition">Pipeline example</a>
-                <a href="#installation" class="hover:text-cyan-300 transition">Installation</a>
-                <a href="#visual-results" class="hover:text-cyan-300 transition">Visual results</a>
-                <a href="#documentation" class="hover:text-cyan-300 transition">Documentation</a>
+            <nav aria-label="Main navigation" class="hidden xl:flex items-center justify-center gap-5 text-sm text-slate-300">
+                <a href="#home">Home</a>
+                <a href="#overview">Features</a>
+                <a href="#scientific-flow">Scientific workflow</a>
+                <a href="#capabilities">Operations</a>
+                <a href="#pipeline-example">Examples</a>
+                <a href="#workspace">About</a>
+                <details class="nav-more">
+                    <summary>Explore <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></summary>
+                    <div class="nav-more-panel">
+                        <div class="nav-more-column">
+                            <span class="nav-more-heading">Platform &amp; setup</span>
+                            <a href="#workflow">Architecture</a>
+                            <a href="#installation">Installation</a>
+                            <a href="#documentation">Documentation guides</a>
+                            <a href="#citation">How to cite</a>
+                        </div>
+                        <div class="nav-more-column">
+                            <span class="nav-more-heading">Research &amp; results</span>
+                            <a href="#analysis">Graph analysis</a>
+                            <a href="#visual-results">Visual results</a>
+                            <a href="#molecular-viewer">Molecular viewer</a>
+                            <a href="#leadership">Scientific leadership</a>
+                        </div>
+                    </div>
+                </details>
             </nav>
 
-            <div class="flex items-center gap-3">
+            <div class="header-actions flex items-center gap-3 shrink-0">
             <button type="button" id="mobile-menu-toggle" aria-controls="mobile-navigation" aria-expanded="false" aria-label="Open navigation" class="text-cyan-200 border border-slate-600 rounded-xl p-3 leading-none"><i class="fa-solid fa-bars" aria-hidden="true"></i></button>
             <a href="docs/index.html"
-               class="inline-flex items-center gap-2 site-cta transition text-slate-950 px-5 py-2.5 rounded-xl font-semibold shadow-lg">
-                <i class="fa-solid fa-terminal"></i>
+               class="inline-flex items-center gap-2 site-cta transition text-white px-5 py-2.5 rounded-full font-semibold shadow-lg">
+                <i class="fa-solid fa-book-open" aria-hidden="true"></i>
                 Documentation
             </a>
             </div>
         </div>
         <nav id="mobile-navigation" class="mobile-nav" aria-label="Mobile navigation" hidden>
-            <a href="#overview">Overview</a><a href="#pipeline-example">Pipeline example</a>
-            <a href="#capabilities">Capabilities</a><a href="#workspace">Workspace</a>
-            <a href="#workflow">Architecture</a><a href="#installation">Installation</a>
-            <a href="#visual-results">Visual results</a><a href="#documentation">Documentation</a>
+            <a href="#home">Home</a>
+            <a href="#overview">Features</a>
+            <a href="#scientific-flow">Scientific workflow</a>
+            <a href="#capabilities">Operations</a>
+            <a href="#pipeline-example">Pipeline example</a>
+            <a href="#workspace">Workspace</a>
+            <a href="#workflow">Architecture</a>
+            <a href="#installation">Installation</a>
+            <a href="#analysis">Graph analysis</a>
+            <a href="#visual-results">Visual results</a>
+            <a href="#molecular-viewer">Molecular viewer</a>
+            <a href="#documentation">Documentation guides</a>
+            <a href="#citation">How to cite</a>
+            <a href="#leadership">Scientific leadership</a>
         </nav>
     </header>
     <main id="main-content">
 
-    <section class="hero-gradient grid-pattern min-h-screen flex items-center relative overflow-hidden">
-        <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.04)_0,transparent_60%)]"></div>
-
-        <div class="max-w-7xl mx-auto px-6 pt-16 pb-20 relative z-10">
-            <div class="hero-columns grid lg:grid-cols-2 gap-16 items-stretch">
-
-                <div class="hero-copy">
-                    <div class="hero-badge inline-flex items-center gap-2 glass rounded-full px-4 py-2 text-xs uppercase tracking-[0.2em] text-brand-primary mb-8">
-                        <i class="fa-solid fa-dna"></i>
-                        Computer-Aided Drug Design Platform
-                    </div>
-
-                    <h1 class="hero-heading text-5xl md:text-6xl xl:text-7xl font-black text-white leading-tight">
-                        Molecular Data Exploration for
-                        <span class="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
-                            Intelligent Drug Discovery
-                        </span>
-                    </h1>
-
-                    <p class="mt-8 text-lg text-slate-400 leading-relaxed max-w-3xl text-justify">
-                        Retrieve molecular data, build the pipeline your study needs, and keep its inputs, settings and results together. BioMolExplorer combines a Flet workspace with Python services for similarity analysis, indexed graph exploration, ADMET screening, preparation, redocking, docking and molecular dynamics.
-                    </p>
-
-                    <div class="hero-buttons flex flex-wrap justify-between items-center gap-3 mt-7 mb-8">
-                        <a href="#pipeline-example" class="site-cta inline-flex items-center gap-2 text-slate-950 px-5 py-3 rounded-xl font-semibold">Explore a pipeline <i class="fa-solid fa-arrow-down" aria-hidden="true"></i></a>
-                        <a href="#installation" class="inline-flex items-center border border-slate-500 text-slate-200 px-5 py-3 rounded-xl font-semibold hover:border-cyan-300">Set up your workspace</a>
-                    </div>
-                   <div class="hero-features grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-    
-                    <div class="w-full bg-slate-900/60 rounded-lg px-4 py-3 text-sm font-mono text-slate-200 border border-slate-700/60 flex items-center justify-start hover:bg-slate-800 transition duration-300 shadow-sm">
-                        <i class="fab fa-python text-brand-primary mr-3 text-base shrink-0"></i>
-                        <span>Python Ecosystem</span>
-                    </div>
-
-                    <div class="w-full bg-slate-900/60 rounded-lg px-4 py-3 text-sm font-mono text-slate-200 border border-slate-700/60 flex items-center justify-start hover:bg-slate-800 transition duration-300 shadow-sm">
-                        <i class="fa-solid fa-network-wired text-brand-primary mr-3 text-base shrink-0"></i>
-                        <span>Graph-Based Analysis</span>
-                    </div>
-
-                    <div class="w-full bg-slate-900/60 rounded-lg px-4 py-3 text-sm font-mono text-slate-200 border border-slate-700/60 flex items-center justify-start hover:bg-slate-800 transition duration-300 shadow-sm">
-                        <i class="fa-solid fa-flask-vial text-brand-primary mr-3 text-base shrink-0"></i>
-                        <span>Virtual Screening</span>
-                    </div>
-
-                    <div class="w-full bg-slate-900/60 rounded-lg px-4 py-3 text-sm font-mono text-slate-200 border border-slate-700/60 flex items-center justify-start hover:bg-slate-800 transition duration-300 shadow-sm">
-                        <i class="fa-solid fa-shield-halved text-brand-primary mr-3 text-base shrink-0"></i>
-<span>Flet Workspace</span>
-                    </div>
-
-                </div>
-
-                    
-                </div>
-
-                <div class="relative">
-                    <div class="absolute -inset-10 bg-emerald-400/10 blur-3xl rounded-full"></div>
-
-                    <div class="hero-panel glass rounded-[2rem] p-10 relative shadow-glow">
-                    
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                            
-                            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 hover:border-brand-primary/30 transition duration-300">
-                                <div class="text-3xl font-black text-brand-primary">PDB</div>
-                                <p class="text-sm text-slate-400 mt-2">Protein structure retrieval and filtering</p>
-                            </div>
-
-                            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 hover:border-brand-secondary/30 transition duration-300">
-                                <div class="text-3xl font-black text-brand-secondary">ChEMBL</div>
-                                <p class="text-sm text-slate-400 mt-2">Bioactivity and target extraction</p>
-                            </div>
-
-                            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 hover:border-emerald-500/30 transition duration-300">
-                                <div class="text-3xl font-black text-emerald-400">ZINC</div>
-                                <p class="text-sm text-slate-400 mt-2">Large-scale compound libraries evaluation</p>
-                            </div>
-
-                            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 hover:border-white/20 transition duration-300">
-                                <div class="text-3xl font-black text-white">Vina</div>
-                                <p class="text-sm text-slate-400 mt-2">Automated redocking validation</p>
-                            </div>
-
-                            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 hover:border-indigo-500/30 transition duration-300">
-                                <div class="text-3xl font-black text-indigo-400">Dock6+Vina</div>
-                                <p class="text-sm text-slate-400 mt-2">Consensus docking score integration for advanced ranking</p>
-                            </div>
-
-                            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5 hover:border-violet-500/30 transition duration-300">
-                                <div class="text-3xl font-black text-violet-400">ADMET</div>
-                                <p class="text-sm text-slate-400 mt-2">Research profiles, local descriptors and optional trained models</p>
-                            </div>
-
-                            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5">
-                                <div class="text-3xl font-black text-emerald-300">PubChem</div>
-                                <p class="text-sm text-slate-400 mt-2">Structural similarity expansion with cross-source deduplication</p>
-                            </div>
-                            <div class="bg-slate-900/70 border border-slate-800 rounded-2xl p-5">
-                                <div class="text-3xl font-black text-cyan-300">Workspace</div>
-                                <p class="text-sm text-slate-400 mt-2">Private projects, invitations and configurable pipelines</p>
-                            </div>
-                        </div>
-                    </div>
+    <section id="home" class="hero-gradient bioinformatics-hero hero-reference relative overflow-hidden" aria-labelledby="hero-title">
+        <div class="data-field" aria-hidden="true">
+          <div class="data-field-glow"></div>
+          <div class="data-field-ring ring-outer"></div>
+          <div class="data-field-ring ring-middle"></div>
+          <div class="data-field-ring ring-inner"></div>
+          <div class="data-field-center periodic-carbon" title="Carbon (C) · atomic number 6 · standard atomic weight 12.011" aria-label="Carbon: atomic number 6; symbol C; atomic weight 12.011; nonmetal; group 14; period 2; electron configuration [He] 2s² 2p²">
+            <div class="carbon-topline"><span class="carbon-number">6</span><span class="carbon-mass">12.011</span></div>
+            <span class="carbon-symbol">C</span>
+            <span class="carbon-name">Carbon</span>
+            <span class="carbon-electrons">[He] 2s² 2p²</span>
+            <div class="carbon-bottomline"><span>Group 14 · Period 2</span><span>Nonmetal</span></div>
+          </div>
+          <div class="carbon-molecule" title="Benzene (C6H6): aromatic carbon-based molecular structure">
+            <div class="benzene-ring"><div class="benzene-aromatic"></div></div>
+            <div class="benzene-caption">AROMATIC RING</div>
+            <div class="benzene-formula">BENZENE · C₆H₆</div>
+          </div>
+          <div class="data-field-axis axis-a"></div><div class="data-field-axis axis-b"></div>
+          <div class="data-field-matrix"><div class="matrix-label"><b>MOLECULAR FINGERPRINT</b><small>Binary descriptor · illustrative</small></div><div class="matrix-bits"><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="active" aria-hidden="true"></span><span class="" aria-hidden="true"></span><span class="muted" aria-hidden="true"></span></div></div>
+          <div class="data-field-signal"><div class="signal-head"><b>SIMILARITY PROFILE</b><small>Tanimoto · conceptual</small></div><div class="signal-bars"><i style="--h:20%"></i><i style="--h:40%"></i><i style="--h:57%"></i><i style="--h:69%"></i><i style="--h:74%"></i><i style="--h:71%"></i><i style="--h:63%"></i><i style="--h:51%"></i><i style="--h:38%"></i><i style="--h:26%"></i><i style="--h:21%"></i><i style="--h:23%"></i><i style="--h:20%"></i><i style="--h:26%"></i><i style="--h:35%"></i><i style="--h:43%"></i><i style="--h:49%"></i><i style="--h:48%"></i><i style="--h:42%"></i><i style="--h:30%"></i><i style="--h:26%"></i><i style="--h:45%"></i><i style="--h:62%"></i><i style="--h:76%"></i><i style="--h:84%"></i><i style="--h:83%"></i><i style="--h:76%"></i><i style="--h:62%"></i><i style="--h:45%"></i><i style="--h:27%"></i><i style="--h:28%"></i><i style="--h:39%"></i><i style="--h:44%"></i><i style="--h:44%"></i><i style="--h:38%"></i><i style="--h:30%"></i><i style="--h:21%"></i><i style="--h:24%"></i><i style="--h:25%"></i><i style="--h:21%"></i><i style="--h:27%"></i><i style="--h:39%"></i></div></div>
+          <div class="data-field-chip chip-top">STRUCTURE <span>→</span> DESCRIPTOR</div>
+          <div class="data-field-chip chip-bottom">FINGERPRINT <span>→</span> SIMILARITY <span>→</span> GRAPH</div>
+          <div class="data-field-spark spark-a"></div><div class="data-field-spark spark-b"></div><div class="data-field-spark spark-c"></div>
+        </div>
+        <div class="hero-reference-container">
+            <div class="hero-reference-copy">
+                <h1 id="hero-title" class="hero-reference-heading">
+                    Molecular Data Exploration for
+                    <span>Intelligent Drug Discovery</span>
+                </h1>
+                <p class="hero-reference-description">An integrated computational platform for molecular exploration and information retrieval, designed to support computer-aided drug discovery through molecular similarity analysis, virtual screening, redocking validation, and interactive 3D inspection of docking poses and receptor–ligand interactions.</p>
+                <div class="hero-reference-capabilities" aria-label="BioMolExplorer research capabilities">
+                    <a class="hero-capability" href="#capabilities" aria-label="Explore PDB">
+                        <span class="hero-capability-icon"><i class="fa-solid fa-database" aria-hidden="true"></i></span>
+                        <span class="hero-capability-text"><strong>PDB</strong><span>Protein structures and targets</span></span>
+                    </a>
+                    <a class="hero-capability" href="#capabilities" aria-label="Explore ChEMBL">
+                        <span class="hero-capability-icon"><i class="fa-solid fa-flask" aria-hidden="true"></i></span>
+                        <span class="hero-capability-text"><strong>ChEMBL</strong><span>Bioactivity and assay data</span></span>
+                    </a>
+                    <a class="hero-capability" href="#capabilities" aria-label="Explore PubChem">
+                        <span class="hero-capability-icon"><i class="fa-solid fa-circle-nodes" aria-hidden="true"></i></span>
+                        <span class="hero-capability-text"><strong>PubChem</strong><span>Compounds and annotations</span></span>
+                    </a>
+                    <a class="hero-capability" href="#capabilities" aria-label="Explore ZINC">
+                        <span class="hero-capability-icon"><i class="fa-solid fa-layer-group" aria-hidden="true"></i></span>
+                        <span class="hero-capability-text"><strong>ZINC</strong><span>Ready-to-dock compound sets</span></span>
+                    </a>
+                    <a class="hero-capability" href="#capabilities" aria-label="Explore Similarity">
+                        <span class="hero-capability-icon"><i class="fa-solid fa-fingerprint" aria-hidden="true"></i></span>
+                        <span class="hero-capability-text"><strong>Similarity</strong><span>Fingerprints and Tanimoto</span></span>
+                    </a>
+                    <a class="hero-capability" href="#capabilities" aria-label="Explore Docking (Vina / DOCK6)">
+                        <span class="hero-capability-icon"><i class="fa-solid fa-bullseye" aria-hidden="true"></i></span>
+                        <span class="hero-capability-text"><strong>Docking (Vina / DOCK6)</strong><span>Docking, redocking and Amber Score</span></span>
+                    </a>
+                    <a class="hero-capability" href="#capabilities" aria-label="Explore ADMET">
+                        <span class="hero-capability-icon"><i class="fa-solid fa-heart-pulse" aria-hidden="true"></i></span>
+                        <span class="hero-capability-text"><strong>ADMET</strong><span>In silico pharmacokinetic profiling</span></span>
+                    </a>
+                    <a class="hero-capability" href="#visual-results" aria-label="Explore Visualization">
+                        <span class="hero-capability-icon"><i class="fa-solid fa-chart-simple" aria-hidden="true"></i></span>
+                        <span class="hero-capability-text"><strong>Visualization</strong><span>3D inspection and interaction analysis</span></span>
+                    </a>
                 </div>
             </div>
         </div>
@@ -373,7 +819,6 @@
             <div class="grid lg:grid-cols-2 gap-14 mt-16 items-start">
 
                 <div class="space-y-6 text-slate-600 leading-relaxed text-justify text-sm md:text-base">
-                    <p></p>
                     <p>
                         Computer-aided drug design brings together protein structures, compound libraries and bioactivity
                         records. Inconsistent metadata, duplicate compounds and incomplete experimental information make
@@ -391,7 +836,7 @@
                     </p>
                 </div>
 
-                <div class="grid gap-5">
+                <div class="overview-cards grid sm:grid-cols-2 gap-4">
 
                     <div class="bg-slate-50 border border-slate-200 rounded-3xl p-7 shadow-card card-hover">
                         <div class="flex items-start gap-4">
@@ -458,12 +903,65 @@
         </div>
     </section>
 
-    <section id="pipeline-example" class="py-24 bg-slate-50 border-y border-slate-200" aria-labelledby="pipeline-heading">
+    <section id="scientific-flow" class="py-24 bg-white border-y border-slate-200" aria-labelledby="scientific-flow-title">
+      <div class="max-w-7xl mx-auto px-6">
+        <span class="text-emerald-700 font-semibold uppercase tracking-widest text-sm">Complete scientific workflow</span>
+        <h2 id="scientific-flow-title" class="section-title text-4xl font-black text-slate-900 mt-3">An integrated, configurable molecular exploration pipeline</h2>
+        <p class="text-slate-600 leading-relaxed mt-7 mb-9 text-justify">The scientific workflow below organizes the platform into data sources and curation, molecular representation, similarity and network exploration, ligand and receptor preparation, molecular evaluation, and ADMET screening. These capabilities can be assembled into configurable execution paths rather than requiring every project to follow a single fixed sequence. Data management, quality control, result reuse and provenance operate across the workflow.</p>
+        <figure class="scientific-flow">
+          <a href="imgs/BioMolExplorer.png" target="_blank" rel="noopener" aria-label="Open full-resolution BioMolExplorer scientific workflow">
+            <img src="imgs/BioMolExplorer.png" alt="Complete BioMolExplorer workflow infographic showing six numbered scientific domains, candidate prioritization and cross-cutting data management features." width="1536" height="1024" loading="lazy" decoding="async">
+          </a>
+          <figcaption><strong>Figure 1. BioMolExplorer scientific workflow.</strong> The diagram summarizes the scientific modules and their relationships. Candidate prioritization is a research interpretation step that combines available evidence, not a claim of a separate automated multi-criteria decision engine. Select the figure to inspect it at full resolution.</figcaption>
+        </figure>
+        <div class="grid lg:grid-cols-2 gap-7 mt-10">
+          <article class="scientific-detail"><h3 class="text-xl font-bold text-slate-900 mb-3">Molecular evaluation: validation to refinement</h3><p class="text-slate-600">The intended conceptual order is <strong>Redocking → Molecular Docking → Consensus Scoring → Molecular Dynamics / Amber Score</strong>. Redocking evaluates protocol reproducibility against a reference ligand, docking evaluates candidates using AutoDock Vina and/or DOCK6, and consensus integrates available scores for comparative ranking. The native DOCK6 6.11 Amber Score option refines poses through its internal implicit-solvent protocol; it must not be presented as a conventional molecular-dynamics trajectory or as proof that RMSD, RMSF, hydrogen-bond time series and radius-of-gyration trajectories are available.</p><a href="docs/en/user_manual.html" class="inline-block mt-4 text-emerald-700 font-semibold underline">Scientific operations and configuration →</a></article>
+          <article class="scientific-detail"><h3 class="text-xl font-bold text-slate-900 mb-3">Research traceability and reusable computation</h3><p class="text-slate-600">The workspace retains input selections, stage configurations, generated artifacts, execution records and logs. Compatible completed computations may be reused, while changes to scientific inputs or parameters require appropriate invalidation. Structural curation, ADMET screening, graph-based compound selection and molecular evaluation remain separately configurable to accommodate different research hypotheses.</p><a href="docs/en/projects.html" class="inline-block mt-4 text-emerald-700 font-semibold underline">Projects, results and provenance →</a></article>
+        </div>
+      </div>
+    </section>
+
+    <section id="capabilities" class="py-24 bg-slate-50 border-y border-slate-200">
         <div class="max-w-7xl mx-auto px-6">
-            <div class="max-w-3xl mb-10">
+
+            <div class="text-center max-w-4xl mx-auto">
+                <span class="text-brand-primary font-semibold uppercase tracking-widest text-sm">Core Capabilities</span>
+                <h2 class="text-4xl font-black text-slate-900 mt-3">
+                    Scientific Operations for Configurable Research Pipelines
+                </h2>
+                <p class="text-slate-600 mt-6 leading-relaxed">
+                    BioMolExplorer combines automated retrieval pipelines, molecular fingerprinting, graph analysis,
+                    and redocking validation into a unified computational ecosystem.
+                </p>
+            </div>
+
+            <div class="feature-grid">
+                <article class="feature-card" data-operation="import_results"><span class="feature-number feature-icon" aria-hidden="true"><i class="fa-solid fa-file-import"></i></span><h3>Import my files</h3><p>Import compound tables, PDB structures and supported prepared results. Validate files before connecting them to a pipeline.</p><a href="docs/en/user_manual.html#import-my-files-import-results">Practical example <span aria-hidden="true">→</span></a></article>
+                <article class="feature-card" data-operation="retrieve_compounds"><span class="feature-number feature-icon" aria-hidden="true"><i class="fa-solid fa-flask"></i></span><h3>Retrieve ChEMBL</h3><p>Search ChEMBL targets, molecules, similarity or substructure. Select molecules and similars separately for downstream analysis.</p><a href="docs/en/user_manual.html#retrieve-chembl-retrieve-compounds">Practical example <span aria-hidden="true">→</span></a></article>
+                <article class="feature-card" data-operation="retrieve_pubchem"><span class="feature-number feature-icon" aria-hidden="true"><i class="fa-solid fa-atom"></i></span><h3>Retrieve PubChem</h3><p>Find similar compounds from a manual SMILES, CID or name, or from compounds produced by another block.</p><a href="docs/en/user_manual.html#retrieve-pubchem-retrieve-pubchem">Practical example <span aria-hidden="true">→</span></a></article>
+                <article class="feature-card" data-operation="expand_similar_compounds"><span class="feature-number feature-icon" aria-hidden="true"><i class="fa-solid fa-magnifying-glass-plus"></i></span><h3>Expand similar compounds</h3><p>Expand an existing ChEMBL collection with a configurable similarity threshold and inspect new compound relationships.</p><a href="docs/en/user_manual.html#expand-similar-compounds-expand-similar-compounds">Practical example <span aria-hidden="true">→</span></a></article>
+                <article class="feature-card" data-operation="retrieve_structures"><span class="feature-number feature-icon" aria-hidden="true"><i class="fa-solid fa-dna"></i></span><h3>Retrieve PDB structures</h3><p>Search by PDB IDs, UniProt, ligand or text. Filter structures and curate receptor–ligand pairs before preparation.</p><a href="docs/en/user_manual.html#retrieve-pdb-structures-retrieve-structures">Practical example <span aria-hidden="true">→</span></a></article>
+                <article class="feature-card" data-operation="retrieve_zinc"><span class="feature-number feature-icon" aria-hidden="true"><i class="fa-solid fa-database"></i></span><h3>Retrieve ZINC</h3><p>Download SMI or MOL2 collections from uploaded ZINC tranche URL lists, with configurable concurrent downloads.</p><a href="docs/en/user_manual.html#retrieve-zinc-retrieve-zinc">Practical example <span aria-hidden="true">→</span></a></article>
+                <article class="feature-card" data-operation="prepare_structures"><span class="feature-number feature-icon" aria-hidden="true"><i class="fa-solid fa-vials"></i></span><h3>Prepare for docking</h3><p>Prepare receptors and candidates with Chimera, gas/am1 charges and configurable hydrogens and minimization. Export for Vina, DOCK6 or both.</p><a href="docs/en/user_manual.html#prepare-for-docking-prepare-structures">Practical example <span aria-hidden="true">→</span></a></article>
+                <article class="feature-card" data-operation="admet"><span class="feature-number feature-icon" aria-hidden="true"><i class="fa-solid fa-heart-pulse"></i></span><h3>Evaluate ADMET</h3><p>Calculate RDKit descriptors, BBB/HIA heuristics, physicochemical rules and structural alerts. ADMET-AI trained models require optional setup.</p><a href="docs/en/user_manual.html#evaluate-admet-admet">Practical example <span aria-hidden="true">→</span></a></article>
+                <article class="feature-card" data-operation="fingerprints"><span class="feature-number feature-icon" aria-hidden="true"><i class="fa-solid fa-fingerprint"></i></span><h3>Generate fingerprints</h3><p>Generate Morgan, MACCS or pharmacophore fingerprints. Configure Morgan radius and bit width for the study.</p><a href="docs/en/user_manual.html#generate-fingerprints-fingerprints">Practical example <span aria-hidden="true">→</span></a></article>
+                <article class="feature-card" data-operation="similarity"><span class="feature-number feature-icon" aria-hidden="true"><i class="fa-solid fa-equals"></i></span><h3>Calculate similarity</h3><p>Compare fingerprints with Tanimoto or another supported metric, a relationship threshold and optional approximate search.</p><a href="docs/en/user_manual.html#calculate-similarity-similarity">Practical example <span aria-hidden="true">→</span></a></article>
+                <article class="feature-card" data-operation="graphs"><span class="feature-number feature-icon" aria-hidden="true"><i class="fa-solid fa-diagram-project"></i></span><h3>Filter by graphs</h3><p>Explore full graphs, connected components, communities and molecular scaffolds. Inspect molecules and export selected compound tables.</p><a href="docs/en/user_manual.html#filter-by-graphs-graphs">Practical example <span aria-hidden="true">→</span></a></article>
+                <article class="feature-card" data-operation="redocking"><span class="feature-number feature-icon" aria-hidden="true"><i class="fa-solid fa-bullseye"></i></span><h3>Run redocking</h3><p>Curate explicit receptor–ligand pairs, share receptor and ligand preparation with Chimera, and redock with AutoDock Vina or DOCK6 6.11. Evaluate RMSD and reference/pose overlays.</p><a href="docs/en/user_manual.html#run-redocking-redocking">Practical example <span aria-hidden="true">→</span></a></article>
+                <article class="feature-card" data-operation="docking_vina"><span class="feature-number feature-icon" aria-hidden="true"><i class="fa-solid fa-cubes"></i></span><h3>Docking with Vina</h3><p>Dock retrieved or imported candidates against a selected receptor. Configure the search box and inspect scores and 3D poses.</p><a href="docs/en/user_manual.html#docking-with-vina-docking-vina">Practical example <span aria-hidden="true">→</span></a></article>
+                <article class="feature-card" data-operation="docking_dock6"><span class="feature-number feature-icon" aria-hidden="true"><i class="fa-solid fa-cube"></i></span><h3>Docking with DOCK6</h3><p>Run rigid or flexible DOCK6 docking with compatible prepared structures. Inspect scores, poses and residue energy footprints.</p><a href="docs/en/user_manual.html#docking-with-dock6-docking-dock6">Practical example <span aria-hidden="true">→</span></a></article>
+                <article class="feature-card" data-operation="consensus"><span class="feature-number feature-icon" aria-hidden="true"><i class="fa-solid fa-scale-balanced"></i></span><h3>Docking consensus</h3><p>Rank compound/receptor pairs shared by Vina and DOCK6 results using normalized scores. Inspect each available pose.</p><a href="docs/en/user_manual.html#docking-consensus-consensus">Practical example <span aria-hidden="true">→</span></a></article>
+                <article class="feature-card" data-operation="dynamics_dock6"><span class="feature-number feature-icon" aria-hidden="true"><i class="fa-solid fa-arrows-rotate"></i></span><h3>Native DOCK6 Amber Score</h3><p>Refine and rescore selected poses with DOCK6 6.11 native Amber Score and implicit solvent; no AmberTools required. Not a trajectory simulation.</p><a href="docs/en/user_manual.html#dock6-molecular-dynamics-dynamics-dock6">Practical example <span aria-hidden="true">→</span></a></article>
+            </div>
+        </div>
+    </section>
+
+    <section id="pipeline-example" class="py-24 bg-white border-y border-slate-200" aria-labelledby="pipeline-heading">
+        <div class="max-w-7xl mx-auto px-6">
+            <div class="w-full mb-10">
                 <span class="text-emerald-700 font-semibold uppercase tracking-widest text-sm">Inside a pipeline</span>
                 <h2 id="pipeline-heading" class="section-title text-4xl font-black text-slate-900 mt-3">From a reference compound to a screened molecular set</h2>
-                <p class="text-slate-600 mt-6 leading-relaxed">A pipeline connects the output of one scientific block to the input of the next. This example expands a PubChem reference, compares molecular fingerprints, selects a connected group and profiles its ADMET properties. The capture below shows this pipeline in the real BioMolExplorer workspace. Expand the configuration examples to inspect each stage.</p>
+                <p class="text-slate-600 mt-6 leading-relaxed text-justify">A pipeline connects the output of one scientific block to the input of the next. This example expands a PubChem reference, compares molecular fingerprints, selects a connected group and profiles its ADMET properties. The capture below shows this pipeline in the real BioMolExplorer workspace. Expand the configuration examples to inspect each stage.</p>
             </div>
             <figure class="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-card mb-8">
                 <a href="imgs/examples/workspace-pipeline.png" class="example-image" data-example aria-label="Enlarge the real pipeline workspace"><img src="imgs/examples/workspace-pipeline.png" width="1700" height="1100" loading="lazy" decoding="async" alt="Actual BioMolExplorer workspace with the stage library, pipeline controls and five connected blocks: Retrieve PubChem, Generate fingerprints, Calculate similarity, Filter by graphs and Evaluate ADMET." style="aspect-ratio: 17 / 11;"><span>View full workspace ↗</span></a>
@@ -514,45 +1012,11 @@
         </div>
     </section>
 
-    <section id="capabilities" class="py-24 bg-slate-100 border-y border-slate-200">
-        <div class="max-w-7xl mx-auto px-6">
-
-            <div class="text-center max-w-4xl mx-auto">
-                <span class="text-brand-primary font-semibold uppercase tracking-widest text-sm">Core Capabilities</span>
-                <h2 class="text-4xl font-black text-slate-900 mt-3">
-                    Scientific Operations for Configurable Research Pipelines
-                </h2>
-                <p class="text-slate-600 mt-6 leading-relaxed">
-                    BioMolExplorer combines automated retrieval pipelines, molecular fingerprinting, graph analysis,
-                    and redocking validation into a unified computational ecosystem.
-                </p>
-            </div>
-
-            <div class="feature-grid">
-                <article class="feature-card" data-operation="import_results"><span class="feature-number">01</span><h3>Import my files</h3><p>Import compound tables, PDB structures and supported prepared results. Validate files before connecting them to a pipeline.</p><a href="docs/en/user_manual.html#import-my-files-import-results">Practical example <span aria-hidden="true">→</span></a></article>
-                <article class="feature-card" data-operation="retrieve_compounds"><span class="feature-number">02</span><h3>Retrieve ChEMBL</h3><p>Search ChEMBL targets, molecules, similarity or substructure. Select molecules and similars separately for downstream analysis.</p><a href="docs/en/user_manual.html#retrieve-chembl-retrieve-compounds">Practical example <span aria-hidden="true">→</span></a></article>
-                <article class="feature-card" data-operation="retrieve_pubchem"><span class="feature-number">03</span><h3>Retrieve PubChem</h3><p>Find similar compounds from a manual SMILES, CID or name, or from compounds produced by another block.</p><a href="docs/en/user_manual.html#retrieve-pubchem-retrieve-pubchem">Practical example <span aria-hidden="true">→</span></a></article>
-                <article class="feature-card" data-operation="expand_similar_compounds"><span class="feature-number">04</span><h3>Expand similar compounds</h3><p>Expand an existing ChEMBL collection with a configurable similarity threshold and inspect new compound relationships.</p><a href="docs/en/user_manual.html#expand-similar-compounds-expand-similar-compounds">Practical example <span aria-hidden="true">→</span></a></article>
-                <article class="feature-card" data-operation="retrieve_structures"><span class="feature-number">05</span><h3>Retrieve PDB structures</h3><p>Search by PDB IDs, UniProt, ligand or text. Filter structures and curate receptor–ligand pairs before preparation.</p><a href="docs/en/user_manual.html#retrieve-pdb-structures-retrieve-structures">Practical example <span aria-hidden="true">→</span></a></article>
-                <article class="feature-card" data-operation="retrieve_zinc"><span class="feature-number">06</span><h3>Retrieve ZINC</h3><p>Download SMI or MOL2 collections from uploaded ZINC tranche URL lists, with configurable concurrent downloads.</p><a href="docs/en/user_manual.html#retrieve-zinc-retrieve-zinc">Practical example <span aria-hidden="true">→</span></a></article>
-                <article class="feature-card" data-operation="prepare_structures"><span class="feature-number">07</span><h3>Prepare for docking</h3><p>Prepare receptors and candidates with Chimera, gas/am1 charges and configurable hydrogens and minimization. Export for Vina, DOCK6 or both.</p><a href="docs/en/user_manual.html#prepare-for-docking-prepare-structures">Practical example <span aria-hidden="true">→</span></a></article>
-                <article class="feature-card" data-operation="admet"><span class="feature-number">08</span><h3>Evaluate ADMET</h3><p>Calculate RDKit descriptors, BBB/HIA heuristics, physicochemical rules and structural alerts. ADMET-AI trained models require optional setup.</p><a href="docs/en/user_manual.html#evaluate-admet-admet">Practical example <span aria-hidden="true">→</span></a></article>
-                <article class="feature-card" data-operation="fingerprints"><span class="feature-number">09</span><h3>Generate fingerprints</h3><p>Generate Morgan, MACCS or pharmacophore fingerprints. Configure Morgan radius and bit width for the study.</p><a href="docs/en/user_manual.html#generate-fingerprints-fingerprints">Practical example <span aria-hidden="true">→</span></a></article>
-                <article class="feature-card" data-operation="similarity"><span class="feature-number">10</span><h3>Calculate similarity</h3><p>Compare fingerprints with Tanimoto or another supported metric, a relationship threshold and optional approximate search.</p><a href="docs/en/user_manual.html#calculate-similarity-similarity">Practical example <span aria-hidden="true">→</span></a></article>
-                <article class="feature-card" data-operation="graphs"><span class="feature-number">11</span><h3>Filter by graphs</h3><p>Explore full graphs, connected components, communities and molecular scaffolds. Inspect molecules and export selected compound tables.</p><a href="docs/en/user_manual.html#filter-by-graphs-graphs">Practical example <span aria-hidden="true">→</span></a></article>
-                <article class="feature-card" data-operation="redocking"><span class="feature-number">12</span><h3>Run redocking</h3><p>Curate explicit receptor–ligand pairs, share receptor and ligand preparation with Chimera, and redock with AutoDock Vina or DOCK6 6.11. Evaluate RMSD and reference/pose overlays.</p><a href="docs/en/user_manual.html#run-redocking-redocking">Practical example <span aria-hidden="true">→</span></a></article>
-                <article class="feature-card" data-operation="docking_vina"><span class="feature-number">13</span><h3>Docking with Vina</h3><p>Dock retrieved or imported candidates against a selected receptor. Configure the search box and inspect scores and 3D poses.</p><a href="docs/en/user_manual.html#docking-with-vina-docking-vina">Practical example <span aria-hidden="true">→</span></a></article>
-                <article class="feature-card" data-operation="docking_dock6"><span class="feature-number">14</span><h3>Docking with DOCK6</h3><p>Run rigid or flexible DOCK6 docking with compatible prepared structures. Inspect scores, poses and residue energy footprints.</p><a href="docs/en/user_manual.html#docking-with-dock6-docking-dock6">Practical example <span aria-hidden="true">→</span></a></article>
-                <article class="feature-card" data-operation="consensus"><span class="feature-number">15</span><h3>Docking consensus</h3><p>Rank compound/receptor pairs shared by Vina and DOCK6 results using normalized scores. Inspect each available pose.</p><a href="docs/en/user_manual.html#docking-consensus-consensus">Practical example <span aria-hidden="true">→</span></a></article>
-            </div>
-        </div>
-    </section>
-
     <section id="workspace" class="py-24 bg-slate-50">
         <div class="max-w-7xl mx-auto px-6">
             <span class="text-emerald-700 font-semibold uppercase tracking-widest text-sm">Flet Workspace</span>
             <h2 class="section-title text-4xl font-black text-slate-900 mt-3">Your project. Your pipeline. Your collaborators.</h2>
-            <p class="text-slate-600 mt-6 max-w-3xl leading-relaxed">Use collapsible navigation and execution groups in the sidebar, with contextual help for each action. Drag stages onto a spacious, zoomable canvas, organize their layout, connect their ports, and double-click each block to configure it. Guided forms handle filters and engine settings; advanced users can edit JSON and scientific templates. Start with a ready-made pipeline or bring your own data wherever the backend format allows.</p>
+            <p class="text-slate-600 mt-6 leading-relaxed text-justify">Use collapsible navigation and execution groups in the sidebar, with contextual help for each action. Drag stages onto a spacious, zoomable canvas, organize their layout, connect their ports, and double-click each block to configure it. Guided forms handle filters and engine settings; advanced users can edit JSON and scientific templates. Start with a ready-made pipeline or bring your own data wherever the backend format allows.</p>
             <div class="grid md:grid-cols-3 gap-6 mt-10">
                 <article class="bg-white border border-slate-200 rounded-3xl p-7"><h3 class="text-xl font-bold mb-3">Projects that travel with you</h3><p class="text-slate-600">Choose a folder for each project. Export and import its configuration, inputs, results and versions to continue on another computer while reusing compatible completed experiments.</p></article>
                 <article class="bg-white border border-slate-200 rounded-3xl p-7"><h3 class="text-xl font-bold mb-3">Collaborate with a shared history</h3><p class="text-slate-600">Invite editors or viewers from the project's Share button. Autosaved edits appear for collaborators, while an attributed change history lets owners restore configuration, files and results to an earlier state.</p></article>
@@ -933,7 +1397,7 @@ biomolexplorer-ui --web --dock6-path /path/to/dock6-6.11</code></pre>
         </div>
     </section>
 
-    <section class="py-24 bg-white">
+    <section id="leadership" class="py-24 bg-white">
         <div class="max-w-7xl mx-auto px-6 text-center">
 
             <span class="text-brand-primary font-semibold uppercase tracking-widest text-sm">Core Team</span>
@@ -1138,5 +1602,82 @@ biomolexplorer-ui --web --dock6-path /path/to/dock6-6.11</code></pre>
     }});
 })();
 </script>
+
+    <script>
+    /* Navigation scrollspy: highlight the section currently in the reading area. */
+    (() => {
+        const header = document.querySelector('.site-header');
+        const links = Array.from(document.querySelectorAll('.site-header nav a[href^="#"]'));
+        const sectionMap = new Map();
+        for (const link of links) {
+            const id = link.getAttribute('href').slice(1);
+            const target = document.getElementById(id);
+            if (target) sectionMap.set(id, target);
+        }
+        const sections = Array.from(sectionMap, ([id, element]) => ({ id, element }))
+            .sort((a,b) => (a.element.compareDocumentPosition(b.element) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1);
+        if (!header || !sections.length) return;
+
+        let pending = false;
+        function updateActiveSection() {
+            pending = false;
+            const threshold = header.getBoundingClientRect().height + Math.min(140, window.innerHeight * .22);
+            let active = null;
+            for (const section of sections) {
+                if (section.element.getBoundingClientRect().top <= threshold) {
+                    active = section.id;
+                } else {
+                    break;
+                }
+            }
+            // At the end of the document, show the last reachable section.
+            if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) {
+                active = sections[sections.length - 1].id;
+            }
+            for (const link of links) {
+                if (link.getAttribute('href') === '#' + active) {
+                    link.setAttribute('aria-current', 'location');
+                } else {
+                    link.removeAttribute('aria-current');
+                }
+            }
+            // Indicate the current submenu section on its parent navigation item.
+            document.querySelectorAll('.site-header .nav-more').forEach(menu => {
+                const activeInside = !!menu.querySelector('a[aria-current="location"]');
+                menu.classList.toggle('is-active', activeInside);
+            });
+        }
+        function scheduleUpdate() {
+            if (!pending) {
+                pending = true;
+                requestAnimationFrame(updateActiveSection);
+            }
+        }
+        // Close the desktop submenu when navigation completes or focus leaves it.
+        document.querySelectorAll('.site-header .nav-more').forEach(menu => {
+            menu.querySelectorAll('a').forEach(link => link.addEventListener('click', () => {
+                menu.open = false;
+            }));
+            document.addEventListener('click', event => {
+                if (!menu.contains(event.target)) menu.open = false;
+            });
+            menu.addEventListener('keydown', event => {
+                if (event.key === 'Escape') {
+                    menu.open = false;
+                    menu.querySelector('summary').focus();
+                }
+            });
+        });
+        window.addEventListener('scroll', scheduleUpdate, { passive:true });
+        window.addEventListener('resize', scheduleUpdate);
+        window.addEventListener('hashchange', scheduleUpdate);
+        document.addEventListener('DOMContentLoaded', scheduleUpdate);
+        scheduleUpdate();
+    })();
+    </script>
+
+
+
+
 </body>
 </html>

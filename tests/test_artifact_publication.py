@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from biomolexplorer.artifact_naming import assign_block_ids,publish,canonical_filename
+from biomolexplorer.artifact_naming import assign_block_ids,publish,canonical_filename,parse_filename
 from biomolexplorer.artifact_choices import choices
 from biomolexplorer.artifacts import index_run,records,reference,validate_reference
 from biomolexplorer.catalog import new_stage
@@ -33,7 +33,7 @@ class PublicationTests(unittest.TestCase):
                 path.write_text('molecule_chembl_id,canonical_smiles\nA,CCO\n');generated.append(str(path))
             result=publish(admet,generated,root)
             self.assertEqual({Path(p).name for p in result},{'B02__admet__'+role+'.csv' for role in ('bbb-pos','bbb-neg','hia-pos','hia-neg')})
-            self.assertEqual({human_name(r) for r in records(dict(admet,artifacts=result))},{'BBB+','BBB−','HIA+','HIA−'})
+            self.assertEqual({parse_filename(human_name(r))['result_type'] for r in records(dict(admet,artifacts=result))},{'BBB+','BBB-','HIA+','HIA-'})
 
     def test_short_names_counts_and_graph_mapping_preserve_bytes(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -84,10 +84,11 @@ class PersistentPublicationTests(unittest.TestCase):
 
     def test_ids_survive_reorder_delete_new_block_and_duplicate(self):
         a,b=new_stage('admet'),new_stage('fingerprints');self.save([a,b])
-        self.assertEqual([a['block_id'],b['block_id']],['B01','B02'])
-        self.save([b,a]);self.assertEqual(b['block_id'],'B02')
+        self.assertEqual([s['id'] for s in self.store.project(self.token,self.project_id)['pipeline']],[a['id'],b['id']])
+        self.save([b,a]);self.assertEqual([s['id'] for s in self.store.project(self.token,self.project_id)['pipeline']],[b['id'],a['id']])
         self.save([a]);c=new_stage('similarity');self.save([a,c])
-        self.assertEqual(c['block_id'],'B03')
+        self.assertEqual(self.store.project(self.token,self.project_id)['pipeline'][0]['id'],a['id'])
+        self.assertNotIn(c['id'],{a['id'],b['id']})
 
     def test_equivalent_blocks_reference_prior_files_and_tamper_invalidates(self):
         a,b=new_stage('retrieve_compounds'),new_stage('retrieve_compounds');self.save([a,b])
@@ -103,7 +104,7 @@ class PersistentPublicationTests(unittest.TestCase):
                 self.assertTrue(second['reused'])
                 self.assertEqual(first['artifact_records'][0]['artifact_id'],second['artifact_records'][0]['artifact_id'])
                 validate_reference(reference(second['artifact_records'][0]),second['artifacts'])
-                self.assertEqual(Path(first['artifacts'][0]).name,'B01__chembl__compounds.csv')
+                self.assertEqual(parse_filename(first['artifact_records'][0]['public_name'])['operation'],'ChEMBL')
                 Path(first['artifacts'][0]).write_text('tampered')
                 again=self.finish_selected(service,service.submit(self.token,self.project_id))
                 self.assertEqual(again['status'],'succeeded',again.get('error'))

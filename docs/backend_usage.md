@@ -13,7 +13,7 @@ Crie/ative o ambiente Conda e instale o projeto a partir da raiz do código baix
 ```bash
 conda env create -f requirements.yml
 conda activate BioMolExplorer
-python -m pip install -e . --no-deps --no-build-isolation
+export PYTHONPATH="$PWD/src${PYTHONPATH:+:$PYTHONPATH}"
 ```
 
 As dependências científicas são gerenciadas pelos arquivos Conda. O pacote
@@ -30,7 +30,7 @@ biomolexplorer retrieve_compounds \
   --output ./datasets
 ```
 
-A forma equivalente é `python -m biomolexplorer ...`. A CLI executa a operação
+A forma equivalente é `PYTHONPATH=src python -m biomolexplorer ...`. A CLI executa a operação
 até terminar e devolve JSON com os artefatos. Sem instalar o pacote, use
 `PYTHONPATH=src python -m biomolexplorer ...` a partir da raiz do projeto.
 Os scripts em `workflow/` continuam disponíveis e encontram `src` pelo local
@@ -118,6 +118,7 @@ Consulte `biomolexplorer.operations.OPERATIONS` para os parâmetros completos.
 | `redocking` | Diretório PDB, `target`, parâmetros de preparação | Cópias de trabalho, resultados Vina ou DOCK6 6.11 e RMSD |
 | `docking_vina` | Complexos preparados, compostos selecionados, `mol_filename` | PDBQT e resultados Vina |
 | `docking_dock6` | Complexos preparados, compostos, `base_vina_path`, `pdb_code`, instalação DOCK6 | Conformações, scores e footprints |
+| `dynamics_dock6` | `base_input_path`, `base_selected_mols`, seleção de pares e DOCK6 6.11 | Amber Score, termos energéticos, protocolo, estruturas e análise inicial/final disponível |
 | `consensus` | Diretório contendo `Vina` e `Dock6`, ou entradas separadas `base_vina_path` e `base_dock6_path`, `target` | CSV e figura de consenso |
 
 Enums aceitam nomes ou valores, como `TanimotoSimilarity`/`Tanimoto` e
@@ -238,7 +239,7 @@ exija código, SMILES, TPSA e WLOGP. Consulte [projetos e versões](projects.md)
 
 Consulte [recuperação da informação](retrieval.md) para os modos ChEMBL `search_mode`, exemplos sem alvo/EC obrigatório, limites, filtros e relatórios. Os nomes das operações e contratos CSV das etapas seguintes permanecem disponíveis.
 
-Consulte [Logs e diagnóstico](logging.md) para o formato comum, contexto por execução, códigos de falha, resumo do job e o comando `python -m biomolexplorer.log_report`.
+Consulte [Logs e diagnóstico](logging.md) para o formato comum, contexto por execução, códigos de falha, resumo do job e o comando `PYTHONPATH=src python -m biomolexplorer.log_report`.
 
 
 ## Contrato interoperável de docking
@@ -388,3 +389,152 @@ As exclusões de resultados usam um journal durável de movimentações, coorden
 a transação SQLite. Na abertura do workspace, uma interrupção antes do commit restaura
 os arquivos; após o commit, conclui a limpeza. Recuperações conflitantes preservam os
 arquivos e registram o problema, sem sobrescrever dados existentes.
+
+## Referência exata dos parâmetros ativos
+
+Inventário extraído do registro atual, sem executar cálculos. Obrigatório significa exigido pela API; a interface pode preencher esse campo. Opcional não significa válido para toda combinação: os validadores verificam tipos, domínios e dependências. O CLI expõe 15 operações científicas; `import_results` é o 16º tipo de bloco, gerenciado pelo workspace e não pelo CLI. Nomes abaixo são chaves da API, não rótulos traduzidos da interface.
+
+### API dynamics_dock6
+
+`wrappers.dynamics.perform_dynamics_dock6`
+
+| Obrigatórios | Opcionais |
+| --- | --- |
+| `base_input_path`, `base_selected_mols` | `dock6_app_path`, `md_inputs`, `md_seed_path`, `selected_pairs`, `excluded_pairs`, `amber_score_type`, `amber_score_movable_region`, `amber_score_minimization_rmsgrad`, `amber_score_before_md_minimization_cycles`, `amber_score_md_steps`, `amber_score_after_md_minimization_cycles`, `amber_score_gb_model`, `amber_score_nonbonded_cutoff`, `amber_score_temperature`, `amber_score_movable_distance_cutoff`, `amber_score_receptor_movable_atom_expr`, `amber_score_complex_movable_atom_expr`, `amber_score_abort_on_unprepped_ligand`, `use_existing_ligand_charges` |
+
+### API retrieve_pubchem
+
+`biomolexplorer.pubchem_retrieval.retrieve_pubchem`
+
+| Obrigatórios | Opcionais |
+| --- | --- |
+| — | `target`, `reference_source`, `reference_type`, `reference`, `selection_mode`, `compound_id`, `threshold`, `max_records`, `base_input_path`, `input_file` |
+
+### API retrieve_compounds
+
+`wrappers.crawlers.retrieve_compounds`
+
+| Obrigatórios | Opcionais |
+| --- | --- |
+| `search_term` | `include_pubchem`, `pubchem_threshold`, `pubchem_max_records`, `chembl_filters`, `search_mode`, `max_targets`, `max_records`, `expand_chembl`, `similarity_threshold` |
+
+### API expand_similar_compounds
+
+`wrappers.crawlers.expand_similar_compounds`
+
+| Obrigatórios | Opcionais |
+| --- | --- |
+| `search_term` | `threshold`, `max_records`, `base_input_path`, `input_file` |
+
+### API retrieve_structures
+
+`wrappers.crawlers.load_pdb`
+
+| Obrigatórios | Opcionais |
+| --- | --- |
+| — | `target`, `pdb_query`, `pdb_ids`, `uniprot_ids`, `ligand_ids`, `max_records`, `pdb_ec`, `organism`, `PolymerEntityTypeID`, `ExperimentalMethodID`, `max_resolution`, `must_have_ligand`, `ligand_selection`, `excluded_pdb_ids` |
+
+### API retrieve_zinc
+
+`wrappers.crawlers.load_zinc`
+
+| Obrigatórios | Opcionais |
+| --- | --- |
+| `base_input_path` | `filename`, `verbose`, `download_workers` |
+
+### API prepare_structures
+
+`wrappers.redocking.prepare_structures`
+
+| Obrigatórios | Opcionais |
+| --- | --- |
+| `base_input_path`, `target` | `pdb_codes`, `pH`, `charge_type`, `preparation_options`, `base_selected_mols`, `mol_filename`, `receptor_prepared`, `docking_engines` |
+
+### API admet
+
+`wrappers.admet.ADMETWrapper`
+
+| Obrigatórios | Opcionais |
+| --- | --- |
+| `base_input_path` | `input_file`, `verbose`, `admet_profile`, `admet_mode`, `prediction_backend`, `bbb_target`, `hia_target`, `rule_set`, `max_rule_violations`, `alert_policy`, `alert_catalogs`, `property_limits`, `dataset_origin` |
+
+### API fingerprints
+
+`wrappers.molecular_analyzer.generate_fingerprints`
+
+| Obrigatórios | Opcionais |
+| --- | --- |
+| `base_input_path` | `morgan_n_bits`, `radius`, `files`, `morgan`, `maccs`, `pharmacophore`, `chunk_size` |
+
+### API similarity
+
+`wrappers.molecular_analyzer.compute_similarity`
+
+| Obrigatórios | Opcionais |
+| --- | --- |
+| `base_input_path` | `metric`, `fingerprint`, `filename`, `threshold`, `approximate` |
+
+### API graphs
+
+`wrappers.molecular_analyzer.analyze_graphs`
+
+| Obrigatórios | Opcionais |
+| --- | --- |
+| — | `similarity_path`, `base_input_path`, `mcs_timeout`, `mcs_ring_matches_ring_only`, `mcs_complete_rings_only`, `graph_inputs` |
+
+### API redocking
+
+`wrappers.redocking.perform_redocking`
+
+| Obrigatórios | Opcionais |
+| --- | --- |
+| `base_input_path`, `target` | `pdb_codes`, `pH`, `sizeof_box`, `exhaustiveness`, `num_modes`, `prepare_complex`, `charge_type`, `preparation_pairs`, `preparation_options`, `redocking_engine`, `dock6_app_path`, `density`, `radius`, `distance`, `conformer_search_type`, `max_orientations`, `num_scored_conformers`, `dock6_seed` |
+
+### API docking_vina
+
+`wrappers.docking.perform_docking_vina`
+
+| Obrigatórios | Opcionais |
+| --- | --- |
+| `base_input_path`, `target`, `base_selected_mols`, `mol_filename` | `pdb_code`, `pH`, `sizeof_box`, `exhaustiveness`, `num_modes`, `preparation_options`, `receptor_prepared` |
+
+### API docking_dock6
+
+`wrappers.docking.perform_docking_dock6`
+
+| Obrigatórios | Opcionais |
+| --- | --- |
+| `base_input_path`, `target`, `base_selected_mols`, `dock6_app_path`, `charge_type`, `mol_filename` | `pdb_code`, `base_vina_path`, `density`, `radius`, `distance`, `conformer_search_type`, `plot_max_residues`, `pH`, `preparation_options`, `receptor_prepared` |
+
+### API consensus
+
+`wrappers.docking.generate_consensus`
+
+| Obrigatórios | Opcionais |
+| --- | --- |
+| `base_input_path`, `target` | `repulsion_weight`, `base_vina_path`, `base_dock6_path` |
+
+## Amber Score nativo: requisitos, configuração e resultados
+
+`dynamics_dock6` exige receptor estrutural e ligante com coordenadas 3D compatíveis; uma tabela apenas com SMILES não substitui uma pose. A seleção inicia vazia ou com escolhas salvas. Separe receptores e ligantes nas tabelas próprias, confira os pares e execute somente os escolhidos. Redocking fornece exclusivamente receptores aos estágios posteriores, não seus ligantes cristalográficos.
+
+O verificador exige DOCK6 que se identifique como **6.11**, `bin/` e `parameters/leap`, além de `prepare_amber.pl`, `amberize_receptor`, `amberize_ligand`, `amberize_complex`, `tleap`, `teLeap`, `antechamber` e `parmchk` na distribuição DOCK6. Esses utilitários AMBER internos não constituem um ambiente AmberTools externo configurável. A ausência de um componente necessário bloqueia o protocolo; não há substituição por outro score.
+
+| Parâmetro | Padrão implementado | Interpretação |
+| --- | --- | --- |
+| `amber_score_type` | `dock6` | Único método ativo |
+| `amber_score_movable_region` | `ligand` | ligand, everything, nothing, distance ou nab_atom_expression |
+| `amber_score_minimization_rmsgrad` | 0.01 | Critério RMS do gradiente, positivo |
+| `amber_score_before_md_minimization_cycles` | 100 | Ciclos antes do refinamento |
+| `amber_score_md_steps` | 3000 | Passos internos; passo fixo 0.001 ps, não uma trajetória de equilíbrio |
+| `amber_score_after_md_minimization_cycles` | 100 | Ciclos após o refinamento |
+| `amber_score_gb_model` | 5 | 1, 2 ou 5; solvente implícito |
+| `amber_score_nonbonded_cutoff` | 18.0 | Corte em Å |
+| `amber_score_temperature` | 300.0 | Temperatura em K |
+| `amber_score_movable_distance_cutoff` | 10.0 | Seleção móvel por distância em Å |
+| `amber_score_receptor_movable_atom_expr` | `::` | Expressão NAB do receptor, não máscara cpptraj |
+| `amber_score_complex_movable_atom_expr` | `::` | Expressão NAB do complexo |
+| `amber_score_abort_on_unprepped_ligand` | true | Não pontuar ligante sem preparo AMBER válido |
+| `use_existing_ligand_charges` | false | true preserva cargas MOL2; false usa a preparação AM1-BCC do bundle DOCK6 |
+
+O resultado contém score e contribuições de complexo/receptor/ligante, protocolo, estruturas e arquivos de diagnóstico. Havendo estrutura final compatível, a análise compara RMSD, raio de giro e contagem de hidrogênios inicial/final. Contagem de hidrogênios não mede ligações H. Não se oferece RMSF ou ocupância temporal sem trajetória; o modo `nothing` pode não fornecer estrutura final. Não há controle de caixa explícita, pressão ou protocolo convencional de equilíbrio. Defeitos de tipagem, metais/cofatores não parametrizados e inconsistências de carga devem ser tratados explicitamente; a documentação não garante que todo par seja viável.

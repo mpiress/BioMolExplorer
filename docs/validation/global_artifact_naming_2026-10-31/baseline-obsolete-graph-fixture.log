@@ -1,0 +1,14 @@
+test_inline_graph_selector_mcc_fragment_color_controls_click_and_download (test_graph_explorer.GraphProvenanceTests.test_inline_graph_selector_mcc_fragment_color_controls_click_and_download) ... FAIL
+
+======================================================================
+FAIL: test_inline_graph_selector_mcc_fragment_color_controls_click_and_download (test_graph_explorer.GraphProvenanceTests.test_inline_graph_selector_mcc_fragment_color_controls_click_and_download)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/biomol-naming-baseline/tests/test_graph_explorer.py", line 331, in test_inline_graph_selector_mcc_fragment_color_controls_click_and_download
+    self.assertTrue(any(f['name'].endswith('__component_0001_mcc.csv') for f in results.graph_files.files))
+AssertionError: False is not true
+
+----------------------------------------------------------------------
+Ran 1 test in 1.585s
+
+FAILED (failures=1)

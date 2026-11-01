@@ -28,7 +28,7 @@ From the downloaded source code root, with the scientific environment prepared:
 
 ```bash
 conda activate BioMolExplorer
-python -m pip install -e '.[ui]'
+# Source-checkout execution; see the packaging limitation below.
 biomolexplorer-ui --web --language en --dock6-path /path/to/dock6-6.11
 ```
 
@@ -451,7 +451,7 @@ Use each row's download button for an individual file, or **Download all (ZIP)**
 
 **View 3D structure** opens the browser viewer, following the same flow as PDB inspection. It accepts PDB, PDBQT and MOL2 for inspecting receptors, ligands and poses before downloading. Use **Model** when opening a file containing multiple poses. The scene opened by the table’s **3D** button automatically selects the lowest-scoring pose, or the first unscored pose; that scene does not offer model switching. Labels and actions follow the selected language. Readers can also inspect and download results.
 
-See [Logs and diagnostics](logging.md) for the common format, execution context, failure codes, job summary and `python -m biomolexplorer.log_report` command.
+See [Logs and diagnostics](logging.md) for the common format, execution context, failure codes, job summary and `PYTHONPATH=src python -m biomolexplorer.log_report` command.
 
 
 ## Docking inputs and results
@@ -676,3 +676,7 @@ criteria, status and available provenance. Pipeline files are never overwritten.
 Communities initialize within the existing computation limits, independently of
 community coloring. MCS parameters occupy separate rows; the depiction sits beside
 the result summary, with both static and dynamic texts localized in English/Portuguese.
+
+## Current execution and result contract
+
+[DAG order, lazy selection, pause/cancellation, cleanup and incremental reuse](projects.md#execution-lazy-selection-and-result-preservation). [Public names and lineage](projects.md#public-names-and-traceability).

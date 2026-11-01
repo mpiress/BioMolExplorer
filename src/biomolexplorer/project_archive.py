@@ -31,10 +31,27 @@ def export_project(store, token, project_id):
             if path.is_file() and not path.is_symlink() and not any(p.startswith('restore-') for p in path.relative_to(root).parts):
                 files[path.relative_to(root).as_posix()] = {'sha256': digest(path), 'size': path.stat().st_size, 'mtime_ns': path.stat().st_mtime_ns}
         manifest = {'format': 'biomolexplorer-project', 'version': 1, 'state': state, 'history': history, 'files': files}
+        raw_runs=[store._run_row(row) for row in db.execute('SELECT * FROM runs WHERE project_id=?',(project_id,))]
         # Compress immutable version contents after releasing SQLite's write
         # lock, so exporting a large project does not stop other running jobs.
         originals={name:root/'.history'/'blobs'/info['sha256'] for name,info in state['files'].items()}
         originals.update({name:root/name for name in files if name not in originals})
+    from .artifacts import index_run
+    from .artifact_naming import bundle_manifest
+    from .project_state import translate
+    manifest['artifact_names']={}
+    for run in raw_runs:
+        index_run(run['stages'],run['id'],state.get('assets',[]))
+        description=bundle_manifest([r for s in run['stages'] for r in s['artifact_records']],run['stages'])
+        manifest['artifact_names'][run['id']]=translate(description,str(root),'@project')
+        # Legacy databases may not yet have persisted artifact descriptors.
+        # Carry the lazy index in the exported state, preserving occurrences
+        # when import must allocate a new run ID. No source DB/file is changed.
+        exported=next((r for r in state['runs'] if r['id']==run['id']),None)
+        if exported:
+            indexed={s['id']:s['artifact_records'] for s in run['stages']}
+            for stage in exported['stages']:
+                stage['artifact_records']=translate(indexed.get(stage['id'],[]),str(root),'@project')
     try:
         with zipfile.ZipFile(target, 'w', zipfile.ZIP_DEFLATED) as archive:
             archive.writestr('manifest.json', json.dumps(manifest, ensure_ascii=False))

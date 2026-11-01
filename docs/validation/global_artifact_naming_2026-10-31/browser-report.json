@@ -1,0 +1,80 @@
+[
+  {
+    "width": 1440,
+    "names": [
+      "TG[ACHE]-SRC[ChEMBL]-OP[ChEMBL]-MOL-ID[c195c00a].csv",
+      "TG[ACHE]-SRC[PDB]-OP[PDB]-Complex-4M0E-ID[4ccd13ef].pdb",
+      "TG[ACHE]-SRC[MOL]-OP[ADMET]-BBB+-ID[24113d53].csv",
+      "TG[ACHE]-SRC[BBB+]-OP[PubChem]-SIM-ID[410a0b13].csv",
+      "TG[ACHE]-SRC[BBB+]-OP[Fingerprints]-Fingerprints-Morgan-ID[d8c7d19d].csv",
+      "TG[ACHE]-SRC[Fingerprints-Morgan]-OP[Similarity]-Similarity-Tanimoto-ID[7b97ff4d].csv",
+      "TG[ACHE]-SRC[Similarity-Tanimoto]-OP[Graphs]-Molecules-LCC-ID[ab7509e3].csv",
+      "TG[BCHE]-SRC[PDB]-OP[Redocking]-Pose-1P0I_BUA_606A-ID[a56de9e9].pdbqt"
+    ],
+    "rows": 8,
+    "origin": "",
+    "open": true,
+    "action": {
+      "x": 1164.3701171875,
+      "y": 834,
+      "width": 59.625,
+      "height": 32,
+      "top": 834,
+      "right": 1223.9951171875,
+      "bottom": 866,
+      "left": 1164.3701171875
+    }
+  },
+  {
+    "width": 1024,
+    "names": [
+      "TG[ACHE]-SRC[ChEMBL]-OP[ChEMBL]-MOL-ID[c195c00a].csv",
+      "TG[ACHE]-SRC[PDB]-OP[PDB]-Complex-4M0E-ID[4ccd13ef].pdb",
+      "TG[ACHE]-SRC[MOL]-OP[ADMET]-BBB+-ID[24113d53].csv",
+      "TG[ACHE]-SRC[BBB+]-OP[PubChem]-SIM-ID[410a0b13].csv",
+      "TG[ACHE]-SRC[BBB+]-OP[Fingerprints]-Fingerprints-Morgan-ID[d8c7d19d].csv",
+      "TG[ACHE]-SRC[Fingerprints-Morgan]-OP[Similarity]-Similarity-Tanimoto-ID[7b97ff4d].csv",
+      "TG[ACHE]-SRC[Similarity-Tanimoto]-OP[Graphs]-Molecules-LCC-ID[ab7509e3].csv",
+      "TG[BCHE]-SRC[PDB]-OP[Redocking]-Pose-1P0I_BUA_606A-ID[a56de9e9].pdbqt"
+    ],
+    "rows": 8,
+    "origin": "",
+    "open": true,
+    "action": {
+      "x": 920.3701171875,
+      "y": 714,
+      "width": 59.625,
+      "height": 32,
+      "top": 714,
+      "right": 979.9951171875,
+      "bottom": 746,
+      "left": 920.3701171875
+    }
+  },
+  {
+    "width": 360,
+    "names": [
+      "TG[ACHE]-SRC[ChEMBL]-OP[ChEMBL]-MOL-ID[c195c00a].csv",
+      "TG[ACHE]-SRC[PDB]-OP[PDB]-Complex-4M0E-ID[4ccd13ef].pdb",
+      "TG[ACHE]-SRC[MOL]-OP[ADMET]-BBB+-ID[24113d53].csv",
+      "TG[ACHE]-SRC[BBB+]-OP[PubChem]-SIM-ID[410a0b13].csv",
+      "TG[ACHE]-SRC[BBB+]-OP[Fingerprints]-Fingerprints-Morgan-ID[d8c7d19d].csv",
+      "TG[ACHE]-SRC[Fingerprints-Morgan]-OP[Similarity]-Similarity-Tanimoto-ID[7b97ff4d].csv",
+      "TG[ACHE]-SRC[Similarity-Tanimoto]-OP[Graphs]-Molecules-LCC-ID[ab7509e3].csv",
+      "TG[BCHE]-SRC[PDB]-OP[Redocking]-Pose-1P0I_BUA_606A-ID[a56de9e9].pdbqt"
+    ],
+    "rows": 8,
+    "origin": "",
+    "open": true,
+    "action": {
+      "x": 256.3701171875,
+      "y": 674,
+      "width": 59.625,
+      "height": 32,
+      "top": 674,
+      "right": 315.9951171875,
+      "bottom": 706,
+      "left": 256.3701171875
+    }
+  }
+]

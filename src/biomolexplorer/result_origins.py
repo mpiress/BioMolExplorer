@@ -17,10 +17,12 @@ class ResultOrigins:
     def add(self, stages, run_id):
         for stage in stages:
             self.stages[(run_id, stage['id'])] = stage
-            for record in records(stage, run_id):
+            for record in records(stage, run_id,decorate=False):
                 key = (record['run_id'], record['stage_id'], record['path'])
                 self.catalog[key] = (record, stage)
                 self.by_path.setdefault(record['path'], []).append(key)
+        from .artifact_naming import name_records
+        name_records(self.catalog.values())
 
     def find(self, reference):
         path = reference.get('path')
@@ -118,5 +120,5 @@ class ResultOrigins:
         from .artifact_naming import human_name
         record=self.catalog[key][0]
         display=human_name(record)
-        return dict(source_label=source, origin=origin, display_name=source + ' — ' + (scope+' — ' if scope else '') + display,
+        return dict(source_label=source, origin=origin, display_name=display, public_name=display,naming=record.get('naming',{}),
                     source_trace='\n'.join(dict.fromkeys(traces)), source_routes=routes)

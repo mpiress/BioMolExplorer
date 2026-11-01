@@ -38,19 +38,19 @@ Run inside the project's Python environment:
 
 ```bash
 # Main-process errors and warnings
-python -m biomolexplorer.log_report
+PYTHONPATH=src python -m biomolexplorer.log_report
 
 # Worker errors; replace JOB_ID with the actual identifier
-python -m biomolexplorer.log_report --job JOB_ID --level ERROR
+PYTHONPATH=src python -m biomolexplorer.log_report --job JOB_ID --level ERROR
 
 # Command history, including output and duration
-python -m biomolexplorer.log_report --job JOB_ID --level INFO --limit 100
+PYTHONPATH=src python -m biomolexplorer.log_report --job JOB_ID --level INFO --limit 100
 
 # Pipeline events for a run/stage
-python -m biomolexplorer.log_report --run RUN_ID --stage STAGE_ID
+PYTHONPATH=src python -m biomolexplorer.log_report --run RUN_ID --stage STAGE_ID
 
 # Structured output for external analysis
-python -m biomolexplorer.log_report --job JOB_ID --json
+PYTHONPATH=src python -m biomolexplorer.log_report --job JOB_ID --json
 ```
 
 `--directory` selects another log root; with `--job`, the reader looks for `jobs/<job_id>` under that root. `--operation redocking` filters by operation. The reader scans rotated JSONL files and retains only the latest matching events without loading the entire history into memory. Older logs created before JSONL support remain available as text.

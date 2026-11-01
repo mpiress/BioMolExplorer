@@ -1,0 +1,15 @@
+test_all_data_headers_sort_locally_without_losing_filters_or_project (test_redocking_results.RedockingResultsTests.test_all_data_headers_sort_locally_without_losing_filters_or_project) ... ok
+test_imported_collections_and_duplicate_artifacts_stay_separate (test_redocking_results.RedockingResultsTests.test_imported_collections_and_duplicate_artifacts_stay_separate) ... ok
+test_inline_rmsd_table_popup_downloads_and_preview_callbacks (test_redocking_results.RedockingResultsTests.test_inline_rmsd_table_popup_downloads_and_preview_callbacks) ... ok
+test_molecular_viewer_serves_pdbqt_and_mol2_with_correct_format (test_redocking_results.RedockingResultsTests.test_molecular_viewer_serves_pdbqt_and_mol2_with_correct_format) ... ok
+test_rmsd_rows_ignore_invalid_values_and_group_each_simulation (test_redocking_results.RedockingResultsTests.test_rmsd_rows_ignore_invalid_values_and_group_each_simulation) ... ok
+test_row_overlay_and_residue_actions_use_the_selected_simulation (test_redocking_results.RedockingResultsTests.test_row_overlay_and_residue_actions_use_the_selected_simulation) ... ok
+test_summary_and_archive_require_current_project_and_simulation (test_redocking_results.RedockingResultsTests.test_summary_and_archive_require_current_project_and_simulation) ... ok
+test_ui_localizes_summary_and_dialog_without_changing_identifiers (test_redocking_results.RedockingResultsTests.test_ui_localizes_summary_and_dialog_without_changing_identifiers) ... ok
+test_multiple_inputs_normalize_aliases_deduplicate_and_are_recorded (test_project_portability.ProjectPortabilityTests.test_multiple_inputs_normalize_aliases_deduplicate_and_are_recorded) ... ok
+test_admet_inline_filter_hover_popup_and_download_callbacks (test_results_display.ResultsDisplayTests.test_admet_inline_filter_hover_popup_and_download_callbacks) ... ok
+
+----------------------------------------------------------------------
+Ran 10 tests in 15.051s
+
+OK

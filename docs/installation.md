@@ -23,7 +23,7 @@ A pasta do código é diferente da pasta de cada projeto de pesquisa. Você esco
 
 | Ferramenta | Versão exigida neste guia | Uso no BioMolExplorer | Obtenção e instalação |
 | --- | --- | --- | --- |
-| UCSF Chimera | 1.17, opcional | Fallback legado escolhido explicitamente | [Downloads de versões anteriores da UCSF](https://www.cgl.ucsf.edu/chimera/olddownload.html) e [instruções de instalação](https://www.cgl.ucsf.edu/chimera/docs/UsersGuide/installation.html) |
+| UCSF Chimera | 1.17 | Preparação ativa de receptores e ligantes | [Downloads de versões anteriores da UCSF](https://www.cgl.ucsf.edu/chimera/olddownload.html) e [instruções de instalação](https://www.cgl.ucsf.edu/chimera/download.html) |
 | DOCK6 | 6.11 | Docking, refinamento e cálculo de scores, com seus programas auxiliares | [Página oficial DOCK 6](https://dock.compbio.ucsf.edu/DOCK_6/index.htm), [notas da versão 6.11](https://dock.compbio.ucsf.edu/DOCK_6/new_in_6.11.txt) e manual incluído na distribuição |
 
 Instale UCSF Chimera 1.17, Open Babel e Vina para a preparação/redocking; instale DOCK6 6.11 para seus blocos de docking. Não é necessário ambiente AmberTools separado. ChimeraX não interpreta os scripts Chimera.
@@ -32,7 +32,7 @@ Instale o Chimera com o instalador adequado ao sistema. Para DOCK6, siga as inst
 
 A superfície molecular é calculada nativamente em Python com NumPy e SciPy. Não é necessário instalar DMS; consulte o [porte e sua validação](dms_migration.md).
 
-As ferramentas exigidas pelo protocolo devem estar disponíveis no computador dos workers, inclusive em implantação web. Não instale Chimera apenas para satisfazer o caminho padrão: ele é opcional.
+As ferramentas exigidas pelo protocolo devem estar disponíveis no computador dos workers, inclusive em implantação web. Chimera é exigido pelos protocolos ativos de preparação; recuperação, descritores e grafos não o exigem.
 
 ## 3. Criar o ambiente científico e instalar a interface
 
@@ -41,7 +41,7 @@ Na raiz do código baixado:
 ```bash
 conda env create -f requirements.yml
 conda activate BioMolExplorer
-python -m pip install -e '.[ui]'
+# Execução pelo checkout; veja a limitação de empacotamento abaixo.
 ```
 
 Se o ambiente já existe, atualize-o com `conda env update -f requirements.yml --prune` e depois ative-o. O ambiente inclui Open Babel, Vina e a interface; ele não substitui Chimera e DOCK6, que continuam instalações externas. O arquivo mantém faixas compatíveis — em especial NumPy 1.x e pandas 2.x — para impedir que extras de aprendizado de máquina alterem silenciosamente o worker científico. O pacote requer Python 3.12.
@@ -74,7 +74,7 @@ else
 fi
 ```
 
-**Não inicie a aplicação enquanto houver uma mensagem FALTA ou o diretório `parameters/` estiver ausente.** Confirme os caminhos das ferramentas realmente usadas; Chimera 1.17 é opcional e DOCK6 6.11 é exigido apenas por seus protocolos, especialmente se houver várias versões instaladas. A localização de um executável confirma sua presença no `PATH`, mas não valida sua versão nem o funcionamento do protocolo. Confira as versões nas ferramentas/distribuições e faça uma execução com um caso de referência antes de iniciar seu estudo.
+**Não execute um protocolo enquanto faltar alguma ferramenta ou pasta exigida por ele.** Confirme os caminhos das ferramentas realmente usadas; Chimera 1.17 é exigido para preparação e DOCK6 6.11 apenas por seus protocolos, especialmente se houver várias versões instaladas. A localização de um executável confirma sua presença no `PATH`, mas não valida sua versão nem o funcionamento do protocolo. Confira as versões nas ferramentas/distribuições e faça uma execução com um caso de referência antes de iniciar seu estudo.
 
 ## 5. Iniciar a aplicação configurada
 
@@ -117,7 +117,7 @@ export BIOMOL_ADMET_PYTHON="/caminho/para/admet-env/bin/python"
 
 Inicie a aplicação no terminal que contém esse export, para o worker herdar a configuração. A variável identifica o Python do preditor, independentemente de `--worker-python`. Na migração para outro computador, recrie o ambiente e atualize caminhos; exportar um projeto não instala bibliotecas científicas.
 
-Se aparecer **ADMET-AI is not installed in the worker environment**, confira o estado mostrado na configuração ADMET, o caminho, a instalação e o acesso do worker aos modelos. Reinicie a aplicação após configurar o ambiente. Como alternativa, selecione explicitamente **RDKit local**; isso fornece descritores, estimativas e regras locais, sem os endpoints `ML_`. Não há substituição silenciosa de modelos. Outra opção é `python -m pip install -e '.[admet-ml]'` em um worker dedicado, respeitando as dependências desse ambiente.
+Se aparecer **ADMET-AI is not installed in the worker environment**, confira o estado mostrado na configuração ADMET, o caminho, a instalação e o acesso do worker aos modelos. Reinicie a aplicação após configurar o ambiente. Como alternativa, selecione explicitamente **RDKit local**; isso fornece descritores, estimativas e regras locais, sem os endpoints `ML_`. Não há substituição silenciosa de modelos. Use o ambiente isolado descrito acima; a instalação editável está bloqueada pelo problema de empacotamento documentado abaixo.
 
 Consulte [ADMET por hipótese](admet_research.md) para unidades, perfis, alertas, arquivos e limites dos modelos.
 
@@ -147,3 +147,9 @@ ADMET-AI 2 requer uma versão de RDKit mais recente que a fixada no ambiente
 científico. Use `python scripts/setup_admet_ai.py` para o venv CPU local ou crie o
 ambiente opcional de `requirements-admet.yml` e configure `BIOMOL_ADMET_PYTHON`
 com o caminho absoluto do Python desse ambiente. Mantenha os ambientes separados.
+
+## Estado verificável da instalação neste checkout
+
+A execução a partir da raiz usa `PYTHONPATH=src`; ela não depende da instalação editável do projeto. O `pyproject.toml` atual contém `dependencies = [dock6, chimera, miniconda]`, que não é TOML válido (itens não citados). Portanto, `pip install -e` e os entry points instalados não são uma rota verificável desta revisão. Esse problema foi registrado, sem alteração do arquivo operacional. Execute os módulos Python a partir do checkout enquanto essa limitação persistir.
+
+`requirements.yml` também inclui ADMET-AI 2 no ambiente principal, embora este guia recomende sua separação por compatibilidade com RDKit. Os manifestos foram preservados; não foi criada uma instalação limpa nem comprovada a resolução de todos os pins nesta auditoria documental. A existência do lock Linux não comprova suporte a outras plataformas. Para um ambiente científico já instalado, confira `PYTHONPATH=src python -m biomolexplorer --help` antes de configurar os executáveis do protocolo.

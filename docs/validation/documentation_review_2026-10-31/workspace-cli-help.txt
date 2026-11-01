@@ -1,0 +1,19 @@
+usage: app.py [-h] [--data-dir DATA_DIR] [--web] [--no-browser] [--host HOST]
+              [--port PORT] [--log-dir LOG_DIR]
+              [--worker-python WORKER_PYTHON] [--dock6-path DOCK6_PATH]
+              [--language {en,pt}]
+
+BioMolExplorer workspace Flet
+
+options:
+  -h, --help            show this help message and exit
+  --data-dir DATA_DIR
+  --web
+  --no-browser          Serve a interface web sem abrir um navegador.
+  --host HOST
+  --port PORT
+  --log-dir LOG_DIR     Diretório central dos logs da interface e dos workers.
+  --worker-python WORKER_PYTHON
+  --dock6-path DOCK6_PATH
+  --language {en,pt}    Initial interface language; users can change it on the
+                        login screen.

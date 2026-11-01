@@ -1,0 +1,1118 @@
+{
+  "run": "d5250afecb2c4a04aae1426ddc37699b",
+  "artifacts": 1620,
+  "existing_files": 1620,
+  "bytes_preserved": true,
+  "unique_occurrences": 1620,
+  "unique_names": 1620,
+  "catalog_seconds": [
+    0.4606818469474092,
+    0.46114376094192266
+  ],
+  "examples": {
+    "retrieve_compounds": [
+      {
+        "native": "B01__chembl__mol.csv",
+        "public": "TG[ACHE]-SRC[ChEMBL]-OP[ChEMBL]-MOL-ID[c195c00a].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "ChEMBL",
+          "operation": "ChEMBL",
+          "result_type": "MOL",
+          "extension": "csv",
+          "identifier": "c195c00ab117f1f9e4be5a156920bc6f3fb0df0e50cc9e261951f6ab0a07db2c",
+          "source_artifact_ids": [],
+          "source_types": []
+        }
+      },
+      {
+        "native": "B01__chembl__sim.csv",
+        "public": "TG[ACHE]-SRC[ChEMBL]-OP[ChEMBL]-SIM-ID[27550c62].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "ChEMBL",
+          "operation": "ChEMBL",
+          "result_type": "SIM",
+          "extension": "csv",
+          "identifier": "27550c62dde88a9628895ac27d07c32a254972f16450750d8a1d0217558374e4",
+          "source_artifact_ids": [],
+          "source_types": []
+        }
+      },
+      {
+        "native": "B01__chembl__chembl220.csv",
+        "public": "TG[ACHE]-SRC[ChEMBL]-OP[ChEMBL]-MOL-ID[f41ae33b].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "ChEMBL",
+          "operation": "ChEMBL",
+          "result_type": "MOL",
+          "extension": "csv",
+          "identifier": "f41ae33b10c565e87321cdc0e1e5bf35ef506743c6c5b8517de185dbd1eb34a5",
+          "source_artifact_ids": [],
+          "source_types": []
+        }
+      },
+      {
+        "native": "B01__chembl__chembl1242923.csv",
+        "public": "TG[ACHE]-SRC[ChEMBL]-OP[ChEMBL]-MOL-ID[db18c9e0].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "ChEMBL",
+          "operation": "ChEMBL",
+          "result_type": "MOL",
+          "extension": "csv",
+          "identifier": "db18c9e02f0b4dd3e657221f5c6365ebd17e198be7407e1629a5d4ca07c280aa",
+          "source_artifact_ids": [],
+          "source_types": []
+        }
+      }
+    ],
+    "retrieve_structures": [
+      {
+        "native": "4M0E.pdb",
+        "public": "TG[ACHE]-SRC[PDB]-OP[PDB]-Complex-4M0E-ID[4ccd13ef].pdb",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "PDB",
+          "operation": "PDB",
+          "result_type": "Complex-4M0E",
+          "extension": "pdb",
+          "identifier": "4ccd13ef306da018528de1117b24a354df322388d2be81b733cec5bcf3b79b99",
+          "source_artifact_ids": [],
+          "source_types": []
+        }
+      },
+      {
+        "native": "ligand_candidates.csv",
+        "public": "TG[ACHE]-SRC[PDB]-OP[PDB]-Pairs-ID[f351bb03].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "PDB",
+          "operation": "PDB",
+          "result_type": "Pairs",
+          "extension": "csv",
+          "identifier": "f351bb03414e80ed0ab76cd243316f39bd358ea5c8af097f38fa31029d62d2d7",
+          "source_artifact_ids": [],
+          "source_types": []
+        }
+      },
+      {
+        "native": "pdb_codes.csv",
+        "public": "TG[ACHE]-SRC[PDB]-OP[PDB]-Pairs-ID[1c42d436].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "PDB",
+          "operation": "PDB",
+          "result_type": "Pairs",
+          "extension": "csv",
+          "identifier": "1c42d43661f6529ddd355dba192acbdca7fc231dcece85c1816753f70a03d971",
+          "source_artifact_ids": [],
+          "source_types": []
+        }
+      },
+      {
+        "native": "retrieval_report.json",
+        "public": "TG[ACHE]-SRC[PDB]-OP[PDB]-Report-ID[a132ff1b].json",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "PDB",
+          "operation": "PDB",
+          "result_type": "Report",
+          "extension": "json",
+          "identifier": "a132ff1b53098f12f67b2c4a0b02f561eaa3ac21d35a58409c8d10ce97cf37a8",
+          "source_artifact_ids": [],
+          "source_types": []
+        }
+      }
+    ],
+    "admet": [
+      {
+        "native": "B04__admet__bbb-pos.csv",
+        "public": "TG[ACHE]-SRC[MOL]-OP[ADMET]-BBB+-ID[24113d53].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "MOL",
+          "operation": "ADMET",
+          "result_type": "BBB+",
+          "extension": "csv",
+          "identifier": "24113d53aaca030c143cb52037fb1bc88c6f1b2e614a1df6e543cfd02d8e7415",
+          "source_artifact_ids": [
+            "f8b52a61d9e83ec2aaa5a7088e34d81e45a72a04d50225a515d08f92c3eed521"
+          ],
+          "source_types": [
+            "MOL"
+          ]
+        }
+      },
+      {
+        "native": "B04__admet__bbb-neg.csv",
+        "public": "TG[ACHE]-SRC[MOL]-OP[ADMET]-BBB--ID[b971a7ac].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "MOL",
+          "operation": "ADMET",
+          "result_type": "BBB-",
+          "extension": "csv",
+          "identifier": "b971a7ac3f719f6a51dfbd45fd01b301ae58387cee2b1a7550b89ad3da2ef6a8",
+          "source_artifact_ids": [
+            "f8b52a61d9e83ec2aaa5a7088e34d81e45a72a04d50225a515d08f92c3eed521"
+          ],
+          "source_types": [
+            "MOL"
+          ]
+        }
+      },
+      {
+        "native": "B04__admet__hia-pos.csv",
+        "public": "TG[ACHE]-SRC[MOL]-OP[ADMET]-HIA+-ID[95507057].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "MOL",
+          "operation": "ADMET",
+          "result_type": "HIA+",
+          "extension": "csv",
+          "identifier": "9550705766c9b8432c3f9bf28f845d8915b9ce6c9f8c9d4a98f4eec044560a10",
+          "source_artifact_ids": [
+            "f8b52a61d9e83ec2aaa5a7088e34d81e45a72a04d50225a515d08f92c3eed521"
+          ],
+          "source_types": [
+            "MOL"
+          ]
+        }
+      },
+      {
+        "native": "B04__admet__hia-neg.csv",
+        "public": "TG[ACHE]-SRC[MOL]-OP[ADMET]-HIA--ID[4010db01].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "MOL",
+          "operation": "ADMET",
+          "result_type": "HIA-",
+          "extension": "csv",
+          "identifier": "4010db0198f4e6deefe1bf657d9bc05f3e2b2f75df6d1f2adc7c50810dd9ad04",
+          "source_artifact_ids": [
+            "f8b52a61d9e83ec2aaa5a7088e34d81e45a72a04d50225a515d08f92c3eed521"
+          ],
+          "source_types": [
+            "MOL"
+          ]
+        }
+      }
+    ],
+    "retrieve_pubchem": [
+      {
+        "native": "B05__pubchem__compounds.csv",
+        "public": "TG[ACHE]-SRC[BBB+]-OP[PubChem]-SIM-ID[410a0b13].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "BBB+",
+          "operation": "PubChem",
+          "result_type": "SIM",
+          "extension": "csv",
+          "identifier": "410a0b134d6f9c9333b3967fdcdc892edcc70e7be08ae68e2f53c1903c1a2121",
+          "source_artifact_ids": [
+            "e9c258d8ef055d9b6bb494f1cf785dea6667b68a3ca1043dcf0e5ce863a2fbde"
+          ],
+          "source_types": [
+            "BBB+"
+          ]
+        }
+      },
+      {
+        "native": "B05__pubchem__matches.csv",
+        "public": "TG[ACHE]-SRC[BBB+]-OP[PubChem]-Table-ID[074202c2].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "BBB+",
+          "operation": "PubChem",
+          "result_type": "Table",
+          "extension": "csv",
+          "identifier": "074202c2446ebdda82f3565a362b79d9784bc8cd2e1dd7b0a35dba09248ce9e0",
+          "source_artifact_ids": [
+            "e9c258d8ef055d9b6bb494f1cf785dea6667b68a3ca1043dcf0e5ce863a2fbde"
+          ],
+          "source_types": [
+            "BBB+"
+          ]
+        }
+      },
+      {
+        "native": "B05__pubchem__compounds.csv",
+        "public": "TG[ACHE]-SRC[BBB+]-OP[PubChem]-SIM-ID[aa50276f].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "BBB+",
+          "operation": "PubChem",
+          "result_type": "SIM",
+          "extension": "csv",
+          "identifier": "aa50276f493aad5bd877218d796b9df5d13b486df98c4cefd219cc712c944864",
+          "source_artifact_ids": [
+            "e9c258d8ef055d9b6bb494f1cf785dea6667b68a3ca1043dcf0e5ce863a2fbde"
+          ],
+          "source_types": [
+            "BBB+"
+          ]
+        }
+      },
+      {
+        "native": "B05__pubchem__report.json",
+        "public": "TG[ACHE]-SRC[BBB+]-OP[PubChem]-Report-ID[b83d9823].json",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "BBB+",
+          "operation": "PubChem",
+          "result_type": "Report",
+          "extension": "json",
+          "identifier": "b83d9823c888449ff07fbaafd2568724891a5ef9d334bacbfbca4594304945e1",
+          "source_artifact_ids": [
+            "e9c258d8ef055d9b6bb494f1cf785dea6667b68a3ca1043dcf0e5ce863a2fbde"
+          ],
+          "source_types": [
+            "BBB+"
+          ]
+        }
+      }
+    ],
+    "fingerprints": [
+      {
+        "native": "B06__fingerprint__morgan.csv",
+        "public": "TG[ACHE]-SRC[BBB+]-OP[Fingerprints]-Fingerprints-Morgan-ID[d8c7d19d].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "BBB+",
+          "operation": "Fingerprints",
+          "result_type": "Fingerprints-Morgan",
+          "extension": "csv",
+          "identifier": "d8c7d19d6f15bbbd58c8c1c83417cec149f712b7cfb5496edeb36a8a3dd9ff1f",
+          "source_artifact_ids": [
+            "e9c258d8ef055d9b6bb494f1cf785dea6667b68a3ca1043dcf0e5ce863a2fbde"
+          ],
+          "source_types": [
+            "BBB+"
+          ]
+        }
+      },
+      {
+        "native": "B06__fingerprint__morgan.csv",
+        "public": "TG[ACHE]-SRC[BBB+]-OP[Fingerprints]-Fingerprints-Morgan-ID[61287aa9].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "BBB+",
+          "operation": "Fingerprints",
+          "result_type": "Fingerprints-Morgan",
+          "extension": "csv",
+          "identifier": "61287aa9620515bbca42835775496970a4b7819468f3f43381bec40a407eebdf",
+          "source_artifact_ids": [
+            "bb2a7bea7769a029aa13680bbad061dcb9fbf33d7fe09b7fba1099e6b2ea5897"
+          ],
+          "source_types": [
+            "BBB+"
+          ]
+        }
+      },
+      {
+        "native": "B06__fingerprint__morgan.csv",
+        "public": "TG[BCHE]-SRC[BBB+]-OP[Fingerprints]-Fingerprints-Morgan-ID[b51518a4].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "BCHE",
+          "targets": [
+            "BCHE"
+          ],
+          "source": "BBB+",
+          "operation": "Fingerprints",
+          "result_type": "Fingerprints-Morgan",
+          "extension": "csv",
+          "identifier": "b51518a4c43867bb689104c8d23269817de092fde8ff15c98f0ae31b2a24403d",
+          "source_artifact_ids": [
+            "8d5025c0e2ce962b5cfe1d50f2590e1cbbb0e235d91115eabd0bf28bb6dccc4a"
+          ],
+          "source_types": [
+            "BBB+"
+          ]
+        }
+      },
+      {
+        "native": "B06__fingerprint__morgan.csv",
+        "public": "TG[BCHE]-SRC[BBB+]-OP[Fingerprints]-Fingerprints-Morgan-ID[e9d7d55c].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "BCHE",
+          "targets": [
+            "BCHE"
+          ],
+          "source": "BBB+",
+          "operation": "Fingerprints",
+          "result_type": "Fingerprints-Morgan",
+          "extension": "csv",
+          "identifier": "e9d7d55cac7816bba9f1f66e5bb22bc6b62c522306828980287a9d89c9ffc774",
+          "source_artifact_ids": [
+            "ceb085ca0fae2107b68af5dbe034c75fcb79d225178000cdf3914d02cefd128e"
+          ],
+          "source_types": [
+            "BBB+"
+          ]
+        }
+      }
+    ],
+    "similarity": [
+      {
+        "native": "B07__similarity__tanimoto.csv",
+        "public": "TG[ACHE]-SRC[Fingerprints-Morgan]-OP[Similarity]-Similarity-Tanimoto-ID[7b97ff4d].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "Fingerprints-Morgan",
+          "operation": "Similarity",
+          "result_type": "Similarity-Tanimoto",
+          "extension": "csv",
+          "identifier": "7b97ff4d1ac773fe78cd58e2eeb13892e01a7d3e3dadc6fe6b80bb55c37956f3",
+          "source_artifact_ids": [
+            "b7399a5c3d2c18db9cb632719e6a91e3ba1fd1c2910a1c5fe87c759c03fe4dba"
+          ],
+          "source_types": [
+            "Fingerprints-Morgan"
+          ]
+        }
+      },
+      {
+        "native": "B07__similarity__tanimoto.csv",
+        "public": "TG[ACHE]-SRC[Fingerprints-Morgan]-OP[Similarity]-Similarity-Tanimoto-ID[cf9cb81f].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "Fingerprints-Morgan",
+          "operation": "Similarity",
+          "result_type": "Similarity-Tanimoto",
+          "extension": "csv",
+          "identifier": "cf9cb81f8ab7e543d3a704e635f8431ed961fad1976a8248958b84728bf9bc19",
+          "source_artifact_ids": [
+            "ba3e5182ad3c621952189736407f0438fd379c220d5412a9968f504462384f38"
+          ],
+          "source_types": [
+            "Fingerprints-Morgan"
+          ]
+        }
+      },
+      {
+        "native": "B07__similarity__tanimoto.csv",
+        "public": "TG[BCHE]-SRC[Fingerprints-Morgan]-OP[Similarity]-Similarity-Tanimoto-ID[e1a62a28].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "BCHE",
+          "targets": [
+            "BCHE"
+          ],
+          "source": "Fingerprints-Morgan",
+          "operation": "Similarity",
+          "result_type": "Similarity-Tanimoto",
+          "extension": "csv",
+          "identifier": "e1a62a2868d93eb1b15bf315a785399bcc0a76037912a8395013921f5b22d9e8",
+          "source_artifact_ids": [
+            "80152ce5f4c579e56e49d3e77f637520b82ecf0fdd8fca5e2310332415b5f98f"
+          ],
+          "source_types": [
+            "Fingerprints-Morgan"
+          ]
+        }
+      },
+      {
+        "native": "B07__similarity__tanimoto.csv",
+        "public": "TG[BCHE]-SRC[Fingerprints-Morgan]-OP[Similarity]-Similarity-Tanimoto-ID[745f161c].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "BCHE",
+          "targets": [
+            "BCHE"
+          ],
+          "source": "Fingerprints-Morgan",
+          "operation": "Similarity",
+          "result_type": "Similarity-Tanimoto",
+          "extension": "csv",
+          "identifier": "745f161cc28428c10225ff5af1b95df5b7fa49b62725575de6255eb28cdfddd4",
+          "source_artifact_ids": [
+            "73573b278aae232f302c06ac5dd6a22294dd3d0d76c735d2aa7068a3a5e1cf17"
+          ],
+          "source_types": [
+            "Fingerprints-Morgan"
+          ]
+        }
+      }
+    ],
+    "graphs": [
+      {
+        "native": "B08__graph__lcc.csv",
+        "public": "TG[ACHE]-SRC[Similarity-Tanimoto]-OP[Graphs]-Molecules-LCC-ID[ab7509e3].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "Similarity-Tanimoto",
+          "operation": "Graphs",
+          "result_type": "Molecules-LCC",
+          "extension": "csv",
+          "identifier": "ab7509e3afd287f8e39b89657d476f8245951cfde3149b43d890e132848369b6",
+          "source_artifact_ids": [
+            "d7c3bb189fde3e136cdd27e70857ae32e62fdcabfdbbc1f7a09b2c7043726fa0"
+          ],
+          "source_types": [
+            "Similarity-Tanimoto"
+          ]
+        }
+      },
+      {
+        "native": "B08__graph__full-graph.csv",
+        "public": "TG[ACHE]-SRC[Similarity-Tanimoto]-OP[Graphs]-Graph-Full-ID[66dd14a6].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "Similarity-Tanimoto",
+          "operation": "Graphs",
+          "result_type": "Graph-Full",
+          "extension": "csv",
+          "identifier": "66dd14a66d3ea5f38907ed184d90431caa3183d075d3b3a3aadac3fec2373843",
+          "source_artifact_ids": [
+            "d7c3bb189fde3e136cdd27e70857ae32e62fdcabfdbbc1f7a09b2c7043726fa0"
+          ],
+          "source_types": [
+            "Similarity-Tanimoto"
+          ]
+        }
+      },
+      {
+        "native": "B08__graph__lcc-27a92da3.csv",
+        "public": "TG[ACHE]-SRC[Similarity-Tanimoto]-OP[Graphs]-MOL-ID[57d37272].csv",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "Similarity-Tanimoto",
+          "operation": "Graphs",
+          "result_type": "MOL",
+          "extension": "csv",
+          "identifier": "57d37272dd2e4a5e828950dbd507d70644608e0482f512a68b17655ae66abb89",
+          "source_artifact_ids": [
+            "d7c3bb189fde3e136cdd27e70857ae32e62fdcabfdbbc1f7a09b2c7043726fa0"
+          ],
+          "source_types": [
+            "Similarity-Tanimoto"
+          ]
+        }
+      },
+      {
+        "native": "B08__graph__figure.png",
+        "public": "TG[ACHE]-SRC[Similarity-Tanimoto]-OP[Graphs]-Figure-Edges-ID[b4712b3b].png",
+        "naming": {
+          "scheme": 1,
+          "target": "ACHE",
+          "targets": [
+            "ACHE"
+          ],
+          "source": "Similarity-Tanimoto",
+          "operation": "Graphs",
+          "result_type": "Figure-Edges",
+          "extension": "png",
+          "identifier": "b4712b3bb3350e1e1c54643e57d64ba73d3c1231da090ffe6c1a4dc4f3c1624f",
+          "source_artifact_ids": [
+            "d7c3bb189fde3e136cdd27e70857ae32e62fdcabfdbbc1f7a09b2c7043726fa0"
+          ],
+          "source_types": [
+            "Similarity-Tanimoto"
+          ]
+        }
+      }
+    ],
+    "redocking": [
+      {
+        "native": "1P0I_BUA_606A.lig.pdbqt",
+        "public": "TG[BCHE]-SRC[PDB]-OP[Redocking]-Pose-1P0I_BUA_606A-ID[a56de9e9].pdbqt",
+        "naming": {
+          "scheme": 1,
+          "target": "BCHE",
+          "targets": [
+            "BCHE"
+          ],
+          "source": "PDB",
+          "operation": "Redocking",
+          "result_type": "Pose-1P0I_BUA_606A",
+          "extension": "pdbqt",
+          "identifier": "a56de9e969dfe7a58bf5acdd194f84bf1c23fe2fbbaf96167347c4503290880d",
+          "source_artifact_ids": [
+            "0a6cd2d393c27a71fd12ac22bb3aa6ff0a7820a1120016dc36b90ba3a3167026",
+            "6e66da98d90b21b2a5511d55040119374facc09fd106a343c001e4e0d441c567"
+          ],
+          "source_types": [
+            "Complex-1P0I",
+            "Pairs"
+          ]
+        }
+      },
+      {
+        "native": "vina_execution.json",
+        "public": "TG[BCHE]-SRC[PDB]-OP[Redocking]-Report-ID[0eadcb0d].json",
+        "naming": {
+          "scheme": 1,
+          "target": "BCHE",
+          "targets": [
+            "BCHE"
+          ],
+          "source": "PDB",
+          "operation": "Redocking",
+          "result_type": "Report",
+          "extension": "json",
+          "identifier": "0eadcb0d20892126b2f1da4f621c3fb2f921dbdd771f4996f127e363d60c1900",
+          "source_artifact_ids": [
+            "0a6cd2d393c27a71fd12ac22bb3aa6ff0a7820a1120016dc36b90ba3a3167026",
+            "6e66da98d90b21b2a5511d55040119374facc09fd106a343c001e4e0d441c567"
+          ],
+          "source_types": [
+            "Complex-1P0I",
+            "Pairs"
+          ]
+        }
+      },
+      {
+        "native": "redocking_cache.json",
+        "public": "TG[BCHE]-SRC[PDB]-OP[Redocking]-Report-ID[e79d6fc8].json",
+        "naming": {
+          "scheme": 1,
+          "target": "BCHE",
+          "targets": [
+            "BCHE"
+          ],
+          "source": "PDB",
+          "operation": "Redocking",
+          "result_type": "Report",
+          "extension": "json",
+          "identifier": "e79d6fc860a6483b56119e82bc11171a61080357dbaf30473efd717b0d218d4b",
+          "source_artifact_ids": [
+            "0a6cd2d393c27a71fd12ac22bb3aa6ff0a7820a1120016dc36b90ba3a3167026",
+            "6e66da98d90b21b2a5511d55040119374facc09fd106a343c001e4e0d441c567"
+          ],
+          "source_types": [
+            "Complex-1P0I",
+            "Pairs"
+          ]
+        }
+      },
+      {
+        "native": "1P0I.pdb",
+        "public": "TG[BCHE]-SRC[PDB]-OP[Redocking]-Complex-1P0I-ID[0800625b].pdb",
+        "naming": {
+          "scheme": 1,
+          "target": "BCHE",
+          "targets": [
+            "BCHE"
+          ],
+          "source": "PDB",
+          "operation": "Redocking",
+          "result_type": "Complex-1P0I",
+          "extension": "pdb",
+          "identifier": "0800625b6fc1fb7be8640c625133b26bf0240f0308e55a17594b1f2177ef4ad4",
+          "source_artifact_ids": [
+            "0a6cd2d393c27a71fd12ac22bb3aa6ff0a7820a1120016dc36b90ba3a3167026",
+            "6e66da98d90b21b2a5511d55040119374facc09fd106a343c001e4e0d441c567"
+          ],
+          "source_types": [
+            "Complex-1P0I",
+            "Pairs"
+          ]
+        }
+      }
+    ]
+  },
+  "types": {
+    "retrieve_compounds": [
+      "MOL",
+      "Report",
+      "SIM",
+      "Table"
+    ],
+    "retrieve_structures": [
+      "Complex-1P0I",
+      "Complex-1TQF",
+      "Complex-1UJK",
+      "Complex-1W50",
+      "Complex-2B8L",
+      "Complex-2B8V",
+      "Complex-2G94",
+      "Complex-2IQG",
+      "Complex-2IRZ",
+      "Complex-2NTR",
+      "Complex-2OAH",
+      "Complex-2P8H",
+      "Complex-2PH6",
+      "Complex-2PH8",
+      "Complex-2QMD",
+      "Complex-2QMF",
+      "Complex-2QMG",
+      "Complex-2QP8",
+      "Complex-2QU3",
+      "Complex-2QZK",
+      "Complex-2QZL",
+      "Complex-2VIE",
+      "Complex-2VIJ",
+      "Complex-2VIY",
+      "Complex-2VIZ",
+      "Complex-2VJ6",
+      "Complex-2VJ7",
+      "Complex-2VJ9",
+      "Complex-2VNM",
+      "Complex-2VNN",
+      "Complex-2WEZ",
+      "Complex-2WF0",
+      "Complex-2WF1",
+      "Complex-2WF2",
+      "Complex-2WF4",
+      "Complex-2WSL",
+      "Complex-2XFI",
+      "Complex-2XFJ",
+      "Complex-2XFK",
+      "Complex-2ZDZ",
+      "Complex-2ZJM",
+      "Complex-3CIB",
+      "Complex-3CIC",
+      "Complex-3CID",
+      "Complex-3DUY",
+      "Complex-3FKT",
+      "Complex-3IN3",
+      "Complex-3INE",
+      "Complex-3INF",
+      "Complex-3INH",
+      "Complex-3IVH",
+      "Complex-3K5G",
+      "Complex-3KMX",
+      "Complex-3KMY",
+      "Complex-3KN0",
+      "Complex-3L58",
+      "Complex-3L59",
+      "Complex-3L5B",
+      "Complex-3L5C",
+      "Complex-3L5D",
+      "Complex-3L5E",
+      "Complex-3L5F",
+      "Complex-3LNK",
+      "Complex-3LPJ",
+      "Complex-3LPK",
+      "Complex-3MSJ",
+      "Complex-3MSK",
+      "Complex-3OOZ",
+      "Complex-3TPJ",
+      "Complex-3TPP",
+      "Complex-3UDH",
+      "Complex-3UDJ",
+      "Complex-3UDM",
+      "Complex-3UDP",
+      "Complex-3UDR",
+      "Complex-3UDY",
+      "Complex-3UFL",
+      "Complex-3UQP",
+      "Complex-3UQU",
+      "Complex-3UQX",
+      "Complex-3VEU",
+      "Complex-3VF3",
+      "Complex-3VG1",
+      "Complex-3ZMG",
+      "Complex-4ACU",
+      "Complex-4ACX",
+      "Complex-4AZY",
+      "Complex-4B00",
+      "Complex-4B05",
+      "Complex-4B0Q",
+      "Complex-4B1C",
+      "Complex-4B1D",
+      "Complex-4B1E",
+      "Complex-4B70",
+      "Complex-4B72",
+      "Complex-4B77",
+      "Complex-4B78",
+      "Complex-4D88",
+      "Complex-4D89",
+      "Complex-4DI2",
+      "Complex-4DJU",
+      "Complex-4DJV",
+      "Complex-4M0E",
+      "Complex-6QAA",
+      "Complex-6ZWI",
+      "Complex-7AWG",
+      "Pairs",
+      "Report"
+    ],
+    "admet": [
+      "Alerts",
+      "BBB+",
+      "BBB-",
+      "Evaluated",
+      "Exclusions",
+      "Figure",
+      "HIA+",
+      "HIA-",
+      "MOL",
+      "Methods",
+      "Rules-Lipinski-Veber",
+      "View"
+    ],
+    "retrieve_pubchem": [
+      "Exclusions",
+      "Report",
+      "SIM",
+      "Table"
+    ],
+    "fingerprints": [
+      "Exclusions",
+      "Fingerprints-Morgan"
+    ],
+    "similarity": [
+      "Exclusions",
+      "Similarity-Tanimoto"
+    ],
+    "graphs": [
+      "Edges",
+      "Exclusions",
+      "Figure-Edges",
+      "Graph-Full",
+      "MOL",
+      "Molecules-LCC",
+      "View-Edges"
+    ],
+    "redocking": [
+      "Centers",
+      "Complex-1P0I",
+      "Complex-1P0I_A",
+      "Complex-1TQF",
+      "Complex-1TQF_A",
+      "Complex-2B8L",
+      "Complex-2B8L_A",
+      "Complex-2B8V",
+      "Complex-2B8V_A",
+      "Complex-2G94",
+      "Complex-2G94_A",
+      "Complex-2IQG",
+      "Complex-2IQG_A",
+      "Complex-2IRZ",
+      "Complex-2IRZ_A",
+      "Complex-2NTR",
+      "Complex-2NTR_A",
+      "Complex-2OAH",
+      "Complex-2OAH_A",
+      "Complex-2P8H",
+      "Complex-2P8H_A",
+      "Complex-2PH6",
+      "Complex-2PH6_A",
+      "Complex-2PH8",
+      "Complex-2PH8_A",
+      "Complex-2QMD",
+      "Complex-2QMD_A",
+      "Complex-2QMF",
+      "Complex-2QMF_A",
+      "Complex-2QMG",
+      "Complex-2QMG_A",
+      "Complex-2QP8",
+      "Complex-2QP8_A",
+      "Complex-2QU3",
+      "Complex-2QU3_A",
+      "Complex-2QZK",
+      "Complex-2QZK_A",
+      "Complex-2QZL",
+      "Complex-2QZL_A",
+      "Complex-2VIE",
+      "Complex-2VIE_A",
+      "Complex-2VIJ",
+      "Complex-2VIJ_A",
+      "Complex-2VIY",
+      "Complex-2VIY_A",
+      "Complex-2VIZ",
+      "Complex-2VIZ_A",
+      "Complex-2VJ6",
+      "Complex-2VJ6_A",
+      "Complex-2VJ7",
+      "Complex-2VJ7_A",
+      "Complex-2VJ9",
+      "Complex-2VJ9_A",
+      "Complex-2VNM",
+      "Complex-2VNM_A",
+      "Complex-2VNN",
+      "Complex-2VNN_A",
+      "Complex-2WEZ",
+      "Complex-2WEZ_A",
+      "Complex-2WF0",
+      "Complex-2WF0_A",
+      "Complex-2WF1",
+      "Complex-2WF1_A",
+      "Complex-2WF2",
+      "Complex-2WF2_A",
+      "Complex-2WF4",
+      "Complex-2WF4_A",
+      "Complex-2WSL",
+      "Complex-2WSL_A",
+      "Complex-2XFI",
+      "Complex-2XFI_A",
+      "Complex-2XFJ",
+      "Complex-2XFJ_A",
+      "Complex-2XFK",
+      "Complex-2XFK_A",
+      "Complex-2ZDZ",
+      "Complex-2ZDZ_A",
+      "Complex-2ZJM",
+      "Complex-2ZJM_A",
+      "Complex-3CIB",
+      "Complex-3CIB_A",
+      "Complex-3CIC",
+      "Complex-3CIC_A",
+      "Complex-3CID",
+      "Complex-3CID_A",
+      "Complex-3DUY",
+      "Complex-3DUY_A",
+      "Complex-3FKT",
+      "Complex-3FKT_A",
+      "Complex-3IN3",
+      "Complex-3IN3_A",
+      "Complex-4M0E",
+      "Complex-4M0E_A",
+      "Complex-6QAA",
+      "Complex-6QAA_A",
+      "Complex-6ZWI",
+      "Complex-6ZWI_A",
+      "Complex-7AWG",
+      "Complex-7AWG_A",
+      "Pose-1P0I_BUA_606A",
+      "Pose-1TQF_32P_401A",
+      "Pose-2B8L_5HA_386A",
+      "Pose-2B8V_3BN_1001A",
+      "Pose-2G94_ZPQ_1001A",
+      "Pose-2IQG_F2I_801A",
+      "Pose-2IRZ_I02_386A",
+      "Pose-2NTR_L00_401A",
+      "Pose-2OAH_QIN_902A",
+      "Pose-2P8H_MY9_386A",
+      "Pose-2PH6_712_401A",
+      "Pose-2PH8_35A_388A",
+      "Pose-2QMD_CS7_1A",
+      "Pose-2QMF_CS9_1A",
+      "Pose-2QMG_SC6_1A",
+      "Pose-2QP8_SC7_1A",
+      "Pose-2QU3_462_1A",
+      "Pose-2QZK_I21_400A",
+      "Pose-2QZL_IXS_449A",
+      "Pose-2VIE_VG0_1448A",
+      "Pose-2VIJ_C44_3000A",
+      "Pose-2VIY_VG3_1448A",
+      "Pose-2VIZ_VG4_1448A",
+      "Pose-2VJ6_VG5_1447A",
+      "Pose-2VJ7_VG6_1448A",
+      "Pose-2VJ9_VG7_1452A",
+      "Pose-2VNM_CM8_2000A",
+      "Pose-2VNN_CM7_2000A",
+      "Pose-2WEZ_ZYE_2000A",
+      "Pose-2WF0_ZY0_2000A",
+      "Pose-2WF1_ZY1_2000A",
+      "Pose-2WF2_ZY2_2000A",
+      "Pose-2WF4_ZY4_2000A",
+      "Pose-2WSL_EFS_1544A",
+      "Pose-2XFI_XFI_1448A",
+      "Pose-2XFJ_VG5_500A",
+      "Pose-2XFK_AA9_500A",
+      "Pose-2ZDZ_310_1A",
+      "Pose-2ZJM_F1M_395A",
+      "Pose-3CIB_314_501A",
+      "Pose-3CIC_316_501A",
+      "Pose-3CID_318_501A",
+      "Pose-3DUY_AFJ_501A",
+      "Pose-3FKT_SII_406A",
+      "Pose-3IN3_472_1A",
+      "Pose-4M0E_1YL_604A",
+      "Pose-6QAA_HUN_613A",
+      "Pose-6ZWI_LEA_605A",
+      "Pose-6ZWI_QRH_604A",
+      "Pose-7AWG_S6Q_605A",
+      "RMSD",
+      "Receptor-1P0I_A",
+      "Receptor-1TQF_A",
+      "Receptor-2B8L_A",
+      "Receptor-2B8V_A",
+      "Receptor-2G94_A",
+      "Receptor-2IQG_A",
+      "Receptor-2IRZ_A",
+      "Receptor-2NTR_A",
+      "Receptor-2OAH_A",
+      "Receptor-2P8H_A",
+      "Receptor-2PH6_A",
+      "Receptor-2PH8_A",
+      "Receptor-2QMD_A",
+      "Receptor-2QMF_A",
+      "Receptor-2QMG_A",
+      "Receptor-2QP8_A",
+      "Receptor-2QU3_A",
+      "Receptor-2QZK_A",
+      "Receptor-2QZL_A",
+      "Receptor-2VIE_A",
+      "Receptor-2VIJ_A",
+      "Receptor-2VIY_A",
+      "Receptor-2VIZ_A",
+      "Receptor-2VJ6_A",
+      "Receptor-2VJ7_A",
+      "Receptor-2VJ9_A",
+      "Receptor-2VNM_A",
+      "Receptor-2VNN_A",
+      "Receptor-2WEZ_A",
+      "Receptor-2WF0_A",
+      "Receptor-2WF1_A",
+      "Receptor-2WF2_A",
+      "Receptor-2WF4_A",
+      "Receptor-2WSL_A",
+      "Receptor-2XFI_A",
+      "Receptor-2XFJ_A",
+      "Receptor-2XFK_A",
+      "Receptor-2ZDZ_A",
+      "Receptor-2ZJM_A",
+      "Receptor-3CIB_A",
+      "Receptor-3CIC_A",
+      "Receptor-3CID_A",
+      "Receptor-3DUY_A",
+      "Receptor-3FKT_A",
+      "Receptor-3IN3_A",
+      "Receptor-4M0E_A",
+      "Receptor-6QAA_A",
+      "Receptor-6ZWI_A",
+      "Receptor-7AWG_A",
+      "ReferenceLigand-1P0I_BUA_606A",
+      "ReferenceLigand-1TQF_32P_401A",
+      "ReferenceLigand-2B8L_5HA_386A",
+      "ReferenceLigand-2B8V_3BN_1001A",
+      "ReferenceLigand-2G94_ZPQ_1001A",
+      "ReferenceLigand-2IQG_F2I_801A",
+      "ReferenceLigand-2IRZ_I02_386A",
+      "ReferenceLigand-2NTR_L00_401A",
+      "ReferenceLigand-2OAH_QIN_902A",
+      "ReferenceLigand-2P8H_MY9_386A",
+      "ReferenceLigand-2PH6_712_401A",
+      "ReferenceLigand-2PH8_35A_388A",
+      "ReferenceLigand-2QMD_CS7_1A",
+      "ReferenceLigand-2QMF_CS9_1A",
+      "ReferenceLigand-2QMG_SC6_1A",
+      "ReferenceLigand-2QP8_SC7_1A",
+      "ReferenceLigand-2QU3_462_1A",
+      "ReferenceLigand-2QZK_I21_400A",
+      "ReferenceLigand-2QZL_IXS_449A",
+      "ReferenceLigand-2VIE_VG0_1448A",
+      "ReferenceLigand-2VIJ_C44_3000A",
+      "ReferenceLigand-2VIY_VG3_1448A",
+      "ReferenceLigand-2VIZ_VG4_1448A",
+      "ReferenceLigand-2VJ6_VG5_1447A",
+      "ReferenceLigand-2VJ7_VG6_1448A",
+      "ReferenceLigand-2VJ9_VG7_1452A",
+      "ReferenceLigand-2VNM_CM8_2000A",
+      "ReferenceLigand-2VNN_CM7_2000A",
+      "ReferenceLigand-2WEZ_ZYE_2000A",
+      "ReferenceLigand-2WF0_ZY0_2000A",
+      "ReferenceLigand-2WF1_ZY1_2000A",
+      "ReferenceLigand-2WF2_ZY2_2000A",
+      "ReferenceLigand-2WF4_ZY4_2000A",
+      "ReferenceLigand-2WSL_EFS_1544A",
+      "ReferenceLigand-2XFI_XFI_1448A",
+      "ReferenceLigand-2XFJ_VG5_500A",
+      "ReferenceLigand-2XFK_AA9_500A",
+      "ReferenceLigand-2ZDZ_310_1A",
+      "ReferenceLigand-2ZJM_F1M_395A",
+      "ReferenceLigand-3CIB_314_501A",
+      "ReferenceLigand-3CIC_316_501A",
+      "ReferenceLigand-3CID_318_501A",
+      "ReferenceLigand-3DUY_AFJ_501A",
+      "ReferenceLigand-3FKT_SII_406A",
+      "ReferenceLigand-3IN3_472_1A",
+      "ReferenceLigand-4M0E_1YL_604A",
+      "ReferenceLigand-6QAA_HUN_613A",
+      "ReferenceLigand-6ZWI_LEA_605A",
+      "ReferenceLigand-6ZWI_QRH_604A",
+      "ReferenceLigand-7AWG_S6Q_605A",
+      "Report"
+    ]
+  },
+  "original_project_written": false
+}

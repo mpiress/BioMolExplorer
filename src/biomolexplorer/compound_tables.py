@@ -76,7 +76,7 @@ class CompoundTables:
         return run,stage
 
     def tables(self,token,project_id,run_id,stage_id):
-        _,stage=self._stage(token,project_id,run_id,stage_id)
+        run,stage=self._stage(token,project_id,run_id,stage_id)
         result=[]
         for filename in stage.get('artifacts',[]):
             path=self.store.scoped_path(project_id,filename)
@@ -91,7 +91,13 @@ class CompoundTables:
                 result.append({'path':str(path),'name':name,'integrated':is_integrated})
         result.sort(key=lambda t:(not t['integrated'],t['name']))
         from .artifacts import annotate_files
-        return annotate_files(stage,result,run_id)
+        result=annotate_files(stage,result,run_id)
+        from .result_origins import ResultOrigins
+        origins=ResultOrigins(run['stages'],run_id)
+        for item in result:
+            info=origins.describe(item['path'],stage_id,run_id)
+            item.update(public_name=info['public_name'],display_name=info['public_name'],label=info['public_name'],naming=info['naming'])
+        return result
 
     def _path(self,token,project_id,run_id,stage_id,filename):
         choices=self.tables(token,project_id,run_id,stage_id)

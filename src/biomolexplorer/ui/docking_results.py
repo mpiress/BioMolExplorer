@@ -67,7 +67,8 @@ class DockingResultsTable(CompoundTableViewer):
         await residue_dialog(self.ui,self.project_id,
             lambda:self.service.scene(self.token,self.project_id,self.run_id,self.stage_id,**selection),
             lambda:self.valid() and sequence==self.sequence,lambda:self.pose_preview(row,selection['column']),
-            open_3d_url=self.view_url(row,selection['column']))
+            open_3d_url=self.view_url(row,selection['column']),
+            naming_context=next((t for t in self.tables if t['path']==self.selector.value),None))
 
     async def footprint(self,row):
         if not self.valid():return

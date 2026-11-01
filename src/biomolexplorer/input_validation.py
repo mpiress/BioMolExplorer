@@ -126,7 +126,8 @@ def validate_file(path,kind,operation=None,validate_rows=True):
                         for field in set(fields)&{'vina','dock6','score','z-score','min-max'}:
                             if not math.isfinite(float(row[field])):raise ValueError(f'Linha {number}: score inválido.')
             return
-        if path.name=='pdb_codes.csv':
+        from .artifact_naming import native_name
+        if native_name(path)=='pdb_codes.csv':
             if not {'PDB_CODE','LIGAND','RESNUM','CHAIN'}.issubset(columns(path)):
                 raise ValueError('pdb_codes.csv está sem as colunas de metadados.')
             with path.open(encoding='utf-8-sig',newline='') as stream:
@@ -134,7 +135,7 @@ def validate_file(path,kind,operation=None,validate_rows=True):
                     if any(not _code(row[k]) for k in ('PDB_CODE','LIGAND','CHAIN')):raise ValueError('Código PDB, ligante ou cadeia inválido.')
                     int(row['RESNUM'])
             return
-        if path.name=='centers.csv':
+        if native_name(path)=='centers.csv':
             with path.open(encoding='utf-8-sig',newline='') as stream:rows=list(csv.reader(stream))
             if len(rows)!=4 or not rows[0] or any(len(row)!=len(rows[0]) for row in rows):raise ValueError('centers.csv precisa de cabeçalho e três linhas de coordenadas.')
             if any(not math.isfinite(float(value)) for row in rows[1:] for value in row):raise ValueError('Centro de docking inválido.')
@@ -168,7 +169,7 @@ def validate_file(path,kind,operation=None,validate_rows=True):
             return
         if kind=='dock6':
             text=path.read_text()
-            if not path.name.endswith('_scored.mol2') or any(marker not in text for marker in ('@<TRIPOS>MOLECULE','@<TRIPOS>ATOM')) or not re.search(r'Grid_Score:\s*-?\d',text):raise ValueError('Resultado DOCK6 incompleto.')
+            if not native_name(path).endswith('_scored.mol2') or any(marker not in text for marker in ('@<TRIPOS>MOLECULE','@<TRIPOS>ATOM')) or not re.search(r'Grid_Score:\s*-?\d',text):raise ValueError('Resultado DOCK6 incompleto.')
     except (ValueError,SyntaxError,UnicodeError,ImportError,KeyError,TypeError,IndexError,OSError) as exc:
         raise ValueError(f'{path.name}: {exc}\nPadrão esperado: {contract(kind,operation)}') from None
 
@@ -182,7 +183,8 @@ def validate_bundle(paths,kind,operation=None):
         else:
             validate_file(path,kind,operation);data.append(Path(path))
     if not data:raise ValueError('Inclua os dados além do gráfico. Padrão esperado: '+contract(kind,operation))
-    if kind=='prepared_structures' and (not {'pdb_codes.csv','centers.csv'}.issubset({p.name for p in data}) or not any(p.suffix=='.pdbqt' for p in data)):
+    from .artifact_naming import native_name
+    if kind=='prepared_structures' and (not {'pdb_codes.csv','centers.csv'}.issubset({native_name(p) for p in data}) or not any(p.suffix=='.pdbqt' for p in data)):
         raise ValueError('O conjunto preparado está incompleto. Padrão esperado: '+contract(kind,operation))
 
 

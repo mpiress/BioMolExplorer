@@ -15,19 +15,19 @@
 <h2 id="filter-quickly">Filter quickly</h2>
 <p>Run inside the project&#x27;s Python environment:</p>
 <pre><code class="language-bash"># Main-process errors and warnings
-python -m biomolexplorer.log_report
+PYTHONPATH=src python -m biomolexplorer.log_report
 
 # Worker errors; replace JOB_ID with the actual identifier
-python -m biomolexplorer.log_report --job JOB_ID --level ERROR
+PYTHONPATH=src python -m biomolexplorer.log_report --job JOB_ID --level ERROR
 
 # Command history, including output and duration
-python -m biomolexplorer.log_report --job JOB_ID --level INFO --limit 100
+PYTHONPATH=src python -m biomolexplorer.log_report --job JOB_ID --level INFO --limit 100
 
 # Pipeline events for a run/stage
-python -m biomolexplorer.log_report --run RUN_ID --stage STAGE_ID
+PYTHONPATH=src python -m biomolexplorer.log_report --run RUN_ID --stage STAGE_ID
 
 # Structured output for external analysis
-python -m biomolexplorer.log_report --job JOB_ID --json</code></pre>
+PYTHONPATH=src python -m biomolexplorer.log_report --job JOB_ID --json</code></pre>
 <p><code>--directory</code> selects another log root; with <code>--job</code>, the reader looks for <code>jobs/&lt;job_id&gt;</code> under that root. <code>--operation redocking</code> filters by operation. The reader scans rotated JSONL files and retains only the latest matching events without loading the entire history into memory. Older logs created before JSONL support remain available as text.</p>
 <h2 id="diagnostic-codes">Diagnostic codes</h2>
 <div class="table-wrap"><table><thead><tr><th scope="col">Code</th><th scope="col">Meaning and verification</th></tr></thead><tbody><tr><td><code>TOOL_NOT_FOUND</code></td><td>Executable unavailable; check installation and worker PATH</td></tr><tr><td><code>TOOL_START_FAILED</code></td><td>Could not start; check permissions and working directory</td></tr><tr><td><code>TOOL_TIMEOUT</code></td><td>Command exceeded a limit explicitly supplied by its caller; there is no automatic limit</td></tr><tr><td><code>TOOL_EXIT_FAILED</code></td><td>Tool returned a nonzero exit code; inspect stdout/stderr</td></tr><tr><td><code>TOOL_REPORTED_ERROR</code></td><td>Chimera reported an error despite returning zero; inspect the retained script</td></tr><tr><td><code>PREPARED_OUTPUT_INVALID</code></td><td>Preparation output missing, empty or without atoms; inspect the tool output and script</td></tr><tr><td><code>EXECUTION_TIMEOUT</code></td><td>Job exceeded an explicitly configured supervisor limit; the default has no limit</td></tr><tr><td><code>INPUT_NOT_FOUND</code></td><td>Input file unavailable</td></tr><tr><td><code>ACCESS_DENIED</code></td><td>Filesystem access denied</td></tr><tr><td><code>VALIDATION_FAILED</code></td><td>Invalid input or configuration</td></tr><tr><td><code>WORKER_EXIT_FAILED</code></td><td>Worker exited without a valid diagnostic; inspect <code>execution.log</code></td></tr><tr><td><code>UNEXPECTED_ERROR</code></td><td>Unclassified exception; inspect its cause and source location</td></tr></tbody></table></div>

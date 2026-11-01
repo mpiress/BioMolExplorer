@@ -1,0 +1,10 @@
+{
+  "protected_files": 506,
+  "changed_protected": [],
+  "new_protected": [],
+  "strict_html_errors": {},
+  "markdown_unbalanced_fences": [],
+  "packaging_error": "Invalid value (at line 10, column 17)",
+  "scientific_operations": 15,
+  "workspace_block_types": 16
+}

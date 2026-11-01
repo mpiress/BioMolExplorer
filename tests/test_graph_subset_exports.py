@@ -83,8 +83,9 @@ class GraphSubsetExportTests(unittest.TestCase):
             target=Path(exported['file']).name
             index=next(i for i,(_,ref) in enumerate(picker.rows) if Path(ref['selector']).name==target)
             label=picker.label(picker.rows[index][0])
-            self.assertIn('Grafo completo',label)
-            self.assertIn('Graph strategy',label)
+            from biomolexplorer.artifact_naming import parse_filename
+            self.assertEqual(parse_filename(label)['result_type'],'Graph-Full')
+            self.assertIn('Graph strategy',picker.rows[index][0].origin_label)
             picker.set_selected([index],True)
             selected=form.read()
             revision=self.store.project(self.token,self.project_id)['revision']
@@ -109,7 +110,8 @@ class GraphSubsetExportTests(unittest.TestCase):
         path='/graphs/Molecules/001_similarity_morgan__component_0002.csv'
         producer.update(status='succeeded',artifacts=[path])
         details=ResultOrigins([producer],'r').describe(path,producer['id'],'r')
-        self.assertIn('Componente 2',details['display_name'])
+        from biomolexplorer.artifact_naming import parse_filename
+        self.assertEqual(parse_filename(details['display_name'])['result_type'],'Molecules-C2')
         self.assertIn(producer['name'],details['origin'])
         self.assertIn('União dos MCCs',subset_label('/graphs/Molecules/molecules.csv'))
         from biomolexplorer.ui.localization import Translator

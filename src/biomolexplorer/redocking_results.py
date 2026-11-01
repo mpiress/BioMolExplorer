@@ -5,6 +5,7 @@ import io
 import math
 import re
 import zipfile
+import json
 from pathlib import Path
 
 from .result_files import ResultFiles
@@ -132,6 +133,9 @@ class RedockingResults:
         with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as archive:
             for item in simulation['files']:
                 archive.writestr(item['archive_name'], self.store.read_file(token, pid, item['path']))
+            from .artifact_naming import bundle_manifest
+            stage=self.results.stage(token,pid,rid,sid)
+            archive.writestr('artifact-names.json',json.dumps(bundle_manifest(simulation['files'],[stage]),ensure_ascii=False))
         return output.getvalue()
 
     def remove_failure(self,token,pid,rid,sid,key):

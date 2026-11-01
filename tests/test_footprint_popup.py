@@ -53,7 +53,11 @@ class FootprintPopupTests(unittest.TestCase):
             self.assertAlmostEqual(controls[3].width/controls[3].height,1.1)
             self.assertLessEqual(dialog.content.height,ui.page.height-170)
             await dialog.actions[0].on_click(None)
-            ui.picker.save_file.assert_awaited_once_with(file_name='M1_footprint.pdf',src_bytes=pdf.read_bytes())
+            ui.picker.save_file.assert_awaited_once()
+            exported=ui.picker.save_file.await_args.kwargs
+            from biomolexplorer.artifact_naming import parse_filename
+            self.assertEqual(parse_filename(exported['file_name'])['result_type'],'Footprint')
+            self.assertEqual(exported['src_bytes'],pdf.read_bytes())
             table.write_text(table.read_text().replace('M1','M2'))
             with self.assertRaises(ValueError):await dialog.actions[0].on_click(None)
             dialog.actions[1].on_click(None)

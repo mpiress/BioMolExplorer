@@ -63,7 +63,7 @@ class AnalysisOriginsIntegrationTests(unittest.TestCase):
         # Keep those historical engine filenames while exercising selection
         # expansion and exact lineage against the real analytical workers.
         with patch('biomolexplorer.pipeline.JobManager',Manager),patch(
-                'biomolexplorer.artifact_naming.publish',side_effect=lambda stage,files,root:files):
+                'biomolexplorer.artifact_naming.publish',side_effect=lambda stage,files,root,**context:files):
             service=PipelineService(self.store);self.addCleanup(service.close)
             first=self.finish_selected(service,service.submit(self.token,self.project_id))
             self.assertEqual(first['status'],'succeeded',first.get('error'))

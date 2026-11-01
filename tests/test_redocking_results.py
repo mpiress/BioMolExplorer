@@ -54,7 +54,7 @@ class RedockingResultsTests(unittest.TestCase):
         self.assertFalse(any('OTH' in f['name'] or 'AA' in f['name'] for f in simulation['files']))
         self.assertEqual(sum(f['name']=='1ABC_LIG_1A.lig.pdbqt' for f in simulation['files']),2)
         with zipfile.ZipFile(io.BytesIO(service.archive(self.token,self.pid,self.rid,stage['id'],rows[0]['id']))) as archive:
-            self.assertEqual(len(archive.namelist()),7)
+            self.assertEqual(len(archive.namelist()),8);self.assertIn('artifact-names.json',archive.namelist())
             self.assertIn('structures/Estruturas/Prepared/1ABC_LIG_1A.lig.pdbqt',archive.namelist())
             self.assertIn('Estruturas/1ABC_LIG_1A.lig.pdbqt',archive.namelist())
 
@@ -100,8 +100,10 @@ class RedockingResultsTests(unittest.TestCase):
         asyncio.run(molecular.cells[-1].content.controls[0].on_click(None))
         self.assertTrue(ui.saved[-1]['src_bytes'])
         asyncio.run(dialog.actions[0].on_click(None))
-        self.assertTrue(ui.saved[-1]['file_name'].endswith('_redocking.zip'))
-        with zipfile.ZipFile(io.BytesIO(ui.saved[-1]['src_bytes'])) as archive:self.assertEqual(len(archive.namelist()),7)
+        from biomolexplorer.artifact_naming import parse_filename
+        exported=parse_filename(ui.saved[-1]['file_name'])
+        self.assertEqual(exported['operation'],'Redocking');self.assertEqual(exported['result_type'],'Bundle');self.assertEqual(exported['extension'],'zip')
+        with zipfile.ZipFile(io.BytesIO(ui.saved[-1]['src_bytes'])) as archive:self.assertEqual(len(archive.namelist()),8);self.assertIn('artifact-names.json',archive.namelist())
         result.close();self.assertFalse(file_table.valid())
         count=len(ui.saved);asyncio.run(dialog.actions[0].on_click(None));self.assertEqual(len(ui.saved),count)
 
@@ -164,7 +166,8 @@ class RedockingResultsTests(unittest.TestCase):
         asyncio.run(table.table.rows[0].cells[-2].content.on_click(None))
         dialog=ui.dialogs[-1];self.assertEqual(dialog.title.value,'Resíduos próximos ao ligante')
         asyncio.run(dialog.actions[1].on_click(None))
-        self.assertEqual(ui.saved[-1]['file_name'],'residue_contacts.csv')
+        from biomolexplorer.artifact_naming import parse_filename
+        exported=parse_filename(ui.saved[-1]['file_name']);self.assertEqual(exported['result_type'],'ResidueContacts');self.assertEqual(exported['operation'],'Redocking')
         self.assertIn(b'ALA',ui.saved[-1]['src_bytes'])
         result.close()
         calls=ui.preview_docking.await_count

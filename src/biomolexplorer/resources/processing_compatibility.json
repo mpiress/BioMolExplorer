@@ -4,7 +4,18 @@
     "0a02a75b59b41cdd2c0acb17e501ef53edfed203d1d4e5dbc0a8ed2be9f57b0e": "f4295fbe300eb121a6e9b2708a1860c2802d945f00229870ba05e9078664a0d4",
     "069dca2b28253f7f1dc4b99ac203ce811d19b5c0907c00a02555d15f34de3b37": "7305453dc23752cb51b2f410d66e2301805b8efd50c5f8e88517695499cea9e2",
     "43a1b5c2845a712a65dbbaafc729b2ab65f2bacca71cd816fa6fc6d6231f5536": "8abf2f9efce9cb969d5210770245b283790968379322b591db30b86b7b1ad72e",
-    "5a4cbff97eb9d8fe62b37dbe1bee67ac4a0bcbec57e9666545ffe3df43262662": "951d60b41620038b8a2d9cf8a229740937492b41ab49be7c7cfc68cb38df7e0d"
+    "5a4cbff97eb9d8fe62b37dbe1bee67ac4a0bcbec57e9666545ffe3df43262662": "951d60b41620038b8a2d9cf8a229740937492b41ab49be7c7cfc68cb38df7e0d",
+    "3d8c93bb9d4013e5e59b34c64715be526f0d7119f2b081b9dd19faa841078e4e": "484e65c4bdf2e8f9bc75768e4147a1c6e5f09abaf505b3821b341e3738e8a464",
+    "def523a58810bfa2b75d03c24161c30a8744c83d3ce5a5c71adf4748ba444e00": "4d4c2284bc15b6680ea222dc6960d447b88649286ba76bf3631c84c03b0f0754",
+    "f217289f82e8b7e0222a6f5abf3dd51100b6250c31919dbce3685decfb3a2b9d": "6a0b21d2e38f03209f468a886f9379fdf66be76f63b7470bb28076d38bd3575c",
+    "417627d693620c6d5c62e721bb3899f2f4dc36ccc36cead54aa900711be8ade1": "8cfc9928f14a452bef4327724600dd4461fef42c72f96d8013fd6859926f2c96",
+    "ce82f5d5a13cb2614e140874103f09929328b64ba07ef7ebad43a73127a1dc6c": "8e6e4e52db0f33d809eb546d64612528e32a4ab57361917b3dea05def953c5af",
+    "abcbfe631328d2fd769f15755544ef0c9ab13a7507dd7b72a4c331cc20ef4fd7": "8abf2f9efce9cb969d5210770245b283790968379322b591db30b86b7b1ad72e",
+    "1be30b72494b6583eac51d6a7327cd3619d21d7a1612ecbb924af8124b8d69a7": "951d60b41620038b8a2d9cf8a229740937492b41ab49be7c7cfc68cb38df7e0d",
+    "b6be1fe48755bf1d49224d609c13b5cbb6e8eae19e9617008b90622335b8fedb": "5b0dec85d0a0f78cfca2d17aed6d632dd60f300145a8017b4929576933bda1fb",
+    "897d566a1de2af9e687fa9f440b8b0df3421784f78a2724f7053dcd022a50a59": "0dc18ff9d42dc73d8088783dd393bee4c128eac1362f6b22fffd632cf2ed6d8c",
+    "1ccf338e0c577b3c5162ff05ae880c2027766d3941f2345175aa8bd46fb43ba4": "e58cccaf2715a8db73772511f3edbfc5a2318b6a7da9daaf568cb3038e2adef6",
+    "2daf9158795a2f5806fc81a15c3364eb5ecef5fbe9dc78615c51cb1ea8c16023": "4f34736243b28a919d1e07588de82a2903f3a545c3a6dc33079150ddbca79857"
   },
   "operations": [
     "prepare_structures",
@@ -25,6 +36,110 @@
       "current": "5a4cbff97eb9d8fe62b37dbe1bee67ac4a0bcbec57e9666545ffe3df43262662",
       "previous": "951d60b41620038b8a2d9cf8a229740937492b41ab49be7c7cfc68cb38df7e0d",
       "reason": "Only validator MD/CIF branches differ; fingerprint/similarity branches and kernels unchanged."
+    }
+  ],
+  "audit_2026_10_31_naming": [
+    {
+      "operation": "import_results",
+      "current": "3d8c93bb9d4013e5e59b34c64715be526f0d7119f2b081b9dd19faa841078e4e",
+      "previous": "484e65c4bdf2e8f9bc75768e4147a1c6e5f09abaf505b3821b341e3738e8a464",
+      "reason": "Shared public artifact naming, metadata and canonical filename routing only; scientific contents, validation rules, kernels and native processing parameters unchanged."
+    },
+    {
+      "operation": "retrieve_compounds",
+      "current": "def523a58810bfa2b75d03c24161c30a8744c83d3ce5a5c71adf4748ba444e00",
+      "previous": "4d4c2284bc15b6680ea222dc6960d447b88649286ba76bf3631c84c03b0f0754",
+      "reason": "Shared public artifact naming, metadata and canonical filename routing only; scientific contents, validation rules, kernels and native processing parameters unchanged."
+    },
+    {
+      "operation": "retrieve_pubchem",
+      "current": "f217289f82e8b7e0222a6f5abf3dd51100b6250c31919dbce3685decfb3a2b9d",
+      "previous": "6a0b21d2e38f03209f468a886f9379fdf66be76f63b7470bb28076d38bd3575c",
+      "reason": "Shared public artifact naming, metadata and canonical filename routing only; scientific contents, validation rules, kernels and native processing parameters unchanged."
+    },
+    {
+      "operation": "expand_similar_compounds",
+      "current": "def523a58810bfa2b75d03c24161c30a8744c83d3ce5a5c71adf4748ba444e00",
+      "previous": "4d4c2284bc15b6680ea222dc6960d447b88649286ba76bf3631c84c03b0f0754",
+      "reason": "Shared public artifact naming, metadata and canonical filename routing only; scientific contents, validation rules, kernels and native processing parameters unchanged."
+    },
+    {
+      "operation": "retrieve_structures",
+      "current": "def523a58810bfa2b75d03c24161c30a8744c83d3ce5a5c71adf4748ba444e00",
+      "previous": "4d4c2284bc15b6680ea222dc6960d447b88649286ba76bf3631c84c03b0f0754",
+      "reason": "Shared public artifact naming, metadata and canonical filename routing only; scientific contents, validation rules, kernels and native processing parameters unchanged."
+    },
+    {
+      "operation": "retrieve_zinc",
+      "current": "def523a58810bfa2b75d03c24161c30a8744c83d3ce5a5c71adf4748ba444e00",
+      "previous": "4d4c2284bc15b6680ea222dc6960d447b88649286ba76bf3631c84c03b0f0754",
+      "reason": "Shared public artifact naming, metadata and canonical filename routing only; scientific contents, validation rules, kernels and native processing parameters unchanged."
+    },
+    {
+      "operation": "prepare_structures",
+      "current": "417627d693620c6d5c62e721bb3899f2f4dc36ccc36cead54aa900711be8ade1",
+      "previous": "8cfc9928f14a452bef4327724600dd4461fef42c72f96d8013fd6859926f2c96",
+      "reason": "Shared public artifact naming, metadata and canonical filename routing only; scientific contents, validation rules, kernels and native processing parameters unchanged."
+    },
+    {
+      "operation": "admet",
+      "current": "ce82f5d5a13cb2614e140874103f09929328b64ba07ef7ebad43a73127a1dc6c",
+      "previous": "8e6e4e52db0f33d809eb546d64612528e32a4ab57361917b3dea05def953c5af",
+      "reason": "Shared public artifact naming, metadata and canonical filename routing only; scientific contents, validation rules, kernels and native processing parameters unchanged."
+    },
+    {
+      "operation": "fingerprints",
+      "current": "abcbfe631328d2fd769f15755544ef0c9ab13a7507dd7b72a4c331cc20ef4fd7",
+      "previous": "8abf2f9efce9cb969d5210770245b283790968379322b591db30b86b7b1ad72e",
+      "reason": "Shared public artifact naming, metadata and canonical filename routing only; scientific contents, validation rules, kernels and native processing parameters unchanged."
+    },
+    {
+      "operation": "similarity",
+      "current": "1be30b72494b6583eac51d6a7327cd3619d21d7a1612ecbb924af8124b8d69a7",
+      "previous": "951d60b41620038b8a2d9cf8a229740937492b41ab49be7c7cfc68cb38df7e0d",
+      "reason": "Shared public artifact naming, metadata and canonical filename routing only; scientific contents, validation rules, kernels and native processing parameters unchanged."
+    },
+    {
+      "operation": "graphs",
+      "current": "b6be1fe48755bf1d49224d609c13b5cbb6e8eae19e9617008b90622335b8fedb",
+      "previous": "5b0dec85d0a0f78cfca2d17aed6d632dd60f300145a8017b4929576933bda1fb",
+      "reason": "Shared public artifact naming, metadata and canonical filename routing only; scientific contents, validation rules, kernels and native processing parameters unchanged."
+    },
+    {
+      "operation": "redocking",
+      "current": "417627d693620c6d5c62e721bb3899f2f4dc36ccc36cead54aa900711be8ade1",
+      "previous": "8cfc9928f14a452bef4327724600dd4461fef42c72f96d8013fd6859926f2c96",
+      "reason": "Shared public artifact naming, metadata and canonical filename routing only; scientific contents, validation rules, kernels and native processing parameters unchanged."
+    },
+    {
+      "operation": "docking_vina",
+      "current": "897d566a1de2af9e687fa9f440b8b0df3421784f78a2724f7053dcd022a50a59",
+      "previous": "0dc18ff9d42dc73d8088783dd393bee4c128eac1362f6b22fffd632cf2ed6d8c",
+      "reason": "Shared public artifact naming, metadata and canonical filename routing only; scientific contents, validation rules, kernels and native processing parameters unchanged."
+    },
+    {
+      "operation": "docking_dock6",
+      "current": "897d566a1de2af9e687fa9f440b8b0df3421784f78a2724f7053dcd022a50a59",
+      "previous": "0dc18ff9d42dc73d8088783dd393bee4c128eac1362f6b22fffd632cf2ed6d8c",
+      "reason": "Shared public artifact naming, metadata and canonical filename routing only; scientific contents, validation rules, kernels and native processing parameters unchanged."
+    },
+    {
+      "operation": "consensus",
+      "current": "897d566a1de2af9e687fa9f440b8b0df3421784f78a2724f7053dcd022a50a59",
+      "previous": "0dc18ff9d42dc73d8088783dd393bee4c128eac1362f6b22fffd632cf2ed6d8c",
+      "reason": "Shared public artifact naming, metadata and canonical filename routing only; scientific contents, validation rules, kernels and native processing parameters unchanged."
+    },
+    {
+      "operation": "dynamics_dock6",
+      "current": "1ccf338e0c577b3c5162ff05ae880c2027766d3941f2345175aa8bd46fb43ba4",
+      "previous": "e58cccaf2715a8db73772511f3edbfc5a2318b6a7da9daaf568cb3038e2adef6",
+      "reason": "Shared public artifact naming, metadata and canonical filename routing only; scientific contents, validation rules, kernels and native processing parameters unchanged."
+    },
+    {
+      "operation": "normalized-compounds infrastructure",
+      "current": "2daf9158795a2f5806fc81a15c3364eb5ecef5fbe9dc78615c51cb1ea8c16023",
+      "previous": "4f34736243b28a919d1e07588de82a2903f3a545c3a6dc33079150ddbca79857",
+      "reason": "Exact infrastructure compatibility; normalized compound table generation and scientific dependencies unchanged. Public naming/registry and canonical-input routing only."
     }
   ]
 }

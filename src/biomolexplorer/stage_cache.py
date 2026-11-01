@@ -84,7 +84,7 @@ def implementation_digest():
             digest.update(path.read_bytes())
     for name in ('operations.py','pipeline.py','input_validation.py','molecule_quality.py','fingerprint_selection.py','graph_inputs.py','docking_inputs.py','visualizations.py','admet_config.py','admet_predictors.py','admet_ai_runner.py','egg_plot.py','vina_session.py','vina_batch.py','calculation_cache.py'):
         digest.update((SOURCE_ROOT / 'biomolexplorer' / name).read_bytes())
-    return digest.hexdigest()
+    return compatible_processing_digest(digest.hexdigest())
 
 
 @lru_cache(maxsize=32)
@@ -207,7 +207,7 @@ def path_manifest(path):
     path = Path(path)
     if path.is_file():
         return {path.name: file_digest(path)}
-    ignored = {'.biomolexplorer', '.calculation-cache', '.curation', '__pycache__', 'cache', 'logs', '.history', '.exports', '.input-cache', 'project.json'}
+    ignored = {'.biomolexplorer', '.calculation-cache', '.curation', '__pycache__', 'cache', 'logs', '.history', '.exports', '.input-cache', 'project.json', '.artifact-publication.json'}
     return {p.relative_to(path).as_posix(): file_digest(p) for p in sorted(path.rglob('*'))
             if p.is_file() and not (set(p.relative_to(path).parts) & ignored)}
 

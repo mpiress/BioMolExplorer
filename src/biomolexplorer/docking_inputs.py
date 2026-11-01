@@ -11,7 +11,10 @@ def target_input(stage, field):
 
 def prepared_receptor(path):
     """The preparation stage gives ligand-free receptors this dedicated suffix."""
-    return Path(path).name.endswith(('.dockprep.pdbqt','.dockprep.mol2'))
+    if Path(path).name.endswith(('.dockprep.pdbqt','.dockprep.mol2')):return True
+    from .artifact_naming import parse_filename
+    parsed=parse_filename(path)
+    return bool(parsed and parsed['scheme']==1 and parsed['result_type'].startswith('Receptor-') and Path(path).suffix.lower() in ('.pdbqt','.mol2'))
 
 
 def preferred_receptors(paths):
@@ -22,7 +25,7 @@ def preferred_receptors(paths):
 
 def ligand_input_file(path):
     path=Path(path)
-    return path.suffix.lower() in ('.csv','.sdf','.mol2','.pdbqt') and '.dockprep.' not in path.name and '.noH.' not in path.name
+    return path.suffix.lower() in ('.csv','.sdf','.mol2','.pdbqt') and not prepared_receptor(path) and '.noH.' not in path.name
 
 
 def compound_identifiers(paths):

@@ -9,6 +9,8 @@ de workflow, os templates, as configurações de ambiente e a documentação.
 A validação científica dos métodos e a execução dos motores externos têm um
 escopo diferente da validação da arquitetura descrita aqui.
 
+> A seção de problemas/tratamentos e as verificações datadas registram revisões anteriores, não aprovação de uma release atual. Esta auditoria documental não executou algoritmos científicos. O empacotamento atual tem uma limitação TOML descrita na instalação; a presença do pyproject não comprova que o pacote seja instalável.
+
 ## Estrutura
 
 ```text
@@ -111,7 +113,7 @@ e [multiprocessing no Flet](https://flet.dev/docs/cookbook/multiprocessing/).
 | Encadeamento | Algumas etapas exigiam dados e resultados no mesmo diretório | Entradas e saídas explícitas para expansão, ZINC, fingerprints, grafos e conformações Vina → DOCK6 |
 | Redocking | O wrapper podia remover arquivos do diretório de entrada | A operação da camada de aplicação cria uma cópia de trabalho das estruturas |
 | Preparação de docking | A cadeia do último complexo era reaproveitada em outros complexos; a primeira execução dependia de um CSV de centros já existente | Uso da cadeia de cada registro e criação inicial do CSV de centros |
-| Distribuição | Ausência de pacote instalável e dependências diretas não declaradas no ambiente | `pyproject.toml`, CLI e dependências explícitas nos ambientes Conda |
+| Distribuição | Ausência de pacote instalável e dependências diretas não declaradas no ambiente | CLI e manifestos presentes; instalação editável bloqueada pela sintaxe atual do pyproject |
 
 As correções de ADMET, filtros e relações com score 1 alteram resultados que
 antes estavam incorretos. Reexecute essas etapas se precisar que conjuntos
@@ -142,7 +144,7 @@ Uma futura versão de esquema poderá adotar `compound_id`, com migração expl�
 
 ## Fluxo e identidade dos artefatos
 
-Cada saída registrada possui `artifact_id` estável por bloco e caminho lógico, `occurrence_id` por execução, manifest SHA-256, produtor, lote, contexto e entradas efetivamente consumidas. O caminho físico localiza os bytes, mas não é a identidade. Nomes seguem o conteúdo científico (`docking_results.csv`, `pdb_codes.csv`, `dynamics_results.json`) dentro de diretórios já identificados por execução, bloco e, quando necessário, par; por isso não repetem IDs longos no nome exibido.
+Cada saída registrada possui `artifact_id` estável por bloco e caminho lógico, `occurrence_id` por execução, manifest SHA-256, produtor, lote, contexto e entradas efetivamente consumidas. O caminho físico localiza os bytes, mas não é a identidade. Nomes físicos de trabalho como `docking_results.csv`, `pdb_codes.csv` e `dynamics_results.json` permanecem internos. O nome público usa `TG[ALVO]-SRC[ORIGEM]-OP[OPERAÇÃO]-TIPO-ID[hash].ext`, com a linhagem completa nos metadados; não concatena o histórico de blocos. Consulte [nomes públicos](projects.md#nomes-publicos-e-rastreabilidade).
 
 O pipeline prioriza um índice autoritativo e artefatos pesados necessários, em vez de cópias derivadas. Grafos gravam um CSV completo com colunas de componente e um `*.biomol-view.json`; componentes são navegados ou exportados sob demanda. Redocking e dinâmica mantêm checkpoints verificados por par, reutilizando receptor/preparo ou resultado somente quando entradas, opções, ferramentas e hashes coincidem. Lotes e etapas só reutilizam saídas de execuções concluídas. Formatos legados continuam legíveis, mas não são regenerados quando há uma representação indexada equivalente.
 
@@ -356,7 +358,7 @@ Os testes automatizados de integração substituem ferramentas externas na front
 
 `ui/redocking_results.py` apresenta a tabela paginada de RMSD e o popup de arquivos por simulação. Etapas em execução ou com falha continuam usando a consulta genérica de artefatos. `pdb_view.py` emite acessos temporários ao visualizador PDB/PDBQT/MOL2; troca de projeto ou sessão invalida ações pendentes. A visualização abre no navegador e usa o mesmo componente 3D dos PDBs recuperados.
 
-Consulte [Logs e diagnóstico](logging.md) para o formato comum, contexto por execução, códigos de falha, resumo do job e o comando `python -m biomolexplorer.log_report`.
+Consulte [Logs e diagnóstico](logging.md) para o formato comum, contexto por execução, códigos de falha, resumo do job e o comando `PYTHONPATH=src python -m biomolexplorer.log_report`.
 
 
 A camada `docking_data.py` preserva código, SMILES e pose nos dois sentidos Vina ↔ DOCK6. `result_tables` usa os resumos de todos os lotes e exclui tabelas redundantes por receptor. `DockingResults` e `DockingResultsTable` compartilham paginação, visualização das poses autorizadas e remoção auditada para os dois motores e o consenso. A seleção de esferas DOCK6 usa o centro do sítio preparado, permitindo candidatos independentes sem conformação Vina prévia.
@@ -438,3 +440,7 @@ ferramentas no cache científico. Lotes com falhas individuais não são tratado
 como resultados integralmente completos: a próxima execução reaproveita os
 sucessos e tenta novamente os demais. A escolha de reuso existente é propagada
 ao worker e controla também os checkpoints, sem novas opções na interface.
+
+## Contrato atual de execução e resultados
+
+[Ordem do DAG, seleção tardia, pausa/cancelamento, limpeza e reúso incremental](projects.md#execucao-selecao-tardia-e-preservacao-de-resultados). [Nomes públicos e linhagem](projects.md#nomes-publicos-e-rastreabilidade).

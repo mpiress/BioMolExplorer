@@ -1,11 +1,12 @@
 # Conjuntos de saída e processamento
 
-As seleções entre blocos mostram o conteúdo do arquivo e sua origem. As tabelas
-analíticas usam o nome `Bnn__operação__conteúdo.ext`, por exemplo
-`B01__chembl__mol.csv` e `B02__admet__bbb-pos.csv`. O identificador do bloco
-permanece estável ao reorganizar o pipeline. Arquivos exigidos pelos motores de
-docking e dinâmica mantêm seus nomes técnicos; o seletor acrescenta um rótulo
-descritivo e preserva o identificador do complexo ou da molécula.
+As seleções usam nomes públicos na convenção
+`TG[ALVO]-SRC[ORIGEM]-OP[OPERAÇÃO]-TIPO-ID[hash].ext`. O identificador curto
+distingue ocorrências; a identidade interna e a linhagem completa permanecem
+nos metadados. `TG[NA]` indica alvo desconhecido ou não aplicável.
+As publicações físicas anteriores `Bnn__operação__conteúdo.ext` e os nomes
+operacionais dos motores continuam compatíveis, sem renomeação destrutiva.
+Consulte a [convenção compartilhada](artifact_naming.md).
 
 | Bloco | Identificação dos conjuntos |
 | --- | --- |
@@ -23,7 +24,7 @@ descritivo e preserva o identificador do complexo ou da molécula.
 | Redocking | RMSD e arquivos do complexo correspondente |
 | Vina/DOCK6 | SCORE: resultados; POSE: pose com identificador molecular |
 | Consenso | RANK: consenso dos resultados Vina e DOCK6 |
-| Dinâmica | MD: trajetória, topologia e coordenadas do par receptor–ligante |
+| Amber Score · DOCK6 | Score, contribuições energéticas, topologias/coordenadas, protocolo e comparação inicial/final disponível; não há dinâmica convencional nem RMSF |
 
 BBB e HIA são as classificações previstas pelo método ADMET configurado. Os
 relatórios preservam os métodos e parâmetros usados.

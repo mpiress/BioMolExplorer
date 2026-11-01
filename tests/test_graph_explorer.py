@@ -328,7 +328,8 @@ class GraphProvenanceTests(unittest.TestCase):
         asyncio.run(results.load());self.assertTrue(results.loaded);self.assertEqual(len(results.dataset.options),2)
         self.assertTrue(results.graph_files.files)
         self.assertTrue(any(f['name'].endswith('__full_graph.csv') for f in results.graph_files.files))
-        self.assertTrue(any(f['name'].endswith('__component_0001_mcc.csv') for f in results.graph_files.files))
+        # Current graph outputs index component membership in the full CSV.
+        self.assertFalse(any(f['name'].endswith('__component_0001_mcc.csv') for f in results.graph_files.files))
         self.assertTrue(any('Grafo completo' in f['description'] for f in results.graph_files.files))
         self.assertTrue(all(Path(f['name']).stem==Path(results.dataset.value).name.removesuffix(SUFFIX) or Path(f['name']).stem.startswith(Path(results.dataset.value).name.removesuffix(SUFFIX)+'__') for f in results.graph_files.files))
         self.assertTrue(all(f['description'] for f in results.graph_files.files))
@@ -344,7 +345,11 @@ class GraphProvenanceTests(unittest.TestCase):
         self.assertTrue(viewer.tip_text.value.startswith('A\n'));asyncio.run(viewer.select('A'))
         self.assertFalse(ui.dialogs);asyncio.run(viewer.explorer.inspector.details())
         self.assertEqual(ui.dialogs[-1].title.controls[1].controls[0].value,'A')
-        asyncio.run(viewer.actions[1].on_click(None));self.assertTrue(ui.saved[-1]['file_name'].endswith('_mcc.csv'))
+        asyncio.run(viewer.actions[1].on_click(None))
+        from biomolexplorer.artifact_naming import parse_filename
+        exported=parse_filename(ui.saved[-1]['file_name'])
+        self.assertEqual(exported['operation'],'Graphs');self.assertEqual(exported['result_type'],'Edges-LCC')
+        self.assertEqual(exported['extension'],'csv')
         results.dataset.value=results.dataset.options[1].key
         asyncio.run(results.change_graph(None));self.assertFalse(viewer.active)
         self.assertTrue(all(Path(f['name']).stem==Path(results.dataset.value).name.removesuffix(SUFFIX) or Path(f['name']).stem.startswith(Path(results.dataset.value).name.removesuffix(SUFFIX)+'__') for f in results.graph_files.files))

@@ -1,0 +1,314 @@
+[
+  {
+    "url": "http://lattes.cnpq.br/1449902596670082",
+    "status": 200,
+    "final": "http://buscatextual.cnpq.br/buscatextual/visualizacv.do?metodo=apresentar&id=K4127909P6",
+    "seconds": 0.4
+  },
+  {
+    "url": "http://lattes.cnpq.br/3856358583630209",
+    "status": 200,
+    "final": "http://buscatextual.cnpq.br/buscatextual/visualizacv.do?metodo=apresentar&id=K4509401E4",
+    "seconds": 0.4
+  },
+  {
+    "url": "http://lattes.cnpq.br/4759006674013596",
+    "status": 200,
+    "final": "http://buscatextual.cnpq.br/buscatextual/visualizacv.do?metodo=apresentar&id=K4795721J1",
+    "seconds": 0.42
+  },
+  {
+    "url": "https://autodock-vina.readthedocs.io/en/latest/docking_python.html",
+    "status": 200,
+    "final": "https://autodock-vina.readthedocs.io/en/latest/docking_python.html",
+    "seconds": 0.14
+  },
+  {
+    "url": "https://cache.docking.org/2D/",
+    "status": 200,
+    "final": "https://cache.docking.org/2D/",
+    "seconds": 0.7
+  },
+  {
+    "url": "https://chembl.gitbook.io/chembl-data-deposition-guide/file-structure/field-names-and-data-types-minimal-data-submission/assay.tsv",
+    "status": 200,
+    "final": "https://chembl.gitbook.io/chembl-data-deposition-guide/file-structure/field-names-and-data-types-minimal-data-submission/assay.tsv",
+    "seconds": 0.19
+  },
+  {
+    "url": "https://deepchem.readthedocs.io/en/stable/index.html",
+    "status": 200,
+    "final": "https://deepchem.readthedocs.io/en/stable/index.html",
+    "seconds": 0.14
+  },
+  {
+    "url": "https://demos.openadmet.org/en/latest/demos/05_Ensemble_Model_Inference/05_Model_Ensemble_Inference.html",
+    "status": 200,
+    "final": "https://demos.openadmet.org/en/latest/demos/05_Ensemble_Model_Inference/05_Model_Ensemble_Inference.html",
+    "seconds": 0.17
+  },
+  {
+    "url": "https://dock.compbio.ucsf.edu/DOCK_6/dock6_manual.htm",
+    "status": null,
+    "error": "<urlopen error timed out>",
+    "seconds": 16.44
+  },
+  {
+    "url": "https://dock.compbio.ucsf.edu/DOCK_6/index.htm",
+    "status": null,
+    "error": "<urlopen error timed out>",
+    "seconds": 16.44
+  },
+  {
+    "url": "https://dock.compbio.ucsf.edu/DOCK_6/new_in_6.11.txt",
+    "status": null,
+    "error": "<urlopen error timed out>",
+    "seconds": 16.3
+  },
+  {
+    "url": "https://dock.compbio.ucsf.edu/DOCK_6/tutorials/ligand_sampling_dock/ligand_sampling_dock.html",
+    "status": null,
+    "error": "<urlopen error timed out>",
+    "seconds": 16.3
+  },
+  {
+    "url": "https://dock.docking.org/DOCK_6/tutorials/grid_generation/generating_grid.html",
+    "status": null,
+    "error": "<urlopen error timed out>",
+    "seconds": 16.21
+  },
+  {
+    "url": "https://docs.gephi.org/desktop/Plugins/Layout/",
+    "status": 200,
+    "final": "https://docs.gephi.org/desktop/Plugins/Layout/",
+    "seconds": 0.29
+  },
+  {
+    "url": "https://docs.gephi.org/desktop/User_Manual/Import/GEXF_File_Format/",
+    "status": 200,
+    "final": "https://docs.gephi.org/desktop/User_Manual/Import/GEXF_File_Format/",
+    "seconds": 0.26
+  },
+  {
+    "url": "https://doi.org/10.1371/journal.pone.0098679",
+    "status": 200,
+    "final": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0098679",
+    "seconds": 1.15
+  },
+  {
+    "url": "https://flet.dev/docs/cookbook/async-apps/",
+    "status": 200,
+    "final": "https://flet.dev/docs/cookbook/async-apps/",
+    "seconds": 0.19
+  },
+  {
+    "url": "https://flet.dev/docs/cookbook/multiprocessing/",
+    "status": 200,
+    "final": "https://flet.dev/docs/cookbook/multiprocessing/",
+    "seconds": 0.18
+  },
+  {
+    "url": "https://gephi.org/quickstart/",
+    "status": 200,
+    "final": "https://gephi.org/quickstart/",
+    "seconds": 0.27
+  },
+  {
+    "url": "https://github.com/3dmol/3Dmol.js/releases/tag/2.5.5",
+    "status": 200,
+    "final": "https://github.com/3dmol/3Dmol.js/releases/tag/2.5.5",
+    "seconds": 0.63
+  },
+  {
+    "url": "https://github.com/PatWalters/solubility",
+    "status": 200,
+    "final": "https://github.com/PatWalters/solubility",
+    "seconds": 0.59
+  },
+  {
+    "url": "https://github.com/mpiress/BioMolExplorer",
+    "status": 200,
+    "final": "https://github.com/mpiress/BioMolExplorer",
+    "seconds": 0.56
+  },
+  {
+    "url": "https://github.com/mpiress/BioMolExplorer.git",
+    "status": 200,
+    "final": "https://github.com/mpiress/BioMolExplorer",
+    "seconds": 0.46
+  },
+  {
+    "url": "https://github.com/pharmai/plip/blob/master/plip/basic/config.py",
+    "status": 200,
+    "final": "https://github.com/pharmai/plip/blob/master/plip/basic/config.py",
+    "seconds": 0.69
+  },
+  {
+    "url": "https://github.com/swansonk14/admet_ai",
+    "status": 200,
+    "final": "https://github.com/swansonk14/admet_ai",
+    "seconds": 0.58
+  },
+  {
+    "url": "https://pubmed.ncbi.nlm.nih.gov/12036371/",
+    "status": 200,
+    "final": "https://pubmed.ncbi.nlm.nih.gov/12036371/",
+    "seconds": 0.51
+  },
+  {
+    "url": "https://pubmed.ncbi.nlm.nih.gov/14554012/",
+    "status": 200,
+    "final": "https://pubmed.ncbi.nlm.nih.gov/14554012/",
+    "seconds": 0.38
+  },
+  {
+    "url": "https://pubmed.ncbi.nlm.nih.gov/1608900/",
+    "status": 200,
+    "final": "https://pubmed.ncbi.nlm.nih.gov/1608900/",
+    "seconds": 0.7
+  },
+  {
+    "url": "https://pubmed.ncbi.nlm.nih.gov/27218427/",
+    "status": 200,
+    "final": "https://pubmed.ncbi.nlm.nih.gov/27218427/",
+    "seconds": 0.54
+  },
+  {
+    "url": "https://pypi.org/project/admet-ai/2.0.1/",
+    "status": 200,
+    "final": "https://pypi.org/project/admet-ai/2.0.1/",
+    "seconds": 0.26
+  },
+  {
+    "url": "https://search.rcsb.org/",
+    "status": 200,
+    "final": "https://search.rcsb.org/",
+    "seconds": 0.53
+  },
+  {
+    "url": "https://tdcommons.ai/single_pred_tasks/adme/",
+    "status": 200,
+    "final": "https://tdcommons.ai/single_pred_tasks/adme/",
+    "seconds": 0.11
+  },
+  {
+    "url": "https://tdcommons.ai/single_pred_tasks/overview/",
+    "status": 200,
+    "final": "https://tdcommons.ai/single_pred_tasks/overview/",
+    "seconds": 0.11
+  },
+  {
+    "url": "https://tdcommons.ai/single_pred_tasks/tox/",
+    "status": 200,
+    "final": "https://tdcommons.ai/single_pred_tasks/tox/",
+    "seconds": 0.11
+  },
+  {
+    "url": "https://wiki.docking.org/index.php?title=ZINC15:examples:screening",
+    "status": null,
+    "error": "<urlopen error timed out>",
+    "seconds": 16.12
+  },
+  {
+    "url": "https://www.cgl.ucsf.edu/Overview/ftp/dms.zip",
+    "status": 200,
+    "final": "https://www.cgl.ucsf.edu/Overview/ftp/dms.zip",
+    "seconds": 1.21
+  },
+  {
+    "url": "https://www.cgl.ucsf.edu/Overview/software.html",
+    "status": 200,
+    "final": "https://www.cgl.ucsf.edu/Overview/software.html",
+    "seconds": 1.13
+  },
+  {
+    "url": "https://www.cgl.ucsf.edu/chimera/download.html",
+    "status": 200,
+    "final": "https://www.cgl.ucsf.edu/chimera/download.html",
+    "seconds": 1.13
+  },
+  {
+    "url": "https://www.cgl.ucsf.edu/chimera/olddownload.html",
+    "status": 200,
+    "final": "https://www.cgl.ucsf.edu/chimera/olddownload.html",
+    "seconds": 1.02
+  },
+  {
+    "url": "https://www.ebi.ac.uk/chembl/elk/es/chembl_activity/_search",
+    "status": 200,
+    "final": "https://www.ebi.ac.uk/chembl/elk/es/chembl_activity/_search",
+    "seconds": 3.12
+  },
+  {
+    "url": "https://www.nature.com/articles/nchem.1243",
+    "status": 200,
+    "final": "https://www.nature.com/articles/nchem.1243?error=cookies_not_supported&code=f6f1f67c-d59e-42e7-a15a-deb622aef417",
+    "seconds": 2.0
+  },
+  {
+    "url": "https://www.nature.com/articles/s41467-020-19160-7",
+    "status": 200,
+    "final": "https://www.nature.com/articles/s41467-020-19160-7?error=cookies_not_supported&code=cd357b79-8443-47d9-a6f7-90f503b08f94",
+    "seconds": 2.04
+  },
+  {
+    "url": "https://www.nature.com/articles/s41592-026-03143-5",
+    "status": 200,
+    "final": "https://www.nature.com/articles/s41592-026-03143-5?error=cookies_not_supported&code=43183f39-fab6-4e53-8030-33e40dc5a4bd",
+    "seconds": 1.98
+  },
+  {
+    "url": "https://www.nature.com/articles/srep42717",
+    "status": 200,
+    "final": "https://www.nature.com/articles/srep42717?error=cookies_not_supported&code=51ee183c-3d63-4f3b-bfc4-79ed67d11a63",
+    "seconds": 1.98
+  },
+  {
+    "url": "https://www.nngroup.com/articles/form-design-white-space/",
+    "status": 200,
+    "final": "https://www.nngroup.com/articles/form-design-white-space/",
+    "seconds": 0.87
+  },
+  {
+    "url": "https://www.nngroup.com/articles/progressive-disclosure/",
+    "status": 200,
+    "final": "https://www.nngroup.com/articles/progressive-disclosure/",
+    "seconds": 0.83
+  },
+  {
+    "url": "https://www.openadmet.org/",
+    "status": 200,
+    "final": "https://www.openadmet.org/",
+    "seconds": 0.35
+  },
+  {
+    "url": "https://www.rdkit.org/docs/GettingStartedInPython.html",
+    "status": 200,
+    "final": "https://www.rdkit.org/docs/GettingStartedInPython.html",
+    "seconds": 0.64
+  },
+  {
+    "url": "https://www.rdkit.org/docs/source/rdkit.Chem.QED.html",
+    "status": 200,
+    "final": "https://www.rdkit.org/docs/source/rdkit.Chem.QED.html",
+    "seconds": 0.65
+  },
+  {
+    "url": "https://www.rdkit.org/docs/source/rdkit.Chem.rdFMCS.html",
+    "status": 200,
+    "final": "https://www.rdkit.org/docs/source/rdkit.Chem.rdFMCS.html",
+    "seconds": 0.67
+  },
+  {
+    "url": "https://www.wwpdb.org/documentation/file-format-content/format33/sect7.html",
+    "status": 200,
+    "final": "https://www.wwpdb.org/documentation/file-format-content/format33/sect7.html",
+    "seconds": 0.54
+  },
+  {
+    "url": "https://zinc20.docking.org/tranches/home/",
+    "status": 200,
+    "final": "https://zinc20.docking.org/captcha?next=%2Ftranches%2Fhome%2F",
+    "seconds": 2.17
+  }
+]
