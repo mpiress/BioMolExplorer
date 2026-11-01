@@ -139,7 +139,7 @@ class ProjectPortabilityTests(unittest.TestCase):
         self.assertEqual(len(item['input_files']['base_input_path']),2)
         import pandas as pd
         report=next(Path(p) for p in item['artifacts'] if p.endswith('_admet_report.json'))
-        file=report.parent/(json.loads(report.read_text())['output_stem']+'.csv')
+        file=report.parent/(json.loads(report.read_text())['output_stem']+'_evaluated.csv')
         self.assertIn(str(file),item['artifacts'])
         self.assertEqual(set(pd.read_csv(file).molecule_chembl_id),{'MOL1','MOL2','MOL3'})
 

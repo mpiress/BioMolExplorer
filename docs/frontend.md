@@ -32,7 +32,7 @@ Na raiz do código baixado, com o ambiente científico preparado:
 
 ```bash
 conda activate BioMolExplorer
-python -m pip install -e '.[ui]'
+# Execução pelo checkout; veja a limitação de empacotamento abaixo.
 biomolexplorer-ui --web --language pt --dock6-path /caminho/para/dock6-6.11
 ```
 
@@ -484,7 +484,7 @@ Use o botão de download de cada linha para baixar um arquivo, ou **Baixar todos
 
 O botão **Visualizar estrutura 3D** abre o visualizador no navegador, como na consulta dos PDBs. Ele aceita PDB, PDBQT e MOL2 para examinar receptor, ligante e poses antes do download. Ao abrir um arquivo com várias poses, use **Modelo** no visualizador. A cena aberta pelo botão **3D** da tabela seleciona automaticamente a pose de menor score, ou a primeira sem score; essa cena não oferece troca de modelo. As legendas e ações acompanham o idioma selecionado. Leitores também podem consultar e baixar os resultados.
 
-Consulte [Logs e diagnóstico](logging.md) para o formato comum, contexto por execução, códigos de falha, resumo do job e o comando `python -m biomolexplorer.log_report`.
+Consulte [Logs e diagnóstico](logging.md) para o formato comum, contexto por execução, códigos de falha, resumo do job e o comando `PYTHONPATH=src python -m biomolexplorer.log_report`.
 
 
 ## Entradas e resultados de docking
@@ -716,3 +716,7 @@ Na abertura, as comunidades são calculadas para o universo apresentado, dentro 
 limites existentes. Seu cartão não depende de ativar a coloração por comunidades.
 No painel MCS, os parâmetros usam linhas separadas e o desenho aparece ao lado
 do resumo do resultado, com tradução dos textos dinâmicos em português e inglês.
+
+## Contrato atual de execução e resultados
+
+[Ordem do DAG, seleção tardia, pausa/cancelamento, limpeza e reúso incremental](projects.md#execucao-selecao-tardia-e-preservacao-de-resultados). [Nomes públicos e linhagem](projects.md#nomes-publicos-e-rastreabilidade).

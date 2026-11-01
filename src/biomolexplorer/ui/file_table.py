@@ -60,7 +60,7 @@ class FileTable:
                     if not self.valid():return
                     if self.download_action:return await self.download_action(item)
                     data=await self.ui.call(self.ui.store.read_file,self.token,self.project_id,item['path'])
-                    if self.valid():await save_file(self.ui,file_name=item['name'],src_bytes=data)
+                    if self.valid():await save_file(self.ui,file_name=item.get('public_name',item['name']),src_bytes=data)
                 await self.ui.guard(action)
             actions=[ft.IconButton(ft.Icons.DOWNLOAD,tooltip='Baixar '+item['name'],on_click=download)]
             if self.run_id and self.stage_id and Path(item['name']).suffix.lower()=='.csv':

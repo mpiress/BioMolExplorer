@@ -4,6 +4,7 @@ import math
 from collections import Counter
 import flet as ft
 from .processing import save_file
+from biomolexplorer.artifact_naming import download_name
 import flet.canvas as canvas
 from biomolexplorer.network_analysis import METRICS,PALETTE
 from .localization import verbatim
@@ -393,7 +394,7 @@ class GraphExplorer:
                         'lower':self.molecular.lower.value,'upper':self.molecular.upper.value,
                         'selected_ids':None if self.molecular.linked_ids is None else sorted(self.molecular.linked_ids)}),ensure_ascii=False).encode()
             else:data=await view.ui.call(self.svg)
-            if view.active and view.ui.token==view.token:await save_file(view.ui,file_name=f'network_{view.mode}.{kind}',src_bytes=data)
+            if view.active and view.ui.token==view.token:await save_file(view.ui,file_name=download_name(view.data.get('dataset_origin',{}),result_type='Graph-'+str(view.mode),extension=kind,qualifier=view.mode,operation='graphs'),src_bytes=data)
         await self.view.ui.guard(action)
 
     def svg(self):
@@ -576,7 +577,7 @@ class GraphExplorer:
             if not view.active or view.ui.token!=view.token:return
             _,current_key=self.ranking_context()
             if current_key!=key or metric!=self.rank_metric.value:return
-            await save_file(view.ui,file_name=f'ranking_{self.rank_scope.value}_{view.mode}_{metric}.csv',src_bytes=data)
+            await save_file(view.ui,file_name=download_name(view.data.get('dataset_origin',{}),result_type='Ranking-'+str(metric),extension='csv',qualifier=[self.rank_scope.value,view.mode,metric],operation='graphs'),src_bytes=data)
         await self.view.ui.guard(action)
 
     async def ranking_help(self,e=None):

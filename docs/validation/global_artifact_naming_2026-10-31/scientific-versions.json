@@ -1,0 +1,22 @@
+{
+  "versions_preserved": 16,
+  "operations": {
+    "import_results": "484e65c4bdf2e8f9bc75768e4147a1c6e5f09abaf505b3821b341e3738e8a464",
+    "retrieve_compounds": "4d4c2284bc15b6680ea222dc6960d447b88649286ba76bf3631c84c03b0f0754",
+    "retrieve_pubchem": "6a0b21d2e38f03209f468a886f9379fdf66be76f63b7470bb28076d38bd3575c",
+    "expand_similar_compounds": "4d4c2284bc15b6680ea222dc6960d447b88649286ba76bf3631c84c03b0f0754",
+    "retrieve_structures": "4d4c2284bc15b6680ea222dc6960d447b88649286ba76bf3631c84c03b0f0754",
+    "retrieve_zinc": "4d4c2284bc15b6680ea222dc6960d447b88649286ba76bf3631c84c03b0f0754",
+    "prepare_structures": "8cfc9928f14a452bef4327724600dd4461fef42c72f96d8013fd6859926f2c96",
+    "admet": "8e6e4e52db0f33d809eb546d64612528e32a4ab57361917b3dea05def953c5af",
+    "fingerprints": "8abf2f9efce9cb969d5210770245b283790968379322b591db30b86b7b1ad72e",
+    "similarity": "951d60b41620038b8a2d9cf8a229740937492b41ab49be7c7cfc68cb38df7e0d",
+    "graphs": "5b0dec85d0a0f78cfca2d17aed6d632dd60f300145a8017b4929576933bda1fb",
+    "redocking": "8cfc9928f14a452bef4327724600dd4461fef42c72f96d8013fd6859926f2c96",
+    "docking_vina": "0dc18ff9d42dc73d8088783dd393bee4c128eac1362f6b22fffd632cf2ed6d8c",
+    "docking_dock6": "0dc18ff9d42dc73d8088783dd393bee4c128eac1362f6b22fffd632cf2ed6d8c",
+    "consensus": "0dc18ff9d42dc73d8088783dd393bee4c128eac1362f6b22fffd632cf2ed6d8c",
+    "dynamics_dock6": "e58cccaf2715a8db73772511f3edbfc5a2318b6a7da9daaf568cb3038e2adef6"
+  },
+  "normalization_version": "4f34736243b28a919d1e07588de82a2903f3a545c3a6dc33079150ddbca79857"
+}

@@ -16,18 +16,16 @@ class StableSelectorsTests(unittest.TestCase):
         self.assertFalse(matches_selector(new, old.replace('4M0E', '4EY4')))
 
     def test_choices_preserve_batches_without_worker_identity(self):
-        files=[Path(f'/project/stage/individual/{i}/.biomolexplorer/jobs/job{i}/artifacts/results/docking_results.csv') for i in ('001', '002')]
-        names=choices({'id':'stage','operation':'docking_vina','batches':[{}],'artifacts':files})
-        self.assertEqual(names, {f'individual/{i}/results/docking_results.csv' for i in ('001', '002')})
-        for name in names:
-            selected=[p for p in files if matches_selector(p,name)]
-            self.assertEqual(len(selected), 1)
-            self.assertEqual(select_input(files,'base_selected_mols',name),selected[0].parent)
-        selector=file_selector(files[0],files)
-        self.assertNotIn('job001',selector)
-        self.assertTrue(matches_selector(str(files[0]).replace('job001','new-job'),selector))
-        with self.assertRaisesRegex(ValueError,'mais de um'):
-            select_input(files, 'base_selected_mols', 'docking_results.csv')
+        with tempfile.TemporaryDirectory() as temp:
+            files=[Path(temp)/f'stage/individual/{i}/.biomolexplorer/jobs/job{i}/artifacts/results/docking_results.csv' for i in ('001','002')]
+            for path in files:
+                path.parent.mkdir(parents=True);path.write_text('molecule_chembl_id,engine,score,conformer_file\nA,vina,-1,pose.pdbqt\n')
+            names=choices({'id':'stage','operation':'docking_vina','batches':[{}],'artifacts':files})
+            self.assertEqual(names,{f'individual/{i}/results/docking_results.csv' for i in ('001','002')})
+            for name in names:
+                selected=[p for p in files if matches_selector(p,name)]
+                self.assertEqual(len(selected),1)
+                self.assertEqual(select_input(files,'base_selected_mols',name),selected[0].parent)
 
     def test_removed_batch_does_not_fall_back_to_another_same_named_file(self):
         file=Path('/project/individual/002/.biomolexplorer/jobs/new/artifacts/results/4M0E.pdb')

@@ -1,6 +1,6 @@
 # Preparação molecular com Chimera
 
-> Histórico da migração nativa. Desde 2026-10-26, docking e redocking voltaram ao preparo exclusivo pelo Chimera. Consulte a [configuração atual](molecular_preparation.md). As descrições abaixo documentam a implementação anterior.
+> Guia do caminho atual de preparação; o nome histórico da URL foi preservado.
 
 ## Caminho ativo
 
@@ -15,7 +15,7 @@ Chimera. Este guia descreve o código atual, sem instruções para backends alte
 | Operação | Implementação | Uso |
 | --- | --- | --- |
 | Preparação independente | `wrappers.redocking.prepare_structures` | Receptores e candidatos para Vina, DOCK6 ou ambos |
-| Redocking | `wrappers.redocking.perform_redocking` | Pares explicitamente selecionados, preparação e RMSD com Vina |
+| Redocking | `wrappers.redocking.perform_redocking` | Pares explicitamente selecionados, preparação e RMSD com Vina ou DOCK6 6.11 |
 | Docking Vina | `wrappers.docking.perform_docking_vina` | Candidatos e receptor, com reutilização dos preparados compatíveis |
 | Docking DOCK6 | `wrappers.docking.perform_docking_dock6` | Candidatos, receptor, esferas, grades, docking e footprint |
 | Consenso | `wrappers.docking.generate_consensus` | Combina scores de pares composto/receptor presentes nos dois motores |

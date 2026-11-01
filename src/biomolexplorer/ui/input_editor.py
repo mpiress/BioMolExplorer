@@ -183,7 +183,7 @@ class InputEditor:
                 scope=subset_label(name,getattr(self.ui,'tr',None))
                 if scope:return scope+' — '+name
             record=next((r for r in catalog if matches_selector(r['path'],name)),None)
-            return human_name(record)+' — '+name if record else name
+            return human_name(record) if record else name
         return [ft.DropdownOption(key='auto',text='Identificar automaticamente')]+[verbatim(ft.DropdownOption(key=n,text=label(n))) for n in sorted(names)]
 
     def add(self,reference=None):

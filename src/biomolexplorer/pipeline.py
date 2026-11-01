@@ -729,9 +729,11 @@ class PipelineService:
             target=stage['parameters'].get('target','MeuAlvo').replace(' ','')
             data=destination/target if kind in ('structures','prepared_structures') else destination
             names={};metadata_sources={}
+            from .artifact_naming import native_name
             for source in selected:
-                file=(data/'Prepared' if kind=='prepared_structures' and source.name!='pdb_codes.csv' else data)/source.name
-                if kind in ('structures','prepared_structures') and source.name in ('pdb_codes.csv','centers.csv'):
+                filename=native_name(source)
+                file=(data/'Prepared' if kind=='prepared_structures' and filename!='pdb_codes.csv' else data)/filename
+                if kind in ('structures','prepared_structures') and filename in ('pdb_codes.csv','centers.csv'):
                     metadata_sources.setdefault(file,[]).append(source)
                     continue
                 if file in names and digest(source)!=digest(names[file]):raise ValueError('Arquivos de entrada com o mesmo nome possuem conteúdos diferentes. Renomeie-os antes de combinar.')
@@ -981,20 +983,22 @@ class PipelineService:
         validate_import_files(selected,params)
         names = set()
         references=[]
+        from .artifact_naming import native_name
         for asset_id,source in selected:
+            filename=native_name(source)
             kind=file_kind(params,asset_id)
             destination=output/target if kind in ('structures','prepared_structures') else output
             if kind=='prepared_structures':destination=destination/'Prepared'
             destination.mkdir(parents=True,exist_ok=True)
-            if source.name in names:
+            if filename in names:
                 raise ValueError('Há dois arquivos com o mesmo nome na importação.')
-            names.add(source.name)
+            names.add(filename)
             if kind not in ('compounds','structures','prepared_structures'):
                 references.append(str(source))
                 continue
-            file = destination / source.name
-            if source.name == 'pdb_codes.csv' and kind == 'prepared_structures':
-                file = destination.parent / source.name
+            file = destination / filename
+            if filename == 'pdb_codes.csv' and kind == 'prepared_structures':
+                file = destination.parent / filename
             shutil.copyfile(source,file)
             if kind == 'compounds' and file.suffix.lower() == '.csv':
                 self._normalize_compounds(file)
@@ -1402,7 +1406,8 @@ class PipelineService:
             item['excluded_records']=job['result'].get('details',{}).get('excluded_records',0)+sum(
                 json.loads(path.read_text()).get('excluded_records',0) for path in reports)
             from .artifact_naming import publish
-            return publish(stage,job['result']['artifacts']+[str(p) for p in reports],stage_dir)
+            return publish(stage,job['result']['artifacts']+[str(p) for p in reports],stage_dir,
+                stages=stages,run_id=run_id,input_files=item.get('input_files'))
         finally:
             manager.close()
             if stage['operation']=='redocking':

@@ -1,0 +1,16 @@
+test_logout_revokes_pdf_download (test_footprint_popup.FootprintPopupTests.test_logout_revokes_pdf_download) ... ok
+test_popup_renders_graph_downloads_original_and_restores_resize (test_footprint_popup.FootprintPopupTests.test_popup_renders_graph_downloads_original_and_restores_resize) ... ok
+test_preview_failure_still_allows_pdf_download (test_footprint_popup.FootprintPopupTests.test_preview_failure_still_allows_pdf_download) ... ok
+test_existing_pdf_is_rendered_as_a_bounded_png (test_footprint_popup.PDFPreviewTests.test_existing_pdf_is_rendered_as_a_bounded_png) ... ok
+test_invalid_document_is_rejected (test_footprint_popup.PDFPreviewTests.test_invalid_document_is_rejected) ... ok
+test_docking_scene_and_pdf_are_bound_to_table_version (test_docking_scene.SceneCapabilityTests.test_docking_scene_and_pdf_are_bound_to_table_version) ... ok
+test_footprint_document_does_not_require_a_pose_or_receptor (test_docking_scene.SceneCapabilityTests.test_footprint_document_does_not_require_a_pose_or_receptor) ... ok
+test_legacy_blank_footprint_is_not_offered_as_a_valid_graph (test_docking_scene.SceneCapabilityTests.test_legacy_blank_footprint_is_not_offered_as_a_valid_graph) ... ok
+test_legacy_pdf_is_available_even_when_manifest_omits_it (test_docking_scene.SceneCapabilityTests.test_legacy_pdf_is_available_even_when_manifest_omits_it) ... ok
+test_missing_receptor_does_not_silently_show_an_unrelated_structure (test_docking_scene.SceneCapabilityTests.test_missing_receptor_does_not_silently_show_an_unrelated_structure) ... ok
+test_overlay_uses_crystal_ligand_and_revokes_all_layers (test_docking_scene.SceneCapabilityTests.test_overlay_uses_crystal_ligand_and_revokes_all_layers) ... ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 8.907s
+
+OK

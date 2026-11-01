@@ -9,6 +9,10 @@ LABELS = {'morgan': 'Morgan', 'maccs': 'MACCS', 'pharmacophore': 'Farmacóforo'}
 
 def filename_kind(filename):
     name = Path(filename).name.lower()
+    from .artifact_naming import parse_filename
+    public=parse_filename(filename)
+    if public and public['scheme']==1:
+        return next((kind for kind in KINDS if public['result_type'].lower()=='fingerprints-'+kind),None)
     return next((kind for kind in KINDS if name.startswith(kind + '_') or
                  re.search(r'__fingerprint__'+kind+r'(?:[.-]|$)',name)), None)
 

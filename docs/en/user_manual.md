@@ -27,7 +27,7 @@ Without Git, use **Code → Download ZIP**, extract the archive and open a termi
 ```bash
 conda env create -f requirements.yml
 conda activate BioMolExplorer
-python -m pip install -e '.[ui]'
+# Source-checkout execution; see the packaging limitation below.
 biomolexplorer-ui --web --language en --dock6-path /path/to/dock6-6.11
 ```
 
@@ -685,13 +685,27 @@ New ADMET outputs include their collection origin before the result type:
 | `MIX` | Merged categories or a consolidated collection |
 | `INPUT` | A file whose category cannot be determined safely |
 
-Examples: `ACHE_molecules_MOL_BBB+.csv`, `ACHE_similars_SIM_HIA-.csv` and
-`ACHE_molecules_MOL_egg.png`. The same identification accompanies evaluated,
-selected/rejected tables, interactive plots, method reports and exclusion reports
-when produced. Pipeline lineage supplies the target name; standalone files use
-conservative filename-based identification. Unsafe characters and long names are
-normalized with a short identifier when needed.
+Published and downloaded files use the global convention
+`TG[TARGET]-SRC[SOURCE]-OP[OPERATION]-TYPE-ID[identifier].ext`.
+For example: `TG[ACHE]-SRC[MOL]-OP[ADMET]-BBB+-ID[24113d53].csv`.
+`SRC` describes the immediate input only; metadata retains the full history.
+`TG[NA]` means no known/applicable molecular target. The deterministic identifier
+distinguishes inputs and runs without changing internal artifact identities.
 
-Readers and downstream blocks still recognize `_evaluated`, `_BBB+`, `_HIA-`,
-`_egg` and `_admet_report` endings. Naming applies to new outputs; historical files
-are neither renamed nor required to be recalculated to remain readable.
+Native working filenames and legacy files remain readable without destructive
+renaming or recalculation. Scientific bundles preserve their internal paths and
+include a naming index. See the [global convention](../artifact_naming.md) for
+content types, compatibility and traceability.
+
+### Amber Score · DOCK6 (`dynamics_dock6`)
+
+```text
+Connect receptor structures and small-molecule 3D poses.
+Explicitly select the required receptors, ligands and pairs.
+Configure Amber Score refinement and run with a complete DOCK6 6.11 installation.
+Inspect energies, protocol and available endpoint metrics; do not expect RMSF.
+```
+
+## Current execution and result contract
+
+[DAG order, lazy selection, pause/cancellation, cleanup and incremental reuse](projects.md#execution-lazy-selection-and-result-preservation). [Public names and lineage](projects.md#public-names-and-traceability).

@@ -38,19 +38,19 @@ Execute no ambiente Python do projeto:
 
 ```bash
 # Erros e avisos do processo principal
-python -m biomolexplorer.log_report
+PYTHONPATH=src python -m biomolexplorer.log_report
 
 # Erros de um worker; substitua JOB_ID pelo identificador real
-python -m biomolexplorer.log_report --job JOB_ID --level ERROR
+PYTHONPATH=src python -m biomolexplorer.log_report --job JOB_ID --level ERROR
 
 # Histórico de comandos, incluindo saídas e duração
-python -m biomolexplorer.log_report --job JOB_ID --level INFO --limit 100
+PYTHONPATH=src python -m biomolexplorer.log_report --job JOB_ID --level INFO --limit 100
 
 # Eventos do pipeline para uma execução/etapa
-python -m biomolexplorer.log_report --run RUN_ID --stage STAGE_ID
+PYTHONPATH=src python -m biomolexplorer.log_report --run RUN_ID --stage STAGE_ID
 
 # Saída estruturada para análise externa
-python -m biomolexplorer.log_report --job JOB_ID --json
+PYTHONPATH=src python -m biomolexplorer.log_report --job JOB_ID --json
 ```
 
 `--directory` seleciona uma raiz diferente de logs; com `--job`, o leitor procura a subpasta `jobs/<job_id>` nessa raiz. `--operation redocking` filtra pela operação. O leitor percorre os arquivos JSONL rotacionados e conserva apenas os últimos eventos correspondentes, sem carregar o histórico inteiro na memória. Logs antigos, anteriores ao JSONL, continuam disponíveis como texto.

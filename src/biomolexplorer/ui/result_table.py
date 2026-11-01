@@ -44,7 +44,7 @@ async def show_result_table(ui,pid,rid,sid,path):
     if selected is None:return
     viewer=ResultTableViewer(ui,pid,rid,sid,[selected],inline=True)
     def close(e=None):viewer.active=False;close_dialog(ui.page,dialog)
-    dialog=ft.AlertDialog(title=verbatim(ft.Text(selected['name'])),on_dismiss=lambda e:setattr(viewer,'active',False),
+    dialog=ft.AlertDialog(title=verbatim(ft.Text(selected.get('public_name',selected.get('display_name',selected['name'])))),on_dismiss=lambda e:setattr(viewer,'active',False),
         content=ft.Container(width=max(240,min(1150,(ui.page.width or 1300)-100)),
             height=max(250,min(650,(ui.page.height or 900)-230)),content=ft.Column([viewer.build()],scroll=ft.ScrollMode.AUTO)),
         actions=[ft.TextButton('Fechar',on_click=close)])

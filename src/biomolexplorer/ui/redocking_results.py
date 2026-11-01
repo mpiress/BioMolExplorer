@@ -143,7 +143,12 @@ class RedockingResultsTable:
             r=self.results
             data=await self.ui.call(self.service.rmsd_csv,r.token,r.project_id,r.run_id,r.stage['id'],
                 [row['id'] for row in self.filtered()])
-            if self.valid():await self.ui.picker.save_file(file_name='redocking_rmsd_by_target.csv',src_bytes=data)
+            from biomolexplorer.artifact_naming import aggregate_download_name
+            selected=self.filtered();targets=sorted({t for row in selected for t in row.get('targets',[])})
+            source='PDB' if r.stage.get('configuration',{}).get('parameters',{}).get('prepare_complex',True) else 'REC'
+            name=aggregate_download_name('redocking','RMSD','csv',targets=targets,source=source,
+                identifiers=[row['id'] for row in selected],qualifier=[r.run_id,r.stage['id']])
+            if self.valid():await save_file(self.ui,file_name=name,src_bytes=data)
         await self.ui.guard(action)
 
     def confirm_remove(self,key):
@@ -192,9 +197,12 @@ class RedockingResultsTable:
     async def contacts(self,key):
         from .docking_scene import residue_dialog
         r=self.results
+        simulation=await self.ui.call(self.service.simulation,r.token,r.project_id,r.run_id,r.stage['id'],key)
+        if not self.valid():return
         await residue_dialog(self.ui,r.project_id,
             lambda:self.service.scene(r.token,r.project_id,r.run_id,r.stage['id'],key),
-            self.valid,lambda:self.overlay(key),open_3d_url=self.view_url(key))
+            self.valid,lambda:self.overlay(key),open_3d_url=self.view_url(key),
+            naming_context=next((f for f in simulation['files'] if f.get('naming')),{'operation':'redocking'}))
 
     async def open(self, key):
         results = self.results
@@ -227,7 +235,9 @@ class RedockingResultsTable:
                     return
                 data = await self.ui.call(self.service.archive, *args)
                 if self.valid() and files.valid():
-                    name = f"{simulation['pdb']}_{simulation['ligand']}_{simulation['residue']}{simulation['chain']}_redocking.zip"
+                    from biomolexplorer.artifact_naming import download_name
+                    context=next((f for f in simulation['files'] if f.get('naming')),{'operation':'redocking'})
+                    name=download_name(context,result_type='Bundle',extension='zip',qualifier=key)
                     await save_file(self.ui,file_name=name, src_bytes=data)
             await self.ui.guard(action)
         failed=simulation.get('status')!='succeeded';unsupported=simulation.get('status')=='UNSUPPORTED'

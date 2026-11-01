@@ -263,7 +263,10 @@ class ResultsDisplayTests(unittest.TestCase):
         asyncio.run(viewer.click(event));self.assertIn('molécula 2D',ui.dialogs[-1].title.value)
         self.assertTrue(any(isinstance(c,ft.Image) for c in ui.dialogs[-1].content.content.controls))
         asyncio.run(viewer.actions[1].on_click(None))
-        self.assertEqual(ui.saved[-1]['file_name'],'admet_BBB+.csv')
+        from biomolexplorer.artifact_naming import parse_filename
+        exported=parse_filename(ui.saved[-1]['file_name'])
+        self.assertEqual(exported['operation'],'ADMET');self.assertEqual(exported['result_type'],'BBB+')
+        self.assertEqual(exported['extension'],'csv')
         self.assertEqual(len(list(csv.DictReader(io.StringIO(ui.saved[-1]['src_bytes'].decode())))),1)
 
     @unittest.skipIf(StageResults is None,'Install ui extra')

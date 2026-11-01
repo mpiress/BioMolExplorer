@@ -240,10 +240,10 @@ class FileSelection:
                         from biomolexplorer.graph_exports import subset_label
                         scope=subset_label(path,getattr(page,'translator',None))
                     from biomolexplorer.artifact_naming import human_name
-                    title=scope or human_name(record)
-                    if item.get('operation')=='admet' and not title.startswith('ADMET ·'):title='ADMET · '+title
+                    title=description.get('public_name') or human_name(record)
+                    # Canonical public names carry the operation and immediate source.
                     count=record.get('record_count')
-                    display=title+' · '+description['origin']+(f' · {count:,} registros' if count is not None else '')
+                    display=title+(f' · {count:,} registros' if count is not None else '')
                     check = SimpleNamespace(label=selector,display_label=display,physical_file=str(path),
                         value=chosen,on_change=None,available=path.is_file(),
                         target_label=record.get('context',{}).get('target') or record.get('context',{}).get('search_term') or

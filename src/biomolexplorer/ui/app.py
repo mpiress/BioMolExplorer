@@ -1322,7 +1322,7 @@ class WorkspaceUI(ProjectTools):
                 from biomolexplorer.molecule_quality import is_quality_report
                 reports=[p for p in stage.get('artifacts',[]) if is_quality_report(p)]
                 report_buttons=[ft.TextButton('Baixar relatório de exclusões'+(f' ({index+1})' if len(reports)>1 else ''),
-                    icon=ft.Icons.DOWNLOAD,on_click=self.event(self.download_stage_report,project_id,path))
+                    icon=ft.Icons.DOWNLOAD,on_click=self.event(self.download_stage_report,project_id,path,result_run_id,stage['id']))
                     for index,path in enumerate(reports)]
                 display_status='cleared' if stage.get('outputs_removed') else 'historical' if stage.get('dependency_obsolete') else stage['status']
                 stage_label=self.message('run.status.'+('cleared' if stage.get('outputs_removed') else 'historical' if stage.get('dependency_obsolete') else 'reused' if stage.get('reused') else 'provided' if stage.get('provided') else stage['status']))
@@ -1340,7 +1340,7 @@ class WorkspaceUI(ProjectTools):
                         ft.TextButton('Compostos não utilizados',icon=ft.Icons.WARNING_AMBER_OUTLINED,
                             on_click=self.event(self.open_preparation_failures,project_id,result_run_id,stage['id'],path)),
                         ft.TextButton('Baixar lista de compostos não utilizados',icon=ft.Icons.DOWNLOAD,
-                            on_click=self.event(self.download_stage_report,project_id,path))],wrap=True))
+                            on_click=self.event(self.download_stage_report,project_id,path,result_run_id,stage['id']))],wrap=True))
                 if writable and stage.get('artifacts') and not stage.get('_result_sources'):
                     stage_details.append(ft.TextButton('Remover todos os resultados',icon=ft.Icons.DELETE_SWEEP_OUTLINED,
                         disabled=bool(active),on_click=self.event(self.remove_stage_results,project_id,result_run_id,stage['id'])))
@@ -1469,11 +1469,13 @@ class WorkspaceUI(ProjectTools):
                      verbatim(ft.TextButton(messages('log.close'),on_click=lambda e:self.page.pop_dialog()))]))
 
     @with_processing('Preparando download…','Lendo o arquivo para download. Aguarde um instante.')
-    async def download_stage_report(self,project_id,path):
+    async def download_stage_report(self,project_id,path,run_id=None,stage_id=None):
         token=self.token
         data=await self.call(self.store.read_file,token,project_id,path)
+        from biomolexplorer.result_files import ResultFiles
+        name=await self.call(ResultFiles(self.store).export_name,token,project_id,run_id,stage_id,path) if run_id and stage_id else Path(path).name
         if self.token==token and self.current and self.current['id']==project_id:
-            await save_file(self,file_name=Path(path).name,src_bytes=data)
+            await save_file(self,file_name=name,src_bytes=data)
 
     @with_processing('Carregando compostos…','Preparando as tabelas de compostos disponíveis. Aguarde um instante.')
     async def open_compound_tables(self,project_id,run_id,stage_id):

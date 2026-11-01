@@ -1,0 +1,13 @@
+usage: __main__.py [-h] --parameters PARAMETERS --output OUTPUT
+                   {admet,consensus,docking_dock6,docking_vina,dynamics_dock6,expand_similar_compounds,fingerprints,graphs,prepare_structures,redocking,retrieve_compounds,retrieve_pubchem,retrieve_structures,retrieve_zinc,similarity}
+
+BioMolExplorer application services
+
+positional arguments:
+  {admet,consensus,docking_dock6,docking_vina,dynamics_dock6,expand_similar_compounds,fingerprints,graphs,prepare_structures,redocking,retrieve_compounds,retrieve_pubchem,retrieve_structures,retrieve_zinc,similarity}
+
+options:
+  -h, --help            show this help message and exit
+  --parameters PARAMETERS
+                        JSON file with operation parameters
+  --output OUTPUT

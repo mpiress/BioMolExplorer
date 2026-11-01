@@ -131,3 +131,24 @@ The graph block receives ready relationships from similarity blocks or external 
 Files explicitly chosen in configuration are reused without repeating the input question. Automatic inputs may request selection after their source finishes. Reconfigure the input to change a saved file. After migration, validate references and install engines and the optional ADMET-AI predictor on the destination computer.
 
 **Remove all results** within a run stage requires confirmation and editing permission. It removes artifacts/reused references, invalidates affected caches and preserves run records/logs. Active runs block removal. History can restore files. This differs from removing one table row, which changes only its CSV, and deleting the entire project. See [navigation and results](frontend.md#navigation-canvas-and-completed-runs).
+
+## Execution, lazy selection and result preservation
+
+The pipeline is a DAG. Confirm execution order before the first run; the saved priority always respects dependencies. **Order stages** revisits it and moves dependent groups. **Run through selected stage** limits execution to the selected stage and its ancestors.
+
+After one stage finishes, the next may remain **Awaiting file selection**. Selection data is prepared ahead of time, but its dialog opens only when the user requests configuration. **Follow run** opens the execution panel and does not confirm inputs. **Pause/Stop** requests a cooperative stop at safe boundaries, not an instantaneous interruption of a native command. **Cancel run** ends the active flow and differs from pausing for analysis. Completed results remain available for inspection before continuing.
+
+Destructive configuration changes require confirmation and identify affected downstream stages. Cancelling preserves the previous configuration and results. Compatible additions preserve valid batches; incremental execution compares inputs, settings, processing versions, tools and integrity before computing the complement. File existence alone does not establish validity or scientific equivalence. Synchronization is automatic within execution; there is no manual Synchronize Results action.
+
+| Runs action | Removes | Preserves |
+| --- | --- | --- |
+| Remove All | Persisted computed results within the cleanup scope | Blocks, connections, parameters and original/imported inputs |
+| Clear All | Results and associated selections/settings; restores scientific defaults | Blocks, connections and protected original sources |
+
+Both cleanup actions require confirmation and edit permission; active execution prevents removal. Neither replaces cancellation. Selective removal follows lineage and protects shared files still in use. History/restoration and project export are complementary mechanisms, not a guarantee of recovery for files absent from both history and backup.
+
+## Public names and traceability
+
+`TG[TARGET]-SRC[SOURCE]-OP[OPERATION]-TYPE-ID[hash].ext` identifies target, immediate input, producer and content. A real example is `TG[ACHE]-SRC[MOL]-OP[ADMET]-BBB+-ID[24113d53].csv`. `TG[NA]` avoids inventing targets for independent collections. The deterministic suffix distinguishes occurrences; metadata retains complete IDs, settings, inputs and history.
+
+Displayed/downloaded names are persistent aliases. Native filenames, relative references and legacy files remain compatible. Scientific ZIPs preserve their internal layout and include a naming index; `.bme.zip` backups preserve configuration, results and descriptors. None of these mechanisms establishes chemical validity. See the [detailed convention](../artifact_naming.md).

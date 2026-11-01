@@ -51,7 +51,7 @@ de grafos; resultados já salvos não são reescritos retroativamente.
 ## Recursos disponíveis
 
 Os recursos foram comparados com o [guia oficial do Gephi](https://gephi.org/quickstart/)
-e o [catálogo de layouts](https://docs.gephi.org/Plugins/layout).
+e o [catálogo de layouts](https://docs.gephi.org/desktop/Plugins/Layout/).
 
 | Recurso | BioMolExplorer |
 | --- | --- |

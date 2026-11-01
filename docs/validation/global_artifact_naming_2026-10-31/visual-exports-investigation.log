@@ -1,0 +1,58 @@
+test_logout_revokes_pdf_download (test_footprint_popup.FootprintPopupTests.test_logout_revokes_pdf_download) ... ok
+test_popup_renders_graph_downloads_original_and_restores_resize (test_footprint_popup.FootprintPopupTests.test_popup_renders_graph_downloads_original_and_restores_resize) ... ok
+test_preview_failure_still_allows_pdf_download (test_footprint_popup.FootprintPopupTests.test_preview_failure_still_allows_pdf_download) ... ok
+test_existing_pdf_is_rendered_as_a_bounded_png (test_footprint_popup.PDFPreviewTests.test_existing_pdf_is_rendered_as_a_bounded_png) ... ok
+test_invalid_document_is_rejected (test_footprint_popup.PDFPreviewTests.test_invalid_document_is_rejected) ... ok
+test_docking_scene_and_pdf_are_bound_to_table_version (test_docking_scene.SceneCapabilityTests.test_docking_scene_and_pdf_are_bound_to_table_version) ... ok
+test_footprint_document_does_not_require_a_pose_or_receptor (test_docking_scene.SceneCapabilityTests.test_footprint_document_does_not_require_a_pose_or_receptor) ... ok
+test_legacy_blank_footprint_is_not_offered_as_a_valid_graph (test_docking_scene.SceneCapabilityTests.test_legacy_blank_footprint_is_not_offered_as_a_valid_graph) ... ok
+test_legacy_pdf_is_available_even_when_manifest_omits_it (test_docking_scene.SceneCapabilityTests.test_legacy_pdf_is_available_even_when_manifest_omits_it) ... ok
+test_missing_receptor_does_not_silently_show_an_unrelated_structure (test_docking_scene.SceneCapabilityTests.test_missing_receptor_does_not_silently_show_an_unrelated_structure) ... ok
+test_overlay_uses_crystal_ligand_and_revokes_all_layers (test_docking_scene.SceneCapabilityTests.test_overlay_uses_crystal_ligand_and_revokes_all_layers) ... ok
+test_dock6_chooses_lowest_score_with_its_mol2 (test_docking_scene.ContactGeometryTests.test_dock6_chooses_lowest_score_with_its_mol2) ... ok
+test_heavy_atoms_cutoff_chains_and_insertion_codes (test_docking_scene.ContactGeometryTests.test_heavy_atoms_cutoff_chains_and_insertion_codes) ... ok
+test_vina_chooses_lowest_score_without_transforming_coordinates (test_docking_scene.ContactGeometryTests.test_vina_chooses_lowest_score_without_transforming_coordinates) ... ok
+test_docking_scene_and_pdf_are_bound_to_table_version (test_docking_scene.SceneCapabilityTests.test_docking_scene_and_pdf_are_bound_to_table_version) ... ok
+test_footprint_document_does_not_require_a_pose_or_receptor (test_docking_scene.SceneCapabilityTests.test_footprint_document_does_not_require_a_pose_or_receptor) ... ok
+test_legacy_blank_footprint_is_not_offered_as_a_valid_graph (test_docking_scene.SceneCapabilityTests.test_legacy_blank_footprint_is_not_offered_as_a_valid_graph) ... ok
+test_legacy_pdf_is_available_even_when_manifest_omits_it (test_docking_scene.SceneCapabilityTests.test_legacy_pdf_is_available_even_when_manifest_omits_it) ... ok
+test_missing_receptor_does_not_silently_show_an_unrelated_structure (test_docking_scene.SceneCapabilityTests.test_missing_receptor_does_not_silently_show_an_unrelated_structure) ... ok
+test_overlay_uses_crystal_ligand_and_revokes_all_layers (test_docking_scene.SceneCapabilityTests.test_overlay_uses_crystal_ligand_and_revokes_all_layers) ... ok
+test_docking_picker_identifies_scopes_and_materializes_only_selected_subset (test_graph_subset_exports.GraphSubsetExportTests.test_docking_picker_identifies_scopes_and_materializes_only_selected_subset) ... ok
+test_full_graph_is_the_single_indexed_component_source (test_graph_subset_exports.GraphSubsetExportTests.test_full_graph_is_the_single_indexed_component_source) ... ok
+test_result_labels_preserve_origin_and_expose_component_number (test_graph_subset_exports.GraphSubsetExportTests.test_result_labels_preserve_origin_and_expose_component_number) ... ok
+test_aliases_and_leading_zero_identifiers_are_preserved (test_graph_explorer.GraphExplorerTests.test_aliases_and_leading_zero_identifiers_are_preserved) ... ok
+test_both_modes_generate_separate_graphs_and_preserve_isolates (test_graph_explorer.GraphExplorerTests.test_both_modes_generate_separate_graphs_and_preserve_isolates) ... ok
+test_common_fragment_single_empty_and_timeout_are_labeled_truthfully (test_graph_explorer.GraphExplorerTests.test_common_fragment_single_empty_and_timeout_are_labeled_truthfully) ... ok
+test_independent_inputs_may_reuse_codes_without_losing_structures_in_union (test_graph_explorer.GraphExplorerTests.test_independent_inputs_may_reuse_codes_without_losing_structures_in_union) ... ok
+test_missing_smiles_unknown_codes_and_conflicting_fingerprints_are_excluded (test_graph_explorer.GraphExplorerTests.test_missing_smiles_unknown_codes_and_conflicting_fingerprints_are_excluded) ... ok
+test_operation_rejects_direct_fingerprints_and_accepts_ready_similarity (test_graph_explorer.GraphExplorerTests.test_operation_rejects_direct_fingerprints_and_accepts_ready_similarity) ... ok
+test_selected_metric_threshold_only_changes_fingerprint_experiment (test_graph_explorer.GraphExplorerTests.test_selected_metric_threshold_only_changes_fingerprint_experiment) ... ok
+test_authorized_graph_choices_exports_and_viewer_access (test_graph_explorer.GraphProvenanceTests.test_authorized_graph_choices_exports_and_viewer_access) ... ok
+test_both_generated_sources_infer_smiles_through_producer_chain (test_graph_explorer.GraphProvenanceTests.test_both_generated_sources_infer_smiles_through_producer_chain) ... ok
+test_cache_ignores_run_paths_but_tracks_inferred_compound_contents (test_graph_explorer.GraphProvenanceTests.test_cache_ignores_run_paths_but_tracks_inferred_compound_contents) ... ok
+test_guided_graph_mode_hides_irrelevant_calculation_parameters (test_graph_explorer.GraphProvenanceTests.test_guided_graph_mode_hides_irrelevant_calculation_parameters) ... ok
+test_inline_graph_selector_mcc_fragment_color_controls_click_and_download (test_graph_explorer.GraphProvenanceTests.test_inline_graph_selector_mcc_fragment_color_controls_click_and_download) ... FAIL
+test_merged_similarity_uses_fingerprint_metadata_instead_of_incomplete_retrieval (test_graph_explorer.GraphProvenanceTests.test_merged_similarity_uses_fingerprint_metadata_instead_of_incomplete_retrieval) ... ok
+test_multiple_similarity_files_remain_independent (test_graph_explorer.GraphProvenanceTests.test_multiple_similarity_files_remain_independent) ... ok
+test_raw_paths_and_assets_cannot_escape_project (test_graph_explorer.GraphProvenanceTests.test_raw_paths_and_assets_cannot_escape_project) ... ok
+test_real_pipeline_with_uploads_both_modes_and_incremental_admet (test_graph_explorer.GraphProvenanceTests.test_real_pipeline_with_uploads_both_modes_and_incremental_admet) ... ok
+test_relative_paths_resolve_inside_project (test_graph_explorer.GraphProvenanceTests.test_relative_paths_resolve_inside_project) ... ok
+test_running_snapshot_keeps_compound_provenance_after_project_edits (test_graph_explorer.GraphProvenanceTests.test_running_snapshot_keeps_compound_provenance_after_project_edits) ... ok
+
+======================================================================
+FAIL: test_inline_graph_selector_mcc_fragment_color_controls_click_and_download (test_graph_explorer.GraphProvenanceTests.test_inline_graph_selector_mcc_fragment_color_controls_click_and_download)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/home/michel/Insync/michel.silva@gmail.com/Google Drive/Profissional/Academico/Doutorado/UFSJ/Projeto/Dev/BioMolExplorer/tests/test_graph_explorer.py", line 351, in test_inline_graph_selector_mcc_fragment_color_controls_click_and_download
+    self.assertEqual(exported['operation'],'Graphs');self.assertEqual(exported['result_type'],'Edges-LCC')
+                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: 'Edges-LCC' != 'Graph-mcc'
+- Edges-LCC
++ Graph-mcc
+
+
+----------------------------------------------------------------------
+Ran 41 tests in 32.600s
+
+FAILED (failures=1)

@@ -99,7 +99,7 @@ Browser checks also covered a MOL2 ligand (35 atoms), a PDBQT receptor (4,142 at
 python scripts/validate_pdb_viewer.py --structure /path/to/structure.mol2
 ```
 
-See [Logs and diagnostics](logging.md) for the common format, execution context, failure codes, job summary and `python -m biomolexplorer.log_report` command.
+See [Logs and diagnostics](logging.md) for the common format, execution context, failure codes, job summary and `PYTHONPATH=src python -m biomolexplorer.log_report` command.
 
 
 ## Interoperable docking: October 7, 2026 validation

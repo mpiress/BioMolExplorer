@@ -68,3 +68,15 @@ ou publicadas junto com `index.html`.
 The generator uses only the Python standard library. Generated pages are static,
 require no external services and can be opened directly in your browser or
 published alongside `index.html`.
+
+## Revisão documental de 31/10/2026 / Documentation review
+
+[Relatório e limites](validation/documentation_review_2026-10-31/README.md) · [Convenção de nomes](artifact_naming.md) · [Fluxograma atual PNG](../imgs/BioMolExplorer.png) · [Fonte vetorial SVG](../imgs/BioMolExplorer.svg).
+
+O site institucional usa somente CSS/JavaScript locais em `docs/assets/site.*`, sem acessar APIs da aplicação. Relatórios de validação antigos são evidências datadas, não instruções de instalação ou promessas sobre a versão atual. O original `index (Cópia).html`, já presente como arquivo não versionado antes da auditoria, não integra a publicação nem foi modificado.
+
+The institutional site uses only local CSS/JavaScript in `docs/assets/site.*` and does not call application APIs. Historical validation reports are dated evidence, not current installation instructions or capability claims.
+
+O gerador existente mantém um resumo legado do guia molecular citando backends alternativos. Nesta revisão exclusivamente documental, o script foi preservado; após `build_docs.py`, corrija o resumo de `molecular_preparation` nos dois portais para descrever o preparo ativo pelo Chimera. O corpo dos guias é gerado a partir do Markdown atualizado. A divergência do resumo do gerador foi registrada para manutenção futura.
+
+The existing generator retains a legacy summary mentioning alternative preparation backends. This documentation-only review leaves the script untouched; after rebuilding, the molecular_preparation card in both portals must describe the active Chimera preparation. Guide bodies are generated from the updated Markdown. This generator-summary discrepancy is recorded for future maintenance.

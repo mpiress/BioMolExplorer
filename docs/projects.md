@@ -137,3 +137,24 @@ O bloco de grafos recebe relações prontas dos blocos de similaridade ou arquiv
 Arquivos explicitamente escolhidos na configuração são reutilizados na execução sem repetir a pergunta. Entradas ainda automáticas podem pedir seleção após a etapa de origem. Reconfigure a entrada para trocar um arquivo salvo. Ao migrar, valide as referências e instale os motores e o preditor ADMET-AI opcional no destino.
 
 **Remover todos os resultados**, em uma etapa de execução, exige confirmação e permissão de edição. Remove artefatos e referências reaproveitadas, invalida o cache afetado e preserva registro/log. A ação fica bloqueada com execuções ativas. Use o histórico para restaurar arquivos. Isso difere de remover uma linha de tabela, que altera apenas o CSV escolhido, e de excluir o projeto inteiro. Veja [navegação e resultados](frontend.md#navegacao-canvas-e-execucoes-concluidas).
+
+## Execução, seleção tardia e preservação de resultados
+
+O pipeline é um DAG: antes da primeira execução, confirme a ordem; a prioridade salva continua sujeita às dependências. **Ordenar blocos** permite revisá-la; mover um bloco considera seus dependentes. **Executar até a etapa selecionada** limita a execução à etapa-alvo e seus ancestrais, não a todo o desenho.
+
+Ao terminar um bloco, o próximo pode permanecer em **Aguardando seleção de arquivos**. A preparação dos dados de seleção é antecipada, mas o diálogo não abre automaticamente: use o botão de configurar a etapa pendente. **Follow run** acompanha a execução; não substitui a confirmação de entradas. **Pausar/Stop** solicita uma parada cooperativa em pontos seguros; não promete interrupção instantânea do comando nativo. **Cancelar execução** encerra o fluxo ativo e é diferente de pausa para análise. Resultados concluídos são consultáveis antes de continuar.
+
+O salvamento de uma configuração destrutiva pede confirmação e apresenta os dependentes afetados. Cancelar preserva a configuração e os resultados anteriores. Adições compatíveis preservam os lotes válidos; a execução incremental compara entradas, parâmetros, versões de processamento, ferramentas e integridade, e calcula o complemento. A presença de um arquivo, isoladamente, não comprova validade ou equivalência científica. A sincronização é automática no protocolo de execução; não há botão manual Synchronize Results.
+
+| Ação em Runs | Exclui | Preserva |
+| --- | --- | --- |
+| Remove All | Resultados calculados persistidos abrangidos pela limpeza | Blocos, conexões, parâmetros e entradas originais/importadas |
+| Clear All | Resultados e seleções/configurações associadas; restaura padrões científicos | Blocos, conexões e fontes originais protegidas |
+
+Ambas as limpezas exigem confirmação e permissão de edição; uma execução ativa impede a remoção. Não são alternativas ao botão de cancelar. Remoções seletivas seguem a linhagem e preservam arquivos compartilhados ainda usados. Histórico/restauração e exportação do projeto são mecanismos complementares: não prometa recuperação de arquivos que já não estejam no histórico ou no backup.
+
+## Nomes públicos e rastreabilidade
+
+`TG[ALVO]-SRC[ORIGEM]-OP[OPERAÇÃO]-TIPO-ID[hash].ext` identifica alvo, entrada imediata, produtor e conteúdo. Exemplo real: `TG[ACHE]-SRC[MOL]-OP[ADMET]-BBB+-ID[24113d53].csv`. `TG[NA]` evita inventar alvos para coleções independentes. O sufixo determinístico distingue ocorrências; IDs completos, parâmetros, entradas e histórico continuam nos metadados.
+
+Os nomes exibidos e baixados são aliases persistentes. Nomes físicos nativos, referências relativas e arquivos legados permanecem compatíveis. ZIPs científicos mantêm sua estrutura e incluem um índice; backups `.bme.zip` preservam a configuração, os resultados e os descritores. Isso não atribui validade química a um arquivo. Consulte a [convenção detalhada](artifact_naming.md).

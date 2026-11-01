@@ -1,0 +1,294 @@
+[
+  {
+    "operation": "dynamics_dock6",
+    "module": "wrappers.dynamics",
+    "entry": "perform_dynamics_dock6",
+    "required": [
+      "base_input_path",
+      "base_selected_mols"
+    ],
+    "optional": [
+      "dock6_app_path",
+      "md_inputs",
+      "md_seed_path",
+      "selected_pairs",
+      "excluded_pairs",
+      "amber_score_type",
+      "amber_score_movable_region",
+      "amber_score_minimization_rmsgrad",
+      "amber_score_before_md_minimization_cycles",
+      "amber_score_md_steps",
+      "amber_score_after_md_minimization_cycles",
+      "amber_score_gb_model",
+      "amber_score_nonbonded_cutoff",
+      "amber_score_temperature",
+      "amber_score_movable_distance_cutoff",
+      "amber_score_receptor_movable_atom_expr",
+      "amber_score_complex_movable_atom_expr",
+      "amber_score_abort_on_unprepped_ligand",
+      "use_existing_ligand_charges"
+    ]
+  },
+  {
+    "operation": "retrieve_pubchem",
+    "module": "biomolexplorer.pubchem_retrieval",
+    "entry": "retrieve_pubchem",
+    "required": [],
+    "optional": [
+      "target",
+      "reference_source",
+      "reference_type",
+      "reference",
+      "selection_mode",
+      "compound_id",
+      "threshold",
+      "max_records",
+      "base_input_path",
+      "input_file"
+    ]
+  },
+  {
+    "operation": "retrieve_compounds",
+    "module": "wrappers.crawlers",
+    "entry": "retrieve_compounds",
+    "required": [
+      "search_term"
+    ],
+    "optional": [
+      "include_pubchem",
+      "pubchem_threshold",
+      "pubchem_max_records",
+      "chembl_filters",
+      "search_mode",
+      "max_targets",
+      "max_records",
+      "expand_chembl",
+      "similarity_threshold"
+    ]
+  },
+  {
+    "operation": "expand_similar_compounds",
+    "module": "wrappers.crawlers",
+    "entry": "expand_similar_compounds",
+    "required": [
+      "search_term"
+    ],
+    "optional": [
+      "threshold",
+      "max_records",
+      "base_input_path",
+      "input_file"
+    ]
+  },
+  {
+    "operation": "retrieve_structures",
+    "module": "wrappers.crawlers",
+    "entry": "load_pdb",
+    "required": [],
+    "optional": [
+      "target",
+      "pdb_query",
+      "pdb_ids",
+      "uniprot_ids",
+      "ligand_ids",
+      "max_records",
+      "pdb_ec",
+      "organism",
+      "PolymerEntityTypeID",
+      "ExperimentalMethodID",
+      "max_resolution",
+      "must_have_ligand",
+      "ligand_selection",
+      "excluded_pdb_ids"
+    ]
+  },
+  {
+    "operation": "retrieve_zinc",
+    "module": "wrappers.crawlers",
+    "entry": "load_zinc",
+    "required": [
+      "base_input_path"
+    ],
+    "optional": [
+      "filename",
+      "verbose",
+      "download_workers"
+    ]
+  },
+  {
+    "operation": "prepare_structures",
+    "module": "wrappers.redocking",
+    "entry": "prepare_structures",
+    "required": [
+      "base_input_path",
+      "target"
+    ],
+    "optional": [
+      "pdb_codes",
+      "pH",
+      "charge_type",
+      "preparation_options",
+      "base_selected_mols",
+      "mol_filename",
+      "receptor_prepared",
+      "docking_engines"
+    ]
+  },
+  {
+    "operation": "admet",
+    "module": "wrappers.admet",
+    "entry": "ADMETWrapper",
+    "required": [
+      "base_input_path"
+    ],
+    "optional": [
+      "input_file",
+      "verbose",
+      "admet_profile",
+      "admet_mode",
+      "prediction_backend",
+      "bbb_target",
+      "hia_target",
+      "rule_set",
+      "max_rule_violations",
+      "alert_policy",
+      "alert_catalogs",
+      "property_limits",
+      "dataset_origin"
+    ]
+  },
+  {
+    "operation": "fingerprints",
+    "module": "wrappers.molecular_analyzer",
+    "entry": "generate_fingerprints",
+    "required": [
+      "base_input_path"
+    ],
+    "optional": [
+      "morgan_n_bits",
+      "radius",
+      "files",
+      "morgan",
+      "maccs",
+      "pharmacophore",
+      "chunk_size"
+    ]
+  },
+  {
+    "operation": "similarity",
+    "module": "wrappers.molecular_analyzer",
+    "entry": "compute_similarity",
+    "required": [
+      "base_input_path"
+    ],
+    "optional": [
+      "metric",
+      "fingerprint",
+      "filename",
+      "threshold",
+      "approximate"
+    ]
+  },
+  {
+    "operation": "graphs",
+    "module": "wrappers.molecular_analyzer",
+    "entry": "analyze_graphs",
+    "required": [],
+    "optional": [
+      "similarity_path",
+      "base_input_path",
+      "mcs_timeout",
+      "mcs_ring_matches_ring_only",
+      "mcs_complete_rings_only",
+      "graph_inputs"
+    ]
+  },
+  {
+    "operation": "redocking",
+    "module": "wrappers.redocking",
+    "entry": "perform_redocking",
+    "required": [
+      "base_input_path",
+      "target"
+    ],
+    "optional": [
+      "pdb_codes",
+      "pH",
+      "sizeof_box",
+      "exhaustiveness",
+      "num_modes",
+      "prepare_complex",
+      "charge_type",
+      "preparation_pairs",
+      "preparation_options",
+      "redocking_engine",
+      "dock6_app_path",
+      "density",
+      "radius",
+      "distance",
+      "conformer_search_type",
+      "max_orientations",
+      "num_scored_conformers",
+      "dock6_seed"
+    ]
+  },
+  {
+    "operation": "docking_vina",
+    "module": "wrappers.docking",
+    "entry": "perform_docking_vina",
+    "required": [
+      "base_input_path",
+      "target",
+      "base_selected_mols",
+      "mol_filename"
+    ],
+    "optional": [
+      "pdb_code",
+      "pH",
+      "sizeof_box",
+      "exhaustiveness",
+      "num_modes",
+      "preparation_options",
+      "receptor_prepared"
+    ]
+  },
+  {
+    "operation": "docking_dock6",
+    "module": "wrappers.docking",
+    "entry": "perform_docking_dock6",
+    "required": [
+      "base_input_path",
+      "target",
+      "base_selected_mols",
+      "dock6_app_path",
+      "charge_type",
+      "mol_filename"
+    ],
+    "optional": [
+      "pdb_code",
+      "base_vina_path",
+      "density",
+      "radius",
+      "distance",
+      "conformer_search_type",
+      "plot_max_residues",
+      "pH",
+      "preparation_options",
+      "receptor_prepared"
+    ]
+  },
+  {
+    "operation": "consensus",
+    "module": "wrappers.docking",
+    "entry": "generate_consensus",
+    "required": [
+      "base_input_path",
+      "target"
+    ],
+    "optional": [
+      "repulsion_weight",
+      "base_vina_path",
+      "base_dock6_path"
+    ]
+  }
+]

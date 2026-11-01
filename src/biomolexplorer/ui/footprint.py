@@ -79,7 +79,10 @@ async def footprint_dialog(ui,pid,rid,sid,selection,name,valid,origin=None,recep
     async def save():
         if not active or not valid():return
         pdf=await read()
-        if active and valid():await save_file(ui,file_name=name+'_footprint.pdf',src_bytes=pdf)
+        from biomolexplorer.result_files import ResultFiles
+        filename=await ui.call(ResultFiles(ui.store).export_name,token,pid,rid,sid,selection['table'],
+            result_type='Footprint',extension='pdf',qualifier=selection)
+        if active and valid():await save_file(ui,file_name=filename,src_bytes=pdf)
     async def download(e):await ui.guard(save)
     dialog=ft.AlertDialog(title=ft.Row([ft.Icon(ft.Icons.BAR_CHART,color='#0F766E'),ft.Text('Footprint',size=22)],spacing=10),
         content=content,inset_padding=16,content_padding=ft.Padding.symmetric(horizontal=24,vertical=12),

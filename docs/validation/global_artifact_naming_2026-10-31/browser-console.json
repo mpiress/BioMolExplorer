@@ -1,0 +1,24 @@
+[
+  {
+    "type": "log",
+    "args": [
+      {
+        "type": "string",
+        "value": "Flutter app loaded"
+      }
+    ],
+    "executionContextId": 1,
+    "timestamp": 1793463735088.399,
+    "stackTrace": {
+      "callFrames": [
+        {
+          "functionName": "",
+          "scriptId": "4",
+          "url": "http://127.0.0.1:47685/",
+          "lineNumber": 73,
+          "columnNumber": 14
+        }
+      ]
+    }
+  }
+]

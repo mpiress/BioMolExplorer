@@ -1,0 +1,179 @@
+{
+  "home": [
+    {
+      "width": 1440,
+      "scrollWidth": 1425,
+      "cards": 16,
+      "localAssets": true,
+      "h1": 1,
+      "imagePreview": true
+    },
+    {
+      "width": 1024,
+      "scrollWidth": 1009,
+      "cards": 16,
+      "localAssets": true,
+      "h1": 1,
+      "imagePreview": true
+    },
+    {
+      "width": 768,
+      "scrollWidth": 753,
+      "cards": 16,
+      "localAssets": true,
+      "h1": 1,
+      "mobileMenu": true,
+      "imagePreview": true
+    },
+    {
+      "width": 390,
+      "scrollWidth": 375,
+      "cards": 16,
+      "localAssets": true,
+      "h1": 1,
+      "mobileMenu": true,
+      "imagePreview": true
+    },
+    {
+      "width": 320,
+      "scrollWidth": 305,
+      "cards": 16,
+      "localAssets": true,
+      "h1": 1,
+      "mobileMenu": true,
+      "imagePreview": true
+    }
+  ],
+  "guides": [
+    {
+      "language": "pt",
+      "guide": "user_manual",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "article": true,
+      "title": "Manual do usu\u00e1rio | BioMolExplorer"
+    },
+    {
+      "language": "pt",
+      "guide": "user_manual",
+      "width": 390,
+      "scrollWidth": 375,
+      "article": true,
+      "title": "Manual do usu\u00e1rio | BioMolExplorer"
+    },
+    {
+      "language": "pt",
+      "guide": "backend_usage",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "article": true,
+      "title": "Uso do backend | BioMolExplorer"
+    },
+    {
+      "language": "pt",
+      "guide": "backend_usage",
+      "width": 390,
+      "scrollWidth": 375,
+      "article": true,
+      "title": "Uso do backend | BioMolExplorer"
+    },
+    {
+      "language": "pt",
+      "guide": "projects",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "article": true,
+      "title": "Projetos e vers\u00f5es | BioMolExplorer"
+    },
+    {
+      "language": "pt",
+      "guide": "projects",
+      "width": 390,
+      "scrollWidth": 375,
+      "article": true,
+      "title": "Projetos e vers\u00f5es | BioMolExplorer"
+    },
+    {
+      "language": "pt",
+      "guide": "installation",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "article": true,
+      "title": "Instala\u00e7\u00e3o e configura\u00e7\u00e3o | BioMolExplorer"
+    },
+    {
+      "language": "pt",
+      "guide": "installation",
+      "width": 390,
+      "scrollWidth": 375,
+      "article": true,
+      "title": "Instala\u00e7\u00e3o e configura\u00e7\u00e3o | BioMolExplorer"
+    },
+    {
+      "language": "en",
+      "guide": "user_manual",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "article": true,
+      "title": "User manual | BioMolExplorer"
+    },
+    {
+      "language": "en",
+      "guide": "user_manual",
+      "width": 390,
+      "scrollWidth": 375,
+      "article": true,
+      "title": "User manual | BioMolExplorer"
+    },
+    {
+      "language": "en",
+      "guide": "backend_usage",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "article": true,
+      "title": "Backend usage | BioMolExplorer"
+    },
+    {
+      "language": "en",
+      "guide": "backend_usage",
+      "width": 390,
+      "scrollWidth": 375,
+      "article": true,
+      "title": "Backend usage | BioMolExplorer"
+    },
+    {
+      "language": "en",
+      "guide": "projects",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "article": true,
+      "title": "Projects and versions | BioMolExplorer"
+    },
+    {
+      "language": "en",
+      "guide": "projects",
+      "width": 390,
+      "scrollWidth": 375,
+      "article": true,
+      "title": "Projects and versions | BioMolExplorer"
+    },
+    {
+      "language": "en",
+      "guide": "installation",
+      "width": 1440,
+      "scrollWidth": 1425,
+      "article": true,
+      "title": "Installation and configuration | BioMolExplorer"
+    },
+    {
+      "language": "en",
+      "guide": "installation",
+      "width": 390,
+      "scrollWidth": 375,
+      "article": true,
+      "title": "Installation and configuration | BioMolExplorer"
+    }
+  ],
+  "errors": [],
+  "scientificJobsStarted": 0
+}

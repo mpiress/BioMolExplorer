@@ -27,7 +27,7 @@ Sem Git, use **Code → Download ZIP**, extraia o arquivo e abra um terminal na 
 ```bash
 conda env create -f requirements.yml
 conda activate BioMolExplorer
-python -m pip install -e '.[ui]'
+# Execução pelo checkout; veja a limitação de empacotamento abaixo.
 biomolexplorer-ui --web --language pt --dock6-path /caminho/para/dock6-6.11
 ```
 
@@ -694,14 +694,28 @@ As novas saídas ADMET incluem a origem do conjunto antes do tipo de resultado:
 | `MIX` | Entradas mescladas de categorias diferentes ou coleção consolidada |
 | `INPUT` | Arquivo cuja categoria não pôde ser determinada com segurança |
 
-Exemplos: `ACHE_molecules_MOL_BBB+.csv`, `ACHE_similars_SIM_HIA-.csv` e
-`ACHE_molecules_MOL_egg.png`. A mesma identificação acompanha a tabela avaliada,
-selecionados/rejeitados, gráficos interativos, relatório de métodos e relatório
-de exclusões, quando gerado. O nome do alvo vem da linhagem do pipeline; arquivos
-avulsos usam uma identificação conservadora pelo nome. Caracteres impróprios e
-nomes muito longos são normalizados com um identificador curto quando necessário.
+Os arquivos publicados e baixados usam a convenção global
+`TG[ALVO]-SRC[ORIGEM]-OP[OPERAÇÃO]-TIPO-ID[identificador].ext`.
+Exemplos: `TG[ACHE]-SRC[MOL]-OP[ADMET]-BBB+-ID[24113d53].csv` e
+`TG[ACHE]-SRC[SIM]-OP[ADMET]-HIA--ID[12345678].csv` (segundo identificador ilustrativo).
+`SRC` identifica somente a entrada imediata; o histórico completo permanece nos
+metadados. `TG[NA]` significa que não há alvo molecular conhecido/aplicável.
+O identificador distingue entradas e execuções sem alterar suas identidades internas.
 
-Os finais `_evaluated`, `_BBB+`, `_HIA-`, `_egg` e `_admet_report` continuam sendo
-reconhecidos pelos leitores e blocos seguintes. A mudança se aplica às novas
-saídas; arquivos históricos não são renomeados nem precisam ser recalculados
-para continuar sendo lidos.
+Os nomes físicos de trabalho e os arquivos históricos continuam reconhecidos,
+sem renomeação destrutiva ou recálculo. Pacotes científicos preservam seus caminhos
+internos e incluem o índice de nomenclatura. Consulte a [convenção global](artifact_naming.md)
+para tipos, compatibilidade e rastreabilidade.
+
+### Amber Score · DOCK6 (`dynamics_dock6`)
+
+```text
+Conecte receptores estruturais e poses 3D de pequenas moléculas.
+Selecione explicitamente os receptores, ligantes e pares desejados.
+Configure o refinamento Amber Score e execute com DOCK6 6.11 completo.
+Inspecione energias, protocolo e métricas inicial/final disponíveis; não espere RMSF.
+```
+
+## Contrato atual de execução e resultados
+
+[Ordem do DAG, seleção tardia, pausa/cancelamento, limpeza e reúso incremental](projects.md#execucao-selecao-tardia-e-preservacao-de-resultados). [Nomes públicos e linhagem](projects.md#nomes-publicos-e-rastreabilidade).

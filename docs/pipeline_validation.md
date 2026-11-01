@@ -99,7 +99,7 @@ Também foram verificados no navegador um ligante MOL2 (35 átomos), um receptor
 python scripts/validate_pdb_viewer.py --structure /path/to/structure.mol2
 ```
 
-Consulte [Logs e diagnóstico](logging.md) para o formato comum, contexto por execução, códigos de falha, resumo do job e o comando `python -m biomolexplorer.log_report`.
+Consulte [Logs e diagnóstico](logging.md) para o formato comum, contexto por execução, códigos de falha, resumo do job e o comando `PYTHONPATH=src python -m biomolexplorer.log_report`.
 
 
 ## Docking interoperável: validação de 7 de outubro de 2026

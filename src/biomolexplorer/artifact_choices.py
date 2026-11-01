@@ -10,8 +10,12 @@ def logical_path(path):
 
 
 def matches_selector(path, selector):
+    physical=path
     path=logical_path(path); selector=logical_path(selector)
-    return path==selector or path.endswith('/'+selector)
+    if path==selector or path.endswith('/'+selector):return True
+    from .artifact_naming import parse_filename,publication_metadata
+    public=parse_filename(selector)
+    return bool(public and public['scheme']==1 and publication_metadata(physical).get('public_name')==selector)
 
 
 def selector_for(path, files):
@@ -22,6 +26,12 @@ def selector_for(path, files):
         if sum(matches_selector(p,suffix) for p in files)==1:
             return suffix
     raise ValueError('Os resultados contêm caminhos de arquivo duplicados.')
+
+
+def _public_kind(path):
+    from .artifact_naming import parse_filename
+    parsed=parse_filename(path)
+    return parsed['result_type'] if parsed and parsed['scheme']==1 else None
 
 
 def produced_files(item):
@@ -47,7 +57,7 @@ def choices(item):
     files=produced_files(item)
     if item['operation'] in ('retrieve_compounds','retrieve_pubchem','expand_similar_compounds') and not item.get('configuration',{}).get('provided_results'):
         files=[p for p in files if p.suffix=='.csv' and (any('__'+role in p.stem for role in ('compounds','mol','sim','merged')) or p.name=='compounds.csv' and p.parent.parent.name=='compounds'
-                or p.stem.endswith(('_FULL','_MOLS','_SIMS')))]
+                or p.stem.endswith(('_FULL','_MOLS','_SIMS')) or _public_kind(p) in ('MOL','SIM','ALL'))]
     if item['operation']=='retrieve_structures':
         files=[p for p in files if p.suffix.lower()=='.pdb']
     if item['operation'] in ('docking_vina','docking_dock6','consensus') and not item.get('configuration',{}).get('provided_results'):

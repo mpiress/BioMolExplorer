@@ -69,7 +69,8 @@ class CompoundTableViewer:
             return await self.load()
         self.data=result;self.loading.visible=False
         label=self.ui.tr('composto encontrado' if result['matched']==1 else 'compostos encontrados') if hasattr(self.ui,'tr') else ('composto encontrado' if result['matched']==1 else 'compostos encontrados')
-        self.count.value=f"{result['name']} · {result['matched']} {label} · {result['total']} na tabela · Página {self.offset//self.limit+1}"
+        public_name=next((t.get('public_name',result['name']) for t in self.tables if t['path']==self.selector.value),result['name'])
+        self.count.value=f"{public_name} · {result['matched']} {label} · {result['total']} na tabela · Página {self.offset//self.limit+1}"
         self.notice.value='A remoção afeta somente o arquivo selecionado. As análises que usam esse arquivo serão atualizadas na próxima execução.' if result['can_edit'] else 'Consulta disponível. Para remover compostos, é necessário ser editor e aguardar o pipeline terminar.'
         self.render_rows(result)
         self.previous.disabled=self.offset==0
@@ -159,7 +160,8 @@ class CompoundTableViewer:
     async def download(self,e):
         async def action():
             if not self.valid():return
-            path,filename=self.selector.value,Path(self.selector.value).name
+            path=self.selector.value
+            filename=next((t.get('public_name',t.get('label',t['name'])) for t in self.tables if t['path']==path),Path(path).name)
             data=await self.ui.call(self.ui.store.read_file,self.token,self.project_id,path)
             if self.valid():await save_file(self.ui,file_name=filename,src_bytes=data)
         await self.ui.guard(action)

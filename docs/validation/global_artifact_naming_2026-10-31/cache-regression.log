@@ -1,0 +1,107 @@
+Baseline exclusions: ["test_adding_unconnected_block_and_moving_canvas_preserves_existing_results", "test_changed_processing_mode_after_restart_requires_new_selection", "test_changed_uploaded_input_invalidates_consumer_after_upgrade", "test_declining_reuse_runs_collection_and_waits_for_new_file_selection", "test_modified_consumer_output_cannot_be_reused_after_upgrade", "test_tampered_original_cache_key_is_not_adopted_after_upgrade", "test_three_old_pubchem_selections_expand_to_six_real_graphs_with_exact_origins"]
+test_adding_connected_block_runs_only_new_stage (test_stage_cache.StageCacheTests.test_adding_connected_block_runs_only_new_stage) ... ok
+test_changed_uploaded_input_reruns_import_and_consumers (test_stage_cache.StageCacheTests.test_changed_uploaded_input_reruns_import_and_consumers) ... ok
+test_configuration_change_reruns_changed_block (test_stage_cache.StageCacheTests.test_configuration_change_reruns_changed_block) ... ok
+test_curation_reuses_collection_but_recalculates_consumers (test_stage_cache.StageCacheTests.test_curation_reuses_collection_but_recalculates_consumers) ... ok
+test_existing_successful_legacy_results_are_adopted (test_stage_cache.StageCacheTests.test_existing_successful_legacy_results_are_adopted) ... ok
+test_forced_execution_bypasses_valid_results (test_stage_cache.StageCacheTests.test_forced_execution_bypasses_valid_results) ... ok
+test_identical_connected_pipeline_reuses_every_stage (test_stage_cache.StageCacheTests.test_identical_connected_pipeline_reuses_every_stage) ... ok
+test_legacy_consumer_with_recently_edited_input_is_not_adopted (test_stage_cache.StageCacheTests.test_legacy_consumer_with_recently_edited_input_is_not_adopted) ... ok
+test_missing_or_modified_output_is_never_reused (test_stage_cache.StageCacheTests.test_missing_or_modified_output_is_never_reused) ... ok
+test_qualified_compounds_filename_selects_integrated_dataset (test_stage_cache.StageCacheTests.test_qualified_compounds_filename_selects_integrated_dataset) ... ok
+test_template_change_invalidates_previous_output (test_stage_cache.StageCacheTests.test_template_change_invalidates_previous_output) ... ok
+test_restart_after_app_upgrade_verifies_and_reuses_saved_provenance (test_restart_reuse.RestartReuseTests.test_restart_after_app_upgrade_verifies_and_reuses_saved_provenance) ... ok
+test_restart_restores_only_the_previously_selected_file (test_restart_reuse.RestartReuseTests.test_restart_restores_only_the_previously_selected_file) ... ok
+test_restart_reuses_completed_chain_without_repeating_file_selection (test_restart_reuse.RestartReuseTests.test_restart_reuses_completed_chain_without_repeating_file_selection) ... ok
+test_cached_lineage_loads_the_original_run_instead_of_a_new_target (test_analysis_origins.OriginRulesTests.test_cached_lineage_loads_the_original_run_instead_of_a_new_target) ... ok
+test_cycles_terminate_and_do_not_invent_target_names (test_analysis_origins.OriginRulesTests.test_cycles_terminate_and_do_not_invent_target_names) ... ok
+test_partial_selection_is_not_expanded_without_complete_prior_coverage (test_analysis_origins.OriginRulesTests.test_partial_selection_is_not_expanded_without_complete_prior_coverage) ... ok
+test_automatic_docking_binding_does_not_restore_an_outdated_file_selection (test_docking_incremental.IndexedCacheTests.test_automatic_docking_binding_does_not_restore_an_outdated_file_selection) ... ok
+test_content_addressing_and_independent_materializations (test_docking_incremental.IndexedCacheTests.test_content_addressing_and_independent_materializations) ... ok
+test_corrupted_object_and_missing_artifact_are_not_hits (test_docking_incremental.IndexedCacheTests.test_corrupted_object_and_missing_artifact_are_not_hits) ... ok
+test_automatic_docking_binding_does_not_restore_an_outdated_file_selection (test_docking_incremental.VinaIncrementalTests.test_automatic_docking_binding_does_not_restore_an_outdated_file_selection) ... ok
+test_changed_ligand_affects_only_that_compound_and_parameters_invalidate_docking (test_docking_incremental.VinaIncrementalTests.test_changed_ligand_affects_only_that_compound_and_parameters_invalidate_docking) ... ok
+test_content_addressing_and_independent_materializations (test_docking_incremental.VinaIncrementalTests.test_content_addressing_and_independent_materializations) ... ok
+test_corrupted_object_and_missing_artifact_are_not_hits (test_docking_incremental.VinaIncrementalTests.test_corrupted_object_and_missing_artifact_are_not_hits) ... ok
+test_forced_rerun_recalculates_and_missing_ligand_is_not_reused (test_docking_incremental.VinaIncrementalTests.test_forced_rerun_recalculates_and_missing_ligand_is_not_reused) ... ok
+test_interruption_commits_completed_items_and_concurrent_requests_share_checkpoint (test_docking_incremental.VinaIncrementalTests.test_interruption_commits_completed_items_and_concurrent_requests_share_checkpoint) ... ok
+test_partial_failure_and_interruption_preserve_completed_checkpoint (test_docking_incremental.VinaIncrementalTests.test_partial_failure_and_interruption_preserve_completed_checkpoint) ... ok
+test_unchanged_batch_and_new_compound_only_run_missing_work (test_docking_incremental.VinaIncrementalTests.test_unchanged_batch_and_new_compound_only_run_missing_work) ... ok
+test_changed_docking_options_reuse_receptor_but_recalculate_pose (test_redocking_incremental.IncrementalRedockingTests.test_changed_docking_options_reuse_receptor_but_recalculate_pose) ... ok
+test_changed_docking_parameters_do_not_repeat_reference_preparation (test_redocking_incremental.IncrementalRedockingTests.test_changed_docking_parameters_do_not_repeat_reference_preparation) ... ok
+test_changed_structure_or_receptor_settings_require_preparation (test_redocking_incremental.IncrementalRedockingTests.test_changed_structure_or_receptor_settings_require_preparation) ... ok
+test_changing_input_source_does_not_mix_previous_collection (test_redocking_incremental.IncrementalRedockingTests.test_changing_input_source_does_not_mix_previous_collection) ... ok
+test_completed_legacy_native_results_are_adopted (test_redocking_incremental.IncrementalRedockingTests.test_completed_legacy_native_results_are_adopted) ... ok
+test_completed_stages_survive_later_run_failure_but_active_runs_are_not_reused (test_redocking_incremental.IncrementalRedockingTests.test_completed_stages_survive_later_run_failure_but_active_runs_are_not_reused) ... ok
+test_forced_rerun_ignores_cache (test_redocking_incremental.IncrementalRedockingTests.test_forced_rerun_ignores_cache) ... ok
+test_individual_batches_partition_previous_results_without_duplicates (test_redocking_incremental.IncrementalRedockingTests.test_individual_batches_partition_previous_results_without_duplicates) ... ok
+test_native_preparation_provenance_survives_pair_reuse (test_redocking_incremental.IncrementalRedockingTests.test_native_preparation_provenance_survives_pair_reuse) ... ok
+test_new_ligand_reuses_receptor_and_accumulates_without_repeating_old_pair (test_redocking_incremental.IncrementalRedockingTests.test_new_ligand_reuses_receptor_and_accumulates_without_repeating_old_pair) ... ok
+test_new_receptor_prepares_and_docks_only_new_pair (test_redocking_incremental.IncrementalRedockingTests.test_new_receptor_prepares_and_docks_only_new_pair) ... ok
+test_new_receptor_selection_excludes_previous_receptors_from_final_table (test_redocking_incremental.IncrementalRedockingTests.test_new_receptor_selection_excludes_previous_receptors_from_final_table) ... ok
+test_partial_index_reuses_surviving_pair_without_resurrecting_removed_pair (test_redocking_incremental.IncrementalRedockingTests.test_partial_index_reuses_surviving_pair_without_resurrecting_removed_pair) ... ok
+test_project_index_recovers_valid_pair_from_failed_run_without_history_seed (test_redocking_incremental.IncrementalRedockingTests.test_project_index_recovers_valid_pair_from_failed_run_without_history_seed) ... ok
+test_removed_original_is_not_resurrected_by_accumulation (test_redocking_incremental.IncrementalRedockingTests.test_removed_original_is_not_resurrected_by_accumulation) ... ok
+test_truncated_pose_invalidates_reuse (test_redocking_incremental.IncrementalRedockingTests.test_truncated_pose_invalidates_reuse) ... ok
+test_retired_processing_version_recalculates_pairs_without_losing_legacy_results (test_redocking_incremental.SchedulerIncrementalTests.test_retired_processing_version_recalculates_pairs_without_losing_legacy_results) ... ok
+test_scheduler_passes_verified_seeds_and_results_table_accumulates (test_redocking_incremental.SchedulerIncrementalTests.test_scheduler_passes_verified_seeds_and_results_table_accumulates) ... ok
+test_changed_site_and_force_rerun_invalidate_affected_calculations (test_dock6_incremental.Dock6IncrementalTests.test_changed_site_and_force_rerun_invalidate_affected_calculations) ... [13:24:26] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:26] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:26] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:26] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:26] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:26] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:26] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:26] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:26] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:26] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:26] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:26] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+ok
+test_failure_resumes_only_missing_compound (test_dock6_incremental.Dock6IncrementalTests.test_failure_resumes_only_missing_compound) ... [13:24:26] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:26] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:26] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:26] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:26] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+ok
+test_same_request_new_ligand_and_mode_change_reuse_only_compatible_work (test_dock6_incremental.Dock6IncrementalTests.test_same_request_new_ligand_and_mode_change_reuse_only_compatible_work) ... [13:24:27] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] C: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] C: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] C: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] C: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] C: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] C: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] C: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[13:24:27] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+ok
+
+----------------------------------------------------------------------
+Ran 49 tests in 72.489s
+
+OK

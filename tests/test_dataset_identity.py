@@ -135,7 +135,7 @@ class AdmetNameIntegrationTests(unittest.TestCase):
                 admet_profile='exploratory',dataset_origin=dict(tag='MOL',label='ACHE')),root/'out')
             names=[Path(p).name for p in result.artifacts]
             self.assertTrue(names);self.assertTrue(all('_MOL' in name for name in names),names)
-            self.assertTrue({'ACHE_molecules_MOL.csv','ACHE_molecules_MOL_egg.png',
+            self.assertTrue({'ACHE_molecules_MOL_evaluated.csv','ACHE_molecules_MOL_egg.png',
                 'ACHE_molecules_MOL_BBB+.csv','ACHE_molecules_MOL_admet_report.json',
                 'ACHE_molecules_MOL_molecule_exclusions.json'}<=set(names))
             self.assertEqual(result.details['excluded_records'],1)
@@ -167,15 +167,15 @@ class AdmetPipelineIdentityTests(unittest.TestCase):
             for rows in form.rows.values():
                 for check,reference in rows:
                     name=Path(reference.get('selector','')).name
-                    check.value=operation=='admet' or name.endswith(('_MOL.csv','_SIM.csv'))
+                    check.value=operation=='admet' or name.endswith('_evaluated.csv')
             run=fixture.wait(service.resume(fixture.token,run['id'],form.read()))
         self.assertEqual(run['status'],'succeeded',run.get('error'))
         admet_stage=next(s for s in run['stages'] if s['id']==admet['id'])
         self.assertEqual(len(admet_stage['batches']),2)
         names=[Path(p).name for p in admet_stage['artifacts']]
         self.assertEqual(len(names),len(set(names)),names)
-        self.assertTrue(any('_MOL.csv' in name for name in names))
-        self.assertTrue(any('_SIM.csv' in name for name in names))
+        self.assertTrue(any('_MOL_evaluated.csv' in name for name in names))
+        self.assertTrue(any('_SIM_evaluated.csv' in name for name in names))
         fingerprint_stage=next(s for s in run['stages'] if s['id']==fingerprint['id'])
         self.assertEqual(len(fingerprint_stage['batches']),2)
         tables=[pd.read_csv(p) for p in fingerprint_stage['artifacts'] if p.endswith('.csv')]

@@ -15,19 +15,19 @@
 <h2 id="filtrar-rapidamente">Filtrar rapidamente</h2>
 <p>Execute no ambiente Python do projeto:</p>
 <pre><code class="language-bash"># Erros e avisos do processo principal
-python -m biomolexplorer.log_report
+PYTHONPATH=src python -m biomolexplorer.log_report
 
 # Erros de um worker; substitua JOB_ID pelo identificador real
-python -m biomolexplorer.log_report --job JOB_ID --level ERROR
+PYTHONPATH=src python -m biomolexplorer.log_report --job JOB_ID --level ERROR
 
 # Histórico de comandos, incluindo saídas e duração
-python -m biomolexplorer.log_report --job JOB_ID --level INFO --limit 100
+PYTHONPATH=src python -m biomolexplorer.log_report --job JOB_ID --level INFO --limit 100
 
 # Eventos do pipeline para uma execução/etapa
-python -m biomolexplorer.log_report --run RUN_ID --stage STAGE_ID
+PYTHONPATH=src python -m biomolexplorer.log_report --run RUN_ID --stage STAGE_ID
 
 # Saída estruturada para análise externa
-python -m biomolexplorer.log_report --job JOB_ID --json</code></pre>
+PYTHONPATH=src python -m biomolexplorer.log_report --job JOB_ID --json</code></pre>
 <p><code>--directory</code> seleciona uma raiz diferente de logs; com <code>--job</code>, o leitor procura a subpasta <code>jobs/&lt;job_id&gt;</code> nessa raiz. <code>--operation redocking</code> filtra pela operação. O leitor percorre os arquivos JSONL rotacionados e conserva apenas os últimos eventos correspondentes, sem carregar o histórico inteiro na memória. Logs antigos, anteriores ao JSONL, continuam disponíveis como texto.</p>
 <h2 id="codigos-de-diagnostico">Códigos de diagnóstico</h2>
 <div class="table-wrap"><table><thead><tr><th scope="col">Código</th><th scope="col">Significado e verificação</th></tr></thead><tbody><tr><td><code>TOOL_NOT_FOUND</code></td><td>Executável não localizado; confira instalação e PATH do worker</td></tr><tr><td><code>TOOL_START_FAILED</code></td><td>Não foi possível iniciar; confira permissões e diretório</td></tr><tr><td><code>TOOL_TIMEOUT</code></td><td>Comando excedeu um limite definido explicitamente pelo chamador; não há limite automático</td></tr><tr><td><code>TOOL_EXIT_FAILED</code></td><td>Ferramenta terminou com código diferente de zero; consulte stdout/stderr</td></tr><tr><td><code>TOOL_REPORTED_ERROR</code></td><td>Chimera relatou erro mesmo retornando zero; confira o script preservado</td></tr><tr><td><code>PREPARED_OUTPUT_INVALID</code></td><td>Preparação produziu arquivo ausente, vazio ou sem átomos; confira a ferramenta e o script</td></tr><tr><td><code>EXECUTION_TIMEOUT</code></td><td>Job excedeu um limite do supervisor definido explicitamente; o padrão não tem limite</td></tr><tr><td><code>INPUT_NOT_FOUND</code></td><td>Arquivo de entrada não localizado</td></tr><tr><td><code>ACCESS_DENIED</code></td><td>Acesso negado pelo sistema de arquivos</td></tr><tr><td><code>VALIDATION_FAILED</code></td><td>Entrada ou configuração inválida</td></tr><tr><td><code>WORKER_EXIT_FAILED</code></td><td>Worker encerrou sem diagnóstico válido; consulte <code>execution.log</code></td></tr><tr><td><code>UNEXPECTED_ERROR</code></td><td>Exceção sem categoria específica; consulte a causa e o código de origem</td></tr></tbody></table></div>

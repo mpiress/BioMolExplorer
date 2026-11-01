@@ -57,23 +57,32 @@ def locator(stage_id, path):
     return logical_path(path)
 
 
-def records(item, run_id=None):
+def records(item, run_id=None, *, decorate=True):
     files=list(dict.fromkeys(str(p) for p in item.get('artifacts', [])))
     previous={r['path']:r for r in item.get('artifact_records', [])}
     config=item.get('configuration', item)
-    suffixes={path:['/'.join(Path(logical_path(path)).parts[-n:]) for n in range(1,len(Path(logical_path(path)).parts)+1)] for path in files}
+    parts={path:Path(logical_path(path)).parts for path in files}
+    suffixes={path:['/'.join(value[-n:]) for n in range(1,len(value)+1)] for path,value in parts.items()}
     counts=Counter(suffix for options in suffixes.values() for suffix in options)
     result=[]
     for path in files:
         selector=next((suffix for suffix in suffixes[path] if counts[suffix]==1),None)
         if selector is None:raise ValueError('Os resultados contêm caminhos de arquivo duplicados.')
-        identity=slot_id(item['id'], locator(item['id'], path))
+        from .artifact_naming import publication_metadata
+        publication=publication_metadata(path)
         prior=previous.get(path, {})
+        identity=prior.get('artifact_id') or publication.get('artifact_id') or slot_id(item['id'],locator(item['id'],path))
         batch=next((b for b in item.get('batches',[]) if path in b.get('artifacts',[])),{})
         origin=prior.get('run_id') or batch.get('reused_from_run') or item.get('reused_from_run') or run_id
         runtime=batch.get('processing_runtime') if batch else item.get('processing_runtime')
         result.append(dict(artifact_id=identity,
-            occurrence_id=hashlib.sha256(json.dumps([identity, origin]).encode()).hexdigest(),
+            block_id=prior.get('block_id') or config.get('block_id') or item.get('block_id'),
+            output=prior.get('output') or publication.get('output'),
+            original_name=prior.get('original_name') or publication.get('legacy_name') or Path(path).name,
+            provenance=dict(prior.get('provenance',{}),legacy_name=publication.get('legacy_name',Path(path).name)),
+            record_count=prior.get('record_count',publication.get('record_count')),
+            naming=prior.get('naming') or publication.get('naming',{}),
+            occurrence_id=prior.get('occurrence_id') or publication.get('naming',{}).get('identifier') or hashlib.sha256(json.dumps([identity, origin]).encode()).hexdigest(),
             stage_id=item['id'], stage_name=item.get('name', item['id']),
             operation=item.get('operation', config.get('operation', 'unknown')),
             content_sha256=item.get('artifact_manifest',{}).get(str(Path(path).resolve())),
@@ -87,6 +96,9 @@ def records(item, run_id=None):
             context=prior.get('context', {'target':config.get('parameters', {}).get('target'),
                      'search_term':config.get('parameters', {}).get('search_term')}),
             inputs=prior.get('inputs', {})))
+    if decorate:
+        from .artifact_naming import name_records
+        name_records([(r,item) for r in result])
     return result
 
 
@@ -124,7 +136,7 @@ def index_run(stages, run_id, assets=()):
     assets_by_path={str(a['path']):a for a in assets}
     by_path={}
     for item in stages:
-        item['artifact_records']=records(item, run_id)
+        item['artifact_records']=records(item, run_id,decorate=False)
         for record in item['artifact_records']:by_path.setdefault(record['path'], []).append(record)
     for item in stages:
         batches={path:batch for batch in item.get('batches',[]) for path in batch.get('artifacts',[])}
@@ -155,6 +167,9 @@ def index_run(stages, run_id, assets=()):
             record['source']=({field:[dict(r) for r in rows] for field,rows in record.get('inputs',{}).items()}
                 or {key:value for key,value in record['context'].items() if value is not None})
 
+    from .artifact_naming import name_records
+    name_records([(r,s) for s in stages for r in s['artifact_records']])
+
 
 def annotate_files(item, files, run_id=None):
     """Attach provenance to display records without replacing original filenames."""
@@ -170,5 +185,6 @@ def annotate_files(item, files, run_id=None):
         if context:parts.append(str(context))
         if inputs:parts.append(' + '.join(inputs))
         file.update(artifact_id=record['artifact_id'],occurrence_id=record['occurrence_id'],
-                    origin_run_id=record['run_id'],label=' — '.join(parts))
+                    origin_run_id=record['run_id'],label=record['public_name'],public_name=record['public_name'],
+                    display_name=record['public_name'],naming=record['naming'])
     return files

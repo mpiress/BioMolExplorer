@@ -60,6 +60,20 @@ class ResultFiles:
                 and not (stage['operation']=='retrieve_structures' and p.name in ('pdb_codes.csv','retrieval_report.json'))
                 and not (stage['operation'] == 'admet' and p.suffix.lower() == '.json' and not is_quality_report(p) and not p.name.endswith('_admet_report.json'))]
 
+    def export_name(self,token,pid,rid,sid,filename,*,result_type=None,extension=None,qualifier=None):
+        stage=self.stage(token,pid,rid,sid)
+        if filename not in stage.get('artifacts',[]) and filename!=stage.get('log_path'):
+            raise AccessDenied('Arquivo não autorizado para esta etapa.')
+        self.store.scoped_path(pid,filename)
+        from .artifact_naming import download_name,name_records
+        origins=self.origins(token,pid,rid)
+        context=origins.describe(filename,sid,rid)
+        if not context.get('naming'):
+            from .artifacts import records
+            virtual=dict(stage,artifacts=[filename]);record=records(virtual,rid)[0]
+            name_records([*origins.catalog.values(),(record,virtual)]);context=record
+        return download_name(context,result_type=result_type,extension=extension,qualifier=qualifier)
+
     def preparation_failures(self,token,pid,rid,sid,filename):
         from .preparation_failures import REPORT_NAME
         stage=self.stage(token,pid,rid,sid);path=self.store.scoped_path(pid,filename)
