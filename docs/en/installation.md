@@ -41,10 +41,15 @@ From the downloaded source code root:
 ```bash
 conda env create -f requirements.yml
 conda activate BioMolExplorer
-# Source-checkout execution; see the packaging limitation below.
+python -m pip install -e '.[ui]'
+python -m pip check
+command -v biomolexplorer-ui
+biomolexplorer-ui --help
 ```
 
-If the environment already exists, update it with `conda env update -f requirements.yml --prune`, then activate it. The environment includes Open Babel, Vina and the UI. It does not replace Chimera and DOCK6, which remain external installations. Compatible ranges — notably NumPy 1.x and pandas 2.x — prevent machine-learning extras from silently replacing the scientific worker stack. The package requires Python 3.12.
+Run one line at a time and wait for it to finish without errors. The `pip install` command is required: installing libraries through Conda does not register BioMolExplorer commands. The `-e` option links the installation to the source folder; do not move or delete it afterwards. `.[ui]` includes the web and desktop interface. The `--help` command should display options without opening the application.
+
+If the environment already exists, update it with `conda env update -f requirements.yml --prune`, then activate it. Repeat `python -m pip install -e '.[ui]'` and the checks above. The environment includes Open Babel, Vina and the UI. It does not replace Chimera and DOCK6, which remain external installations. Compatible ranges — notably NumPy 1.x and pandas 2.x — prevent machine-learning extras from silently replacing the scientific worker stack. The package requires Python 3.12.
 
 ## 4. Configure paths and check the installation
 
@@ -60,7 +65,7 @@ export PATH="/path/to/chimera-1.17/bin:$BIOMOL_DOCK6_ROOT/bin:$PATH"
 Check executables before starting:
 
 ```bash
-for tool in dock6 sphgen showbox grid obabel vina; do
+for tool in chimera dock6 sphgen showbox grid obabel vina; do
     if command -v "$tool"; then
         printf 'OK: %s available\n' "$tool"
     else
@@ -117,39 +122,26 @@ export BIOMOL_ADMET_PYTHON="/path/to/admet-env/bin/python"
 
 Start the application from that terminal so workers inherit the setting. This variable selects the predictor Python independently of `--worker-python`. When moving computers, recreate the environment and update paths; exporting a project does not install scientific libraries.
 
-For **ADMET-AI is not installed in the worker environment**, check the availability shown in ADMET settings, the interpreter path, installation and worker access to models. Restart after configuring the environment. Alternatively select **Local RDKit** explicitly: it provides local descriptors, estimates and rules without `ML_` endpoints. There is no silent model substitution. Use the isolated environment described above; editable installation is blocked by the packaging issue documented below.
+For **ADMET-AI is not installed in the worker environment**, check the availability shown in ADMET settings, the interpreter path, installation and worker access to models. Restart after configuring the environment. Alternatively select **Local RDKit** explicitly: it provides local descriptors, estimates and rules without `ML_` endpoints. There is no silent model substitution. Use the isolated environment described above.
 
 See [hypothesis-driven ADMET](admet_research.md) for units, profiles, alerts, outputs and model limits.
 
 
-## Audited environment and reproducible installation
+## Reopen the application and troubleshoot
 
-`requirements.yml` declares scientific and UI imports, Open Babel and Poppler
-executables, and installation/build infrastructure. `scripts/audit_dependencies.py`
-compares Python imports with these manifests, including literal dynamic imports
-and the optional isolated predictor.
+In a new terminal, run `conda activate BioMolExplorer`, repeat the paths from step 4 if you did not save them in your shell, then run the command from step 5. Reinstallation is not needed each time.
 
-To create a new Linux x86_64 environment with Conda builds and pip artifacts pinned
-by this audit, use the corresponding lock:
+| Message or situation | Solution |
+| --- | --- |
+| `conda: command not found` | Install Miniconda/Anaconda and open a new Bash terminal. Initialize Bash following the installer instructions if needed. |
+| `CondaError: Run conda init before conda activate` | Run `conda init bash`, close the terminal and open another one. |
+| `biomolexplorer-ui: command not found` | Activate `BioMolExplorer`, return to the folder containing `pyproject.toml` and repeat `python -m pip install -e '.[ui]'`. Check `python -m pip --version` and `command -v biomolexplorer-ui`: both should point into the active environment. |
+| Missing `pyproject.toml` | Enter the extracted/cloned source folder, rather than `src`. |
+| Installation or `pip check` failure | Stop and record the full message. Do not use `sudo pip` or the system Python. For old environments, prefer a fresh one using `conda env create -n BioMolExplorer-clean -f requirements.yml`, then activate it before editable installation. |
+| Desktop interface does not open | Try `--web --no-browser` and open the address shown in the terminal. |
 
-```bash
-conda env create -f requirements-linux-64.lock.yml
-conda activate BioMolExplorer
-python -m pip check
-```
+## Scope and scientific environment
 
-The lock includes pip wheel hashes for Python 3.12. Refresh it when changing the
-main manifest; it is not a lock for other platforms. The audit and simulated
-resolutions do not replace a clean installation and protocol tests. Editing the
-manifest does not uninstall packages from an existing environment.
+The recommended route uses `requirements.yml` for scientific dependencies and `python -m pip install -e '.[ui]'` to register the application. Chimera, DOCK6 and Conda are external tools, not pip dependencies. The `ui` extra alone does not install the full scientific environment. ADMET-AI remains optional and isolated; do not install `.[admet-ml]` in the docking environment.
 
-ADMET-AI 2 requires newer RDKit than the scientific environment pins. Use
-`python scripts/setup_admet_ai.py` for the local CPU venv, or create the optional
-`requirements-admet.yml` environment and set `BIOMOL_ADMET_PYTHON` to its absolute
-Python path. Keep these environments separate.
-
-## Verifiable installation status in this checkout
-
-Source-checkout execution uses `PYTHONPATH=src` from the repository root and does not require an editable installation. The current `pyproject.toml` contains `dependencies = [dock6, chimera, miniconda]`, which is invalid TOML (unquoted items). Consequently, editable installation and installed entry points are not a verified installation route in this review. The operational file was left unchanged. Run Python modules from the checkout while this limitation remains.
-
-`requirements.yml` also includes ADMET-AI 2 in the main environment although this guide recommends isolation for compatibility with RDKit. No manifest was changed, clean environment created or resolution of every pin demonstrated in this documentation audit. The Linux lock does not establish support for other platforms. For an existing scientific environment, check `PYTHONPATH=src python -m biomolexplorer --help` before configuring the protocol executables.
+This guide uses Linux/Bash and Python 3.12. No Linux lock is distributed in this checkout; do not use a nonexistent lock file. A clean installation requires network access and availability of the declared packages. `pip check` checks Python metadata, not scientific protocols. Validate external tools and a reference case before using results in research.

@@ -22,14 +22,15 @@ The workspace provides **16 block types**: 15 scientific operations plus import.
 
 Use Python 3.12 and the scientific dependencies declared in [requirements.yml](requirements.yml). Active preparation protocols require classic UCSF Chimera 1.17 and Open Babel; Vina protocols need AutoDock Vina, and DOCK6 protocols need a complete DOCK6 6.11 installation with the relevant accessory executables and parameter files. The native SES surface implementation does not require a standalone DMS executable.
 
-**Current installation limitation:** `pyproject.toml` contains invalid TOML in its dependency list. Editable installation and installed entry points are therefore not a verified path for this checkout. Dependency manifests were not changed in this documentation-only review; no clean environment resolution is claimed. See [installation status](docs/en/installation.md#verifiable-installation-status-in-this-checkout), including the main-manifest/isolated-ADMET-AI discrepancy.
-
-With an existing configured scientific environment, run from the repository root:
+Follow the [step-by-step installation guide](docs/en/installation.md). From the repository root:
 
 ```bash
-export PYTHONPATH="$PWD/src${PYTHONPATH:+:$PYTHONPATH}"
-python -m biomolexplorer --help
-python -m biomolexplorer.ui.app --language en
+conda env create -f requirements.yml
+conda activate BioMolExplorer
+python -m pip install -e '.[ui]'
+python -m pip check
+biomolexplorer-ui --help
+biomolexplorer-ui --web --language en
 ```
 
 For a local web session with explicit worker/tool paths:

@@ -7,11 +7,12 @@ name = "biomolexplorer"
 version = "2.2.0"
 description = "Molecular retrieval and computational drug discovery services"
 requires-python = ">=3.12"
+# Scientific dependencies and external tools are managed through requirements.yml.
 dependencies = []
 
 [project.optional-dependencies]
 admet-ml = ["admet-ai==2.0.1"]
-ui = ["flet==1.0.3", "flet-web==1.0.3"]
+ui = ["flet[desktop]==1.0.3", "flet-web==1.0.3"]
 
 [project.scripts]
 biomolexplorer = "biomolexplorer.__main__:main"
