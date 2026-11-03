@@ -35,6 +35,3 @@ dependencies:
     - fastapi==0.142.2
     - uvicorn==0.54.0
     - websockets==17.2
-    - --extra-index-url https://download.pytorch.org/whl/cpu
-    - torch==2.8.0+cpu
-    - admet-ai==2.0.1
