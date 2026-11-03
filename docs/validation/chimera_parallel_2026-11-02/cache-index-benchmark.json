@@ -1,0 +1,16 @@
+{
+  "molecules": 1000,
+  "scope": "Synthetic adapter/cache I/O benchmark with simulated native preparation, not scientific execution",
+  "runs": [
+    {
+      "version": "previous",
+      "seconds": 8.517,
+      "index_writes": 1002
+    },
+    {
+      "version": "current",
+      "seconds": 0.857,
+      "index_writes": 2
+    }
+  ]
+}

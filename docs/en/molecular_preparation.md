@@ -42,3 +42,17 @@ MOL2 export may repair heavy-bond orders from the component definition while
 preserving prepared coordinates and partial charges. Missing atoms are never
 invented. An internal `.export.json` records missing atoms and the scope when
 the reference represents only an observed fragment.
+
+## Concurrency and resource use
+
+Vina, DOCK6 and Prepare for docking share candidate preparation. Independent molecules use a bounded queue and private temporary Chimera directories. Charge methods, pH, minimization and chemical validation are unchanged. When both formats are requested, they are exported from the same prepared conformation without repeating charge calculation.
+
+Admission respects the worker CPU budget (normally two in the workspace), half the effective CPUs, available-memory estimates and a ceiling of four. CPU affinity/quotas and cgroup-v2 limits are considered. The estimate reserves at least 1 GiB and, when larger, 25% of available memory, with a 1 GiB allowance per process. Unknown or small available memory leads to serial preparation. This is a conservative admission policy, not a hard memory limit or a guarantee against OOM for every molecule.
+
+Linux file leases coordinate candidate-preparation Chimera processes across workers of the same OS user. Process-group cancellation releases leases automatically. Numerical-library threads inside Chimera are limited to one. Manually started Chimera sessions and other OS users are outside this coordination scope.
+
+Set `BIOMOL_PREPARATION_WORKERS=1` in the application's environment to reduce concurrency without changing scientific settings. Higher values never exceed the worker budget or safety limits. The workspace supplies `BIOMOL_CPU_WORKERS` from its configuration; this variable sets the reference budget for CLI use. No scientific numeric option was added to forms.
+
+Per-molecule native files and verified cache manifests remain durable. The growing `compounds.csv` index is coalesced with a five-second minimum interval between periodic writes and forced on completion/handled fatal error, reducing repeated I/O. This does not promise a CSV checkpoint for every molecule; valid rows can be rebuilt from verified cache after interruption. Explicitly disabled reuse remains disabled. Exact version equivalences were audited so scheduling changes do not invalidate existing scientific caches.
+
+Speedup depends on molecules, hardware and cache state. Parallelism does not repair chemical typing or convergence failures. See the [benchmark scope and limitations](../validation/chimera_parallel_2026-11-02/README.md).

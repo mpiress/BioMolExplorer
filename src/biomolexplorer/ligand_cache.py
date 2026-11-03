@@ -44,11 +44,12 @@ def validate_prepared_ligand(path, format):
 
 def preparation_identity():
     """Fingerprint the adapter and the installed preparation tools once per batch."""
+    from .stage_cache import compatible_processing_digest
     files = {}
     root = Path(__file__).parent
     for name in ('ligand_cache.py', 'docking_preparation.py', 'docking_data.py',
                  'visualizations.py', 'molecular_parsing.py', 'redocking_config.py', 'chimera_mol2.py', 'chimera_charge_repair.py'):
-        files[name] = file_digest(root / name)
+        files[name] = compatible_processing_digest(file_digest(root / name))
     for name in ('chimera', 'obabel'):
         executable = shutil.which(name)
         if not executable:

@@ -1,0 +1,196 @@
+[
+  {
+    "sample": "real",
+    "molecules": 4,
+    "runs": [
+      {
+        "name": "serial",
+        "seconds": 92.508,
+        "workers": 1,
+        "prepared": 1,
+        "max_child_rss_kib": 112236
+      },
+      {
+        "name": "parallel",
+        "seconds": 58.435,
+        "workers": 2,
+        "prepared": 1,
+        "max_child_rss_kib": 123892
+      },
+      {
+        "name": "warm",
+        "seconds": 38.299,
+        "workers": 2,
+        "prepared": 1,
+        "max_child_rss_kib": 124400
+      }
+    ],
+    "successful_ids": {
+      "serial": [
+        "CHEMBL174706"
+      ],
+      "parallel": [
+        "CHEMBL174706"
+      ],
+      "warm": [
+        "CHEMBL174706"
+      ]
+    },
+    "failures": {
+      "serial": [
+        {
+          "compound": "CHEMBL4296710",
+          "type": "ValueError"
+        },
+        {
+          "compound": "CHEMBL4296711",
+          "type": "ValueError"
+        },
+        {
+          "compound": "CHEMBL176366",
+          "type": "ScientificToolError"
+        }
+      ],
+      "parallel": [
+        {
+          "compound": "CHEMBL4296710",
+          "type": "ValueError"
+        },
+        {
+          "compound": "CHEMBL4296711",
+          "type": "ValueError"
+        },
+        {
+          "compound": "CHEMBL176366",
+          "type": "ScientificToolError"
+        }
+      ],
+      "warm": [
+        {
+          "compound": "CHEMBL4296710",
+          "type": "ValueError"
+        },
+        {
+          "compound": "CHEMBL4296711",
+          "type": "ValueError"
+        },
+        {
+          "compound": "CHEMBL176366",
+          "type": "ScientificToolError"
+        }
+      ]
+    },
+    "serial_parallel_same_acceptance": true,
+    "comparisons": [
+      {
+        "compound": "CHEMBL174706",
+        "max_charge_delta": 0.0,
+        "max_coordinate_delta": 0.0
+      }
+    ],
+    "source_integrity": [
+      {
+        "name": "B04__admet__bbb-pos.csv",
+        "sha256": "5f9d8b3080110fa2114f095d65a1dec640061bd1df355d4bc4dbbf8a776f20b3",
+        "unchanged": true
+      }
+    ],
+    "native_full_acceptance": false
+  },
+  {
+    "sample": "real2",
+    "molecules": 4,
+    "runs": [
+      {
+        "name": "serial",
+        "seconds": 74.749,
+        "workers": 1,
+        "prepared": 2,
+        "max_child_rss_kib": 110500
+      },
+      {
+        "name": "parallel",
+        "seconds": 42.122,
+        "workers": 2,
+        "prepared": 2,
+        "max_child_rss_kib": 122180
+      },
+      {
+        "name": "warm",
+        "seconds": 23.209,
+        "workers": 2,
+        "prepared": 3,
+        "max_child_rss_kib": 122580
+      }
+    ],
+    "successful_ids": {
+      "serial": [
+        "CHEMBL174706",
+        "CHEMBL3099483"
+      ],
+      "parallel": [
+        "CHEMBL174706",
+        "CHEMBL3099483"
+      ],
+      "warm": [
+        "CHEMBL176366",
+        "CHEMBL174706",
+        "CHEMBL3099483"
+      ]
+    },
+    "failures": {
+      "serial": [
+        {
+          "compound": "CHEMBL176366",
+          "type": "ScientificToolError"
+        },
+        {
+          "compound": "CHEMBL366411",
+          "type": "ScientificToolError"
+        }
+      ],
+      "parallel": [
+        {
+          "compound": "CHEMBL176366",
+          "type": "ScientificToolError"
+        },
+        {
+          "compound": "CHEMBL366411",
+          "type": "ScientificToolError"
+        }
+      ],
+      "warm": [
+        {
+          "compound": "CHEMBL366411",
+          "type": "ScientificToolError"
+        }
+      ]
+    },
+    "serial_parallel_same_acceptance": true,
+    "comparisons": [
+      {
+        "compound": "CHEMBL174706",
+        "max_charge_delta": 0.0,
+        "max_coordinate_delta": 0.0
+      },
+      {
+        "compound": "CHEMBL3099483",
+        "max_charge_delta": 0.0,
+        "max_coordinate_delta": 9.999999999998899e-05
+      }
+    ],
+    "source_integrity": [
+      {
+        "name": "B04__admet__bbb-pos.csv",
+        "sha256": "5f9d8b3080110fa2114f095d65a1dec640061bd1df355d4bc4dbbf8a776f20b3",
+        "unchanged": true
+      },
+      {
+        "name": "B04__admet__bbb-pos.csv",
+        "sha256": "5c0401d28c2a4f8d33ef0713a21d43ef3426614ef112b18cbdea09c0501b3d05",
+        "unchanged": true
+      }
+    ],
+    "native_full_acceptance": false
+  }
+]

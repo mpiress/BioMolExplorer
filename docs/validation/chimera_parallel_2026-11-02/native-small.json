@@ -1,0 +1,59 @@
+{
+  "molecules": 4,
+  "settings": {
+    "ligand": {
+      "charge_type": "am1",
+      "minimize": true
+    }
+  },
+  "runs": [
+    {
+      "name": "serial",
+      "seconds": 4.088,
+      "workers": 1,
+      "prepared": 4,
+      "max_child_rss_kib": 110204
+    },
+    {
+      "name": "parallel",
+      "seconds": 2.312,
+      "workers": 2,
+      "prepared": 4,
+      "max_child_rss_kib": 121980
+    },
+    {
+      "name": "warm",
+      "seconds": 0.492,
+      "workers": 2,
+      "prepared": 4,
+      "max_child_rss_kib": 121980
+    }
+  ],
+  "comparison": [
+    {
+      "molecule": "ETHANOL",
+      "atoms": 9,
+      "max_charge_delta": 0.0,
+      "max_coordinate_delta": 0.0
+    },
+    {
+      "molecule": "ACETIC_ACID",
+      "atoms": 7,
+      "max_charge_delta": 0.0,
+      "max_coordinate_delta": 0.0
+    },
+    {
+      "molecule": "BENZENE",
+      "atoms": 12,
+      "max_charge_delta": 0.0,
+      "max_coordinate_delta": 0.0
+    },
+    {
+      "molecule": "ETHYLAMINE",
+      "atoms": 11,
+      "max_charge_delta": 0.0,
+      "max_coordinate_delta": 0.0
+    }
+  ],
+  "speedup": 1.768
+}

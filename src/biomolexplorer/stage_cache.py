@@ -125,7 +125,7 @@ def operation_digest(operation):
         return compatible_processing_digest(digest.hexdigest())
     pending=[spec.module] if spec else []
     pending+=['biomolexplorer.input_validation','biomolexplorer.molecule_quality']
-    infrastructure={'workspace','pipeline','jobs','stage_cache','result_sync','clear_results',
+    infrastructure={'workspace','pipeline','jobs','stage_cache','result_sync','clear_results','preparation_resources',
                     'project_state','project_folders','project_archive','project_merge','config','contracts','catalog','operations',
                     'bindings','paths','diagnostics','logging','progress','storage','artifacts','artifact_choices','artifact_naming',
                     'result_origins','result_files'}

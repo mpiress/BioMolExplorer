@@ -1,5 +1,5 @@
 """Preparation reuse must preserve science, partial work, and failure isolation."""
-from contextlib import ExitStack
+from contextlib import ExitStack, nullcontext
 import os
 from pathlib import Path
 import tempfile
@@ -27,6 +27,10 @@ class PreparationPerformanceTests(unittest.TestCase):
             'BIOMOL_PREPARATION_CACHE':str(self.cache),'BIOMOL_REUSE_PREPARATIONS':'1',
             'BIOMOL_CPU_WORKERS':'2'}))
         self.stack.enter_context(patch('biomolexplorer.ligand_cache.preparation_identity',return_value={'version':'test'}))
+        # These adapter tests stub native commands. Resource admission and
+        # cross-process contention are exercised by test_preparation_resources.
+        self.stack.enter_context(patch('biomolexplorer.preparation_resources.capacity',side_effect=lambda: int(os.environ['BIOMOL_CPU_WORKERS'])))
+        self.stack.enter_context(patch('biomolexplorer.preparation_resources.chimera_slot',side_effect=nullcontext))
         self.stack.enter_context(patch('biomolexplorer.docking_preparation.molecule_sdf',side_effect=lambda smiles:smiles))
         self.stack.enter_context(patch('biomolexplorer.docking_preparation.convert_structure',side_effect=self.convert))
         self.calls=[]
@@ -131,6 +135,18 @@ class PreparationPerformanceTests(unittest.TestCase):
         self.runner.reset_mock();self.runner.side_effect=original
         self.assertEqual(len(self.run_batch('resumed')),2)
         self.runner.assert_called_once()
+
+    def test_large_cached_batch_coalesces_indexes_without_losing_rows(self):
+        self.write([(str(i),'CCO') for i in range(300)])
+        self.run_batch('large-cold')
+        self.runner.reset_mock()
+        from biomolexplorer.storage import write_text
+        with patch('biomolexplorer.storage.write_text',wraps=write_text) as writes:
+            rows=self.run_batch('large-warm')
+        self.runner.assert_not_called()
+        self.assertEqual([r['molecule_chembl_id'] for r in rows],[str(i) for i in range(300)])
+        indexes=[call for call in writes.call_args_list if Path(call.args[1]).name=='compounds.csv']
+        self.assertLess(len(indexes),30)
 
     def test_parallelism_obeys_budget_and_preserves_input_order(self):
         self.write([(str(i),'C'*(i+2)) for i in range(6)])

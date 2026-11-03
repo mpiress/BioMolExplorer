@@ -106,7 +106,9 @@ def _prepare_one(original,dataset,destination,options,ph,engines,formats,cache,o
                 (work/'prepare.com').write_text('\n'.join(commands)+'\n',encoding='utf-8')
                 step_started=time.monotonic()
                 from .processes import run_command
-                run_command(['chimera','--nogui','prepare.com'],cwd=work)
+                from .preparation_resources import chimera_slot,single_thread_environment
+                with chimera_slot():
+                    run_command(['chimera','--nogui','prepare.com'],cwd=work,env=single_thread_environment())
                 event(logger,'ligand.preparation.chimera','Preparação pelo Chimera finalizada.',compound_identifier=code,duration_ms=round((time.monotonic()-step_started)*1000))
                 prepared=work/'prepared.mol2'
                 if not prepared.is_file() or not prepared.stat().st_size:
@@ -141,7 +143,7 @@ def prepare_candidates(dataset, destination, config=None, ph=7.4, engines='both'
     from .diagnostics import event,get_logger
     from .ligand_cache import LigandCache
     from .molecule_quality import CURRENT_REPORT as QUALITY, QualityReport
-    from .paths import worker_count
+    from .preparation_resources import capacity,available_memory
     from .preparation_failures import CURRENT_REPORT,PreparationFailures
     from .progress import report_progress
     from .storage import write_text
@@ -167,14 +169,19 @@ def prepare_candidates(dataset, destination, config=None, ph=7.4, engines='both'
     formats=('pdbqt','mol2') if engines=='both' else ('pdbqt',) if engines=='vina' else ('mol2',)
     fields=list(dict.fromkeys([k for row in inputs for k in row]+['molecule_chembl_id','canonical_smiles','prepared_pdbqt','prepared_mol2','docking_engines','prepared_origin','conformer_file','preparation_metadata']))
     cache=LigandCache(destination,backend)
-    workers=min(worker_count(),len(inputs) or 1)
+    workers=min(capacity(),len(inputs) or 1)
     logger=get_logger('scientific_tools')
-    event(logger,'ligand.preparation.batch','Preparando ligantes antes do docking.',total=len(inputs),workers=workers)
+    event(logger,'ligand.preparation.batch','Preparando ligantes antes do docking.',total=len(inputs),workers=workers,
+          available_memory_bytes=available_memory())
     report_progress('Preparando ligantes antes do docking (0/'+str(len(inputs))+').',0,len(inputs))
 
     last_checkpoint=[0.]
     def checkpoint(force=False):
         now=time.monotonic()
+        # Per-molecule native files and verified cache entries are already
+        # durable. Coalesce the growing CSV index instead of rewriting it for
+        # every cache hit (quadratic I/O on large libraries).
+        if not force and now-last_checkpoint[0]<5:return
         last_checkpoint[0]=now
         stream=io.StringIO(newline='')
         writer=csv.DictWriter(stream,fieldnames=fields)
@@ -193,7 +200,7 @@ def prepare_candidates(dataset, destination, config=None, ph=7.4, engines='both'
         return result,local.records,local_quality.records
 
     completed=reused=0
-    checkpoint()
+    checkpoint(force=True)
     # Bound the queue to the configured CPU budget. Each Chimera process uses
     # its own working directory; correlation contexts are copied per task.
     with ThreadPoolExecutor(max_workers=workers,thread_name_prefix='ligand-preparation') as pool:

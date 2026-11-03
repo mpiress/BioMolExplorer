@@ -15,7 +15,18 @@
     "b6be1fe48755bf1d49224d609c13b5cbb6e8eae19e9617008b90622335b8fedb": "5b0dec85d0a0f78cfca2d17aed6d632dd60f300145a8017b4929576933bda1fb",
     "897d566a1de2af9e687fa9f440b8b0df3421784f78a2724f7053dcd022a50a59": "0dc18ff9d42dc73d8088783dd393bee4c128eac1362f6b22fffd632cf2ed6d8c",
     "1ccf338e0c577b3c5162ff05ae880c2027766d3941f2345175aa8bd46fb43ba4": "e58cccaf2715a8db73772511f3edbfc5a2318b6a7da9daaf568cb3038e2adef6",
-    "2daf9158795a2f5806fc81a15c3364eb5ecef5fbe9dc78615c51cb1ea8c16023": "4f34736243b28a919d1e07588de82a2903f3a545c3a6dc33079150ddbca79857"
+    "2daf9158795a2f5806fc81a15c3364eb5ecef5fbe9dc78615c51cb1ea8c16023": "4f34736243b28a919d1e07588de82a2903f3a545c3a6dc33079150ddbca79857",
+    "53312cf58c17ab8426a82a5fa4851ff2d2b180e54bd7022ff2c5aed260294f12": "b501d3cf2f2c7e137410e3f1f65a3b5c09be09169cf55be3485e63b456ccdb57",
+    "99b9e69b4606b5bb46c9457fd4b1c8b11f7a43b132c5250093a3cce2bfc1a380": "47a57afc69a84c2f5bc72dbefc2d9ebfe7c47362aaedae995464900870e40176",
+    "9603b1358b29bc84a4cfcce122608b9865ea973e6f49866dffb3223e42b9b28c": "484e65c4bdf2e8f9bc75768e4147a1c6e5f09abaf505b3821b341e3738e8a464",
+    "b40d56ec22a7a22683c07b8fecb41a479b908bb09274a21452708de902c60cb7": "4d4c2284bc15b6680ea222dc6960d447b88649286ba76bf3631c84c03b0f0754",
+    "e23519df8e218cf878bf0064ba655d7ca994c8208769bac2c962569f6593d715": "6a0b21d2e38f03209f468a886f9379fdf66be76f63b7470bb28076d38bd3575c",
+    "af901c46f20945220c3168ae81b17ac32963d18d957a43366fb1468a33a86a39": "8cfc9928f14a452bef4327724600dd4461fef42c72f96d8013fd6859926f2c96",
+    "aa08f7e4b4581a1f74d3d82746b9ec3f035c87919c30a8ede5aa2b82f3ff5be3": "8e6e4e52db0f33d809eb546d64612528e32a4ab57361917b3dea05def953c5af",
+    "7dce715ca01bbf42ced7f95e7401cb063d69ce7e651ff9d548b21bb0e1ac8f97": "5b0dec85d0a0f78cfca2d17aed6d632dd60f300145a8017b4929576933bda1fb",
+    "e617d9c169706b6a5f03ef88946c0ccb0c9ca689e881f439b7ae25d2d651e4e3": "0dc18ff9d42dc73d8088783dd393bee4c128eac1362f6b22fffd632cf2ed6d8c",
+    "f32157edf572481d1744ed9bf1b485044095169abb5ea8e41580e061e2b5dd6b": "e58cccaf2715a8db73772511f3edbfc5a2318b6a7da9daaf568cb3038e2adef6",
+    "a2c8345778cc212244611f9e64e115343b46143ec45548774fddcadabf8fb9a3": "4f34736243b28a919d1e07588de82a2903f3a545c3a6dc33079150ddbca79857"
   },
   "operations": [
     "prepare_structures",
@@ -141,5 +152,123 @@
       "previous": "4f34736243b28a919d1e07588de82a2903f3a545c3a6dc33079150ddbca79857",
       "reason": "Exact infrastructure compatibility; normalized compound table generation and scientific dependencies unchanged. Public naming/registry and canonical-input routing only."
     }
-  ]
+  ],
+  "audit_2026_11_02_preparation_resources": {
+    "reason": "Resource scheduling, single-thread child environment and coalesced CSV indexes only. Chimera scripts, chemical settings, validation rules and native prepared bytes are unchanged.",
+    "entries": [
+      {
+        "scope": "preparation-file",
+        "file": "docking_preparation.py",
+        "current": "53312cf58c17ab8426a82a5fa4851ff2d2b180e54bd7022ff2c5aed260294f12",
+        "previous": "b501d3cf2f2c7e137410e3f1f65a3b5c09be09169cf55be3485e63b456ccdb57"
+      },
+      {
+        "scope": "preparation-file",
+        "file": "ligand_cache.py",
+        "current": "99b9e69b4606b5bb46c9457fd4b1c8b11f7a43b132c5250093a3cce2bfc1a380",
+        "previous": "47a57afc69a84c2f5bc72dbefc2d9ebfe7c47362aaedae995464900870e40176"
+      },
+      {
+        "scope": "operation",
+        "operation": "import_results",
+        "current": "9603b1358b29bc84a4cfcce122608b9865ea973e6f49866dffb3223e42b9b28c",
+        "previous": "484e65c4bdf2e8f9bc75768e4147a1c6e5f09abaf505b3821b341e3738e8a464"
+      },
+      {
+        "scope": "operation",
+        "operation": "retrieve_compounds",
+        "current": "b40d56ec22a7a22683c07b8fecb41a479b908bb09274a21452708de902c60cb7",
+        "previous": "4d4c2284bc15b6680ea222dc6960d447b88649286ba76bf3631c84c03b0f0754"
+      },
+      {
+        "scope": "operation",
+        "operation": "retrieve_pubchem",
+        "current": "e23519df8e218cf878bf0064ba655d7ca994c8208769bac2c962569f6593d715",
+        "previous": "6a0b21d2e38f03209f468a886f9379fdf66be76f63b7470bb28076d38bd3575c"
+      },
+      {
+        "scope": "operation",
+        "operation": "expand_similar_compounds",
+        "current": "b40d56ec22a7a22683c07b8fecb41a479b908bb09274a21452708de902c60cb7",
+        "previous": "4d4c2284bc15b6680ea222dc6960d447b88649286ba76bf3631c84c03b0f0754"
+      },
+      {
+        "scope": "operation",
+        "operation": "retrieve_structures",
+        "current": "b40d56ec22a7a22683c07b8fecb41a479b908bb09274a21452708de902c60cb7",
+        "previous": "4d4c2284bc15b6680ea222dc6960d447b88649286ba76bf3631c84c03b0f0754"
+      },
+      {
+        "scope": "operation",
+        "operation": "retrieve_zinc",
+        "current": "b40d56ec22a7a22683c07b8fecb41a479b908bb09274a21452708de902c60cb7",
+        "previous": "4d4c2284bc15b6680ea222dc6960d447b88649286ba76bf3631c84c03b0f0754"
+      },
+      {
+        "scope": "operation",
+        "operation": "prepare_structures",
+        "current": "af901c46f20945220c3168ae81b17ac32963d18d957a43366fb1468a33a86a39",
+        "previous": "8cfc9928f14a452bef4327724600dd4461fef42c72f96d8013fd6859926f2c96"
+      },
+      {
+        "scope": "operation",
+        "operation": "admet",
+        "current": "aa08f7e4b4581a1f74d3d82746b9ec3f035c87919c30a8ede5aa2b82f3ff5be3",
+        "previous": "8e6e4e52db0f33d809eb546d64612528e32a4ab57361917b3dea05def953c5af"
+      },
+      {
+        "scope": "operation",
+        "operation": "fingerprints",
+        "current": "abcbfe631328d2fd769f15755544ef0c9ab13a7507dd7b72a4c331cc20ef4fd7",
+        "previous": "8abf2f9efce9cb969d5210770245b283790968379322b591db30b86b7b1ad72e"
+      },
+      {
+        "scope": "operation",
+        "operation": "similarity",
+        "current": "1be30b72494b6583eac51d6a7327cd3619d21d7a1612ecbb924af8124b8d69a7",
+        "previous": "951d60b41620038b8a2d9cf8a229740937492b41ab49be7c7cfc68cb38df7e0d"
+      },
+      {
+        "scope": "operation",
+        "operation": "graphs",
+        "current": "7dce715ca01bbf42ced7f95e7401cb063d69ce7e651ff9d548b21bb0e1ac8f97",
+        "previous": "5b0dec85d0a0f78cfca2d17aed6d632dd60f300145a8017b4929576933bda1fb"
+      },
+      {
+        "scope": "operation",
+        "operation": "redocking",
+        "current": "af901c46f20945220c3168ae81b17ac32963d18d957a43366fb1468a33a86a39",
+        "previous": "8cfc9928f14a452bef4327724600dd4461fef42c72f96d8013fd6859926f2c96"
+      },
+      {
+        "scope": "operation",
+        "operation": "docking_vina",
+        "current": "e617d9c169706b6a5f03ef88946c0ccb0c9ca689e881f439b7ae25d2d651e4e3",
+        "previous": "0dc18ff9d42dc73d8088783dd393bee4c128eac1362f6b22fffd632cf2ed6d8c"
+      },
+      {
+        "scope": "operation",
+        "operation": "docking_dock6",
+        "current": "e617d9c169706b6a5f03ef88946c0ccb0c9ca689e881f439b7ae25d2d651e4e3",
+        "previous": "0dc18ff9d42dc73d8088783dd393bee4c128eac1362f6b22fffd632cf2ed6d8c"
+      },
+      {
+        "scope": "operation",
+        "operation": "consensus",
+        "current": "e617d9c169706b6a5f03ef88946c0ccb0c9ca689e881f439b7ae25d2d651e4e3",
+        "previous": "0dc18ff9d42dc73d8088783dd393bee4c128eac1362f6b22fffd632cf2ed6d8c"
+      },
+      {
+        "scope": "operation",
+        "operation": "dynamics_dock6",
+        "current": "f32157edf572481d1744ed9bf1b485044095169abb5ea8e41580e061e2b5dd6b",
+        "previous": "e58cccaf2715a8db73772511f3edbfc5a2318b6a7da9daaf568cb3038e2adef6"
+      },
+      {
+        "scope": "implementation",
+        "current": "a2c8345778cc212244611f9e64e115343b46143ec45548774fddcadabf8fb9a3",
+        "previous": "4f34736243b28a919d1e07588de82a2903f3a545c3a6dc33079150ddbca79857"
+      }
+    ]
+  }
 }

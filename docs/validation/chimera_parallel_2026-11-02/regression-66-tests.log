@@ -1,0 +1,141 @@
+test_cgroup_limit_and_affinity_are_respected (test_preparation_resources.CapacityTests.test_cgroup_limit_and_affinity_are_respected) ... ok
+test_cpu_reserve_memory_reserve_and_explicit_caps (test_preparation_resources.CapacityTests.test_cpu_reserve_memory_reserve_and_explicit_caps) ... ok
+test_environment_can_reduce_but_never_expand_cpu_budget (test_preparation_resources.CapacityTests.test_environment_can_reduce_but_never_expand_cpu_budget) ... ok
+test_native_thread_limits_do_not_mutate_parent_environment (test_preparation_resources.CapacityTests.test_native_thread_limits_do_not_mutate_parent_environment) ... ok
+test_distinct_workers_share_two_slots_and_crash_releases_them (test_preparation_resources.LeaseTests.test_distinct_workers_share_two_slots_and_crash_releases_them) ... ok
+test_already_prepared_inputs_skip_chimera (test_ligand_preparation_performance.PreparationPerformanceTests.test_already_prepared_inputs_skip_chimera) ... ok
+test_changed_tool_identity_invalidates_cache (test_ligand_preparation_performance.PreparationPerformanceTests.test_changed_tool_identity_invalidates_cache) ... ok
+test_corrupt_and_missing_cached_outputs_are_recomputed (test_ligand_preparation_performance.PreparationPerformanceTests.test_corrupt_and_missing_cached_outputs_are_recomputed) ... ok
+test_explicit_rerun_bypasses_reads (test_ligand_preparation_performance.PreparationPerformanceTests.test_explicit_rerun_bypasses_reads) ... ok
+test_failed_compounds_are_not_cached_or_confused_with_other_rows (test_ligand_preparation_performance.PreparationPerformanceTests.test_failed_compounds_are_not_cached_or_confused_with_other_rows) ... ok
+test_large_cached_batch_coalesces_indexes_without_losing_rows (test_ligand_preparation_performance.PreparationPerformanceTests.test_large_cached_batch_coalesces_indexes_without_losing_rows) ... ok
+test_nonfinite_pdbqt_is_rejected_before_cache_or_vina (test_ligand_preparation_performance.PreparationPerformanceTests.test_nonfinite_pdbqt_is_rejected_before_cache_or_vina) ... ok
+test_parallelism_obeys_budget_and_preserves_input_order (test_ligand_preparation_performance.PreparationPerformanceTests.test_parallelism_obeys_budget_and_preserves_input_order) ... ok
+test_partial_work_survives_fatal_interruption (test_ligand_preparation_performance.PreparationPerformanceTests.test_partial_work_survives_fatal_interruption) ... ok
+test_pose_content_and_conformer_index_invalidate_cache (test_ligand_preparation_performance.PreparationPerformanceTests.test_pose_content_and_conformer_index_invalidate_cache) ... ok
+test_receptors_and_overlapping_subsets_reuse_only_selected_compounds (test_ligand_preparation_performance.PreparationPerformanceTests.test_receptors_and_overlapping_subsets_reuse_only_selected_compounds) ... ok
+test_scientific_settings_and_smiles_invalidate_cache (test_ligand_preparation_performance.PreparationPerformanceTests.test_scientific_settings_and_smiles_invalidate_cache) ... [10:03:34] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:34] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+ok
+test_every_preparation_batch_reaches_both_engines (test_docking_preparation.PreparationPipelineTests.test_every_preparation_batch_reaches_both_engines) ... ok
+test_multiple_candidate_sources_merge_by_identifier (test_docking_preparation.PreparationPipelineTests.test_multiple_candidate_sources_merge_by_identifier) ... ok
+test_redocking_popup_shows_only_prepared_receptors (test_docking_preparation.PreparationPipelineTests.test_redocking_popup_shows_only_prepared_receptors) ... ok
+test_redocking_receiver_infers_prepared_mode_and_selected_metadata (test_docking_preparation.PreparationPipelineTests.test_redocking_receiver_infers_prepared_mode_and_selected_metadata) ... ok
+test_each_engine_choice_exports_from_one_candidate_preparation (test_docking_preparation.ReceptorOutputTests.test_each_engine_choice_exports_from_one_candidate_preparation) ... [10:03:39] CID1: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:39] CID1: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:39] CID1: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:39] CID1: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+ok
+test_engine_formats_and_finite_centers_are_required (test_docking_preparation.ReceptorOutputTests.test_engine_formats_and_finite_centers_are_required) ... ok
+test_incomplete_redocking_bundle_fails_before_candidate_preparation (test_docking_preparation.ReceptorOutputTests.test_incomplete_redocking_bundle_fails_before_candidate_preparation) ... ok
+test_invalid_engine_does_not_read_or_prepare_candidates (test_docking_preparation.ReceptorOutputTests.test_invalid_engine_does_not_read_or_prepare_candidates) ... ok
+test_all_failed_preparation_writes_empty_table_with_headers (test_preparation_failures.PreparationFailureTests.test_all_failed_preparation_writes_empty_table_with_headers) ... ok
+test_chimera_error_with_zero_exit_is_excluded_and_both_exports_are_cleaned (test_preparation_failures.PreparationFailureTests.test_chimera_error_with_zero_exit_is_excluded_and_both_exports_are_cleaned) ... [10:03:40] ligand: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:40] ligand: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:40] ligand: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:40] ligand: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+ok
+test_empty_ligand_lists_do_not_start_vina_or_dock6 (test_preparation_failures.PreparationFailureTests.test_empty_ligand_lists_do_not_start_vina_or_dock6) ... ok
+test_failed_conversion_continues_and_removes_partial_or_stale_pose (test_preparation_failures.PreparationFailureTests.test_failed_conversion_continues_and_removes_partial_or_stale_pose) ... ok
+test_failed_second_export_removes_first_format_and_keeps_next_compound (test_preparation_failures.PreparationFailureTests.test_failed_second_export_removes_first_format_and_keeps_next_compound) ... [10:03:41] ligand: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:41] ligand: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:42] ligand: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:42] ligand: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+ok
+test_missing_engine_and_disk_errors_are_not_silently_skipped (test_preparation_failures.PreparationFailureTests.test_missing_engine_and_disk_errors_are_not_silently_skipped) ... ok
+test_mixed_batch_docks_only_successful_compounds_with_each_engine (test_preparation_failures.PreparationFailureTests.test_mixed_batch_docks_only_successful_compounds_with_each_engine) ... [10:03:44] ligand: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:44] ligand: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+ok
+test_operation_registers_separate_report_and_quality_exclusions (test_preparation_failures.PreparationFailureTests.test_operation_registers_separate_report_and_quality_exclusions) ... ok
+test_ccd_oxygen_and_substituted_pyrrole_types_before_addh (test_chimera_preparation.ChimeraPreparationTests.test_ccd_oxygen_and_substituted_pyrrole_types_before_addh) ... [10:03:44] BUA: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:44] S6Q: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+ok
+test_charge_comes_from_actual_hydrogenated_graph_not_chimera_heuristic (test_chimera_preparation.ChimeraPreparationTests.test_charge_comes_from_actual_hydrogenated_graph_not_chimera_heuristic) ... ok
+test_final_charge_validation_rejects_zero_charges_for_charged_ligand (test_chimera_preparation.ChimeraPreparationTests.test_final_charge_validation_rejects_zero_charges_for_charged_ligand) ... ok
+test_final_validation_records_preserved_graph_and_neutral_charge (test_chimera_preparation.ChimeraPreparationTests.test_final_validation_records_preserved_graph_and_neutral_charge) ... ok
+test_heavy_atom_rmsd_excludes_exceptional_phosphoryl_hydrogens (test_chimera_preparation.ChimeraPreparationTests.test_heavy_atom_rmsd_excludes_exceptional_phosphoryl_hydrogens) ... ok
+test_known_native_hbond_bug_retries_only_hydrogen_placement_once (test_chimera_preparation.ChimeraPreparationTests.test_known_native_hbond_bug_retries_only_hydrogen_placement_once) ... ok
+test_receptor_hetero_amino_acid_cleanup_preserves_explicit_cofactors (test_chimera_preparation.ChimeraPreparationTests.test_receptor_hetero_amino_acid_cleanup_preserves_explicit_cofactors) ... ok
+test_automatic_docking_binding_does_not_restore_an_outdated_file_selection (test_docking_incremental.IndexedCacheTests.test_automatic_docking_binding_does_not_restore_an_outdated_file_selection) ... ok
+test_content_addressing_and_independent_materializations (test_docking_incremental.IndexedCacheTests.test_content_addressing_and_independent_materializations) ... ok
+test_corrupted_object_and_missing_artifact_are_not_hits (test_docking_incremental.IndexedCacheTests.test_corrupted_object_and_missing_artifact_are_not_hits) ... ok
+test_automatic_docking_binding_does_not_restore_an_outdated_file_selection (test_docking_incremental.VinaIncrementalTests.test_automatic_docking_binding_does_not_restore_an_outdated_file_selection) ... ok
+test_changed_ligand_affects_only_that_compound_and_parameters_invalidate_docking (test_docking_incremental.VinaIncrementalTests.test_changed_ligand_affects_only_that_compound_and_parameters_invalidate_docking) ... ok
+test_content_addressing_and_independent_materializations (test_docking_incremental.VinaIncrementalTests.test_content_addressing_and_independent_materializations) ... ok
+test_corrupted_object_and_missing_artifact_are_not_hits (test_docking_incremental.VinaIncrementalTests.test_corrupted_object_and_missing_artifact_are_not_hits) ... ok
+test_forced_rerun_recalculates_and_missing_ligand_is_not_reused (test_docking_incremental.VinaIncrementalTests.test_forced_rerun_recalculates_and_missing_ligand_is_not_reused) ... ok
+test_interruption_commits_completed_items_and_concurrent_requests_share_checkpoint (test_docking_incremental.VinaIncrementalTests.test_interruption_commits_completed_items_and_concurrent_requests_share_checkpoint) ... ok
+test_partial_failure_and_interruption_preserve_completed_checkpoint (test_docking_incremental.VinaIncrementalTests.test_partial_failure_and_interruption_preserve_completed_checkpoint) ... ok
+test_unchanged_batch_and_new_compound_only_run_missing_work (test_docking_incremental.VinaIncrementalTests.test_unchanged_batch_and_new_compound_only_run_missing_work) ... ok
+test_real_child_commits_results_and_unchanged_batch_starts_no_worker (test_vina_reuse.RealVinaReuseTests.test_real_child_commits_results_and_unchanged_batch_starts_no_worker) ... ok
+test_real_engine_docks_different_atom_types_with_one_session (test_vina_reuse.RealVinaReuseTests.test_real_engine_docks_different_atom_types_with_one_session) ... ok
+test_batch_records_invalid_ligand_and_does_not_call_vina (test_vina_reuse.VinaReuseTests.test_batch_records_invalid_ligand_and_does_not_call_vina) ... ok
+test_changed_receptor_center_size_and_scoring_create_new_maps (test_vina_reuse.VinaReuseTests.test_changed_receptor_center_size_and_scoring_create_new_maps) ... ok
+test_docking_loop_uses_shared_session_and_keeps_reference_pose_names (test_vina_reuse.VinaReuseTests.test_docking_loop_uses_shared_session_and_keeps_reference_pose_names) ... ok
+test_engine_failure_is_propagated_without_retry_or_double_docking (test_vina_reuse.VinaReuseTests.test_engine_failure_is_propagated_without_retry_or_double_docking) ... ok
+test_many_compounds_use_one_receptor_and_all_atom_type_maps (test_vina_reuse.VinaReuseTests.test_many_compounds_use_one_receptor_and_all_atom_type_maps) ... ok
+test_native_abort_isolated_and_remaining_ligands_resume (test_vina_reuse.VinaReuseTests.test_native_abort_isolated_and_remaining_ligands_resume) ... ok
+test_nonfinite_ligand_is_rejected_before_native_vina (test_vina_reuse.VinaReuseTests.test_nonfinite_ligand_is_rejected_before_native_vina) ... ok
+test_raw_receptor_conversion_happens_once_per_chain_not_reference_ligand (test_vina_reuse.VinaReuseTests.test_raw_receptor_conversion_happens_once_per_chain_not_reference_ligand) ... ok
+test_redocking_receptor_reused_for_every_batch_without_preparation (test_vina_reuse.VinaReuseTests.test_redocking_receptor_reused_for_every_batch_without_preparation) ... ok
+test_unsupported_custom_options_and_missing_api_keep_cli (test_vina_reuse.VinaReuseTests.test_unsupported_custom_options_and_missing_api_keep_cli) ... ok
+test_changed_site_and_force_rerun_invalidate_affected_calculations (test_dock6_incremental.Dock6IncrementalTests.test_changed_site_and_force_rerun_invalidate_affected_calculations) ... [10:03:49] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:49] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:49] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:49] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:49] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:49] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:49] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:49] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:49] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:49] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:49] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:49] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+ok
+test_failure_resumes_only_missing_compound (test_dock6_incremental.Dock6IncrementalTests.test_failure_resumes_only_missing_compound) ... [10:03:49] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:49] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:49] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:49] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:49] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:49] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:49] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:49] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+ok
+test_same_request_new_ligand_and_mode_change_reuse_only_compatible_work (test_dock6_incremental.Dock6IncrementalTests.test_same_request_new_ligand_and_mode_change_reuse_only_compatible_work) ... [10:03:50] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] C: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] C: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] C: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] C: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] C: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] C: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] B: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] A: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+[10:03:50] C: Warning - no explicit hydrogens in mol2 file but needed for formal charge estimation.
+ok
+
+----------------------------------------------------------------------
+Ran 66 tests in 18.602s
+
+OK

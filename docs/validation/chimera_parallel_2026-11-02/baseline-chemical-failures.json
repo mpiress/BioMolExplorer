@@ -1,0 +1,15 @@
+{
+  "prepared": 0,
+  "seconds": 38.05204749002587,
+  "failures": [
+    {
+      "compound": "CHEMBL4296710",
+      "reason": "ValueError: Topologia ou tipos at\u00f4micos MOL2 inv\u00e1lidos para o docking."
+    },
+    {
+      "compound": "CHEMBL176366",
+      "reason": "ScientificToolError: Falha na ferramenta chimera (c\u00f3digo 0): drogens added\n\nDefining AMBER residue types\nChecking phosphorylation of chain-terminal nucleic acids\n\nAdding standard charges\nCharge model: AMBER ff14SB\n\nStandard charges added\nAssigning partial charges to residue UNL1 (net charge +0) with am1 method\n\nCopying residue UNL1\nFinding amides\nPutting atoms in input order\nwriting atoms\nwriting bonds\nwriting residues\nRunning ANTECHAMBER for residue UNL1\nRunning ANTECHAMBER command: /opt/UCSF/Chimera64-1.17.3/bin/amber18/bin/antechamber -ek qm_theory='AM1', -i /tmp/tmpHvqION/ante.in.mol2 -fi mol2 -o /tmp/tmpHvqION/ante.out.mol2 -fo mol2 -c bcc -nc 0 -j 5 -s 2 -dr n\n\n(UNL1) \n\n(UNL1) Welcome to antechamber 17.3: molecular input file processor.\n\n(UNL1) \n\n(UNL1) Info: Finished reading file (/tmp/tmpHvqION/ante.in.mol2).\n\n(UNL1) Running: /opt/UCSF/Chimera64-1.17.3/bin/amber18/bin/bondtype -j part -i ANTECHAMBER_BOND_TYPE.AC0 -o ANTECHAMBER_BOND_TYPE.AC -f ac\n\n(UNL1) \n\n(UNL1) \n\n(UNL1) Running: /opt/UCSF/Chimera64-1.17.3/bin/amber18/bin/atomtype -i ANTECHAMBER_AC.AC0 -o ANTECHAMBER_AC.AC -p gaff\n\n(UNL1) Info: Total number of electrons: 150; net charge: 0\n\n(UNL1) \n\n(UNL1) Running: /opt/UCSF/Chimera64-1.17.3/bin/amber18/bin/sqm -O -i sqm.in -o sqm.out\n\n(UNL1) /opt/UCSF/Chimera64-1.17.3/bin/amber18/bin/antechamber: Fatal Error!\n\n(UNL1) Cannot properly run \"/opt/UCSF/Chimera64-1.17.3/bin/amber18/bin/sqm -O -i sqm.in -o sqm.out\".\n\n\nYou have used an unregistered copy of Chimera for 20 days.\nYou can either register now by visiting:\n   http://www.cgl.ucsf.edu/cgi-bin/chimera_registration.py\nor by choosing 'Registration...' from the 'Help' menu next\ntime you start Chimera with the gui enabled.\n\nRegistration is free.  By providing the information requested\nyou will be helping us document the impact this software is\nhaving in the scientific community. The information you supply\nwill only be used for reporting summary statistics to NIH.\nError while processing prepare.com:\nFailure running ANTECHAMBER for residue UNL1\nCheck reply log for details"
+    }
+  ],
+  "source": "unchanged HEAD docking_preparation.py"
+}

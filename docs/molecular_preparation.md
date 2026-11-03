@@ -62,3 +62,17 @@ componente, preservando coordenadas e cargas calculadas. Conformações
 alternativas são resolvidas antes do preparo; átomos ausentes não são inventados.
 Quando a referência contém apenas o fragmento observado, o arquivo interno
 `.export.json` registra o escopo e os nomes dos átomos ausentes.
+
+## Concorrência e consumo de recursos
+
+O preparo de candidatos é compartilhado por Vina, DOCK6 e pelo bloco Preparar para docking. Moléculas independentes usam uma fila limitada; cada Chimera trabalha em uma pasta temporária própria. Os métodos de carga `gas`/`am1`, pH, minimização e validação química permanecem os mesmos. Quando são solicitados ambos os formatos, eles são exportados da mesma conformação preparada, sem repetir o cálculo de cargas.
+
+O número de tarefas é limitado pelo orçamento de CPU do worker (normalmente dois no workspace), por metade das CPUs efetivamente disponíveis, por estimativa de memória disponível e por um teto de quatro. Quotas/afinidade de CPU e limites cgroup v2 são considerados. A estimativa reserva pelo menos 1 GiB e 25% da memória disponível quando aplicável, estimando 1 GiB por processo; se a memória não puder ser consultada ou for pequena, o preparo fica serial. Essa política é conservadora, não um limite rígido de memória nem uma garantia contra OOM para qualquer molécula.
+
+Leases de arquivo no Linux limitam os processos Chimera de preparo de candidatos entre workers do mesmo usuário do sistema. Um encerramento do grupo de processos libera as leases automaticamente. As threads internas de bibliotecas numéricas do processo Chimera recebem limite de uma. A política não controla sessões Chimera iniciadas manualmente ou outros usuários do sistema.
+
+Para reduzir o uso de recursos sem mudar parâmetros científicos, defina `BIOMOL_PREPARATION_WORKERS=1` no ambiente que inicia a aplicação. Um valor maior não ultrapassa o orçamento do worker nem os limites de segurança. O workspace fornece `BIOMOL_CPU_WORKERS` a partir de sua configuração; no CLI essa variável define o orçamento de referência. Nenhuma opção numérica científica foi adicionada aos formulários.
+
+Os resultados moleculares e seus manifests de cache continuam sendo gravados por item. O índice crescente `compounds.csv` é consolidado com intervalo mínimo de cinco segundos entre gravações periódicas, quando há novos resultados e forçado ao término/erro tratado, reduzindo regravações em lotes grandes. Não há promessa de checkpoint a cada molécula no CSV; entradas válidas podem ser reconstruídas do cache verificado após interrupção. Reúso explicitamente desabilitado continua desabilitado. A mera alteração de escalonamento não invalida os caches científicos existentes: equivalências exatas de versão foram auditadas.
+
+Os ganhos dependem da molécula, máquina e estado do cache; paralelismo não corrige falhas químicas de tipagem ou convergência. Veja as medições e limitações no [relatório de concorrência](validation/chimera_parallel_2026-11-02/README.md).
