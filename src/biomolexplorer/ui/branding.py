@@ -2,6 +2,7 @@
 from functools import lru_cache
 from pathlib import Path
 import flet as ft
+from biomolexplorer.i18n import language_info
 
 BRAND_BLUE='#2552E8'
 BRAND_NAVY='#091D48'
@@ -24,6 +25,7 @@ def wordmark(width=240):
     return ft.Image(src=image_bytes('wordmark.png'),width=width,height=width*209/662,fit=ft.BoxFit.CONTAIN,semantics_label='BioMolExplorer')
 
 def flag(language):
-    label='Português (Brasil)' if language=='pt' else 'English (United States)'
-    return ft.Image(src=image_bytes('br.svg' if language=='pt' else 'us.svg'),
-        width=28,height=20,fit=ft.BoxFit.CONTAIN,semantics_label=label)
+    info=language_info(language)
+    if not info.get('flag'):return ft.Text(info['language_code'].upper(),semantics_label=info['name'])
+    return ft.Image(src=image_bytes(info['flag']),
+        width=28,height=20,fit=ft.BoxFit.CONTAIN,semantics_label=info['name'])

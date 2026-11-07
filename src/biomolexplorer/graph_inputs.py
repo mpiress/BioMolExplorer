@@ -31,7 +31,8 @@ class GraphInputs:
             if row is None:raise AccessDenied('Arquivo não autorizado.')
             files=[self.store.scoped_path(self.pid,row[0])]
         else:
-            files=[self.store.scoped_path(self.pid,p) for p in self.results.get(reference['stage'],[])]
+            files=[self.store.scoped_path(self.pid,p) for p in
+                   (reference.get('_resolved_paths') or self.results.get(reference['stage'],[]))]
         selector=reference.get('selector','auto')
         candidates=[p for p in files if p.is_file() and p.suffix.lower()=='.csv' and REQUIRED[kind]<=columns(p)]
         if selector!='auto':
@@ -40,6 +41,10 @@ class GraphInputs:
         elif kind=='compounds':
             candidates.sort(key=lambda p:(p.name!='compounds.csv',p.name!='molecules.csv',len(p.parts),p.name))
             candidates=candidates[:1]
+        if reference.get('selection'):
+            from .selection_views import csv_view
+            root=self.store.project_dir(self.pid)/'.input-cache'/'selections'
+            candidates=[csv_view(path,reference['selection'],root) for path in candidates]
         return sorted(candidates)
 
     def lineage(self,reference,filename,seen=None):

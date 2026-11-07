@@ -1,0 +1,22 @@
+{
+  "presentation_expressions": 2006,
+  "catalogs": {
+    "en": {
+      "phrases": 2772,
+      "patterns": 327,
+      "runtime": 122,
+      "viewer": 32,
+      "scene": 24,
+      "methods": 14
+    },
+    "pt": {
+      "phrases": 5211,
+      "patterns": 585,
+      "runtime": 122,
+      "viewer": 32,
+      "scene": 24,
+      "methods": 14
+    }
+  },
+  "errors": []
+}

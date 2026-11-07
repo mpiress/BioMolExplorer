@@ -89,7 +89,7 @@ class RedockingPairs:
 
     def add(self, record=None, update=True, config=None):
         record = list(record or ['', '', '', 'A'])
-        fields=[SimpleNamespace(value=str(value)) for value in record[:4]]
+        fields=[SimpleNamespace(value=str(value),disabled=not self.form.writable) for value in record[:4]]
         has_cofactors,cofactors=self.preparation.has_cofactors,self.preparation.cofactors
         settings=self.preparation.settings
         panel=ft.DataRow(cells=[ft.DataCell(verbatim(ft.Text(field.value))) for field in fields])

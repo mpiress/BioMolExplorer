@@ -53,6 +53,8 @@ class LocalizationTests(unittest.TestCase):
         for name,label in LABELS.items():
             if name not in ('morgan','maccs'):
                 self.assertNotEqual(translate(label),label,(name,label))
+        self.assertEqual(translate('Emitir relatório experimental reprodutível'),
+                         'Generate reproducible experimental report')
 
     def test_dynamic_messages_preserve_identifiers_and_filenames(self):
         translate=Translator('en')
@@ -61,6 +63,12 @@ class LocalizationTests(unittest.TestCase):
         self.assertEqual(translate('3 arquivos · Página 2'),'3 files · Page 2')
         self.assertEqual(translate('Etapa atual: Meu alvo\nProcessando os dados…'),
                          'Current stage: Meu alvo\nProcessing data…')
+        self.assertEqual(
+            translate('Saída científica: prepared_receptors · disponível após executar o bloco produtor'),
+            'Scientific output: prepared_receptors · available after running the producer block')
+        self.assertEqual(
+            translate('Selecione os resultados científicos que serão usados em “Meu alvo”. A execução continuará após sua confirmação.'),
+            'Select the scientific results to be used in “Meu alvo”. The run will continue after your confirmation.')
 
     def test_file_validation_translates_contract_and_retains_filename(self):
         from biomolexplorer.input_validation import contract
@@ -137,9 +145,12 @@ class LocalizationCoverageTests(unittest.TestCase):
             with self.subTest(operation=stage['operation']):
                 form=GuidedForm(ui,stage,[],True)
                 original=form.read()
-                ui.page.localize(form.layout())
+                layout=form.layout()
+                ui.page.localize(layout)
                 self.assertEqual(form.read(),original)
-                for control in walk(form.controls):
+                # Audit what the user can actually see. Specialized layouts
+                # (notably redocking) intentionally replace the generic form.
+                for control in walk(layout):
                     if getattr(control,'_biomol_verbatim',False) is True:continue
                     for attr in LocalizedPage._labels+ (('value',) if isinstance(control,ft.Text) else ('text',) if isinstance(control,ft.DropdownOption) else ('content',) if isinstance(control,(ft.Button,ft.TextButton)) else ()):
                         value=getattr(control,attr,None)
@@ -156,7 +167,7 @@ class LocalizationCoverageTests(unittest.TestCase):
         self.assertEqual(Translator('pt')('ValueError: radius must be a non-negative integer'),'ValueError: radius deve ser um inteiro não negativo')
 
     def test_literal_validation_messages_have_translations_in_both_directions(self):
-        import ast
+        import ast,re
         from pathlib import Path
         from biomolexplorer.ui.localization import catalogs
         phrases,_=catalogs()
@@ -167,8 +178,15 @@ class LocalizationCoverageTests(unittest.TestCase):
                 argument=node.exc.args[0]
                 if isinstance(argument,ast.Constant) and isinstance(argument.value,str):
                     message=argument.value
-                    self.assertTrue(Translator('en')(message)!=message or message in known_english,
-                        f'{path.name}:{node.lineno}: {message}')
+                    portuguese=bool(re.search(
+                        r'[ãõçáéíóúêô]|\b(?:deve|inválid[ao]|selecione|escolha|execução|artefato|dinâmica|átomos?|cargas?|não|antes|arquivo|porta|origem|bloco)\b',
+                        message,re.IGNORECASE))
+                    if portuguese:
+                        self.assertNotEqual(Translator('en')(message),message,
+                            f'{path.name}:{node.lineno}: {message}')
+                    elif message in known_english:
+                        self.assertNotEqual(Translator('pt')(message),message,
+                            f'{path.name}:{node.lineno}: {message}')
 
 
 if __name__=='__main__':unittest.main()

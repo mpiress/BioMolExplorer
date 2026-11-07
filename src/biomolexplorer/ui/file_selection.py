@@ -1,4 +1,4 @@
-"""Explicit per-run file choices at pipeline stage boundaries."""
+"""Semantic artifact and entity choices at pipeline stage boundaries."""
 import copy
 from types import SimpleNamespace
 from pathlib import Path
@@ -135,10 +135,10 @@ class FileSelection:
             self.processing.options=[ft.DropdownOption(key='merge',text='Reunir as entradas selecionadas')]
         asset_names={a['id']:a['name'] for a in assets}
         completed = {s['id']: s for s in run['stages'] if s['status'] == 'succeeded'}
-        controls = [ft.Text('Selecione os arquivos que serão usados em “' + pending['name'] + '”. '
+        controls = [ft.Text('Selecione os resultados científicos que serão usados em “' + pending['name'] + '”. '
                             'A execução continuará após sua confirmação.'),
                     self.processing,
-                    ft.Text('Individual: cada arquivo gera resultados separados. Merge: as entradas são reunidas. '
+            ft.Text('Individual: cada resultado gera análises separadas. Merge: as entradas são reunidas. '
                             'Com várias entradas, o modo individual processa cada combinação de arquivos. '
                             'Individual + ALL acrescenta a análise do conjunto completo e reaproveita lotes já calculados. '
                             'Metadados necessários acompanham as estruturas escolhidas.',
@@ -253,6 +253,7 @@ class FileSelection:
                     previous=next((r for r in configured if r.get('stage')==item['id'] and
                         (r.get('artifact_id')==record['artifact_id'] if r.get('artifact_id') else matches_selector(path,r.get('selector','auto')))),{})
                     if previous.get('compound_id'):reference['compound_id']=previous['compound_id']
+                    if previous.get('selection'):reference['selection']=copy.deepcopy(previous['selection'])
                     rows.append((check,reference))
                     if self.stage['operation']=='retrieve_pubchem':
                         from biomolexplorer.pubchem_retrieval import reference_choices
@@ -267,7 +268,7 @@ class FileSelection:
                         records=(compound_references or {}).get(str(path),{}) if compound_references is not None else compound_identifiers([path])
                     self.add_docking_choice(field,check,reference,records,controls,page)
                 if not matching:
-                    controls.append(ft.Text('Esta origem não produziu arquivos compatíveis com esta entrada.', color='#B91C1C'))
+                    controls.append(ft.Text('Esta origem não produziu resultados compatíveis com esta entrada.', color='#B91C1C'))
             for saved in configured:
                 if saved.get('selector','auto')=='auto':continue
                 if not any(flag.value and all((True if saved.get('artifact_id') else matches_selector(ref.get('selector','auto'),v)) if k=='selector' else ref.get(k)==v for k,v in saved.items() if k!='compound_id') for flag,ref in rows):
@@ -359,7 +360,7 @@ class FileSelection:
         refs=[]
         for check,ref in rows:
             if not check.value:continue
-            if validate and not getattr(check,'available',True):raise ValueError('Arquivo selecionado indisponível. Remova ou selecione novamente a origem.')
+            if validate and not getattr(check,'available',True):raise ValueError('Resultado selecionado indisponível. Remova ou selecione novamente a origem.')
             ref=copy.deepcopy(ref)
             choice=self.compound_fields.get(id(check))
             if choice:
@@ -395,10 +396,10 @@ class FileSelection:
                     stage['bindings'].pop(field,None)
                     continue
                 if require_selection:
-                    raise ValueError('Selecione ao menos um arquivo para ' + field_label(self.stage['operation'],field) + '.')
+                    raise ValueError('Selecione ao menos um arquivo para esta entrada.')
                 # Keep the upstream origins available in the settings form when
                 # configuration is opened before any files have been selected.
-                refs = [{'stage':ref['stage'],'selector':'auto'}
+                refs = [dict(copy.deepcopy(ref),selector='auto')
                         for ref in sources(stage['bindings'][field]) if 'stage' in ref]
             group = pack(refs)
             if group:stage['bindings'][field] = group

@@ -45,6 +45,7 @@ class RedockingSettings:
 
     def layout(self):
         form=self.form;t=self.tr
+        from .settings_layout import field as settings_field
         def card(title,description,content):
             return ft.Container(padding=24,bgcolor='#FFFFFF',border_radius=16,border=ft.Border.all(1,'#E2E8F0'),
                 content=ft.Column([ft.Text(t(title),size=18,weight=ft.FontWeight.W_600),ft.Text(t(description),size=13,color='#64748B'),content],spacing=24))
@@ -55,8 +56,8 @@ class RedockingSettings:
             group=preparation.groups[role];group.title=ft.Text(t(title))
             charge=preparation.settings[role]['charge_type'];charge.width=None;charge.expand=True
             notice='Estas opções serão aplicadas a todos os receptores selecionados.' if role=='receptor' else 'Estas opções serão aplicadas a todos os ligantes selecionados.'
-            group.controls=[ft.Container(ft.Text(t(notice),size=13),height=56),
-                *[ft.Container(preparation.settings[role][key],height=56) for key in ('remove_solvent','remove_hydrogens','add_hydrogens','minimize')],
+            group.controls=[ft.Container(ft.Text(t(notice),size=13),padding=ft.Padding.only(bottom=8)),
+                *[settings_field(preparation.settings[role][key],full=True) for key in ('remove_solvent','remove_hydrogens','add_hydrogens','minimize')],
                 ft.Container(ft.Row([charge]),padding=ft.Padding.only(top=24,bottom=20))]
             group.controls_padding=24;group.tile_padding=20
         roles=ft.ResponsiveRow([ft.Container(preparation.groups[role],col={'xs':12,'md':6},

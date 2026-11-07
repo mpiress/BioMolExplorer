@@ -1,0 +1,49 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "report_button": {
+        "x": 956.4996337890625,
+        "y": 62,
+        "width": 40,
+        "height": 40
+      },
+      "preview_seconds": 0.24910023100164835,
+      "modal_english": true
+    },
+    {
+      "width": 1024,
+      "report_button": {
+        "x": 956.4996337890625,
+        "y": 62,
+        "width": 40,
+        "height": 40
+      },
+      "preview_seconds": 0.11495521799952257,
+      "modal_english": true
+    },
+    {
+      "width": 560,
+      "report_button": {
+        "x": 432,
+        "y": 116,
+        "width": 40,
+        "height": 40
+      },
+      "preview_seconds": 0.13663328700204147,
+      "modal_english": true
+    },
+    {
+      "width": 360,
+      "report_button": {
+        "x": 68,
+        "y": 216,
+        "width": 40,
+        "height": 40
+      },
+      "preview_seconds": 0.15662963100112393,
+      "modal_english": true
+    }
+  ],
+  "errors": []
+}

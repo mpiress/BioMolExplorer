@@ -59,7 +59,7 @@ def validate_structure(path,kind):
 class MDInputs:
     def __init__(self,store,pid,results):self.store,self.pid,self.results=store,pid,results
 
-    def expand(self,candidates,kind,suffixes,compound_id=None):
+    def expand(self,candidates,kind,suffixes,compound_id=None,selection=None):
         from .docking_data import read_compounds
         result=[]
         for candidate in candidates:
@@ -70,6 +70,9 @@ class MDInputs:
             for row in read_compounds(path):
                 code=row.get('molecule_chembl_id')
                 if not code or compound_id and code!=compound_id:continue
+                if selection:
+                    from .selection_views import row_matches
+                    if not row_matches(row,selection):continue
                 for name in ('conformer_file','pose_file','prepared_mol2','prepared_pdbqt','dock6_pose','vina_pose'):
                     if row.get(name):
                         pose=Path(row[name]);row[name]=str(self.store.scoped_path(self.pid,pose if pose.is_absolute() else path.parent/pose))
@@ -98,7 +101,7 @@ class MDInputs:
                 if asset is None:raise ValueError('Arquivo molecular não autorizado.')
                 candidates=[dict(path=asset['path'],name=asset['name'],identity='asset:'+ref['asset'])]
             elif 'stage' in ref:
-                paths=self.results.get(ref['stage'],[])
+                paths=ref.get('_resolved_paths') or self.results.get(ref['stage'],[])
                 if ref.get('selector','auto')!='auto':
                     selected=validate_reference(ref,paths)
                     paths=[selected]
@@ -114,13 +117,16 @@ class MDInputs:
                     elif scored:paths=scored
                 else:
                     paths=receptor_input_files(paths)
+                if ref.get('selection'):
+                    from .selection_views import path_matches
+                    paths=[path for path in paths if Path(path).suffix.lower()=='.csv' or path_matches(path,ref['selection'])]
                 candidates=[dict(path=str(p),name=Path(p).name,
                     identity='stage:'+ref['stage']+':'+locator(ref['stage'],p)) for p in paths]
             else:
                 # The editor keeps an empty reference while a source is being
                 # selected.  Treat that transient placeholder as no input.
                 continue
-            result.extend(self.expand(candidates,kind,suffixes,ref.get('compound_id')))
+            result.extend(self.expand(candidates,kind,suffixes,ref.get('compound_id'),ref.get('selection')))
         direct=stage['parameters'].get(field)
         if not stage.get('bindings',{}).get(field) and direct:
             folder=self.store.scoped_path(self.pid,direct)

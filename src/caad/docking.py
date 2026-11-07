@@ -541,6 +541,7 @@ class Docking():
                                              input_ligand=directory(self.outputpath) + f'{extention}',
                                              output_ligand=directory(self.outputpath) + f'{extention}', _preparation=preparation if preparation_pairs is not None else None)
                 ligands.append(f'prepare_ligand_{extention}.com')
+                if not hasattr(self,'_chimera_ligand_settings'):self._chimera_ligand_settings={}
                 self._chimera_ligand_settings[f'prepare_ligand_{extention}.com']=(pdb,preparation)
 
 

@@ -273,13 +273,16 @@ def validate_structure_pairs(folder, records, settings, prepared=False, engine='
                 raise ValueError(f'Cofator não encontrado no PDB {code}: {cofactor}')
 
 
-def validate_redocking_tools(prepare=True, search_path=None, engine='vina', dock6_path=None):
+def validate_redocking_tools(prepare=True, search_path=None, engine='vina', dock6_path=None,preparation_pairs=None):
     """Use the same executable search path as the scientific worker."""
     import os
     import shutil
     import sys
     search_path = search_path or str(Path(sys.executable).parent) + os.pathsep + os.environ.get('PATH', '')
     if engine not in ENGINES:raise ValueError('Método de redocking inválido.')
+    if preparation_pairs is not None:
+        prepare=any((settings or {}).get('preparation_backend','native')=='legacy_chimera'
+                    for settings in preparation_pairs.values())
     tools=(['chimera','obabel'] if prepare else [])+(['vina'] if engine=='vina' else [])
     for executable in tools:
         if not shutil.which(executable, path=search_path):

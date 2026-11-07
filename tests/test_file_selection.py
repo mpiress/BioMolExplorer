@@ -86,7 +86,9 @@ class FileSelectionTests(unittest.TestCase):
                 self.assertEqual([Path(p).name for p in selected],['B01__chembl__mol.csv'])
                 stored=self.store.project(self.token,self.project_id)['pipeline'][1]
                 self.assertEqual(stored['bindings']['base_input_path'],
-                    dict(stage=source['id'],selector='B01__chembl__mol.csv',artifact_id=next(r['artifact_id'] for r in finished['stages'][0]['artifact_records'] if r['name']=='B01__chembl__mol.csv')))
+                    dict(stage=source['id'],selector='B01__chembl__mol.csv',
+                         artifact_id=next(r['artifact_id'] for r in finished['stages'][0]['artifact_records'] if r['name']=='B01__chembl__mol.csv'),
+                         output_port='compounds'))
                 self.assertEqual(stored['input_processing'],'individual')
                 self.assertEqual(len(calls),2)
                 self.assertFalse(dialog.open)

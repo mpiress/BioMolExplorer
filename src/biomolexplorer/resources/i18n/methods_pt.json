@@ -1,0 +1,16 @@
+{
+  "retrieve_compounds": "Recuperação de compostos e registros de bioatividade da ChEMBL.",
+  "retrieve_pubchem": "Recuperação de compostos e resultados de similaridade do PubChem.",
+  "retrieve_zinc": "Recuperação de estruturas moleculares disponíveis no ZINC.",
+  "retrieve_structures": "Recuperação e triagem de estruturas PDB determinadas experimentalmente.",
+  "admet": "Avaliação in silico de propriedades moleculares e hipóteses ADMET configuradas.",
+  "fingerprints": "Geração de fingerprints moleculares para comparação estrutural.",
+  "similarity": "Cálculo de similaridade molecular par a par com o coeficiente configurado.",
+  "graphs": "Construção e análise de uma rede de similaridade molecular.",
+  "prepare_structures": "Preparação de receptores e ligantes para docking molecular.",
+  "redocking": "Redocking de ligantes cristalográficos para avaliar a reprodução das poses.",
+  "docking_vina": "Docking molecular com AutoDock Vina; os escores são funções computacionais de ranqueamento, não afinidades experimentais.",
+  "docking_dock6": "Docking molecular com DOCK6; os escores são funções computacionais de ranqueamento, não afinidades experimentais.",
+  "consensus": "Consolidação de resultados correspondentes de docking pelo método de consenso configurado.",
+  "dynamics_dock6": "Refinamento curto Amber Score do DOCK6; este procedimento não é uma simulação de dinâmica molecular."
+}

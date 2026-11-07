@@ -48,6 +48,8 @@ class WorkspaceStore:
                     user_id TEXT REFERENCES users(id), status TEXT NOT NULL, stages TEXT NOT NULL,
                     created REAL NOT NULL, updated REAL NOT NULL, error TEXT);
                 CREATE INDEX IF NOT EXISTS runs_project ON runs(project_id,created);
+                CREATE INDEX IF NOT EXISTS runs_active_project ON runs(project_id)
+                    WHERE status IN ('queued','running','awaiting_input');
                 CREATE INDEX IF NOT EXISTS assets_project ON assets(project_id);
                 CREATE TABLE IF NOT EXISTS project_locations(project_id TEXT PRIMARY KEY REFERENCES projects(id), path TEXT UNIQUE NOT NULL);
                 CREATE TABLE IF NOT EXISTS pending_deletions(id TEXT PRIMARY KEY, owner TEXT NOT NULL,
@@ -60,7 +62,39 @@ class WorkspaceStore:
                 CREATE TABLE IF NOT EXISTS execution_preferences(project_id TEXT PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
                     stage_ids TEXT NOT NULL,confirmed INTEGER NOT NULL,updated REAL NOT NULL);
                 CREATE TABLE IF NOT EXISTS result_file_transactions(id TEXT PRIMARY KEY,project_id TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS execution_manifests(
+                    project_id TEXT NOT NULL,run_id TEXT NOT NULL,stage_id TEXT NOT NULL,
+                    schema_version INTEGER NOT NULL,manifest TEXT NOT NULL,updated REAL NOT NULL,
+                    PRIMARY KEY(project_id,run_id,stage_id));
+                CREATE TABLE IF NOT EXISTS artifact_instances(
+                    occurrence_id TEXT NOT NULL,artifact_id TEXT NOT NULL,project_id TEXT NOT NULL,
+                    indexed_run_id TEXT NOT NULL,producer_run_id TEXT,stage_id TEXT NOT NULL,block_id TEXT,
+                    output_port TEXT,artifact_type TEXT NOT NULL,schema_version INTEGER NOT NULL,
+                    storage_path TEXT NOT NULL,content_sha256 TEXT,state TEXT NOT NULL,metadata TEXT NOT NULL,
+                    dependencies TEXT NOT NULL,provenance TEXT NOT NULL,created REAL NOT NULL,
+                    PRIMARY KEY(project_id,indexed_run_id,occurrence_id));
+                CREATE INDEX IF NOT EXISTS artifacts_project_stage ON artifact_instances(project_id,stage_id,indexed_run_id);
+                CREATE INDEX IF NOT EXISTS artifacts_content ON artifact_instances(project_id,content_sha256);
+                CREATE TABLE IF NOT EXISTS artifact_entities(
+                    project_id TEXT NOT NULL,occurrence_id TEXT NOT NULL,artifact_id TEXT NOT NULL,entity_type TEXT NOT NULL,
+                    entity_id TEXT NOT NULL,qualifiers TEXT NOT NULL,metadata TEXT NOT NULL,
+                    PRIMARY KEY(project_id,occurrence_id,entity_type,entity_id,qualifiers));
+                CREATE INDEX IF NOT EXISTS artifact_entities_lookup ON artifact_entities(project_id,entity_type,entity_id);
+                CREATE TABLE IF NOT EXISTS artifact_entity_indexes(
+                    project_id TEXT NOT NULL,occurrence_id TEXT NOT NULL,artifact_id TEXT NOT NULL,content_sha256 TEXT,
+                    state TEXT NOT NULL,error TEXT,updated REAL NOT NULL,
+                    PRIMARY KEY(project_id,occurrence_id));
+                CREATE TABLE IF NOT EXISTS artifact_migration_issues(
+                    project_id TEXT NOT NULL,consumer_stage_id TEXT NOT NULL,input_port TEXT NOT NULL,
+                    reference_index INTEGER NOT NULL,producer_stage_id TEXT NOT NULL,reason TEXT NOT NULL,details TEXT NOT NULL,
+                    PRIMARY KEY(project_id,consumer_stage_id,input_port,reference_index));
             ''')
+            from .artifact_registry import backfill,migrate_schema
+            migrate_schema(db)
+            backfill(db)
+            from .semantic_references import migrate_project_references
+            for row in db.execute('SELECT id,pipeline FROM projects WHERE deleted=0').fetchall():
+                migrate_project_references(db,row['id'],json.loads(row['pipeline']))
 
         from .project_folders import finish
         try:
@@ -201,7 +235,7 @@ class WorkspaceStore:
         return self.project(token, project_id)
 
     @contextmanager
-    def change(self, token, project_id, role, action, summary):
+    def change(self, token, project_id, role, action, summary, *, reuse_snapshot=False):
         from .project_state import snapshot, record
         user = self.user(token)
         with self.connect() as db:
@@ -209,7 +243,7 @@ class WorkspaceStore:
             self._require_user(user['id'], project_id, role)
             before = snapshot(self, db, project_id)
             yield db
-            record(self, db, project_id, user['id'], action, summary, before)
+            record(self, db, project_id, user['id'], action, summary, before,reuse_snapshot=reuse_snapshot)
 
     def history(self, token, project_id):
         self.project(token, project_id)
@@ -254,14 +288,22 @@ class WorkspaceStore:
         from .project_folders import delete
         delete(self, token, project_id, expected_directory)
 
-    def save_pipeline(self, token, project_id, stages, expected_revision, base_pipeline=None, prune_results=False, confirmation=None):
+    def save_pipeline(self, token, project_id, stages, expected_revision,
+                      base_pipeline=None, prune_results=False, confirmation=None,
+                      presentation_only=False):
         self.project(token, project_id, 'editor')
+        from .semantic_references import migrate_pipeline_references
+        stages,_,_=migrate_pipeline_references(stages)
         from .pipeline import validate_pipeline
         validate_pipeline(stages)
+        with self.connect() as db:
+            existing=db.execute('SELECT pipeline,revision FROM projects WHERE id=?',(project_id,)).fetchone()
+        if expected_revision>0 and existing and existing['revision']==expected_revision and json.loads(existing['pipeline'])==stages:
+            return self.project(token,project_id)
         from .result_sync import finish
         moved=[];journal=None
         try:
-            with self.change(token, project_id, 'editor', 'pipeline', 'Pipeline e configurações dos blocos alterados') as db:
+            with self.change(token, project_id, 'editor', 'pipeline', 'Pipeline e configurações dos blocos alterados',reuse_snapshot=not prune_results) as db:
                 current = db.execute('SELECT pipeline,revision FROM projects WHERE id=?', (project_id,)).fetchone()
                 if current['revision'] != expected_revision:
                     if base_pipeline is None:
@@ -270,8 +312,18 @@ class WorkspaceStore:
                     from .graph_contract import normalize_legacy_graphs
                     stages = merge_pipeline(base_pipeline, stages, normalize_legacy_graphs(json.loads(current['pipeline'])))
                     validate_pipeline(stages)
+                stored_pipeline=json.loads(current['pipeline'])
+                if presentation_only:
+                    from .result_state import signature
+                    previous={stage['id']:signature(stage) for stage in stored_pipeline}
+                    candidate={stage['id']:signature(stage) for stage in stages}
+                    if any(stage_id not in candidate or candidate[stage_id]!=value for stage_id,value in previous.items()):
+                        raise ValueError('Uma alteração científica não pode usar o salvamento somente de apresentação.')
                 from .result_sync import plan,apply
-                proposal=plan(db,project_id,stages,self.project_dir(project_id,db))
+                proposal = (dict(affected=0, active_conflicts=[], pipeline=stages,
+                                 paths=[], runs=[], confirmation=None)
+                            if presentation_only else
+                            plan(db, project_id, stages, self.project_dir(project_id, db)))
                 if proposal['affected']:
                     if not prune_results:
                         raise ValueError('Confirme a invalidação dos resultados antes de salvar esta alteração.')
@@ -285,6 +337,8 @@ class WorkspaceStore:
                     apply(self,db,project_id,proposal,moved,journal)
                 db.execute('UPDATE projects SET pipeline=?,revision=revision+1,updated=? WHERE id=?',
                     (json.dumps(stages, allow_nan=False), time.time(), project_id))
+                from .semantic_references import migrate_project_references
+                migrate_project_references(db,project_id,stages)
         except BaseException:
             finish(moved,rollback=True)
             if journal:journal.finish()

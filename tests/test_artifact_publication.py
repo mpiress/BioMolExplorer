@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from biomolexplorer.artifact_naming import assign_block_ids,publish,canonical_filename,parse_filename
+from biomolexplorer.artifact_naming import assign_block_ids,publish,canonical_filename,parse_filename,name_records
 from biomolexplorer.artifact_choices import choices
 from biomolexplorer.artifacts import index_run,records,reference,validate_reference
 from biomolexplorer.catalog import new_stage
@@ -16,6 +16,37 @@ import test_pipeline_execution as execution
 
 
 class PublicationTests(unittest.TestCase):
+    def test_analytical_chain_preserves_mol_or_sim_lineage_through_fingerprints(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);entries=[]
+            for index,source_kind in enumerate(('MOL','SIM')):
+                source,admet,pubchem,second_admet,fingerprints=(new_stage(op) for op in
+                    ('retrieve_compounds','admet','retrieve_pubchem','admet','fingerprints'))
+                paths=[root/f'{index}-{part}.csv' for part in ('source','bbb','pubchem','second-bbb','fingerprints')]
+                for path in paths:path.write_text('molecule_chembl_id,canonical_smiles\nA,CCO\n')
+                source_record={'path':str(paths[0]),'name':paths[0].name,'artifact_id':f'{index+1:064x}',
+                    'occurrence_id':f'{index+11:064x}','stage_id':source['id'],'operation':'retrieve_compounds','output':'mol' if source_kind=='MOL' else 'sim',
+                    'naming':{'scheme':1,'source':'ChEMBL','result_type':source_kind,'extension':'csv'}}
+                admet_record={'path':str(paths[1]),'name':paths[1].name,'artifact_id':f'{index+21:064x}',
+                    'occurrence_id':f'{index+31:064x}','stage_id':admet['id'],'operation':'admet','output':'bbb-pos',
+                    'inputs':{'base_input_path':[{'path':str(paths[0]),'artifact_id':source_record['artifact_id'],'stage_id':source['id']}]}}
+                pubchem_record={'path':str(paths[2]),'name':paths[2].name,'artifact_id':f'{index+41:064x}',
+                    'occurrence_id':f'{index+51:064x}','stage_id':pubchem['id'],'operation':'retrieve_pubchem','output':'compounds',
+                    'inputs':{'base_input_path':[{'path':str(paths[1]),'artifact_id':admet_record['artifact_id'],'stage_id':admet['id']}]}}
+                second_record={'path':str(paths[3]),'name':paths[3].name,'artifact_id':f'{index+61:064x}',
+                    'occurrence_id':f'{index+71:064x}','stage_id':second_admet['id'],'operation':'admet','output':'bbb-pos',
+                    'inputs':{'base_input_path':[{'path':str(paths[2]),'artifact_id':pubchem_record['artifact_id'],'stage_id':pubchem['id']}]}}
+                fingerprint_record={'path':str(paths[4]),'name':paths[4].name,'artifact_id':f'{index+81:064x}',
+                    'occurrence_id':f'{index+91:064x}','stage_id':fingerprints['id'],'operation':'fingerprints','output':'morgan',
+                    'inputs':{'base_input_path':[{'path':str(paths[3]),'artifact_id':second_record['artifact_id'],'stage_id':second_admet['id']}]}}
+                items=[(source_record,source),(admet_record,admet),(pubchem_record,pubchem),
+                    (second_record,second_admet),(fingerprint_record,fingerprints)]
+                name_records(items);entries.append((pubchem_record,second_record,fingerprint_record))
+            self.assertEqual([row[0]['naming']['source'] for row in entries],['MOL-BBB+','SIM-BBB+'])
+            self.assertEqual([row[1]['naming']['source'] for row in entries],['MOL-BBB+-SIM','SIM-BBB+-SIM'])
+            self.assertEqual([row[2]['naming']['source'] for row in entries],
+                ['MOL-BBB+-SIM-BBB+','SIM-BBB+-SIM-BBB+'])
+            self.assertTrue(all(row[0]['naming']['result_type']=='SIM' for row in entries))
     def test_mol_sim_and_downstream_admet_keep_meaningful_roles(self):
         from biomolexplorer.artifact_naming import human_name
         with tempfile.TemporaryDirectory() as directory:

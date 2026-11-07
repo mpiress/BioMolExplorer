@@ -1,5 +1,6 @@
 """Native, zoomable Flet graph editor; connections are validated before mutation."""
 import copy
+import json
 import math
 from uuid import uuid4
 import flet as ft
@@ -206,7 +207,7 @@ class FlowCanvas:
         issues=flow.stage_issues(stage)
         labels=input_labels(stage,getattr(self.ui,'project_assets',[]),getattr(self.ui,'automatic_labels',{}),self.stages)
         rows.append(ft.Container(height=34,padding=ft.Padding.only(left=8,right=8),content=ft.Text(
-            'Entradas: '+('; '.join(labels) if labels else 'Nenhuma / coleta própria'),size=10,max_lines=2,
+            'Entradas: '+('; '.join(labels) if labels else (self.ui.tr('Nenhuma / coleta própria') if hasattr(self.ui,'tr') else 'Nenhuma / coleta própria')),size=10,max_lines=2,
             overflow=ft.TextOverflow.ELLIPSIS,tooltip='\n'.join(labels))))
         rows.append(ft.Row([ft.Icon(ft.Icons.ERROR_OUTLINE if issues else ft.Icons.CHECK_CIRCLE_OUTLINE,size=14,color='#D97706' if issues else color),
             ft.Text(issues[0] if issues else 'Resultados fornecidos · concluído' if stage.get('provided_results') else 'Pronto para executar',size=10,expand=True),
@@ -293,6 +294,84 @@ class FlowCanvas:
             if self.ui.token==token and same_project:
                 await save_file(self.ui,file_name='pipeline.png',src_bytes=data)
         await self.ui.guard(action)
+    async def export_experimental_report(self,e):
+        from biomolexplorer.experimental_report import build_report,build_report_preview
+        from .branding import logo
+        from .feedback import close_dialog
+        from .runtime_messages import session_language
+        from .localization import Translator
+        project=self.ui.current;token=self.ui.token
+        if getattr(self.ui,'_experimental_report_busy',False):
+            self.ui.notify('O relatório já está sendo preparado. Aguarde a conclusão.')
+            return
+        def valid():
+            current=self.ui.current
+            return self.ui.token==token and current and current.get('id')==project['id']
+        async def action():
+            self.ui._experimental_report_busy=True
+            try:preview=await self.ui.call(build_report_preview,self.ui.store,token,project['id'])
+            finally:self.ui._experimental_report_busy=False
+            if not valid():return
+            language=session_language(self.ui);tr=Translator(language)
+            # Each dialog owns one document snapshot. No cross-project cache or
+            # result reads on opening; figures are generated only on export.
+            report=None
+            async def document():
+                nonlocal report
+                if not valid():return None
+                if report is None:
+                    result=await self.ui.call(build_report,self.ui.store,token,project['id'],language)
+                    if not valid():return None
+                    report=result
+                return report
+            async def export(kind):
+                if getattr(self.ui,'_experimental_export_busy',False):
+                    self.ui.notify('Uma exportação do relatório já está em andamento.');return
+                self.ui._experimental_export_busy=True
+                try:
+                    result=await document()
+                    if result is None:return
+                    from biomolexplorer.experimental_report import public_report,report_docx,report_pdf,printable_file
+                    if kind=='print':
+                        path=await self.ui.call(printable_file,self.ui.store,result,language)
+                        if not valid():return
+                        url='/experimental-reports/'+path.name if getattr(self.ui.page,'web',False) else path.as_uri()
+                        await ft.UrlLauncher().launch_url(url,mode=ft.LaunchMode.EXTERNAL_APPLICATION,web_only_window_name='_blank')
+                    else:
+                        if kind=='json':data=await self.ui.call(lambda:json.dumps(public_report(result),ensure_ascii=False,indent=2,allow_nan=False).encode())
+                        elif kind=='docx':data=await self.ui.call(report_docx,result,language)
+                        else:data=await self.ui.call(report_pdf,result,language)
+                        if valid():await save_file(self.ui,file_name='experimental-report.'+kind,src_bytes=data)
+                finally:self.ui._experimental_export_busy=False
+            async def download(e):await self.ui.guard(lambda:export(e.control.data))
+            async def print_report(e):await self.ui.guard(lambda:export('print'))
+            cards=[('Blocos',len(preview['pipeline'])),('Execuções',preview['document_scope']['execution_count']),
+                ('Artefatos',preview['document_scope']['artifact_count'])]
+            overview=ft.ResponsiveRow([ft.Container(col={'xs':6,'md':4},padding=14,bgcolor='#F4F7FF',border_radius=12,
+                content=ft.Column([ft.Text(tr(label),size=11,color='#52637A'),ft.Text(str(value),size=24,weight=ft.FontWeight.W_700,color='#091D48')],spacing=2)) for label,value in cards],spacing=12,run_spacing=12)
+            stage_rows=[ft.Container(padding=12,border=ft.Border.only(bottom=ft.BorderSide(1,'#E7ECF5')),
+                content=ft.Row([ft.Text(stage.get('block_id') or str(index+1),width=90,weight=ft.FontWeight.W_600,color='#2552E8'),
+                    ft.Column([stage_control(ft.Text(stage.get('name') or stage.get('operation'),weight=ft.FontWeight.W_600),stage),
+                        verbatim(ft.Text(stage.get('operation',''),size=11,color='#52637A'))],spacing=2,expand=True)]))
+                for index,stage in enumerate(preview['pipeline'][:20])]
+            contents=[verbatim(ft.Text(preview['project'].get('description'),size=12,color='#42526E')) if preview['project'].get('description') else
+                ft.Text(tr('Registro do fluxo científico e de sua reprodutibilidade.'),size=12,color='#42526E'),overview,
+                ft.Text('Pipeline',size=17,weight=ft.FontWeight.W_600,color='#2552E8'),*stage_rows,
+                ft.Text(tr('Os documentos completos são preparados ao baixar ou imprimir, com parâmetros, proveniência, métricas e figuras disponíveis. A primeira exportação é reutilizada enquanto esta prévia estiver aberta.'),size=11,color='#52637A',italic=True)]
+            dialog=ft.AlertDialog(modal=True,
+                title=ft.Row([logo(48),ft.Column([
+                    verbatim(ft.Text(preview['project']['name']+' — '+tr('Relatório Experimental Reprodutível'),size=20,weight=ft.FontWeight.W_700,color='#091D48')),
+                    ft.Text(preview['generated_at'],size=12,color='#52637A')],spacing=2,expand=True)],spacing=14),
+                content=ft.Container(bgcolor='#FFFFFF',padding=ft.Padding.symmetric(horizontal=34,vertical=28),
+                    border=ft.Border.all(1,'#DCE4F3'),border_radius=4,
+                    content=ft.Column(contents,scroll=ft.ScrollMode.AUTO,spacing=22),width=780,height=560),
+                actions=[ft.Button(tr('Imprimir'),icon=ft.Icons.PRINT,on_click=print_report),
+                    ft.PopupMenuButton(content=ft.Row([ft.Icon(ft.Icons.DOWNLOAD),ft.Text(tr('Baixar'))],spacing=8),
+                        tooltip=tr('Escolher formato do relatório'),items=[ft.PopupMenuItem(content=ft.Text(label),data=kind,on_click=download)
+                            for kind,label in [('docx','DOCX'),('pdf','PDF'),('json','JSON')]]),
+                    ft.TextButton(tr('Fechar'),on_click=lambda event:close_dialog(self.ui.page,dialog))])
+            self.ui.page.show_dialog(dialog)
+        await self.ui.guard(action)
     def build(self,include_library=True):
         if not hasattr(self.ui,'sidebar_expanded'):self.ui.sidebar_expanded={}
         palette=[]; items=[]; sections=[]
@@ -341,7 +420,8 @@ class FlowCanvas:
             (ft.Icons.CONTENT_COPY,'Duplicar bloco',self.duplicate,not self.writable),(ft.Icons.DELETE_OUTLINE,'Excluir bloco',self.delete,not self.writable),
             (ft.Icons.AUTO_FIX_HIGH,'Organizar blocos',self.arrange,not self.writable),(ft.Icons.ZOOM_IN,'Ampliar',self.zoom_in,False),
             (ft.Icons.ZOOM_OUT,'Reduzir',self.zoom_out,False),(ft.Icons.CENTER_FOCUS_STRONG,'Redefinir visão',self.reset,False),
-            (ft.Icons.PHOTO_CAMERA_OUTLINED,'Exportar pipeline completo como PNG',self.export_png,False)]],spacing=0)
+            (ft.Icons.PHOTO_CAMERA_OUTLINED,'Exportar pipeline completo como PNG',self.export_png,False),
+            (ft.Icons.SCIENCE_OUTLINED,'Emitir relatório experimental reprodutível',self.export_experimental_report,False)]],spacing=0)
         from .action_help import show_action_help
         bar.controls.append(icon_button(icon=ft.Icons.INFO_OUTLINE,tooltip='Controles do canvas',
             on_click=lambda e:show_action_help(self.ui,'canvas')))
@@ -352,6 +432,8 @@ class FlowCanvas:
         workspace=ft.Row([ft.Container(width=250,padding=14,bgcolor='#F8FAFC',border_radius=14,
             content=ft.Column([self.library],scroll=ft.ScrollMode.AUTO)),canvas_panel],expand=True,spacing=14,
             vertical_alignment=ft.CrossAxisAlignment.STRETCH) if include_library else canvas_panel
+        # Let each action wrap; a nested unbroken bar hides trailing exports.
         return ft.Column([ft.Row([self.selection,
-            ft.Button('Configurar seleção',icon=ft.Icons.TUNE,on_click=self.configure_selected),bar],wrap=True,spacing=12),
+            ft.Button('Configurar seleção',icon=ft.Icons.TUNE,on_click=self.configure_selected),
+            *bar.controls],wrap=True,spacing=12),
             self.status,workspace],expand=True,spacing=8)

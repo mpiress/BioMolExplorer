@@ -77,7 +77,8 @@ def dock6_variant_matches(stage, refs, results, store, project_id):
             with store.connect() as db:
                 row=db.execute('SELECT path FROM assets WHERE project_id=? AND id=?',(project_id,reference['asset'])).fetchone()
             return [store.scoped_path(project_id,row[0])] if row else []
-        paths=[store.scoped_path(project_id,p) for p in results.get(reference['stage'],[])]
+        paths=[store.scoped_path(project_id,p) for p in
+               (reference.get('_resolved_paths') or results.get(reference['stage'],[]))]
         selector=reference.get('selector','auto')
         if reference.get('artifact_id'):
             from .artifacts import validate_reference
@@ -86,7 +87,8 @@ def dock6_variant_matches(stage, refs, results, store, project_id):
     receptor_ref=refs['base_input_path']
     receptor_files=files(receptor_ref)
     receptors={p.name.split('.',1)[0] for p in receptor_files if prepared_receptor(p)}
-    all_paths=[store.scoped_path(project_id,p) for p in results.get(receptor_ref.get('stage'),[])]
+    all_paths=[store.scoped_path(project_id,p) for p in
+               (receptor_ref.get('_resolved_paths') or results.get(receptor_ref.get('stage'),[]))]
     records=[]
     for path in all_paths:
         if path.name!='pdb_codes.csv':continue

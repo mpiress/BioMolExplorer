@@ -1,6 +1,7 @@
 """Render the complete canvas model to a bounded, high resolution PNG."""
 import io
 import math
+from collections import Counter
 
 from biomolexplorer import flow
 from biomolexplorer.bindings import sources
@@ -17,6 +18,7 @@ def render_pipeline(stages, translate=lambda value: value):
     from PIL import Image, ImageDraw
     positions = {s['id']: flow.position(s, i) for i, s in enumerate(stages)}
     by_id = {s['id']: s for s in stages}
+    block_counts=Counter(stage.get('block_id') for stage in stages if stage.get('block_id'))
     pad = 130  # Also covers the control points of backwards connections.
     left = min((p['x'] for p in positions.values()), default=0) - pad
     top = min((p['y'] for p in positions.values()), default=0) - pad
@@ -44,8 +46,8 @@ def render_pipeline(stages, translate=lambda value: value):
                 label = label[:-1] + '…'
         draw.text(point(x, y), label, font=font, fill=color)
 
-    stroke = max(1, round(3 * scale))
-    for stage in stages:
+    stroke = max(1, round(3 * scale));connection_labels=[];connection_index=0
+    for index,stage in enumerate(stages):
         pos = positions[stage['id']]
         for j, port in enumerate(flow.input_ports(stage)):
             binding = stage.get('bindings', {}).get(port['field'])
@@ -53,6 +55,7 @@ def render_pipeline(stages, translate=lambda value: value):
                 source = by_id.get(reference.get('stage'))
                 if source is None:
                     continue
+                connection_index+=1
                 start = positions[source['id']]
                 x, y = start['x'] + flow.NODE_WIDTH - 30, start['y'] + 83
                 ex, ey = pos['x'] + 28, pos['y'] + 117 + j * 34
@@ -61,7 +64,24 @@ def render_pipeline(stages, translate=lambda value: value):
                     t = step / 100; u = 1 - t
                     points.append(point(u**3*x + 3*u*u*t*(x+100) + 3*u*t*t*(ex-100) + t**3*ex,
                                         u**3*y + 3*u*u*t*y + 3*u*t*t*ey + t**3*ey))
-                draw.line(points, fill=COLORS[TITLES[source['operation']][2]], width=stroke)
+                color=COLORS[TITLES[source['operation']][2]]
+                # A light halo keeps crossings distinguishable on dense
+                # canvases; the arrowhead terminates at the exact input port.
+                draw.line(points, fill='#F5F7FC', width=stroke+max(2,round(4*scale)))
+                draw.line(points, fill=color, width=stroke)
+                tip=points[-1];previous=points[-5]
+                angle=math.atan2(tip[1]-previous[1],tip[0]-previous[0]);length=max(7,12*scale);spread=.55
+                arrow=[tip,(tip[0]-length*math.cos(angle-spread),tip[1]-length*math.sin(angle-spread)),
+                    (tip[0]-length*math.cos(angle+spread),tip[1]-length*math.sin(angle+spread))]
+                draw.polygon(arrow,fill=color)
+                connection_labels.append((f'C{connection_index:02d}',points[58],color))
+
+    for label,(lx,ly),color in connection_labels:
+        font=_font(max(8,round(10*scale)));bounds=draw.textbbox((0,0),label,font=font)
+        tw,th=bounds[2]-bounds[0],bounds[3]-bounds[1];padding=max(2,round(3*scale))
+        draw.rounded_rectangle((lx-tw/2-padding,ly-th/2-padding,lx+tw/2+padding,ly+th/2+padding),
+            radius=max(2,round(3*scale)),fill='white',outline=color,width=max(1,round(scale)))
+        draw.text((lx-tw/2,ly-th/2-bounds[1]),label,font=font,fill=color)
 
     for stage in stages:
         pos = positions[stage['id']]; x, y = pos['x'], pos['y']
@@ -69,9 +89,14 @@ def render_pipeline(stages, translate=lambda value: value):
         draw.rounded_rectangle(box(x, y, flow.NODE_WIDTH, flow.node_height(stage)),
                                radius=round(14*scale), fill='white', outline='#DDE5F0', width=max(1, round(2*scale)))
         draw.rounded_rectangle(box(x+2, y+2, flow.NODE_WIDTH-4, 64), radius=round(12*scale), fill=color)
-        text(x+12, y+12, translate(category).upper(), 10, 'white')
+        stored_block=stage.get('block_id')
+        block_id=stored_block if stored_block and block_counts[stored_block]==1 else f'B{index+1:02d}'
+        text(x+12, y+10, str(block_id), 10, 'white', 72)
+        category_label=translate(category).upper()
+        category_width=draw.textlength(category_label,font=_font(max(1,round(10*scale))))/scale
+        text(x+flow.NODE_WIDTH-12-category_width, y+10, category_label, 10, 'white', 120)
         name = translate(stage['name']) if stage['name'] in default_stage_names() else stage['name']
-        text(x+12, y+32, name, 14, 'white', flow.NODE_WIDTH-24)
+        text(x+12, y+34, name, 13, 'white', flow.NODE_WIDTH-24)
         text(x+16, y+76, translate('Saída'), 12, color)
         draw.ellipse(box(x+flow.NODE_WIDTH-35, y+78, 10, 10), fill=color)
         for j, port in enumerate(flow.input_ports(stage)):

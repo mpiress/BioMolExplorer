@@ -1,9 +1,11 @@
 import json
+import io
 import tempfile
 import unittest
+import zipfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-from biomolexplorer.updates import UpdateChecker, CHECK_INTERVAL, REMIND_INTERVAL
+from unittest.mock import AsyncMock, MagicMock, patch
+from biomolexplorer.updates import UpdateChecker, CHECK_INTERVAL, REMIND_INTERVAL, trusted_download_url
 
 
 class UpdateTests(unittest.TestCase):
@@ -68,27 +70,69 @@ class UpdateTests(unittest.TestCase):
         with patch('biomolexplorer.updates.urlopen', return_value=self.response('2' * 40)):
             self.assertFalse(self.checker.check()['available'])
 
+    def test_only_the_pinned_github_archive_is_trusted(self):
+        sha='2'*40
+        self.assertTrue(trusted_download_url('https://github.com/mpiress/BioMolExplorer/archive/'+sha+'.zip',sha))
+        self.assertFalse(trusted_download_url('http://github.com/mpiress/BioMolExplorer/archive/'+sha+'.zip',sha))
+        self.assertFalse(trusted_download_url('https://example.com/mpiress/BioMolExplorer/archive/'+sha+'.zip',sha))
+        self.assertFalse(trusted_download_url('https://github.com/mpiress/BioMolExplorer/archive/'+'3'*40+'.zip',sha))
+
+    def test_install_validates_archive_and_uses_current_python_environment(self):
+        sha='2'*40;buffer=io.BytesIO()
+        with zipfile.ZipFile(buffer,'w') as archive:
+            archive.writestr(f'BioMolExplorer-{sha}/pyproject.toml','[project]\nname="biomolexplorer"\n')
+            archive.writestr(f'BioMolExplorer-{sha}/src/biomolexplorer/__init__.py','')
+        response=MagicMock();response.__enter__.return_value=io.BytesIO(buffer.getvalue())
+        latest={'sha':sha,'available':True,'message':'Update',
+            'download_url':f'https://github.com/mpiress/BioMolExplorer/archive/{sha}.zip'}
+        completed=MagicMock(returncode=0,stdout='installed',stderr='')
+        with patch('biomolexplorer.updates.urlopen',return_value=response), \
+                patch('biomolexplorer.updates.subprocess.run',return_value=completed) as run:
+            result=self.checker.install(latest)
+        command=run.call_args.args[0]
+        self.assertEqual(command[:3],[__import__('sys').executable,'-m','pip'])
+        self.assertIn('--no-deps',command);self.assertTrue(Path(result['archive']).is_file())
+        self.assertTrue(result['restart_required']);self.assertFalse(self.checker.latest['available'])
+
 
 class UpdateNoticeTests(unittest.IsolatedAsyncioTestCase):
     async def test_download_uses_pinned_archive_and_persists_reminder(self):
         from types import SimpleNamespace
-        from unittest.mock import AsyncMock
         from biomolexplorer.ui.updates import UpdateNotice
         checker = MagicMock()
         checker.check.return_value = {'sha':'2'*40, 'available':True,
             'message':'New update', 'download_url':'https://github.com/mpiress/BioMolExplorer/archive/'+'2'*40+'.zip'}
         dialogs = []
-        page = SimpleNamespace(show_dialog=dialogs.append, update=lambda:None, launch_url=AsyncMock())
+        page = SimpleNamespace(show_dialog=dialogs.append, update=lambda:None)
         async def call(function,*args):return function(*args)
         ui = SimpleNamespace(page=page, token='token', store=SimpleNamespace(user=lambda token:{'id':'alice'}),
             call=call, tr=lambda value:value, notify=MagicMock())
         notice=UpdateNotice(ui,checker)
         notice.button()
         await notice.open(None)
-        await dialogs[0].actions[1].on_click(None)
-        page.launch_url.assert_awaited_once_with(checker.check.return_value['download_url'])
+        dialogs[0].actions[1].update=MagicMock()
+        await dialogs[0].actions[1].on_click(SimpleNamespace(control=dialogs[0].actions[1]))
+        checker.install.assert_called_once_with(checker.check.return_value)
         checker.remind_later.assert_called_once_with('alice')
         self.assertFalse(dialogs[0].open)
+
+    async def test_failed_download_keeps_dialog_open_and_allows_retry(self):
+        from types import SimpleNamespace
+        from biomolexplorer.ui.updates import UpdateNotice
+        checker=MagicMock();checker.check.return_value={'sha':'2'*40,'available':True,
+            'message':'New update','download_url':'https://github.com/mpiress/BioMolExplorer/archive/'+'2'*40+'.zip'}
+        dialogs=[]
+        def show_dialog(dialog):dialog.open=True;dialogs.append(dialog)
+        page=SimpleNamespace(show_dialog=show_dialog,update=lambda:None)
+        async def call(function,*args):return function(*args)
+        ui=SimpleNamespace(page=page,token='token',store=SimpleNamespace(user=lambda token:{'id':'alice'}),
+            call=call,tr=lambda value:value,notify=MagicMock())
+        notice=UpdateNotice(ui,checker);notice.button();await notice.open(None)
+        button=dialogs[0].actions[1];button.update=MagicMock()
+        checker.install.side_effect=OSError('installation unavailable')
+        await button.on_click(SimpleNamespace(control=button))
+        ui.notify.assert_called_once();checker.remind_later.assert_not_called()
+        self.assertFalse(button.disabled);self.assertTrue(dialogs[0].open)
 
     async def test_offline_check_reports_retry_without_update_dialog(self):
         from types import SimpleNamespace

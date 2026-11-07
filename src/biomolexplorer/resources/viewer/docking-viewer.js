@@ -1,8 +1,8 @@
 /* Shared local docking scene; every layer keeps its original coordinates. */
 window.BioMolDockingScene = async function (config) {
   'use strict';
-  const el = id => document.getElementById(id), en = config.language === 'en';
-  const t = (pt, english) => en ? english : pt;
+  const el = id => document.getElementById(id);
+  const t = key => config.scene_labels[key] ?? key;
   let viewer;
   const state = {layers: [], cutoff: 4, selected: null, interactions: [], enabledTypes: new Set(), shapes: [], hoveredInteraction: null};
   const protein = new Set('ALA ARG ASN ASP CYS GLN GLU GLY HIS ILE LEU LYS MET PHE PRO SER THR TRP TYR VAL HID HIE HIP CYX SEC PYL'.split(' '));
@@ -23,9 +23,9 @@ window.BioMolDockingScene = async function (config) {
     return rep==='spheres' ? {sphere:{...coloring,scale:.65}} : rep==='lines' ? {line:{...coloring}} : {stick:{...coloring,radius:.22},sphere:{...coloring,scale:.2}};
   }
   const interactionNames = {
-    pi_parallel:t('π–π paralelo','Parallel π–π'), pi_t:t('π–π em T','T-shaped π–π'),
-    hydrogen_bond:t('Ligação de hidrogênio','Hydrogen bond'), hydrophobic:t('Contato hidrofóbico','Hydrophobic contact'),
-    van_der_waals:t('Contato van der Waals (geométrico)','Van der Waals contact (geometric)')
+    pi_parallel:t("π–π paralelo"), pi_t:t("π–π em T"),
+    hydrogen_bond:t("Ligação de hidrogênio"), hydrophobic:t("Contato hidrofóbico"),
+    van_der_waals:t("Contato van der Waals (geométrico)")
   };
   const position = xyz => ({x:xyz[0],y:xyz[1],z:xyz[2]});
   function interactionText(row) {
@@ -80,19 +80,19 @@ window.BioMolDockingScene = async function (config) {
       const button=document.createElement('button');button.className='interaction-row';button.textContent=interactionText(row);button.style.borderLeftColor=row.color;
       button.addEventListener('click',() => {state.selected=row;draw();viewer.zoomTo({model:receptor.model.getID(),...residueSelection(row)});viewer.render();});container.append(button);
     });
-    const shortNames={pi_parallel:'π–π',pi_t:'π–π (T)',hydrogen_bond:t('lig. H','H-bond'),hydrophobic:t('hidrofóbico','hydrophobic'),van_der_waals:'vdW'};
+    const shortNames={pi_parallel:'π–π',pi_t:'π–π (T)',hydrogen_bond:t("lig. H"),hydrophobic:t("hidrofóbico"),van_der_waals:'vdW'};
     if (el('show-residue-labels').checked) labels.forEach(({position,rows}) => viewer.addLabel(`${rows[0].resn} ${rows[0].resi}${rows[0].icode || ''} · ${rows[0].chain || '—'} · ${rows.map(row => shortNames[row.kind]).join(' / ')}`,
       {position,backgroundColor:'#111b2b',fontColor:'#e5edf9',fontSize:10,showBackground:true}));
   }
   function setupInteractions(capability) {
     el('interaction-controls').hidden=false;
-    el('interaction-toggle-label').textContent=t('Mostrar interações em 3D','Show 3D interactions');
-    el('residue-label-toggle-label').textContent=t('Mostrar nomes dos resíduos','Show residue names');
+    el('interaction-toggle-label').textContent=t("Mostrar interações em 3D");
+    el('residue-label-toggle-label').textContent=t("Mostrar nomes dos resíduos");
     el('show-interactions').disabled=!capability?.available;
     el('show-residue-labels').disabled=!capability?.available;
     el('interaction-status').textContent=!capability?.available ?
-      t('Classificação indisponível: faltam topologia química ou identificação dos resíduos. Os contatos por distância continuam disponíveis.','Classification unavailable: chemical topology or residue identities are missing. Distance contacts remain available.') :
-      `${capability.interactions.length} ${t('interações geométricas. Ligações de hidrogênio exigem H explícitos; ausência não comprova inexistência. van der Waals indica proximidade pelos raios atômicos, sem cálculo de energia.','geometric interactions. Hydrogen bonds require explicit H; absence does not prove no bonds exist. van der Waals indicates proximity by atomic radii, without energy calculation.')}`;
+      t("Classificação indisponível: faltam topologia química ou identificação dos resíduos. Os contatos por distância continuam disponíveis.") :
+      `${capability.interactions.length} ${t("interações geométricas. Ligações de hidrogênio exigem H explícitos; ausência não comprova inexistência. van der Waals indica proximidade pelos raios atômicos, sem cálculo de energia.")}`;
     if (!capability?.available) return;
     state.interactions=capability.interactions;
     capability.types.forEach(kind => {
@@ -161,9 +161,9 @@ window.BioMolDockingScene = async function (config) {
       const key = residueKey(r); rows.set(key,{...(rows.get(key) || r),reference:r.distance});
     });
     const container = el('contacts');container.replaceChildren();
-    const heading = document.createElement('strong');heading.textContent = t('Resíduos próximos','Nearby residues');container.append(heading);
-    const header = document.createElement('p');header.textContent = state.referenceContacts.length ? t('Resíduo · Pose / Referência (Å)','Residue · Pose / Reference (Å)') : t('Resíduo · Distância mínima (Å)','Residue · Minimum distance (Å)');container.append(header);
-    if (!rows.size) {const empty=document.createElement('p');empty.textContent=t('Nenhum contato nesta distância.','No contacts at this distance.');container.append(empty);}
+    const heading = document.createElement('strong');heading.textContent = t("Resíduos próximos");container.append(heading);
+    const header = document.createElement('p');header.textContent = state.referenceContacts.length ? t("Resíduo · Pose / Referência (Å)") : t("Resíduo · Distância mínima (Å)");container.append(header);
+    if (!rows.size) {const empty=document.createElement('p');empty.textContent=t("Nenhum contato nesta distância.");container.append(empty);}
     [...rows.values()].sort((a,b) => (a.pose ?? a.reference)-(b.pose ?? b.reference)).forEach(row => {
       const button=document.createElement('button');button.className='contact-residue';
       button.textContent=`${row.resn} ${row.resi}${row.icode || ''} · ${row.chain || '—'} · ${row.pose?.toFixed(3) || '—'}${state.referenceContacts.length ? ' / '+(row.reference?.toFixed(3) || '—') : ''}`;
@@ -187,17 +187,17 @@ window.BioMolDockingScene = async function (config) {
       state.layers.push({...layer,poseModel:layer.model,data:undefined,model,visible:layer.role!=='complex'});
       const label=document.createElement('label');label.className='scene-layer '+layer.role;
       const check=document.createElement('input');check.type='checkbox';check.checked=layer.role!=='complex';
-      const name=layer.role==='receptor' ? t('Receptor utilizado','Docking receptor') : layer.role==='complex' ? t('Complexo cristalográfico','Crystallographic complex') : layer.role==='reference' ?
-        data.reference_kind==='crystal' ? t('Ligante cristalográfico','Crystallographic ligand') : t('Referência preparada','Prepared reference') :
-        layer.selection==='lowest_score' ? t('Melhor pose','Best pose') : t('Primeira pose sem score','First unscored pose');
-      label.append(check,document.createTextNode(name+(layer.role==='pose' ? ` · ${layer.score ?? '—'} · ${t('modelo','model')} ${layer.model || 1}` : '')));
+      const name=layer.role==='receptor' ? t("Receptor utilizado") : layer.role==='complex' ? t("Complexo cristalográfico") : layer.role==='reference' ?
+        data.reference_kind==='crystal' ? t("Ligante cristalográfico") : t("Referência preparada") :
+        layer.selection==='lowest_score' ? t("Melhor pose") : t("Primeira pose sem score");
+      label.append(check,document.createTextNode(name+(layer.role==='pose' ? ` · ${layer.score ?? '—'} · ${t("modelo")} ${layer.model || 1}` : '')));
       check.addEventListener('change',() => {state.layers.find(l => l.role===layer.role).visible=check.checked;draw();});el('layers').append(label);
     });
     const receptor=state.layers.find(layer => layer.role==='receptor');
     [...new Set(receptor.model.selectedAtoms({}).map(a => a.chain || ''))].sort().forEach(chain => el('chain').add(new Option(chain || '—',chain || '__blank__')));
     el('model').parentElement.querySelector('label[for="model"]').remove();el('model').hidden=true;
-    document.body.dataset.scene='true';el('docking-controls').hidden=false;el('cutoff-label').textContent=t('Distância de contato (Å)','Contact distance (Å)');
-    el('contact-note').textContent=t('Proximidade entre átomos pesados; não identifica tipos de ligação. Coordenadas originais, sem realinhamento.','Heavy-atom proximity; does not identify bond types. Original coordinates, without realignment.');
+    document.body.dataset.scene='true';el('docking-controls').hidden=false;el('cutoff-label').textContent=t("Distância de contato (Å)");
+    el('contact-note').textContent=t("Proximidade entre átomos pesados; não identifica tipos de ligação. Coordenadas originais, sem realinhamento.");
     el('summary').textContent=data.name;
     el('representation').value=receptor.format==='mol2' ? 'sticks' : 'cartoon';
     setupInteractions(data.interactions);contactTable();draw();viewer.zoomTo({model:state.layers.find(layer => layer.role==='pose').model.getID()});viewer.render();

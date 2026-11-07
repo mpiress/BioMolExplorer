@@ -39,6 +39,13 @@ INPUTS = {
     'docking_dock6': {'base_input_path':{'structures','prepared_structures'},'base_selected_mols':{'compounds','vina','dock6'}},
     'consensus': {'base_vina_path':{'vina'},'base_dock6_path':{'dock6'}},
 }
+# The typed contract is authoritative.  These legacy-shaped views keep the
+# existing editor API stable while the UI and executor consume one definition.
+from .artifact_contracts import OUTPUT_PORTS as _OUTPUT_PORTS, INPUT_PORTS as _INPUT_PORTS
+OUTPUTS={operation:{kind for kinds in ports.values() for kind in kinds}
+         for operation,ports in _OUTPUT_PORTS.items()}
+INPUTS={operation:{field:set(kinds) for field,kinds in ports.items()}
+        for operation,ports in _INPUT_PORTS.items()}
 # These inputs are configured with uploaded files, never with canvas connections.
 EXTERNAL_INPUTS = {'graphs': {'base_input_path': {'compounds'}}}
 
@@ -103,7 +110,11 @@ def connect(stages, source_id, target_id, field):
     candidate=copy.deepcopy(stages)
     proposed=next(s for s in candidate if s['id']==target_id)
     old=proposed.setdefault('bindings',{}).get(field)
-    proposed['bindings'][field]=pack((sources(old) if old else [])+[{'stage':source_id,'selector':'auto'}])
+    from .artifact_contracts import output_port
+    reference={'stage':source_id,'selector':'auto'}
+    port=output_port(source['operation'],input_types(target,field))
+    if port:reference['output_port']=port
+    proposed['bindings'][field]=pack((sources(old) if old else [])+[reference])
     if target['operation'] in ('prepare_structures','docking_vina','docking_dock6') and field=='base_input_path':
         proposed['parameters']['receptor_prepared']='prepared_structures' in output_types(source)
     if target['operation']=='consensus' and field=='base_vina_path':
