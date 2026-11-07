@@ -433,3 +433,32 @@ choice controls these worker checkpoints without adding interface options.
 ## Current execution and result contract
 
 [DAG order, lazy selection, pause/cancellation, cleanup and incremental reuse](projects.md#execution-lazy-selection-and-result-preservation). [Public names and lineage](projects.md#public-names-and-traceability).
+
+## Scientific artifacts and semantic references
+
+New connections persist the producer block identifier, typed output port,
+dynamic or pinned mode, and an optional entity selection. The executor follows
+`reference → execution manifest → artifact occurrence → entity → storage`.
+Filenames are confined to external-tool adapters and explicit legacy
+compatibility. `artifact_contracts.py` is the shared definition of types,
+cardinality and compatibility used by the canvas, validator and executor.
+
+The SQLite registry stores manifests, immutable occurrences, hashes,
+dependencies, provenance and entities. Publication automatically indexes
+compounds, structures/chains, receptors, poses, communities and molecular
+pairs. A selection such as `pdb:4M0E, chain:A` can be configured before
+retrieval; after publication it is checked against the entity index and only
+materialized at the scientific-tool boundary. Multiple-compound selections use
+a deterministic `.input-cache` view without changing the source artifact.
+
+Dynamic references follow a port in the current execution. Pinned references
+include the execution and artifact identity and resolve through the historical
+manifest, including occurrences shared by several consumers. Cache signatures
+remain scientific: equivalent blocks may share work within an active run, but
+a newly added block does not silently inherit another block ID's historical
+result.
+
+On startup, save and import, a legacy reference receives a port only when one
+compatible choice exists. Incompatible or ambiguous cases remain unchanged for
+review and are recorded in `artifact_migration_issues`. Backfill is idempotent
+and never silently moves, renames or reassociates scientific files.

@@ -13,6 +13,16 @@ def create_web_app(session,store,viewers,secret_key=None):
     async def favicon():
         return Response(image_bytes('logo.png'),media_type='image/png',headers={'Cache-Control':'no-cache'})
 
+    @app.get('/experimental-reports/{identifier}.html')
+    async def experimental_report(identifier:str):
+        # Capability URL: identifiers are random and previews expire on the
+        # next cleanup cycle. Never accept paths or user-provided filenames.
+        if len(identifier)!=32 or any(c not in '0123456789abcdef' for c in identifier):
+            return Response(status_code=404)
+        path=store.staging/'report-previews'/(identifier+'.html')
+        if not path.is_file():return Response(status_code=404)
+        return Response(path.read_bytes(),media_type='text/html',headers={'Cache-Control':'no-store','Content-Security-Policy':"default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'"})
+
     @app.get(PREFIX+'/{resource:path}')
     async def structure(request:Request,resource:str):
         import asyncio

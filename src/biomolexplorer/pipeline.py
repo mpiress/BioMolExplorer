@@ -112,7 +112,7 @@ def requires_curation(stage):
     if not stage_dependencies(stage):return False
     if stage['operation']=='redocking' and stage['parameters'].get('pdb_codes'):return False
     refs=[ref for group in stage.get('bindings',{}).values() for ref in input_sources(group)]
-    if refs and all('asset' in ref or ref.get('selector','auto')!='auto' for ref in refs):return False
+    if refs and all('asset' in ref or ref.get('selector','auto')!='auto' or ref.get('selection') for ref in refs):return False
     if not refs and any(stage['parameters'].get(k) for k in PATH_FIELDS):return False
     return True
 
@@ -164,9 +164,10 @@ def validate_pipeline(stages):
             if 'sources' in group and (set(group)!={'sources'} or not isinstance(group['sources'],list) or not group['sources']):
                 raise ValueError('Selecione ao menos um arquivo por entrada.')
             for binding in input_sources(group):
-                if not isinstance(binding,dict) or set(binding) - {'stage','asset','selector','compound_id','artifact_id'} or ('stage' in binding) == ('asset' in binding):
-                    raise ValueError('Escolha uma etapa ou um arquivo como entrada.')
-                if 'artifact_id' in binding and (not isinstance(binding['artifact_id'],str) or not re.fullmatch('[a-f0-9]{64}',binding['artifact_id']) or 'stage' not in binding or binding.get('selector','auto')=='auto'):
+                from .semantic_references import validate_reference as validate_semantic_reference
+                try:validate_semantic_reference(binding)
+                except ValueError as exc:raise ValueError(str(exc)) from None
+                if 'artifact_id' in binding and (not isinstance(binding['artifact_id'],str) or not re.fullmatch('[a-f0-9]{64}',binding['artifact_id']) or 'stage' not in binding):
                     raise ValueError('Identificador de artefato inválido.')
                 reference = binding.get('stage',binding.get('asset'))
                 if not isinstance(reference,str) or not re.fullmatch('[a-f0-9]{32}',reference):
@@ -208,10 +209,17 @@ def validate_pipeline(stages):
             if 'stage' not in binding:continue
             port = 'base_vina_path' if stage['operation'] == 'consensus' and field == 'base_input_path' else field
             source = by_id[binding['stage']]
+            from .semantic_references import validate_reference as validate_semantic_reference
+            validate_semantic_reference(binding,source)
             if source['operation'] == 'import_results' and not isinstance(source['parameters'].get('kind','other'),str):
                 raise ValueError('Tipo de importação inválido.')
             if not compatible(source,stage,port):
                 raise ValueError('Dados incompatíveis. Escolha uma saída do tipo esperado por esta entrada.')
+            if binding.get('output_port'):
+                from .artifact_contracts import port_types
+                from .flow import input_types
+                if not port_types(source['operation'],binding['output_port']) & input_types(stage,port):
+                    raise ValueError('A porta selecionada não é compatível com esta entrada.')
     return ordered
 
 
@@ -495,6 +503,9 @@ class PipelineService:
             prior=db.execute('SELECT * FROM runs WHERE id=?',(run_id,)).fetchone()
             assets=[dict(row) for row in db.execute('SELECT id,name,path FROM assets WHERE project_id=?',(prior['project_id'],))] if prior else []
             index_run(stages,run_id,assets)
+            if prior:
+                from .artifact_registry import register_run
+                register_run(db,prior['project_id'],run_id,stages)
             db.execute('UPDATE runs SET status=?,stages=?,updated=?,error=? WHERE id=?',
                        (status,json.dumps(stages),time.time(),error,run_id))
             if prior and prior['status'] in ACTIVE_RUNS and status not in ACTIVE_RUNS:
@@ -514,7 +525,8 @@ class PipelineService:
                             db.execute('SELECT id,path FROM assets WHERE project_id=?',(project_id,))}
                 if ref['asset'] not in assets:raise AccessDenied('Arquivo não autorizado.')
                 selected.append(assets[ref['asset']]);available.extend(assets.values());continue
-            files=[self.store.scoped_path(project_id,p) for p in results.get(ref['stage'],[])]
+            files=[self.store.scoped_path(project_id,p) for p in
+                   (ref.get('_resolved_paths') or results.get(ref['stage'],[]))]
             available.extend(files);selector=ref.get('selector','auto')
             if ref.get('artifact_id'):
                 from .artifacts import validate_reference
@@ -655,7 +667,7 @@ class PipelineService:
                     raise ValueError('Selecione um receptor preparado para o alvo do docking.')
                 selected.append(asset_path)
                 continue
-            upstream=results.get(ref['stage'])
+            upstream=ref.get('_resolved_paths') or results.get(ref['stage'])
             if not upstream:raise ValueError('A origem desta entrada não possui resultados disponíveis.')
             selector=ref.get('selector','auto')
             if selector!='auto':
@@ -679,12 +691,28 @@ class PipelineService:
                 if kind=='structures':
                     candidates=[p for p in candidates if p.name.count('.')==1]
                 selected.extend(candidates)
+            selection=ref.get('selection')
+            if selection:
+                from .selection_views import csv_view,path_matches
+                view_root=(directory or self.store.project_dir(project_id)/'.input-cache')/'selections'
+                chosen=[]
+                for candidate in selected[start:]:
+                    if candidate.suffix.lower()=='.csv':
+                        chosen.append(csv_view(candidate,selection,view_root))
+                    elif path_matches(candidate,selection):chosen.append(candidate)
+                selected[start:]=chosen
+                if not chosen:
+                    raise ValueError('A seleção não corresponde a nenhuma entidade disponível na origem.')
             if kind in ('structures','prepared_structures'):
                 chosen=selected[start:]
                 files=[Path(p) for p in upstream]
                 folders={p.parent for p in chosen}
                 if kind=='prepared_structures':folders|={p.parent.parent for p in chosen if p.parent.name=='Prepared'}
-                selected.extend(p for p in files if p.parent in folders and p.name in ('pdb_codes.csv','centers.csv'))
+                metadata=[p for p in files if p.parent in folders and p.name in ('pdb_codes.csv','centers.csv')]
+                if selection:
+                    from .selection_views import csv_view
+                    metadata=[csv_view(p,selection,view_root) if p.name=='pdb_codes.csv' else p for p in metadata]
+                selected.extend(metadata)
                 if kind=='prepared_structures':
                     receptors={p.name.split('.',1)[0] for p in chosen if '.dockprep.' in p.name}
                     ligands=set()
@@ -786,7 +814,8 @@ class PipelineService:
                         writer.writeheader();writer.writerows(coordinates)
         return destination,filename,selected
 
-    def _resolve(self, project_id, user_id, stage, results, input_directory=None, item=None, cache_only=False, pipeline=None):
+    def _resolve(self, project_id, user_id, stage, results, input_directory=None, item=None, cache_only=False, pipeline=None,
+                 current_run_id=None):
         from .artifacts import validate_reference
         from .artifact_choices import produced_files
         results=dict(results)
@@ -794,10 +823,12 @@ class PipelineService:
             if producer.get('operation')=='admet' and producer['id'] in results:
                 results[producer['id']]=[str(p) for p in produced_files(dict(producer,artifacts=results[producer['id']]))]
         stage=copy.deepcopy(stage)
+        from .artifact_registry import SemanticArtifactResolver
+        semantic=SemanticArtifactResolver(self.store,project_id,pipeline,results,current_run_id)
         for group in stage.get('bindings',{}).values():
             for ref in input_sources(group):
                 if 'stage' in ref:
-                    files=results.get(ref['stage'],[])
+                    files=semantic.resolve(ref);ref['_resolved_paths']=files
                     chosen=validate_reference(ref,files)
                     if ref.get('artifact_id'):
                         from .artifacts import slot_id,locator
@@ -811,7 +842,7 @@ class PipelineService:
             modes=[]
             for ref in input_sources(stage.get('bindings',{}).get('base_input_path',{})):
                 if 'stage' in ref:
-                    files=results.get(ref['stage'],[])
+                    files=ref.get('_resolved_paths') or results.get(ref['stage'],[])
                     selector=ref.get('selector','auto')
                     modes.append(prepared_receptor(selector) if selector!='auto' else any(prepared_receptor(p) for p in files))
                 elif 'asset' in ref:
@@ -906,7 +937,7 @@ class PipelineService:
                 continue
             binding=refs[0]
             if 'stage' in binding:
-                upstream = results.get(binding['stage'])
+                upstream = binding.get('_resolved_paths') or results.get(binding['stage'])
                 if not upstream:
                     raise ValueError('Uma entrada depende de uma etapa desativada ou sem resultados.')
                 path = select_input(upstream,field,binding.get('selector','auto'))
@@ -1316,7 +1347,8 @@ class PipelineService:
                         destination=file.with_suffix('.biomol-view.json')
                         write_view(destination,view);artifacts.append(str(destination))
             return artifacts
-        params = self._resolve(project_id,user_id,stage,results,stage_dir/'inputs',item,pipeline=execution_context(stages))
+        params = self._resolve(project_id,user_id,stage,results,stage_dir/'inputs',item,
+            pipeline=execution_context(stages),current_run_id=run_id)
         item['input_manifest']=input_manifests(stage,results,item.get('input_files'))
         from .stage_cache import runtime_signature
         item['processing_runtime']=runtime_signature(stage['operation'],str(self.worker_python or os.sys.executable),params)
@@ -1483,6 +1515,7 @@ class PipelineService:
             # pending/running stages are excluded by the candidate predicate.
             snapshot=json.loads(encoded)
             old=next((s for s in snapshot if (s['id']==stage['id'] or
+                      run_status in ACTIVE_RUNS and
                       s.get('operation')==stage['operation'] and s.get('cache_key')==key)
                       and s['status']=='succeeded'
                       and (s.get('artifacts') or stage['operation']=='redocking')),None)
@@ -1869,7 +1902,9 @@ class PipelineService:
         # Native/chemical input validation can be expensive. It must not prevent
         # cancel, pause or monitoring of this or another run.
         validated_snapshot=json.dumps(stages,sort_keys=True)
-        context=[dict(c,_execution_batches=s.get('batches',[])) for c,s in zip(candidate,stages)]
+        context=[dict(c,_execution_batches=s.get('batches',[]),
+                      _execution_artifact_records=s.get('artifact_records',[]))
+                 for c,s in zip(candidate,stages)]
         for group in configuration.get('bindings',{}).values():
             if any('stage' in ref and ref.get('selector','auto')=='auto' for ref in input_sources(group)):
                 raise ValueError('Escolha explicitamente os arquivos de entrada deste bloco antes de continuar.')

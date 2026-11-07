@@ -12,6 +12,7 @@ class UpdateNotice:
         self.ui, self.checker = ui, checker
         self.control = None
         self.task = None
+        self.downloading = False
 
     def user(self):
         try:
@@ -56,12 +57,31 @@ class UpdateNotice:
             close_dialog(self.ui.page, dialog)
             self.refresh(); self.ui.page.update()
         async def download(e):
-            await self.ui.page.launch_url(latest['download_url'])
-            await later(e)
+            if self.downloading:
+                return
+            self.downloading = True
+            button=e.control if e is not None else None
+            if button is not None:
+                button.disabled=True
+                button.content=self.ui.tr('Instalando atualização...')
+                button.update()
+            try:
+                await self.ui.call(self.checker.install,latest)
+            except Exception as exc:
+                self.ui.notify('Não foi possível instalar a atualização: '+str(exc))
+                if button is not None:
+                    button.disabled=False
+                    button.content=self.ui.tr('Instalar atualização')
+                    button.update()
+            else:
+                await later(e)
+                self.ui.notify('Atualização instalada com segurança. Reinicie o BioMolExplorer para usar a nova versão.')
+            finally:
+                self.downloading=False
         dialog = ft.AlertDialog(modal=False, title=ft.Text('Atualização disponível'),
             content=ft.Column([verbatim(ft.Text(latest['message'])), verbatim(ft.Text(latest['sha'][:12])),
-                ft.Text('Baixe a atualização da branch master. Instale após encerrar as análises e reinicie o aplicativo.')],
+                ft.Text('A atualização será validada e instalada automaticamente no ambiente atual. Reinicie o aplicativo após a conclusão.')],
                 tight=True, width=480),
             actions=[ft.TextButton('Lembrar em 24 horas', on_click=later),
-                ft.TextButton('Baixar atualização', on_click=download)])
+                ft.TextButton('Instalar atualização', on_click=download)])
         self.ui.page.show_dialog(dialog)

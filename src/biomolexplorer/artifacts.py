@@ -99,19 +99,29 @@ def records(item, run_id=None, *, decorate=True):
     if decorate:
         from .artifact_naming import name_records
         name_records([(r,item) for r in result])
+    from .artifact_contracts import infer_output_port,port_types
+    for record in result:
+        port=record.get('output_port') or infer_output_port(record.get('operation'),record.get('output'))
+        if port:record['output_port']=port
+        kinds=port_types(record.get('operation'),port) if port else set()
+        aliases={'structure':'structures','receptor':'receptor_pdb','ligand':'molecular_poses',
+                 'pose':'molecular_poses','scores':'scores','ranking':'scores'}
+        semantic_role=aliases.get(record.get('output'),record.get('output'))
+        record['artifact_type']=record.get('artifact_type') or (next(iter(kinds)) if len(kinds)==1 else semantic_role if semantic_role in kinds else 'other')
     return result
 
 
 def reference(record):
-    return {'stage':record['stage_id'], 'selector':record['selector'],
+    result={'stage':record['stage_id'], 'selector':record['selector'],
             'artifact_id':record['artifact_id']}
+    if record.get('output_port'):result['output_port']=record['output_port']
+    return result
 
 
 def validate_reference(ref, files):
     """Verify identity and availability before any consumer materializes inputs."""
     if 'stage' not in ref or ref.get('selector', 'auto') == 'auto':
-        if ref.get('artifact_id'):raise ValueError('Um artefato identificado exige um arquivo específico.')
-        return
+        if not ref.get('artifact_id'):return
     if ref.get('artifact_id'):
         from .artifact_naming import publication_metadata
         matching=[p for p in files if publication_metadata(p).get('artifact_id',slot_id(ref['stage'],locator(ref['stage'],p)))==ref['artifact_id']]
@@ -169,6 +179,21 @@ def index_run(stages, run_id, assets=()):
 
     from .artifact_naming import name_records
     name_records([(r,s) for s in stages for r in s['artifact_records']])
+    from .artifact_contracts import OUTPUT_PORTS,infer_output_port,port_types
+    for stage in stages:
+        ports=OUTPUT_PORTS.get(stage.get('operation'),{})
+        for record in stage.get('artifact_records',[]):
+            role=record.get('output')
+            # Publication assigns a semantic role.  New manifests map that
+            # role to a port without inspecting a storage path; filename
+            # heuristics are reserved for explicit legacy migration.
+            port=infer_output_port(stage.get('operation'),role)
+            if port:record['output_port']=port
+            kinds=port_types(stage.get('operation'),port) if port else set()
+            aliases={'structure':'structures','receptor':'receptor_pdb','ligand':'molecular_poses',
+                     'pose':'molecular_poses','scores':'scores','ranking':'scores'}
+            semantic_role=aliases.get(role,role)
+            record['artifact_type']=next(iter(kinds)) if len(kinds)==1 else semantic_role if semantic_role in kinds else 'other'
 
 
 def annotate_files(item, files, run_id=None):

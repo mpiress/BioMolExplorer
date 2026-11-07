@@ -33,6 +33,7 @@ class ProcessingSplash:
             self.control.content=None;self.control.content=self._card(title,description)
             if hasattr(self.page,'localize'):self.page.localize(self.control)
             self.page.overlay.append(self.control)
+        self.title.value=title;self.description.value=description;self.ring.semantics_label=title
         self.page.update()
 
     def hide(self,request):

@@ -97,13 +97,14 @@ class GraphLayoutAndFragmentTests(unittest.TestCase):
 @unittest.skipIf(ft is None, 'Install the ui extra to test Flet controls')
 class GraphNavigationTests(unittest.TestCase):
     def ui(self):
+        from test_frontend_navigation import Page
         async def call(function, *args):
             return function(*args)
         async def guard(action):
             await action()
         return SimpleNamespace(token='owner', call=call, guard=guard,
             store=SimpleNamespace(project=lambda token, project: None),
-            page=SimpleNamespace(update=lambda: None))
+            page=Page())
 
     def viewer(self, model):
         viewer = ResultsViewer(self.ui(), 'project', model)

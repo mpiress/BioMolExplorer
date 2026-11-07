@@ -1,4 +1,5 @@
 """Portable project snapshots, audit history and content-addressed file versions."""
+import copy
 import hashlib
 import json
 import os
@@ -90,9 +91,20 @@ def mirror(store, db, project_id):
     temporary.replace(root / 'project.json')
 
 
-def record(store, db, project_id, user_id, action, summary, before=None):
+def record(store, db, project_id, user_id, action, summary, before=None, reuse_snapshot=False):
     root = store.project_dir(project_id,db)
-    state = snapshot(store, db, project_id)
+    if reuse_snapshot and before is not None:
+        # Pipeline-only saves do not modify assets, results, members or files.
+        # Preserve the complete rollback snapshot while avoiding a second walk
+        # over every scientific artifact and a second serialization of runs.
+        state=copy.deepcopy(before)
+        project=dict(db.execute('SELECT * FROM projects WHERE id=?',(project_id,)).fetchone())
+        project['pipeline']=json.loads(project['pipeline']);project['tags']=json.loads(project['tags'])
+        state['project']=translate(project,str(root),'@project')
+        state['block_registry']=[dict(id=row[0],block_id=row[1]) for row in db.execute(
+            'SELECT stage_id,block_id FROM block_ids WHERE project_id=?',(project_id,))]
+    else:
+        state = snapshot(store, db, project_id)
     folder = root / '.history' / 'snapshots'
     folder.mkdir(parents=True, exist_ok=True)
     event_id = uuid4().hex

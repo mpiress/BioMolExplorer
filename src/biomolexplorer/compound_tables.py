@@ -40,6 +40,7 @@ class CompoundTables:
     def __init__(self,store):
         self.store=store
         self._snapshot=None
+        self._view=None
 
     @contextmanager
     def _reader(self,path):
@@ -131,23 +132,40 @@ class CompoundTables:
                 fields=fields+['normalized_score']
             if sort_by is not None and sort_by not in fields:
                 raise ValueError('Coluna de ordenação inválida.')
-            for index,original in enumerate(reader.rows):
+            # Keep one bounded view of the cached CSV. Authorization and the file
+            # stamp are checked on every request, including cache hits.
+            key=(version,query.lower(),sort_by,ascending,self.requires_compounds)
+            cacheable=isinstance(reader.rows,list)
+            view=self._view
+            if cacheable and view is not None and view[0]==key:
+                total,selected=view[1:]
+                matched=len(selected)
+            else:
+                needle=query.lower()
+                for index,original in enumerate(reader.rows):
+                    row=original
+                    if 'normalized_score' in fields and 'normalized_score' not in row:
+                        row=dict(row,normalized_score=row.get('min-max',''))
+                    total+=1
+                    if needle:
+                        identifier=row.get('molecule_chembl_id',row.get(fields[0],'')) or ''
+                        smiles=row.get('canonical_smiles') or ''
+                        searchable=identifier+' '+smiles if self.requires_compounds else ' '.join(str(v or '') for v in row.values())
+                        if needle not in searchable.lower():continue
+                    if cacheable or sort_by is not None or offset<=matched<offset+limit:
+                        selected.append((index,row))
+                    matched+=1
+                if sort_by is not None:
+                    numeric=sort_by in ('score','vina','dock6','normalized_score','z-score','min-max') or (
+                        sort_by not in ('molecule_chembl_id','canonical_smiles','receptor_id') and is_numeric(row.get(sort_by) for _,row in selected))
+                    selected=ordered(selected,lambda item:item[1].get(sort_by),ascending,numeric)
+                self._view=(key,total,selected) if cacheable else None
+            visible=selected[offset:offset+limit] if cacheable or sort_by is not None else selected
+            for index,original in visible:
                 row=dict(original)
-                if 'normalized_score' in fields and 'normalized_score' not in row:row['normalized_score']=row.get('min-max','')
-                total+=1
                 identifier=row.get('molecule_chembl_id',row.get(fields[0],'')) or ''
                 smiles=row.get('canonical_smiles') or ''
-                searchable=identifier+' '+smiles if self.requires_compounds else ' '.join(str(v or '') for v in row.values())
-                if query.lower() not in searchable.lower():
-                    continue
-                record={'index':index,'id':identifier,'smiles':smiles,'links':compound_links(row),'properties':row}
-                if sort_by is not None:selected.append(record)
-                elif offset<=matched<offset+limit:rows.append(record)
-                matched+=1
-        if sort_by is not None:
-            numeric=sort_by in ('score','vina','dock6','normalized_score','z-score','min-max') or (
-                sort_by not in ('molecule_chembl_id','canonical_smiles','receptor_id') and is_numeric(r['properties'].get(sort_by) for r in selected))
-            rows=ordered(selected,lambda row:row['properties'].get(sort_by),ascending,numeric)[offset:offset+limit]
+                rows.append({'index':index,'id':identifier,'smiles':smiles,'links':compound_links(row),'properties':row})
         project=self.store.project(token,project_id)
         with self.store.connect() as db:
             active=db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running','awaiting_input')",(project_id,)).fetchone()

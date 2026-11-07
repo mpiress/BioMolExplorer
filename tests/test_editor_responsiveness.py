@@ -29,6 +29,26 @@ class EditorResponsivenessTests(unittest.TestCase):
             parse.assert_not_called()
         self.assertTrue(self.page.dialogs[-1].open)
 
+    def test_experimental_report_preview_is_bounded_and_keeps_canvas_controls(self):
+        self.ui.schedule_save=lambda:None
+        editor=FlowCanvas(self.ui,True);original_node=editor.nodes[self.stage['id']]
+        report={'schema':'biomolexplorer.experimental-report','schema_version':1,'generated_at':'2026-01-01T00:00:00Z',
+            'project':{'id':self.pid,'name':'Large study','description':'Study description','revision':1},
+            'pipeline':[dict(new_stage('fingerprints'),block_id=f'B{i:03d}') for i in range(100)],
+            'executions':[{'id':f'run-{i}','status':'succeeded','created':i,'stages':[]} for i in range(500)],
+            'artifacts':[{'artifact_id':str(i),'output_port':'compounds','state':'available','artifact_type':'table'} for i in range(2000)],
+            'results':{'tables':[],'figures':[]},'notes':{'en':'note','pt':'nota'}}
+        async def scenario():
+            report['document_scope']={'execution_count':500,'artifact_count':2000}
+            with patch('biomolexplorer.experimental_report.build_report_preview',return_value=report), patch('biomolexplorer.experimental_report.build_report') as full:
+                full.side_effect=AssertionError('Opening a preview must not analyze results')
+                await editor.export_experimental_report(None)
+        asyncio.run(scenario())
+        dialog=self.page.dialogs[-1]
+        self.assertLess(len(list(walk(dialog))),250)
+        self.assertIs(editor.nodes[self.stage['id']],original_node)
+        self.assertIn(editor.stack.controls[0],editor.stack.controls)
+
     def test_toolbar_add_uses_visible_viewport_and_unlink_resets_input_dependent_state(self):
         self.ui.schedule_save=lambda:None
         editor=FlowCanvas(self.ui,True)

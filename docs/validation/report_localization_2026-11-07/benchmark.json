@@ -1,0 +1,12 @@
+{
+  "scenario": {
+    "stages": 4,
+    "tables": 32,
+    "rows_per_table": 1000
+  },
+  "full_seconds": 1.2141254859998298,
+  "preview_median_seconds": 0.0008074604993453249,
+  "preview_max_seconds": 0.0015629619992978405,
+  "charts": 8,
+  "datasets_with_metrics": 32
+}

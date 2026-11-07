@@ -90,11 +90,22 @@ def verify(store,pid,stage,entry,snapshot,results):
             return True
         if not original_inputs(entry):return False
         asset_ids=asset_references(stage)
-        for asset in asset_ids:
+        # One project-scoped query per bounded batch rather than a connection
+        # and query for each referenced asset (also respects SQLite bind limits).
+        asset_rows={}
+        asset_ids=list(asset_ids)
+        if asset_ids:
             with store.connect() as db:
-                row=db.execute('SELECT path FROM assets WHERE project_id=? AND id=?',(pid,asset)).fetchone()
+                for start in range(0,len(asset_ids),500):
+                    batch=asset_ids[start:start+500]
+                    placeholders=','.join('?' for _ in batch)
+                    asset_rows.update(db.execute(
+                        f'SELECT id,path FROM assets WHERE project_id=? AND id IN ({placeholders})',
+                        (pid,*batch)).fetchall())
+        for asset in asset_ids:
+            row=asset_rows.get(asset)
             if row is None:return False
-            asset_path=str(_scoped(root,row[0]).resolve())
+            asset_path=str(_scoped(root,row).resolve())
             sha=entry.get('source_manifest',{}).get(asset)
             if sha is not None:
                 if sha!=input_digest(asset_path):return False

@@ -54,7 +54,7 @@ class LayoutTests(unittest.TestCase):
             event=lambda *args:lambda e:None,save_draft=None,preset_dialog=None,run_pipeline=None)
         controls=list(walk(FlowCanvas(ui,True).build()))
         sections=[c for c in controls if isinstance(c,ft.ExpansionTile)]
-        self.assertEqual(len(sections),4)
+        self.assertEqual(len(sections),5)
         self.assertTrue(all(not s.expanded for s in sections))
         search=next(c for c in controls if isinstance(c,ft.TextField))
         sections[0].expanded=True
@@ -68,7 +68,7 @@ class LayoutTests(unittest.TestCase):
         self.assertTrue(all(not s.visible for s in sections))
         search.value='';search.on_change(None)
         self.assertTrue(all(s.visible for s in sections))
-        self.assertEqual([s.expanded for s in sections],[True,False,False,False])
+        self.assertEqual([s.expanded for s in sections],[True,False,False,False,False])
 
 
 if __name__=='__main__':unittest.main()

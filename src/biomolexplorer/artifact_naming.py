@@ -460,6 +460,24 @@ def name_records(entries):
             structures=[k for k in categories if k in ('PDB','REC')]
             if structures:categories=structures
         source=categories[0] if len(categories)==1 else 'MIX-'+hashlib.sha256(json.dumps(categories).encode()).hexdigest()[:8] if categories else None
+        # Analytical transformations must retain the semantic route, not only
+        # the immediate content type.  MOL -> BBB+ -> PubChem SIM -> BBB+, for
+        # example, remains MOL-BBB+-SIM and then MOL-BBB+-SIM-BBB+.  Provider
+        # labels are deliberately omitted because TIPO carries the first
+        # meaningful category and the operation already identifies PubChem.
+        if op in ('retrieve_pubchem','admet','fingerprints','similarity','graphs') and immediate:
+            lineage=[]
+            for parent,parent_stage in immediate:
+                parent_kind=kind_of(parent,parent_stage)
+                parent_source=describe(parent,parent_stage).get('source')
+                if parent_source in (None,'INPUT','ChEMBL','PubChem','ZINC','PDB'):
+                    value=parent_kind
+                elif parent_source==parent_kind or parent_source.endswith('-'+parent_kind):
+                    value=parent_source
+                else:value=parent_source+'-'+parent_kind
+                lineage.append(value)
+            lineage=sorted(set(lineage))
+            source=lineage[0] if len(lineage)==1 else 'MIX-'+hashlib.sha256(json.dumps(lineage).encode()).hexdigest()[:8]
         if source is None:
             from .dataset_identity import file_tag
             tags={file_tag(ref.get('path',ref.get('name',''))) for ref in inputs.get(port,[])}-{'INPUT'}

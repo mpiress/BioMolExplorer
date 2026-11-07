@@ -1,4 +1,5 @@
 """Project authorization and execution contracts, independent of Flet."""
+import copy
 import csv
 import os
 import sys
@@ -63,6 +64,29 @@ class WorkspaceTests(unittest.TestCase):
         guest_id=self.store.user(self.guest)['id']
         self.store.revoke(self.owner,self.pid,guest_id)
         with self.assertRaises(AccessDenied):self.store.project(self.guest,self.pid)
+
+    def test_optimized_pipeline_snapshot_remains_fully_rollback_capable(self):
+        stage=new_stage('fingerprints');saved=self.store.save_pipeline(self.owner,self.pid,[stage],0)
+        stage=saved['pipeline'][0];stage['parameters']['radius']=3
+        self.store.save_pipeline(self.owner,self.pid,[stage],saved['revision'])
+        event=next(item for item in self.store.history(self.owner,self.pid) if item['action']=='pipeline')
+        restored=self.store.rollback(self.owner,self.pid,event['id'])
+        self.assertEqual(restored['pipeline'][0]['parameters']['radius'],new_stage('fingerprints')['parameters']['radius'])
+
+    def test_unchanged_saved_pipeline_is_a_true_noop(self):
+        saved=self.store.save_pipeline(self.owner,self.pid,[new_stage('fingerprints')],0)
+        history=len(self.store.history(self.owner,self.pid));revision=saved['revision']
+        repeated=self.store.save_pipeline(self.owner,self.pid,saved['pipeline'],revision)
+        self.assertEqual(repeated['revision'],revision);self.assertEqual(len(self.store.history(self.owner,self.pid)),history)
+
+    def test_presentation_only_save_accepts_layout_but_rejects_scientific_change(self):
+        stage=new_stage('fingerprints')
+        saved=self.store.save_pipeline(self.owner,self.pid,[stage],0)
+        moved=copy.deepcopy(saved['pipeline']);moved[0]['position']={'x':500,'y':300}
+        saved=self.store.save_pipeline(self.owner,self.pid,moved,saved['revision'],presentation_only=True)
+        changed=copy.deepcopy(saved['pipeline']);changed[0]['parameters']['radius']=3
+        with self.assertRaisesRegex(ValueError,'alteração científica'):
+            self.store.save_pipeline(self.owner,self.pid,changed,saved['revision'],presentation_only=True)
 
     def test_metadata_archive_delete_and_revision_conflict(self):
         self.store.update_project(self.owner,self.pid,'Novo','Descrição','#6366F1',['teste'],True)

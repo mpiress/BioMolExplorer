@@ -193,23 +193,6 @@ def plan(db,pid,pipeline,project_root=None):
     for _,items in runs:
         for item in items:
             if item.get('batches'):item['batches']=[b for b in item['batches'] if id(b) not in invalid_units]
-    from .artifact_choices import matches_selector
-    from .artifacts import slot_id,locator
-    def removed_reference(reference):
-        if reference.get('selector','auto')=='auto':return False
-        owner=reference.get('stage')
-        if owner not in selection_owners:return False
-        return any(owner in owners and (reference.get('artifact_id')==slot_id(owner,locator(owner,path)) or
-                   matches_selector(path,reference.get('selector',''))) for path,owners in lost_owners.items())
-    for stage in pipeline:
-        for field,group in list(stage.get('bindings',{}).items()):
-            old=sources(group);kept=[r for r in old if not removed_reference(r)]
-            if old==kept:continue
-            if not kept:kept=[dict(stage=r['stage'],selector='auto') for r in old if r.get('stage') in current]
-            value=pack(kept)
-            if value:stage['bindings'][field]=value
-            else:stage['bindings'].pop(field,None)
-            for key in ('files','filename','input_file','mol_filename','graph_inputs','dataset_origin'):stage.get('parameters',{}).pop(key,None)
     for _,items in runs:
         for item in items:
             if not item.get('dependency_obsolete'):
@@ -219,6 +202,32 @@ def plan(db,pid,pipeline,project_root=None):
                 protected.update(batch.get('artifacts',[]))
                 for paths in batch.get('input_files',{}).values():protected.update(paths)
     protected.update(row[0] for row in db.execute('SELECT path FROM assets WHERE project_id=?',(pid,)))
+    # Reset a physical legacy selector only when its exact artifact will
+    # actually be removed.  Shared/reused files are protected above and must
+    # keep their semantic artifact reference during curation.
+    removed_paths=candidates-protected
+    from .artifact_choices import matches_selector
+    from .artifacts import slot_id,locator
+    def removed_reference(reference):
+        if reference.get('selector','auto')=='auto':return False
+        owner=reference.get('stage')
+        if owner not in selection_owners:return False
+        return any(path in removed_paths and owner in owners and
+                   (reference.get('artifact_id')==slot_id(owner,locator(owner,path)) or
+                    matches_selector(path,reference.get('selector','')))
+                   for path,owners in lost_owners.items())
+    for stage in pipeline:
+        for field,group in list(stage.get('bindings',{}).items()):
+            old=sources(group);kept=[r for r in old if not removed_reference(r)]
+            if old==kept:continue
+            if not kept:
+                kept=[{key:copy.deepcopy(value) for key,value in r.items()
+                       if key not in ('artifact_id','selector')}|{'selector':'auto'}
+                      for r in old if r.get('stage') in current]
+            value=pack(kept)
+            if value:stage['bindings'][field]=value
+            else:stage['bindings'].pop(field,None)
+            for key in ('files','filename','input_file','mol_filename','graph_inputs','dataset_origin'):stage.get('parameters',{}).pop(key,None)
     blocks=[dict(id=key,name=value) for key,value in changed_blocks.items()]
     confirmation=digest(dict(pipeline=[signature(s) for s in pipeline],removed=sorted(candidates),blocks=blocks))
     return dict(runs=runs,pipeline=pipeline,paths=sorted(candidates-protected),affected=affected,blocks=blocks,

@@ -19,28 +19,8 @@ PREFIX='/molecular-viewer'
 ASSETS={'3Dmol-min.js','pdb-viewer.js','pdb-viewer.css','docking-viewer.js','logo.png'}
 PRIVATE_HEADERS={'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff',
     'Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data: blob:; worker-src 'self' blob:; base-uri 'none'; frame-ancestors 'none'"}
-TEXT={
- 'pt':{'viewer':'Estrutura 3D','representation':'Representação','cartoon':'Fitas + ligantes','sticks':'Bastões','spheres':'Esferas','lines':'Linhas',
-       'color':'Colorir por','chain':'Cadeia','element':'Elemento','spectrum':'Sequência','model':'Modelo','all':'Todas as cadeias',
-       'ligands':'Ligantes','water':'Água','center':'Recentrar','fullscreen':'Tela inteira','snapshot':'Salvar imagem',
-       'hint':'Arraste para girar · Roda do mouse para zoom · Botão direito para deslocar',
-       'loading':'Carregando estrutura…','error':'Não foi possível abrir a estrutura. Volte ao projeto e abra o visualizador novamente.',
-       'webgl':'Seu navegador não conseguiu iniciar o WebGL. Ative a aceleração gráfica ou use outro navegador.',
-       'atoms':'átomos','chains':'cadeias','picked':'Selecione um átomo para ver seus detalhes.',
-       'conformer':'Conformero gerado localmente a partir do SMILES; não representa uma pose de docking.'},
- 'en':{'viewer':'3D structure','representation':'Representation','cartoon':'Ribbons + ligands','sticks':'Sticks','spheres':'Spheres','lines':'Lines',
-       'color':'Color by','chain':'Chain','element':'Element','spectrum':'Sequence','model':'Model','all':'All chains',
-       'ligands':'Ligands','water':'Water','center':'Recenter','fullscreen':'Fullscreen','snapshot':'Save image',
-       'hint':'Drag to rotate · Mouse wheel to zoom · Right drag to pan',
-       'loading':'Loading structure…','error':'Unable to open the structure. Return to the project and open the viewer again.',
-       'webgl':'Your browser could not start WebGL. Enable graphics acceleration or use another browser.',
-       'atoms':'atoms','chains':'chains','picked':'Select an atom to see its details.',
-       'conformer':'Conformer generated locally from SMILES; this is not a docking pose.'}}
+from .i18n import locales,localized_dictionary
 
-TEXT['pt'].update(receptor_style='Estilo do receptor',ligand_style='Estilo do ligante',hydrogens='Hidrogênios do ligante',
-    hydrogen_hint='Exibe apenas os hidrogênios presentes no arquivo.',interaction_view='Interações 2D',close='Voltar ao 3D')
-TEXT['en'].update(receptor_style='Receptor style',ligand_style='Ligand style',hydrogens='Ligand hydrogens',
-    hydrogen_hint='Shows only hydrogen atoms present in the file.',interaction_view='2D interactions',close='Back to 3D')
 
 @lru_cache(maxsize=32)
 def _asset_digest(name,mtime_ns,size):
@@ -53,12 +33,13 @@ def _asset_path(name):
 
 
 def viewer_document(name,language='pt',prefix=PREFIX,generated=False,scene=False):
-    language=language if language in TEXT else 'pt'
-    labels=TEXT[language]
+    language=language if language in locales() else 'en'
+    labels=localized_dictionary(language,'viewer')
     file_format=Path(name).suffix.lower().lstrip('.')
     ligand='.lig.' in name.lower() or file_format=='sdf'
     config=json.dumps({'name':name,'labels':labels,'format':file_format if file_format in ('pdb','pdbqt','mol2','sdf') else 'pdb',
         'ligand':ligand,'generated':generated,'scene':scene,'language':language,
+        'scene_labels':localized_dictionary(language,'scene'),
         'representation':'sticks' if ligand or file_format=='mol2' else 'cartoon'},ensure_ascii=False).replace('<','\\u003c').replace('>','\\u003e').replace('&','\\u0026')
     source=(RESOURCE/'pdb-viewer.html').read_text(encoding='utf-8')
     for asset in ASSETS:
@@ -184,8 +165,7 @@ class StructureViewers:
                                      record['language'],prefix,generated=record.get('generated',False))
             return 200,'text/html; charset=utf-8',document.encode(),PRIVATE_HEADERS
         except (AccessDenied,FileNotFoundError,ValueError,OSError):
-            message = ('Visualização expirada ou indisponível. Retorne ao projeto e abra novamente.' if language == 'pt' else
-                       'Visualization expired or unavailable. Return to the project and reopen it.')
+            message=localized_dictionary(language if language in locales() else 'en','viewer')['unavailable']
             return 403,'text/plain; charset=utf-8',message.encode('utf-8'),PRIVATE_HEADERS
 
     def url(self,key,web=False,page_url=None):

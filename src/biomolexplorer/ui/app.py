@@ -210,13 +210,14 @@ class WorkspaceUI(ProjectTools):
                 on_language()
             else:
                 self.page.update()
+        from biomolexplorer.i18n import locales
         language_choice=ft.PopupMenuButton(content=flag(self.language),
             disabled=bool(getattr(self,'current_run',None)),
             tooltip=ft.Tooltip(message=self.tr('Selecionar idioma'),exclude_from_semantics=True),
             width=48,height=48,menu_position=ft.PopupMenuPosition.UNDER,
             items=[ft.PopupMenuItem(content=flag(code),data=code,
                 tooltip=label,on_click=change) for code,label in
-                [('pt','Português (Brasil)'),('en','English (United States)')]])
+                [(code,info['name']) for code,info in locales().items()]])
         brand=wordmark(190)
         update_notice=getattr(self,'update_notice',None)
         bar=ft.Container(height=76,padding=ft.Padding.symmetric(horizontal=32),bgcolor='#FFFFFF',
@@ -911,6 +912,9 @@ class WorkspaceUI(ProjectTools):
                 self.editing_stage=False
                 self._dialog_request+=1
         dialog.on_dismiss=dismissed
+        # Keep the logical dialog state deterministic for tests and custom
+        # Page adapters; Flet's real ``show_dialog`` also sets this flag.
+        dialog.open=True
         self.page.show_dialog(dialog)
 
     def event_action(self,handler,configuration_dialog=None,processing_title=None):
@@ -1039,7 +1043,12 @@ class WorkspaceUI(ProjectTools):
             return
         if not self.dirty and not verify_results:return True
         sent=copy.deepcopy(project['pipeline'])
-        proposal=await self.call(self.store.result_removal_plan,token,project['id'],sent)
+        from biomolexplorer.result_state import signature
+        before={stage['id']:signature(stage) for stage in self.base_pipeline}
+        after={stage['id']:signature(stage) for stage in sent}
+        presentation_only=not verify_results and all(stage_id in after and after[stage_id]==value for stage_id,value in before.items())
+        proposal=({'affected':0,'blocks':[],'active_conflicts':[],'confirmation':None}
+            if presentation_only else await self.call(self.store.result_removal_plan,token,project['id'],sent))
         prune=bool(proposal['affected'])
         if prune:
             runs=await self.call(self.store.list_runs,token,project['id'])
@@ -1065,7 +1074,7 @@ class WorkspaceUI(ProjectTools):
                 return False
             if self.token!=token or self.current is not project:return
         if not self.dirty and not prune:return True
-        saved=await self.call(self.store.save_pipeline,token,project['id'],sent,project['revision'],base_pipeline=self.base_pipeline,prune_results=prune,confirmation=proposal['confirmation'] if prune else None)
+        saved=await self.call(self.store.save_pipeline,token,project['id'],sent,project['revision'],base_pipeline=self.base_pipeline,prune_results=prune,confirmation=proposal['confirmation'] if prune else None,presentation_only=presentation_only)
         if self.token != token or self.current is not project:
             return
         previous_pipeline=project['pipeline']
@@ -1654,10 +1663,13 @@ class WorkspaceUI(ProjectTools):
         if cached and cached[0]==key:return cached[1]
         snapshot=copy.deepcopy(run);selection=copy.deepcopy(pending)
         async def prepare():
-            def work():
-                assets=self.store.assets(token,pid)
-                return prepare_selection_data(self.store,token,snapshot,selection,assets)
-            return await asyncio.to_thread(work)
+            # Route blocking work through the UI's single async adapter.  A
+            # nested ``to_thread`` left its completion future orphaned when a
+            # short-lived event loop opened this dialog (and on repeated test
+            # loops), so the selector could wait forever although its worker
+            # had already become idle.
+            assets=await self.call(self.store.assets,token,pid)
+            return await self.call(prepare_selection_data,self.store,token,snapshot,selection,assets)
         task=asyncio.create_task(prepare())
         def finished(task):
             if not task.cancelled() and task.exception():
@@ -1704,7 +1716,11 @@ class WorkspaceUI(ProjectTools):
         cached=getattr(self,'_selection_preparation',None)
         if cached and cached[1].done() and (cached[1].cancelled() or cached[1].exception()):self._selection_preparation=None
         prepared=await asyncio.shield(self.prepare_pending_inputs(run,pending))
-        fresh_files=await asyncio.to_thread(selection_file_state,prepared['paths'])
+        # This is a bounded stat-only freshness check.  Keeping it on the UI
+        # loop avoids queuing a second executor job behind the preparation
+        # task, which can deadlock short-lived event loops used by dialogs and
+        # tests while adding no useful I/O parallelism.
+        fresh_files=selection_file_state(prepared['paths'])
         if prepared['assets']!=assets or fresh_files!=prepared['file_state'] or prepared['files_before']!=prepared['file_state']:
             self._selection_preparation=None
             prepared=await asyncio.shield(self.prepare_pending_inputs(run,pending))
@@ -1851,7 +1867,8 @@ def main():
     parser.add_argument('--log-dir',type=Path,help='Diretório central dos logs da interface e dos workers.')
     parser.add_argument('--worker-python',type=Path)
     parser.add_argument('--dock6-path',type=Path)
-    parser.add_argument('--language',choices=('en','pt'),default='en',help='Initial interface language; users can change it on the login screen.')
+    from biomolexplorer.i18n import locales
+    parser.add_argument('--language',choices=tuple(locales()),default='en',help='Initial interface language; users can change it on the login screen.')
     args=parser.parse_args()
     if args.no_browser:
         os.environ['FLET_FORCE_WEB_SERVER']='true'

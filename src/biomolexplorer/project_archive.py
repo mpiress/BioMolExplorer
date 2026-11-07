@@ -210,6 +210,13 @@ def import_project(store, token, archive_path, directory):
                     for stage in run['stages']:
                         stage.pop('cache_key', None)  # Adopt using rebased configuration and verified input/output hashes.
                 restore_database(store, db, project['id'], state, owner=user['id'])
+                # Imported runs did not exist when the process-level startup
+                # migration ran.  Index them now and upgrade only references
+                # whose semantic port is unambiguous.
+                from .artifact_registry import backfill
+                from .semantic_references import migrate_project_references
+                backfill(db)
+                migrate_project_references(db,project['id'])
                 for event in manifest['history']:
                     db.execute('INSERT INTO project_history VALUES (?,?,?,?,?,?,?,?,?)',
                                (mapping[event['id']], project['id'], None, event['actor_name'], event['actor_email'],

@@ -44,6 +44,17 @@ class PreparationSettingsTests(unittest.TestCase):
             self.assertEqual(set(panel.settings[role]),set(DEFAULTS))
             self.assertNotIn('Chimera',panel.settings[role]['charge_type'].label)
 
+    def test_redocking_shared_switches_keep_external_labels_in_responsive_layout(self):
+        stage=new_stage('redocking');form=self.form(stage);layout=form.layout()
+        from test_frontend_navigation import walk
+        controls=list(walk(layout))
+        for role in ('receptor','ligand'):
+            for switch in (form.preparation_settings.settings[role][key]
+                           for key in ('remove_solvent','remove_hydrogens','add_hydrogens','minimize')):
+                label=switch._settings_label
+                self.assertIsNone(switch.label)
+                self.assertTrue(any(isinstance(control,ft.Text) and control.value==label for control in controls))
+
     def test_independent_settings_survive_save_and_reopen(self):
         form=self.form();panel=form.preparation_settings
         panel.settings['receptor']['add_hydrogens'].value=False

@@ -444,3 +444,34 @@ ao worker e controla também os checkpoints, sem novas opções na interface.
 ## Contrato atual de execução e resultados
 
 [Ordem do DAG, seleção tardia, pausa/cancelamento, limpeza e reúso incremental](projects.md#execucao-selecao-tardia-e-preservacao-de-resultados). [Nomes públicos e linhagem](projects.md#nomes-publicos-e-rastreabilidade).
+
+## Artefatos científicos e referências semânticas
+
+As conexões novas persistem o identificador do bloco produtor, a porta tipada,
+o modo dinâmico ou fixo e, quando aplicável, uma seleção de entidades. O
+executor segue `referência → manifesto da execução → ocorrência do artefato →
+entidade → armazenamento`; nomes de arquivos são usados somente pelos
+adaptadores das ferramentas e pela compatibilidade explícita com projetos
+antigos. `artifact_contracts.py` é a definição compartilhada de tipos,
+cardinalidade e compatibilidade usada pelo canvas, validador e executor.
+
+O registry SQLite registra manifestos, ocorrências imutáveis, hashes,
+dependências, proveniência e entidades. A publicação indexa automaticamente
+compostos, estruturas/cadeias, receptores, poses, comunidades e pares. Uma
+seleção como `pdb:4M0E, chain:A` pode ser configurada antes da recuperação; após
+a publicação, ela é conferida contra o índice e materializada apenas na
+fronteira do programa científico. Seleções múltiplas de compostos criam uma
+visão determinística em `.input-cache`, sem alterar o artefato de origem.
+
+Referências dinâmicas acompanham a porta da execução corrente. Referências
+fixas incluem execução e identidade do artefato e são resolvidas pelo manifesto
+histórico, inclusive quando a mesma ocorrência foi reutilizada por mais de um
+consumidor. O cache mantém sua assinatura científica; compartilhamento entre
+blocos equivalentes é permitido durante a execução ativa, sem fazer um bloco
+novo herdar silenciosamente o resultado histórico de outro ID.
+
+Na abertura, gravação e importação, referências antigas recebem uma porta
+somente quando há uma única compatibilidade válida. Casos incompatíveis ou
+ambíguos permanecem intactos para revisão e são registrados em
+`artifact_migration_issues`. O backfill é idempotente e não move, renomeia nem
+reassocia silenciosamente arquivos científicos.

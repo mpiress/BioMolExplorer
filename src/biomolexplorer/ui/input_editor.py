@@ -20,6 +20,8 @@ class InputEditor:
         self.selection_signature=None
         self.selection_box=ft.Column(spacing=12)
         self.compound_fields={}
+        self.entity_fields={}
+        self.reference_metadata={}
         self.on_change=None
         self.box=ft.Column(spacing=24)
         self.value=stage['parameters'].get(field['name'])
@@ -42,7 +44,7 @@ class InputEditor:
         self.refresh_selection(self.initial_references)
 
     def refresh_selection(self, references=None):
-        signature=[(source.value,selector.value) for source,selector,_ in self.rows]
+        signature=[(source.value,selector.value,self.entity_fields.get(id(source)).value if id(source) in self.entity_fields else '') for source,selector,_ in self.rows]
         if signature==self.selection_signature:
             if self.selection:
                 for _,selector,_ in self.rows:selector.visible=False
@@ -108,10 +110,38 @@ class InputEditor:
             if source.value and source.value!='configured-path':
                 kind,identifier=source.value.split(':',1)
                 ref={kind:identifier,'selector':selector.value or 'auto'}
+                if kind=='stage':ref.update(copy.deepcopy(self.reference_metadata.get(id(source),{})))
+                if kind=='stage':
+                    from biomolexplorer.artifact_contracts import output_port
+                    producer=next((stage for stage in self.ui.current['pipeline'] if stage['id']==identifier),None)
+                    port=output_port(producer['operation'],self.expected) if producer else None
+                    if port:ref['output_port']=port
+                entity=self.entity_fields.get(id(source))
+                if entity and entity.value:
+                    from biomolexplorer.semantic_references import parse_selection
+                    ref['selection']=parse_selection(entity.value)
                 compound=self.compound_fields.get(id(source))
                 if compound and compound.value:ref['compound_id']=compound.value
                 refs.append(ref)
         return refs
+
+    def semantic_port(self,source):
+        if not source.value or not source.value.startswith('stage:'):return None
+        identifier=source.value.split(':',1)[1]
+        saved=self.reference_metadata.get(id(source),{}).get('output_port')
+        if saved:return saved
+        from biomolexplorer.artifact_contracts import output_port
+        producer=next((stage for stage in self.ui.current['pipeline'] if stage['id']==identifier),None)
+        return output_port(producer['operation'],self.expected) if producer else None
+
+    def update_semantic_controls(self,source,selector,port_label,mode):
+        port=self.semantic_port(source)
+        selector.visible=not bool(port)
+        port_label.value=('Saída científica: '+port+' · disponível após executar o bloco produtor'
+                          if port else 'Origem legada: selecione o resultado físico compatível')
+        port_label.color='#0F766E' if port else '#B45309'
+        port_label.visible=bool(source.value and source.value!='configured-path')
+        mode.visible=bool(port)
 
     def source_options(self):
         options=[ft.DropdownOption(key='',text='Conectar no canvas / selecionar arquivo')]
@@ -190,19 +220,41 @@ class InputEditor:
         ref=reference or {}
         value='stage:'+ref['stage'] if 'stage' in ref else 'asset:'+ref['asset'] if 'asset' in ref else ''
         source=ft.Dropdown(label=self.field['label'],value=value,options=self.source_options(),disabled=not self.writable)
+        self.reference_metadata[id(source)]={key:copy.deepcopy(ref[key]) for key in
+            ('output_port','mode','run_id','artifact_id') if key in ref}
         selector=ft.Dropdown(label='Receptor que deseja utilizar' if self.stage['operation'] in ('prepare_structures','docking_vina','docking_dock6') and self.field['name']=='base_input_path' else 'Resultado usado nesta entrada',value=logical_path(ref.get('selector','auto')),options=self.selectors(value),disabled=not self.writable)
         if selector.value not in {o.key for o in selector.options}:
             if self.is_target:selector.value='auto'
             else:selector.options.append(ft.DropdownOption(key=selector.value,text=selector.value))
         if self.is_target and source.value not in {o.key for o in source.options}:source.value=''
+        pinned=bool(ref.get('run_id') and ref.get('artifact_id'))
+        mode=ft.Dropdown(label='Vínculo da referência',value=ref.get('mode','current'),disabled=not self.writable,
+            options=[ft.DropdownOption(key='current',text='Dinâmica · execução corrente')]+(
+                [ft.DropdownOption(key='pinned',text='Fixa · execução histórica')] if pinned else []))
+        port_label=ft.Text(size=12)
         def change(e):
+            self.reference_metadata[id(source)]={}
             selector.options=self.selectors(source.value);selector.value='auto'
+            mode.value='current';self.update_semantic_controls(source,selector,port_label,mode)
             self.changed()
         source.on_select=change
         selector.on_select=lambda e:self.changed()
         source.expand=selector.expand=True
         from .settings_layout import grid
-        input_controls=[grid([source,selector])]
+        def mode_changed(e):
+            metadata=self.reference_metadata.setdefault(id(source),{})
+            metadata['mode']=mode.value
+            self.changed()
+        mode.on_select=mode_changed
+        self.update_semantic_controls(source,selector,port_label,mode)
+        input_controls=[grid([source,selector]),port_label,mode]
+        from biomolexplorer.semantic_references import selection_text
+        entity=ft.TextField(label='Entidades científicas (opcional)',
+            hint_text='Ex.: pdb:4M0E, chain:A ou CHEMBL25, CHEMBL120',
+            value=selection_text(ref.get('selection')),disabled=not self.writable)
+        entity.on_change=lambda e:self.changed()
+        self.entity_fields[id(source)]=entity
+        input_controls.append(entity)
         row=ft.Column(input_controls,spacing=20,horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
         if self.stage['operation'] in ('docking_vina','docking_dock6') and self.is_ligand:
             compound=ft.Dropdown(label='Composto para docking (opcional)',value=ref.get('compound_id',''),
@@ -239,12 +291,17 @@ class InputEditor:
             row.controls.append(compound_picker.control)
             sync_compounds()
         item=(source,selector,row)
-        def remove(e):self.rows.remove(item);self.compound_fields.pop(id(source),None);self.box.controls.remove(row);self.changed()
+        def remove(e):
+            self.rows.remove(item);self.compound_fields.pop(id(source),None);self.entity_fields.pop(id(source),None)
+            self.reference_metadata.pop(id(source),None)
+            self.box.controls.remove(row);self.changed()
         row.controls.append(ft.TextButton('Remover entrada',icon=ft.Icons.REMOVE_CIRCLE_OUTLINE,on_click=remove,disabled=not self.writable))
         self.rows.append(item);self.box.controls.append(row)
 
     def changed(self):
-        for _,selector,_ in self.rows:selector.visible=True
+        for source,selector,row in self.rows:
+            if self.semantic_port(source):selector.visible=False
+            elif not self.selection:selector.visible=True
         self.refresh_selection()
         if self.on_change:self.on_change()
         self.ui.page.update()
@@ -285,23 +342,17 @@ class InputEditor:
             selected=self.selection.selected_references(self.selection.rows[self.field['name']],validate=validate)
             if selected:return pack(selected)
             if picker.touched:return None
-            return pack(self.initial_references if self.selection_signature==[(('stage:'+r['stage']) if 'stage' in r else ('asset:'+r['asset']),r.get('selector','auto')) for r in self.initial_references] else self.connection_references())
+            return pack(self.connection_references())
         if self.stage['operation'] in ('prepare_structures','docking_vina','docking_dock6') and self.field['name']=='base_input_path':
             modes=[self.prepared_source(source.value,selector.value) for source,selector,_ in self.rows if source.value]
             if any(modes) and not all(modes):
                 raise ValueError('Use receptores brutos ou preparados em um mesmo bloco de preparação.')
-        refs=[]
         for source,selector,_ in self.rows:
-            if source.value and source.value!='configured-path':
-                if self.prepared_source(source.value,selector.value) and (source.value not in {o.key for o in self.source_options()}
-                        or selector.value not in {o.key for o in self.selectors(source.value)}):
-                    raise ValueError('Selecione um receptor preparado para o alvo do docking.')
-                kind,identifier=source.value.split(':',1)
-                ref={kind:identifier,'selector':selector.value or 'auto'}
-                compound=self.compound_fields.get(id(source))
-                if compound and compound.value:ref['compound_id']=compound.value
-                refs.append(ref)
-        return pack(refs)
+            if (source.value and source.value!='configured-path' and self.prepared_source(source.value,selector.value)
+                    and (source.value not in {o.key for o in self.source_options()}
+                         or selector.value not in {o.key for o in self.selectors(source.value)})):
+                raise ValueError('Selecione um receptor preparado para o alvo do docking.')
+        return pack(self.connection_references())
 
     def direct_path(self):
         return self.value if any(c.value=='configured-path' for c,_,_ in self.rows) else None
