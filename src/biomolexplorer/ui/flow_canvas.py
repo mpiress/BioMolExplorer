@@ -24,8 +24,11 @@ class FlowCanvas:
         self.history=[]; self.future=[]; self.pending=None
         self.output_draggables={}; self.active_drag=None
         self.edges=canvas.Canvas(shapes=[])
+        self.edges._biomol_geometry_only=True
         self.nodes={}
         self._node_states={}; self._option_labels=None
+        self._edge_shapes={};self._incident_edges={};self._positions={};self._by_id={}
+        self._ports={};self._issues={};self._labels={}
         self.viewport_scale=1.0;self.viewport_offset=ft.Offset(0,0)
         self.viewport_width=max(320,(getattr(ui.page,'width',None) or 1160)-64)
         self.viewport_height=max(240,(getattr(ui.page,'height',None) or 900)-260)
@@ -87,7 +90,60 @@ class FlowCanvas:
     def changed(self):
         self.ui.dirty=True; self.refresh()
         if hasattr(self.ui,'schedule_save'):self.ui.schedule_save()
+
+    def _edge_elements(self,key):
+        source,target,field=key
+        start=self._positions[source];end=self._positions[target]
+        port=next(i for i,value in enumerate(self._ports[target]) if value['field']==field)
+        x=start['x']+flow.NODE_WIDTH-30;y=start['y']+83
+        endx=end['x']+28;endy=end['y']+117+port*34
+        return [canvas.Path.MoveTo(x,y),canvas.Path.CubicTo(x+100,y,endx-100,endy,endx,endy)]
+
+    def _resize_grid(self,width,height):
+        if hasattr(self,'grid') and (width,height)==(self.grid.width,self.grid.height):return False
+        grid=[canvas.Line(x,0,x,height,paint=ft.Paint(color='#E8EDF5',stroke_width=1)) for x in range(0,int(width),40)]
+        grid.extend(canvas.Line(0,y,width,y,paint=ft.Paint(color='#E8EDF5',stroke_width=1)) for y in range(0,int(height),40))
+        self.grid=canvas.Canvas(shapes=grid,width=width,height=height)
+        self.grid._biomol_geometry_only=True
+        self.stack.width=width;self.stack.height=height
+        self.edges.width=width;self.edges.height=height
+        return True
+
+    def _move_refresh(self,node,update):
+        key=node.data
+        self._positions[key]={'x':node.left,'y':node.top}
+        for edge in self._incident_edges.get(key,()):
+            self._edge_shapes[edge].elements=self._edge_elements(edge)
+        width=min(flow.CANVAS_WIDTH,max(self.grid.width,math.ceil((node.left+flow.NODE_WIDTH+400)/400)*400))
+        height=max(self.grid.height,math.ceil((node.top+168+len(self._ports[key])*34+120)/400)*400)
+        resized=self._resize_grid(width,height)
+        state=self._node_states.get(key)
+        if state:self._node_states[key]=(*state[:4],dict(self._positions[key]))
+        if resized:self.stack.controls=[self.grid,self.edges,*self.nodes.values()]
+        if update:
+            if resized:self.ui.page.update(self.stack)
+            else:self.ui.page.update(node,self.edges)
+
+    def _input_labels(self,stage):
+        # The graph represents stage/port connections. File-level selection is
+        # edited in the existing configuration dialog, not by overlapping wires.
+        refs=[(field,ref) for field,group in stage.get('bindings',{}).items() for ref in sources(group)]
+        if len(refs)<=12:
+            return input_labels(stage,getattr(self.ui,'project_assets',[]),getattr(self.ui,'automatic_labels',{}),self.stages)
+        groups={}
+        for field,ref in refs:
+            groups.setdefault((field,ref.get('stage'),ref.get('asset')),[]).append(ref)
+        labels=[]
+        for (field,_,_),values in groups.items():
+            preview=dict(stage,bindings={field:values[0]})
+            names=input_labels(preview,getattr(self.ui,'project_assets',[]),getattr(self.ui,'automatic_labels',{}),self.stages)
+            labels.extend(name+(f' (+{len(values)-1})' if len(values)>1 else '') for name in names)
+        return labels
+
     def refresh(self,update=True,nodes=True,moved_node=None):
+        if moved_node is not None and hasattr(self,'grid') and moved_node.data in self._positions:
+            self._move_refresh(moved_node,update)
+            return
         width=min(flow.CANVAS_WIDTH,max(4000,max((flow.position(s,i)['x']+flow.NODE_WIDTH+400 for i,s in enumerate(self.stages)),default=0)))
         height=max(2800,max((flow.position(s,i)['y']+flow.node_height(s)+120 for i,s in enumerate(self.stages)),default=0))
         # Grow in grid bands: a bottom/right node moving one pixel must not
@@ -97,43 +153,58 @@ class FlowCanvas:
         if moved_node is not None and hasattr(self,'grid'):
             width=max(width,self.grid.width);height=max(height,self.grid.height)
         self.stack.height=height;self.stack.width=width
-        resized=not hasattr(self,'grid') or self.grid.height!=height or self.grid.width!=width
-        if resized:
-            grid=[]
-            for x in range(0,int(width),40): grid.append(canvas.Line(x,0,x,height,paint=ft.Paint(color='#E8EDF5',stroke_width=1)))
-            for y in range(0,int(height),40): grid.append(canvas.Line(0,y,width,y,paint=ft.Paint(color='#E8EDF5',stroke_width=1)))
-            self.grid=canvas.Canvas(shapes=grid,width=width,height=height)
-        shapes=[]
+        resized=self._resize_grid(width,height)
         by_id={s['id']:s for s in self.stages}
         positions={s['id']:flow.position(s,i) for i,s in enumerate(self.stages)}
+        self._by_id=by_id;self._positions=positions
+        self._ports={s['id']:flow.input_ports(s) for s in self.stages}
+        shapes={};incident={key:set() for key in by_id}
         self.output_draggables={key:control for key,control in self.output_draggables.items() if key in by_id}
         for index,target in enumerate(self.stages):
-            pos=flow.position(target,index)
-            for j,port in enumerate(flow.input_ports(target)):
+            for j,port in enumerate(self._ports[target['id']]):
               group=target.get('bindings',{}).get(port['field'])
               for reference in sources(group) if group else []:
                 source=by_id.get(reference.get('stage'))
                 if not source: continue
-                start=positions[source['id']]; x=start['x']+flow.NODE_WIDTH-30; y=start['y']+83
-                endx=pos['x']+28; endy=pos['y']+117+j*34
-                shapes.append(canvas.Path([canvas.Path.MoveTo(x,y),canvas.Path.CubicTo(x+100,y,endx-100,endy,endx,endy)],
-                    paint=ft.Paint(color=COLORS[TITLES[source['operation']][2]],stroke_width=3,style=ft.PaintingStyle.STROKE)))
-        self.edges.shapes=shapes;self.edges.width=width;self.edges.height=height
+                key=(source['id'],target['id'],port['field'])
+                if key in shapes:continue
+                color=COLORS[TITLES[source['operation']][2]]
+                shape=self._edge_shapes.get(key)
+                elements=self._edge_elements(key)
+                if shape is None:
+                    shape=canvas.Path(elements,paint=ft.Paint(color=color,stroke_width=3,style=ft.PaintingStyle.STROKE))
+                else:
+                    if shape.elements!=elements:shape.elements=elements
+                    if shape.paint.color!=color:shape.paint.color=color
+                shapes[key]=shape
+                incident[source['id']].add(key);incident[target['id']].add(key)
+        if list(shapes)!=list(self._edge_shapes):self.edges.shapes=list(shapes.values())
+        self._edge_shapes=shapes;self._incident_edges=incident
         if nodes:
-            # Keep unaffected controls (and in-flight gestures) mounted. A stage
-            # replacement must rebuild its callbacks even when values are equal.
+            # Rebind callbacks to restored/remote stage objects without replacing
+            # their controls when the visible card has not changed.
             rebuilt={}; states={}
             for i,stage in enumerate(self.stages):
                 key=stage['id']
-                labels=input_labels(stage,getattr(self.ui,'project_assets',[]),getattr(self.ui,'automatic_labels',{}),self.stages)
-                state=(stage,copy.deepcopy(stage),labels,self.ui.selected==key,positions[key])
+                labels=self._input_labels(stage)
+                self._labels[key]=labels;self._issues[key]=flow.stage_issues(stage)
+                visual=(stage['operation'],stage['name'],bool(stage.get('provided_results')),
+                    tuple((port['field'],port['label'],port['field'] in stage.get('bindings',{})) for port in self._ports[key]),
+                    tuple(self._issues[key]))
+                state=(stage,visual,labels,self.ui.selected==key,positions[key])
                 old=self._node_states.get(key)
-                if old and old[0] is stage and old[1:]==state[1:]:
-                    rebuilt[key]=self.nodes[key]
+                if old and old[1:3]==state[1:3]:
+                    node=self.nodes[key]
+                    node._bind_stage(stage,positions[key])
+                    if old[3]!=state[3]:
+                        color=COLORS[TITLES[stage['operation']][2]]
+                        node.border=ft.Border.all(2,color if state[3] else '#DDE5F0')
+                    rebuilt[key]=node
                 else:
                     rebuilt[key]=self.node(stage,i)
                 states[key]=state
             self.nodes=rebuilt; self._node_states=states
+            self._labels={key:self._labels[key] for key in by_id};self._issues={key:self._issues[key] for key in by_id}
             option_labels=[(s['id'],s['name']) for s in self.stages]
             if option_labels!=self._option_labels:
                 self.selection.options=[stage_control(ft.DropdownOption(key=s['id'],text=s['name']),s,'text') for s in self.stages]
@@ -142,16 +213,16 @@ class FlowCanvas:
         if nodes or resized:self.stack.controls=[self.grid,self.edges,*self.nodes.values()]
         if update:
             if moved_node is not None and not resized:self.ui.page.update(moved_node,self.edges)
-            else:self.ui.page.update()
+            else:self.ui.page.update(self.stack,self.selection,self.status)
 
     def select_stage(self,stage_id):
         previous=self.ui.selected
         self.ui.selected=stage_id
         self.selection.value=stage_id
         changed=[self.selection]
-        for stage in self.stages:
-            key=stage['id']
-            if key not in (previous,stage_id):continue
+        for key in dict.fromkeys((previous,stage_id)):
+            stage=self._by_id.get(key)
+            if stage is None:continue
             color=COLORS[TITLES[stage['operation']][2]]
             self.nodes[key].border=ft.Border.all(2,color if key==stage_id else '#DDE5F0')
             old=self._node_states.get(key)
@@ -173,7 +244,7 @@ class FlowCanvas:
             node.left=pos['x']; node.top=pos['y']; self.refresh(nodes=False,moved_node=node)
         async def output(e):
             if self.writable:
-                self.pending=stage['id']; self.status.value='Escolha uma entrada compatível para '+stage['name']; self.ui.page.update()
+                self.pending=stage['id']; self.status.value='Escolha uma entrada compatível para '+stage['name']; self.ui.page.update(self.status)
         # Keep the source control ID across selection/autosave redraws.
         out=self.output_draggables.get(stage['id'])
         if out is None:
@@ -190,7 +261,9 @@ class FlowCanvas:
             mouse_cursor=ft.MouseCursor.MOVE,content=ft.Container(width=flow.NODE_WIDTH-4,height=64,padding=12,bgcolor=color,border_radius=ft.BorderRadius.only(top_left=14,top_right=14),
             content=ft.Column([ft.Text(TITLES[stage['operation']][2].upper(),size=10,color='#FFFFFF'),stage_control(ft.Text(stage['name'],size=14,color='#FFFFFF',weight=ft.FontWeight.W_600,max_lines=1,overflow=ft.TextOverflow.ELLIPSIS),stage)],spacing=4)))
         rows=[ft.Row([ft.Text('Saída',size=12,color=color,expand=True),out],spacing=0,height=34)]
-        for port in flow.input_ports(stage):
+        ports=self._ports.get(stage['id'])
+        if ports is None:ports=flow.input_ports(stage)
+        for port in ports:
             field=port['field']
             async def accept(e,field=field):
                 source=self.drag_source(e,'flow-link')
@@ -204,19 +277,30 @@ class FlowCanvas:
             dot=ft.Semantics(container=True,exclude_semantics=True,label='Entrada · '+port['label']+' · '+stage['name'],button=True,on_tap=click,content=dot)
             async def unlink(e,field=field): self.remember(); flow.disconnect(stage,field); self.changed()
             rows.append(ft.Row([dot,ft.Text(port['label'],size=11,expand=True),icon_button(icon=ft.Icons.LINK_OFF,icon_size=16,tooltip='Desconectar '+port['label'],on_click=unlink,disabled=not self.writable) if linked else ft.Container(width=30)],height=34,spacing=0))
-        issues=flow.stage_issues(stage)
-        labels=input_labels(stage,getattr(self.ui,'project_assets',[]),getattr(self.ui,'automatic_labels',{}),self.stages)
+        issues=self._issues.get(stage['id'])
+        if issues is None:issues=flow.stage_issues(stage)
+        labels=self._labels.get(stage['id'])
+        if labels is None:labels=self._input_labels(stage)
+        # Roboto covers the path separator without requesting a remote symbol
+        # font on every graph repaint in offline/web installations.
+        display_labels=[label.replace(' → ',' / ') for label in labels]
         rows.append(ft.Container(height=34,padding=ft.Padding.only(left=8,right=8),content=ft.Text(
-            'Entradas: '+('; '.join(labels) if labels else (self.ui.tr('Nenhuma / coleta própria') if hasattr(self.ui,'tr') else 'Nenhuma / coleta própria')),size=10,max_lines=2,
-            overflow=ft.TextOverflow.ELLIPSIS,tooltip='\n'.join(labels))))
+            'Entradas: '+('; '.join(display_labels) if labels else (self.ui.tr('Nenhuma / coleta própria') if hasattr(self.ui,'tr') else 'Nenhuma / coleta própria')),size=10,max_lines=2,
+            overflow=ft.TextOverflow.ELLIPSIS,tooltip='\n'.join(display_labels))))
         rows.append(ft.Row([ft.Icon(ft.Icons.ERROR_OUTLINE if issues else ft.Icons.CHECK_CIRCLE_OUTLINE,size=14,color='#D97706' if issues else color),
             ft.Text(issues[0] if issues else 'Resultados fornecidos · concluído' if stage.get('provided_results') else 'Pronto para executar',size=10,expand=True),
             icon_button(icon=ft.Icons.INFO_OUTLINE,icon_size=18,tooltip='Informações do bloco',on_click=information),
             icon_button(icon=ft.Icons.INSIGHTS,icon_size=18,tooltip='Resultados de '+stage['name'],on_click=results),
             icon_button(icon=ft.Icons.TUNE,icon_size=18,tooltip='Configurar '+stage['name'],on_click=configure)],height=32,spacing=4))
-        node=ft.Container(left=pos['x'],top=pos['y'],width=flow.NODE_WIDTH,
+        node=ft.Container(left=pos['x'],top=pos['y'],width=flow.NODE_WIDTH,data=stage['id'],
             border=ft.Border.all(2,color if self.ui.selected==stage['id'] else '#DDE5F0'),border_radius=16,bgcolor='#FFFFFF',
             content=ft.Column([header,ft.Container(ft.Column(rows,spacing=0),padding=ft.Padding.symmetric(horizontal=8))],spacing=0))
+        def bind_stage(current,position):
+            nonlocal stage
+            stage=current;pos.update(position)
+            if node.left!=position['x']:node.left=position['x']
+            if node.top!=position['y']:node.top=position['y']
+        node._bind_stage=bind_stage
         return node
     async def select_from_menu(self,e):
         self.select_stage(self.selection.value)
@@ -225,7 +309,7 @@ class FlowCanvas:
         else: self.ui.notify('Selecione um bloco para configurar.')
     async def keyboard(self,e):
         if not self.writable or self.ui.current is None or self.ui.tab!='Pipeline' or getattr(self.ui,'editing_stage',False) or getattr(self,'typing',False): return
-        if e.key=='Escape': self.pending=None; self.active_drag=None; self.status.value='Conexão cancelada.'; self.ui.page.update()
+        if e.key=='Escape': self.pending=None; self.active_drag=None; self.status.value='Conexão cancelada.'; self.ui.page.update(self.status)
         elif e.ctrl and e.key.lower()=='z': await (self.redo(e) if e.shift else self.undo(e))
         elif e.ctrl and e.key.lower()=='y': await self.redo(e)
         elif e.key=='Delete': await self.delete(e)
@@ -373,6 +457,8 @@ class FlowCanvas:
             self.ui.page.show_dialog(dialog)
         await self.ui.guard(action)
     def build(self,include_library=True):
+        built=getattr(self,'_built_view',None)
+        if built and built[0]==include_library:return built[1]
         if not hasattr(self.ui,'sidebar_expanded'):self.ui.sidebar_expanded={}
         palette=[]; items=[]; sections=[]
         for category in COLORS:
@@ -388,14 +474,17 @@ class FlowCanvas:
                     icon_button(icon=ft.Icons.INFO_OUTLINE,icon_size=18,tooltip='Informações do bloco',on_click=information),
                     icon_button(icon=ft.Icons.ADD,icon_size=18,tooltip='Adicionar '+title,on_click=add,disabled=not self.writable)],spacing=0)))
                 items.append((title,blocks[-1]))
-            def category_changed(e,key='library-'+category):self.ui.sidebar_expanded[key]=str(e.data).lower()=='true'
             section=ft.ExpansionTile(title=ft.Text(category,size=13,color=COLORS[category],weight=ft.FontWeight.W_600),
-                controls=blocks,expanded=self.ui.sidebar_expanded.get('library-'+category,False),on_change=category_changed,maintain_state=True,dense=True,min_tile_height=44,
+                controls=blocks,expanded=self.ui.sidebar_expanded.get('library-'+category,False),maintain_state=True,dense=True,min_tile_height=44,
                 shape=ft.RoundedRectangleBorder(radius=10,side=ft.BorderSide(0,ft.Colors.TRANSPARENT)),
                 collapsed_shape=ft.RoundedRectangleBorder(radius=10,side=ft.BorderSide(0,ft.Colors.TRANSPARENT)),
                 tile_padding=ft.Padding.symmetric(horizontal=4,vertical=4),controls_padding=ft.Padding.only(bottom=8),
                 expanded_cross_axis_alignment=ft.CrossAxisAlignment.STRETCH,
                 icon_color=COLORS[category],collapsed_icon_color=COLORS[category])
+            def category_changed(e,key='library-'+category,section=section):
+                section.expanded=str(e.data).lower()=='true'
+                self.ui.sidebar_expanded[key]=section.expanded
+            section.on_change=category_changed
             sections.append(section);palette.append(section)
         search=ft.TextField(label='Buscar etapa',text_size=12)
         expanded_before_search=None
@@ -410,7 +499,7 @@ class FlowCanvas:
                 if query:section.expanded=section.visible
                 elif expanded_before_search is not None:section.expanded=expanded_before_search[index]
             if not query:expanded_before_search=None
-            self.ui.page.update()
+            self.ui.page.update(self.library)
         search.on_change=filter_palette
         search.on_focus=lambda e:setattr(self,'typing',True)
         search.on_blur=lambda e:setattr(self,'typing',False)
@@ -433,7 +522,9 @@ class FlowCanvas:
             content=ft.Column([self.library],scroll=ft.ScrollMode.AUTO)),canvas_panel],expand=True,spacing=14,
             vertical_alignment=ft.CrossAxisAlignment.STRETCH) if include_library else canvas_panel
         # Let each action wrap; a nested unbroken bar hides trailing exports.
-        return ft.Column([ft.Row([self.selection,
+        view=ft.Column([ft.Row([self.selection,
             ft.Button('Configurar seleção',icon=ft.Icons.TUNE,on_click=self.configure_selected),
             *bar.controls],wrap=True,spacing=12),
             self.status,workspace],expand=True,spacing=8)
+        self._built_view=(include_library,view)
+        return view

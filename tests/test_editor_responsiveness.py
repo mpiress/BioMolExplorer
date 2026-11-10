@@ -69,7 +69,7 @@ class EditorResponsivenessTests(unittest.TestCase):
         old=editor.nodes[self.stage['id']]
         restored=copy.deepcopy(self.ui.current['pipeline'])
         self.ui.current['pipeline']=restored;editor.refresh()
-        self.assertIsNot(old,editor.nodes[self.stage['id']])
+        self.assertIs(old,editor.nodes[self.stage['id']])
         header=editor.nodes[self.stage['id']].content.controls[0]
         header.on_pan_update(SimpleNamespace(local_delta=SimpleNamespace(x=8,y=9)))
         self.assertIn('position',restored[0]);self.assertNotIn('position',self.stage)

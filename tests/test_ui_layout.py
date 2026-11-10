@@ -20,7 +20,7 @@ def walk(control):
 
 class LayoutTests(unittest.TestCase):
     def page(self):
-        page=SimpleNamespace(width=1200,height=900,controls=[],web=False,update=lambda:None)
+        page=SimpleNamespace(width=1200,height=900,controls=[],web=False,update=lambda *controls:None)
         page.add=lambda *controls:page.controls.extend(controls)
         return page
 

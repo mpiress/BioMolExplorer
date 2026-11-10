@@ -193,6 +193,8 @@ class LocalizedPage:
             return
         if not isinstance(control, (ft.Control, canvas.Shape, ft.TextSpan, ft.Tooltip)):
             return
+        if getattr(control,'_biomol_geometry_only',False):
+            return
         # Flet owns immutable controls created by its component renderer.
         # Translating their runtime snapshots would abort the entire update,
         # including unrelated graphs and charts. Localize our mutable controls.

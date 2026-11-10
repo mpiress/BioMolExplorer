@@ -187,6 +187,9 @@ class WorkspaceUI(ProjectTools):
         if preparation and not preparation[1].done():preparation[1].cancel()
         self._selection_preparation = None
         self.page.on_keyboard_event = None
+        for attribute in ('flow_editor','_canvas_context'):
+            if hasattr(self,attribute):delattr(self,attribute)
+        self.automatic_labels={}
         self.pending_file_selections = {}
         self._configuration_dialogs = {}
         self.settings_dialog=None;self.settings_run_id=None;self.settings_body=None
@@ -614,16 +617,17 @@ class WorkspaceUI(ProjectTools):
 
     async def pipeline_view(self,writable):
         from .flow_canvas import FlowCanvas
-        self.project_assets=await self.call(self.store.assets,self.token,self.current['id'])
-        runs=await self.call(self.store.list_runs,self.token,self.current['id'])
-        self.automatic_labels={}
-        for run in runs:
-            for item in run['stages']:
-                if item['status']=='succeeded' and item.get('artifacts') and not item.get('outputs_removed') and item['id'] not in self.automatic_labels:
-                    from biomolexplorer.artifact_choices import choices
-                    options=choices(item)
-                    self.automatic_labels[item['id']]='compounds.csv' if any(p.endswith('/compounds.csv') or p=='compounds.csv' for p in options) else next(iter(sorted(options)),item['name']).rsplit('/',1)[-1]
-        self.flow_editor = FlowCanvas(self,writable)
+        token,project=self.token,self.current
+        assets=await self.call(self.store.assets,token,project['id'])
+        if self.token!=token or self.current is not project:return ft.Column([])
+        self.project_assets=assets
+        context=(token,project['id'],writable)
+        if getattr(self,'_canvas_context',None)!=context:
+            self.automatic_labels={}
+            self.flow_editor=FlowCanvas(self,writable)
+            self._canvas_context=context
+        else:
+            self.flow_editor.refresh(update=False)
         self.page.on_keyboard_event=self.flow_editor.keyboard
         return self.flow_editor.build(include_library=False)
 

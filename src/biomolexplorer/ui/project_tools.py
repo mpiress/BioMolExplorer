@@ -179,5 +179,11 @@ class ProjectTools:
                 self.close_project_views();await self.open_project(project_id);return
             if (not self.dirty and not getattr(self,'editing_stage',False)
                     and fresh['revision']>=self.current['revision'] and fresh['updated']>self.current['updated']):
+                editor=getattr(self,'flow_editor',None)
+                if editor and fresh['pipeline']!=self.current['pipeline']:
+                    # The retained canvas keeps its viewport, but an undo from
+                    # before a collaborator's edit must not replace that edit.
+                    editor.history.clear();editor.future.clear()
+                    editor.pending=None;editor.active_drag=None
                 self.current.update(fresh);self.base_pipeline=copy.deepcopy(fresh['pipeline'])
                 await self.draw_project()
