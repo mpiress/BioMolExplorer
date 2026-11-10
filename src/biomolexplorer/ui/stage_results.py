@@ -80,7 +80,8 @@ class StageResults:
                 if self.stage.get('skip_reason'):
                     self.root.controls=[ft.Text(self.stage['skip_reason'])]
                     self.loaded=True;self.ui.page.update();return
-                if self.stage['status']=='succeeded':
+                if self.stage['status']=='succeeded' or any(
+                        batch.get('status')=='succeeded' for batch in self.stage.get('batches',[])):
                     from biomolexplorer.docking_results import DockingResults
                     from .docking_results import DockingResultsTable
                     tables=await self.ui.call(DockingResults(self.ui.store).tables,self.token,self.project_id,self.run_id,self.stage['id'])

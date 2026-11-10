@@ -61,6 +61,8 @@ def records(item, run_id=None, *, decorate=True):
     files=list(dict.fromkeys(str(p) for p in item.get('artifacts', [])))
     previous={r['path']:r for r in item.get('artifact_records', [])}
     config=item.get('configuration', item)
+    batches={str(path):batch for batch in item.get('batches',[]) for path in batch.get('artifacts',[])}
+    runtime_ids={}
     parts={path:Path(logical_path(path)).parts for path in files}
     suffixes={path:['/'.join(value[-n:]) for n in range(1,len(value)+1)] for path,value in parts.items()}
     counts=Counter(suffix for options in suffixes.values() for suffix in options)
@@ -72,9 +74,12 @@ def records(item, run_id=None, *, decorate=True):
         publication=publication_metadata(path)
         prior=previous.get(path, {})
         identity=prior.get('artifact_id') or publication.get('artifact_id') or slot_id(item['id'],locator(item['id'],path))
-        batch=next((b for b in item.get('batches',[]) if path in b.get('artifacts',[])),{})
+        batch=batches.get(path,{})
         origin=prior.get('run_id') or batch.get('reused_from_run') or item.get('reused_from_run') or run_id
         runtime=batch.get('processing_runtime') if batch else item.get('processing_runtime')
+        runtime_key=id(batch) if batch else id(item)
+        if runtime_key not in runtime_ids:
+            runtime_ids[runtime_key]=hashlib.sha256(json.dumps(runtime,sort_keys=True).encode()).hexdigest() if runtime else None
         result.append(dict(artifact_id=identity,
             block_id=prior.get('block_id') or config.get('block_id') or item.get('block_id'),
             output=prior.get('output') or publication.get('output'),
@@ -88,8 +93,8 @@ def records(item, run_id=None, *, decorate=True):
             content_sha256=item.get('artifact_manifest',{}).get(str(Path(path).resolve())),
             processing_version=batch.get('processing_version') if batch else item.get('processing_version'),
             producer_software=batch.get('producer_software') if batch else item.get('producer_software'),
-            runtime_id=hashlib.sha256(json.dumps(runtime,sort_keys=True).encode()).hexdigest() if runtime else None,
-            dependency_manifest=item.get('input_manifest',{}),
+            runtime_id=runtime_ids[runtime_key],
+            dependency_manifest=(batch or item).get('input_manifest',{}),
             run_id=origin, name=Path(path).name, selector=selector, locator=locator(item['id'],path), path=path,
             processing_scope='all' if batch.get('configuration',{}).get('_combined_input') else 'individual',
             batch_label=batch.get('label'),
@@ -101,6 +106,9 @@ def records(item, run_id=None, *, decorate=True):
         name_records([(r,item) for r in result])
     from .artifact_contracts import infer_output_port,port_types
     for record in result:
+        from .docking_inputs import prepared_receptor
+        if record.get('operation') in ('prepare_structures','redocking','docking_vina','docking_dock6') and prepared_receptor(record['path']):
+            record['output']='receptor'
         port=record.get('output_port') or infer_output_port(record.get('operation'),record.get('output'))
         if port:record['output_port']=port
         kinds=port_types(record.get('operation'),port) if port else set()
@@ -184,6 +192,11 @@ def index_run(stages, run_id, assets=()):
         ports=OUTPUT_PORTS.get(stage.get('operation'),{})
         for record in stage.get('artifact_records',[]):
             role=record.get('output')
+            if not role and stage.get('operation') in ('redocking','docking_vina','docking_dock6','dynamics_dock6'):
+                from .artifact_naming import output_role
+                role=output_role(stage['operation'],record['path'],
+                    stage.get('configuration',stage).get('parameters',{}))
+                record['output']=role
             # Publication assigns a semantic role.  New manifests map that
             # role to a port without inspecting a storage path; filename
             # heuristics are reserved for explicit legacy migration.
@@ -198,7 +211,10 @@ def index_run(stages, run_id, assets=()):
 
 def annotate_files(item, files, run_id=None):
     """Attach provenance to display records without replacing original filenames."""
-    catalog={r['path']:r for r in records(item,run_id)}
+    requested={file['path'] for file in files}
+    subset=dict(item,artifacts=[path for path in item.get('artifacts',[]) if path in requested],
+        artifact_records=[record for record in item.get('artifact_records',[]) if record['path'] in requested])
+    catalog={r['path']:r for r in records(subset,run_id)}
     for file in files:
         record=catalog.get(file['path'])
         if not record:continue

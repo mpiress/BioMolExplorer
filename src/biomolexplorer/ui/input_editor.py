@@ -61,6 +61,7 @@ class InputEditor:
         completed=[items[r['stage']] for r in refs if 'stage' in r and r['stage'] in items]
         explicit=any(r.get('selector','auto')!='auto' for r in refs)
         self.selection=None;self.selection_box.controls=[]
+        self.box.visible=True
         if not refs or not (completed or explicit):return
         from .file_selection import FileSelection
         candidate=copy.deepcopy(self.stage)
@@ -102,6 +103,8 @@ class InputEditor:
         self.selection.apply_pdb_reviews(getattr(self.ui,'pdb_review_states',{}))
         self.selection.pickers[self.field['name']].on_change=lambda:self.on_change() if self.on_change else None
         self.selection_box.controls=[self.selection.pickers[self.field['name']].control]
+        if self.stage['operation'] in ('docking_vina','docking_dock6'):
+            self.box.visible=False
         for _,selector,_ in self.rows:selector.visible=False
 
     def connection_references(self):
@@ -306,7 +309,8 @@ class InputEditor:
         if self.on_change:self.on_change()
         self.ui.page.update()
 
-    def append(self,e):self.add();self.changed()
+    def append(self,e):
+        self.add();self.changed();self.box.visible=True;self.ui.page.update()
 
     async def upload(self,e):
         async def action():

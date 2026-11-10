@@ -111,6 +111,28 @@ class LigandCache:
                        options=options, ph=float(ph), engines=engines, software=self.identity)
         return hashlib.sha256(json.dumps(request, sort_keys=True, allow_nan=False).encode()).hexdigest()
 
+    def shared_key(self,row,dataset,options,ph):
+        # Preparation precedes receptor placement and engine-specific export.
+        # Keep IDs, geometry, protonation, charge policy and software in the key.
+        return self.key(row,dataset,options,ph,'shared-mol2-v1')
+
+    def restore_compatible(self,key,row,destination,formats,legacy_keys=()):
+        for candidate in dict.fromkeys((key,*legacy_keys)):
+            if self.restore(candidate,row,destination,formats):
+                if candidate!=key:self.save(key,row,formats)
+                return True
+            # MOL2 retains bonds, atom types and charges. Only the missing
+            # PDBQT serialization is generated; no charge/minimization repeats.
+            if 'pdbqt' in formats and self.restore(candidate,row,destination,('mol2',)):
+                from .docking_data import convert_structure
+                output=Path(destination)/(row['molecule_chembl_id']+'.lig.pdbqt')
+                convert_structure(row['prepared_mol2'],output)
+                validate_prepared_ligand(output,'pdbqt')
+                row['prepared_pdbqt']=str(output.resolve())
+                self.save(key,row,('mol2','pdbqt'))
+                return True
+        return False
+
     @contextmanager
     def locked(self, key):
         # An OS lock is released even when the worker or its process group is cancelled.

@@ -498,12 +498,26 @@ class PipelineService:
 
     def _update(self, run_id, status, stages, error=None):
         from .artifacts import index_run
+        signature=tuple((item['id'],tuple(item.get('artifacts',[])),
+            tuple(item.get('artifact_manifest',{}).items()),
+            tuple((batch.get('cache_key'),batch.get('reused_from_run')) for batch in item.get('batches',[])),
+            json.dumps(item.get('input_files',{}),sort_keys=True),
+            json.dumps(item.get('input_manifest',{}),sort_keys=True)) for item in stages)
+        indexed=getattr(self,'_indexed_run_signatures',{})
+        changed=indexed.get(run_id)!=signature
+        updates=getattr(self,'_run_update_times',{})
+        previous=updates.get(run_id)
+        if not changed and status=='running' and previous and previous[1]=='running' and time.monotonic()-previous[0]<2:
+            return
+        if changed:
+            with self.store.connect() as db:
+                prior=db.execute('SELECT project_id FROM runs WHERE id=?',(run_id,)).fetchone()
+                assets=[dict(row) for row in db.execute('SELECT id,name,path FROM assets WHERE project_id=?',(prior['project_id'],))] if prior else []
+            index_run(stages,run_id,assets)
         with self.store.connect() as db:
             db.execute('BEGIN IMMEDIATE')
-            prior=db.execute('SELECT * FROM runs WHERE id=?',(run_id,)).fetchone()
-            assets=[dict(row) for row in db.execute('SELECT id,name,path FROM assets WHERE project_id=?',(prior['project_id'],))] if prior else []
-            index_run(stages,run_id,assets)
-            if prior:
+            prior=db.execute('SELECT id,project_id,user_id,status FROM runs WHERE id=?',(run_id,)).fetchone()
+            if prior and changed:
                 from .artifact_registry import register_run
                 register_run(db,prior['project_id'],run_id,stages)
             db.execute('UPDATE runs SET status=?,stages=?,updated=?,error=? WHERE id=?',
@@ -513,6 +527,10 @@ class PipelineService:
                 last=db.execute('SELECT id FROM project_history WHERE project_id=? ORDER BY created DESC LIMIT 1',(prior['project_id'],)).fetchone()
                 before=read_snapshot(self.store,prior['project_id'],last['id'],'after',db=db) if last else None
                 record(self.store,db,prior['project_id'],prior['user_id'],'execution',f'Execução {run_id[:8]}: {status}',before)
+        indexed[run_id]=signature
+        self._indexed_run_signatures=indexed
+        updates[run_id]=(time.monotonic(),status)
+        self._run_update_times=updates
 
     def _docking_sources(self, project_id, refs, results, engine=None):
         from .input_validation import columns
@@ -705,7 +723,7 @@ class PipelineService:
                     raise ValueError('A seleção não corresponde a nenhuma entidade disponível na origem.')
             if kind in ('structures','prepared_structures'):
                 chosen=selected[start:]
-                files=[Path(p) for p in upstream]
+                files=[Path(p) for p in (ref.get('_bundle_paths') or upstream)]
                 folders={p.parent for p in chosen}
                 if kind=='prepared_structures':folders|={p.parent.parent for p in chosen if p.parent.name=='Prepared'}
                 metadata=[p for p in files if p.parent in folders and p.name in ('pdb_codes.csv','centers.csv')]
@@ -825,10 +843,13 @@ class PipelineService:
         stage=copy.deepcopy(stage)
         from .artifact_registry import SemanticArtifactResolver
         semantic=SemanticArtifactResolver(self.store,project_id,pipeline,results,current_run_id)
-        for group in stage.get('bindings',{}).values():
+        for field,group in stage.get('bindings',{}).items():
             for ref in input_sources(group):
                 if 'stage' in ref:
                     files=semantic.resolve(ref);ref['_resolved_paths']=files
+                    if field=='base_input_path' and stage['operation'] in (
+                            'prepare_structures','redocking','docking_vina','docking_dock6','dynamics_dock6'):
+                        ref['_bundle_paths']=list(dict.fromkeys(results.get(ref['stage'],[])))
                     chosen=validate_reference(ref,files)
                     if ref.get('artifact_id'):
                         from .artifacts import slot_id,locator

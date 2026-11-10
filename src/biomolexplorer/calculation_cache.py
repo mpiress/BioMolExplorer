@@ -38,9 +38,9 @@ def copy_artifact(source, destination):
 
 
 class CalculationCache:
-    def __init__(self, namespace, destination):
+    def __init__(self, namespace, destination, *, root=None):
         preparation = os.environ.get('BIOMOL_PREPARATION_CACHE')
-        self.root = Path(preparation).parent / 'calculations' if preparation else Path(destination) / '.calculation-cache'
+        self.root = Path(root) if root is not None else Path(preparation).parent / 'calculations' if preparation else Path(destination) / '.calculation-cache'
         self.root.mkdir(parents=True, exist_ok=True)
         self.namespace = namespace
         self.reuse = os.environ.get('BIOMOL_REUSE_PREPARATIONS', '1') != '0'

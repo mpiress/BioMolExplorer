@@ -74,7 +74,8 @@ def project_run(run,pipeline):
             missing=old_files-set(item.get('artifacts',[]))
             if missing:removed.update(missing);changed=True
     for item in run['stages']:
-        item['artifact_records']=[r for r in item.get('artifact_records',[]) if r['path'] in item.get('artifacts',[])]
+        available=set(item.get('artifacts',[]))
+        item['artifact_records']=[r for r in item.get('artifact_records',[]) if r['path'] in available]
         if not item.get('artifacts') and item.get('status')=='succeeded' and original_files.get(item['id'],set()).intersection(removed):item['results_stale']=True
     return run
 

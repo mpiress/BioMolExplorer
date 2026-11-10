@@ -62,6 +62,10 @@ def output_role(operation,path,parameters):
         if match:return ('lcc-' if name.endswith('_mcc') else 'component-')+match[1]
         if path.parent.name=='Molecules':return 'lcc'
         return 'edges'
+    if operation in ('prepare_structures','redocking','docking_vina','docking_dock6','dynamics_dock6'):
+        filename=path.name.lower()
+        if '.dockprep.' in filename or '.noh.' in filename:return 'receptor'
+        if '.lig.' in filename or '.ligand.' in filename:return 'pose'
     roles={'retrieve_structures':{'.pdb':'structure','.cif':'structure','.mmcif':'structure'},
         'prepare_structures':{'.pdbqt':'receptor','.mol2':'ligand'},
         'docking_vina':{'.pdbqt':'pose'},'docking_dock6':{'.mol2':'pose'},
@@ -396,6 +400,9 @@ def name_records(entries):
     for record,stage in entries:
         by_path.setdefault(record['path'],[]).append((record,stage));by_id.setdefault(record.get('artifact_id'),[]).append((record,stage))
     memo={};visiting=set();kinds={}
+    stages={id(stage):stage for _,stage in entries}
+    batch_indexes={key:{path:batch for batch in stage.get('batches',[]) for path in batch.get('artifacts',[])}
+        for key,stage in stages.items()}
     def kind_of(record,stage):
         key=(record.get('stage_id'),record['path'])
         if key not in kinds:kinds[key]=result_type(record,stage.get('configuration',stage))
@@ -406,7 +413,7 @@ def name_records(entries):
         if key in visiting:return dict(targets=[],source='INPUT')
         visiting.add(key)
         config=stage.get('configuration',stage);op=record.get('operation',config.get('operation'));kind=kind_of(record,stage)
-        batch=next((b for b in stage.get('batches',[]) if record['path'] in b.get('artifacts',[])),{})
+        batch=batch_indexes[id(stage)].get(record['path'],{})
         inputs=record.get('inputs') or {field:[dict(path=str(p)) for p in paths] for field,paths in (batch or stage).get('input_files',{}).items()}
         port='base_selected_mols' if op in ('prepare_structures','docking_vina','docking_dock6','dynamics_dock6') and not kind.startswith(('Receptor','Complex','Structure','Centers')) else 'base_vina_path' if op=='consensus' else 'similarity_path' if op=='graphs' else 'base_input_path'
         def parents(field):
@@ -524,7 +531,10 @@ def publish(stage,files,owned_root,*,stages=None,run_id=None,input_files=None):
     files=_publish_legacy_analytical(stage,files,owned_root)
     import copy
     from .artifacts import index_run,records
-    view=copy.deepcopy(stages or [])
+    # index_run replaces descriptors on these stage shells. Engine artifacts,
+    # batches and configurations are read-only; cloning every previous pose
+    # and its repeated lineage dominates late docking batches.
+    view=[dict(item) for item in stages or []]
     current=dict(stage,configuration=copy.deepcopy(stage),artifacts=list(files),
         input_files=copy.deepcopy(input_files or {}),status='succeeded')
     view=[s for s in view if s['id']!=stage['id']]+[current]

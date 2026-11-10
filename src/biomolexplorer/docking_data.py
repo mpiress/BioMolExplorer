@@ -105,7 +105,7 @@ def prepare_ligands(dataset, destination, format, ph=7.4, charge_type='gas', cen
     report=CURRENT_REPORT.get() or PreparationFailures()
     input_codes={row['molecule_chembl_id'] for row in read_compounds(dataset)}
     token=CURRENT_REPORT.set(report)
-    try:dataset=prepare_candidates(dataset,destination/'Prepared',config,ph,'vina' if format=='pdbqt' else 'dock6')
+    try:dataset=prepare_candidates(dataset,destination,config,ph,'vina' if format=='pdbqt' else 'dock6')
     finally:CURRENT_REPORT.reset(token)
     ready_codes={row['molecule_chembl_id'] for row in read_compounds(dataset)}
     for code in input_codes-ready_codes:
@@ -238,9 +238,11 @@ def write_results(engine, poses, dataset, records, output, prepared=None):
     """Retain input SMILES/IDs and link to the actual docked pose, not a new conformer."""
     output=Path(output);output.mkdir(parents=True,exist_ok=True)
     compounds=read_compounds(dataset);rows=[]
+    by_code={row['molecule_chembl_id']:row for row in compounds}
     for pose in sorted(map(Path,poses)):
         name=pose.name.removesuffix('_scored.mol2').removesuffix('.pdbqt').removesuffix('.lig')
-        candidates=[r for r in compounds if name==r['molecule_chembl_id'] or name.endswith('_'+r['molecule_chembl_id'])]
+        suffixes=[name]+[name[index+1:] for index,character in enumerate(name) if character=='_']
+        candidates=[by_code[code] for code in suffixes if code in by_code]
         if not candidates:continue
         row=max(candidates,key=lambda r:len(r['molecule_chembl_id']))
         matches=[r for r in records if name.startswith(f'{r[0]}_{r[1]}_{r[2]}{r[3]}_') or name.startswith(f'{r[0]}_{r[3]}_')]
@@ -253,16 +255,19 @@ def write_results(engine, poses, dataset, records, output, prepared=None):
         import shutil
         prepared=Path(prepared)
         context=output/'receptors';context.mkdir(exist_ok=True)
+        copied={}
         for row in rows:
             rid=row['receptor_id']
             source=next((prepared/(rid+suffix) for suffix in ('.noH.pdb','.dockprep.pdbqt','.dockprep.mol2') if (prepared/(rid+suffix)).is_file()),None)
             if source:
-                target=context/source.name;shutil.copy2(source,target)
+                target=context/source.name
+                if source not in copied:shutil.copy2(source,target);copied[source]=target
                 row['receptor_file']=target.relative_to(output).as_posix()
             record=next(r for r in records if f'{r[0]}_{r[3]}'==rid)
             reference=prepared/f'{record[0]}_{record[1]}_{record[2]}{record[3]}.lig.pdb'
             if reference.is_file():
-                target=context/reference.name;shutil.copy2(reference,target)
+                target=context/reference.name
+                if reference not in copied:shutil.copy2(reference,target);copied[reference]=target
                 row['reference_file']=target.relative_to(output).as_posix()
             if engine=='dock6':
                 pdf=output/'Dock6/footprint/plots'/(row['molecule_chembl_id']+'.pdf')

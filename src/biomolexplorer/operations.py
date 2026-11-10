@@ -265,6 +265,8 @@ def _execute_operation(operation, parameters, output_path):
             result = evaluator.run_pipeline()
     artifacts = [str(p) for p in sorted(output.rglob('*')) if p.is_file()
                  and 'cache' not in p.parts and '.quality-inputs' not in p.parts
+                 and '.calculation-cache' not in p.parts and not p.name.startswith('.')
+                 and not (operation in ('docking_vina','docking_dock6') and 'Molecules' in p.relative_to(output).parts)
                  and (p.suffix in ('.csv', '.png', '.json', '.pdb', '.pdbqt', '.mol2', '.sdf', '.pdf')
                       or p.name.endswith('_footprint_scored.txt') or operation=='redocking' and p.suffix in ('.in','.out'))]
     details = {'rows': len(result)} if hasattr(result, 'columns') else result if isinstance(result,dict) else {}

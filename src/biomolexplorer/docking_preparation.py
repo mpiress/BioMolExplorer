@@ -75,12 +75,13 @@ def _prepare_one(original,dataset,destination,options,ph,engines,formats,cache,o
             row['prepared_'+fmt]=str(source.resolve())
         event(logger,'ligand.preparation.reused','Reutilizando composto já preparado.',compound_identifier=code)
         return row,True
-    owned.extend(destination/(code+'.lig.'+fmt) for fmt in formats)
+    owned.extend(destination/(code+'.lig.'+fmt) for fmt in dict.fromkeys((*formats,'mol2')))
     pose=row.get('prepared_mol2') or row.get('conformer_file') or row.get('pose_file')
     for key in ('prepared_pdbqt','prepared_mol2','docking_engines','prepared_origin'):row.pop(key,None)
-    key=cache.key(row,dataset,options,ph,engines)
+    key=cache.shared_key(row,dataset,options,ph)
     with cache.locked(key):
-        reused=cache.restore(key,row,destination,formats)
+        reused=cache.restore_compatible(key,row,destination,formats,
+            [cache.key(row,dataset,options,ph,engine) for engine in (engines,'both','dock6','vina')])
         if not reused:
             with tempfile.TemporaryDirectory(prefix='bme-prepare-') as folder:
                 event(logger,'ligand.preparation.started','Preparando ligante externo (não o receptor).',compound_identifier=code)
@@ -116,7 +117,7 @@ def _prepare_one(original,dataset,destination,options,ph,engines,formats,cache,o
                 from .chimera_mol2 import normalize_carboxylates
                 normalize_carboxylates(prepared)
                 # Export both selected formats from this one conformation; no second minimization.
-                for format in formats:
+                for format in dict.fromkeys((*formats,'mol2')):
                     output=destination/(code+'.lig.'+format)
                     if format=='mol2':shutil.copy2(prepared,output)
                     else:convert_structure(prepared,output)
@@ -125,7 +126,7 @@ def _prepare_one(original,dataset,destination,options,ph,engines,formats,cache,o
                     row['prepared_'+format]=str(output.resolve())
                 import json
                 row['preparation_metadata']=json.dumps(dict(backend='legacy_chimera',charge_method={'gas':'gasteiger','am1':'am1bcc'}.get(method,method),ph=ph,minimization=options['minimize']),sort_keys=True)
-                cache.save(key,row,formats)
+                cache.save(key,row,tuple(dict.fromkeys((*formats,'mol2'))))
         row['conformer_file']=row['prepared_mol2'] if engines!='vina' else row['prepared_pdbqt']
         row.pop('pose_file',None);row.pop('conformer_index',None)
         row['prepared_origin']='library' if pose and row.get('conformer_origin')=='library' else 'pose' if pose else 'smiles'

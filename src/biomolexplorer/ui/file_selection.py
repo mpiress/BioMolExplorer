@@ -250,10 +250,11 @@ class FileSelection:
                             item.get('configuration',{}).get('parameters',{}).get('target') or item.get('name',item['id']),
                         origin_label=(record.get('block_id') or item['id'][:8])+' · '+item.get('name',item['id']))
                     reference=artifact_reference(record)
-                    previous=next((r for r in configured if r.get('stage')==item['id'] and
-                        (r.get('artifact_id')==record['artifact_id'] if r.get('artifact_id') else matches_selector(path,r.get('selector','auto')))),{})
+                    previous=next((r for r in configured if self.same_file_reference(r,reference)),{})
                     if previous.get('compound_id'):reference['compound_id']=previous['compound_id']
                     if previous.get('selection'):reference['selection']=copy.deepcopy(previous['selection'])
+                    for key in ('mode','run_id'):
+                        if key in previous:reference[key]=previous[key]
                     rows.append((check,reference))
                     if self.stage['operation']=='retrieve_pubchem':
                         from biomolexplorer.pubchem_retrieval import reference_choices
@@ -271,7 +272,10 @@ class FileSelection:
                     controls.append(ft.Text('Esta origem não produziu resultados compatíveis com esta entrada.', color='#B91C1C'))
             for saved in configured:
                 if saved.get('selector','auto')=='auto':continue
-                if not any(flag.value and all((True if saved.get('artifact_id') else matches_selector(ref.get('selector','auto'),v)) if k=='selector' else ref.get(k)==v for k,v in saved.items() if k!='compound_id') for flag,ref in rows):
+                matching=[(flag,ref) for flag,ref in rows if self.same_file_reference(saved,ref)]
+                if len(matching)==1:
+                    continue
+                if not any(flag.value and self.same_file_reference(saved,ref) for flag,ref in rows):
                     flag=SimpleNamespace(label=saved.get('selector',asset_names.get(saved.get('asset'),'Arquivo indisponível')),value=True,on_change=None,available=False)
                     producer=completed.get(saved.get('stage'),{})
                     if producer.get('operation') in ('docking_vina','docking_dock6','consensus'):
@@ -284,7 +288,8 @@ class FileSelection:
                                 flag.available=True;flag.legacy_selection=True;flag.physical_file=str(path)
                                 self.extras[id(flag)]=file_actions(producer,path) if file_actions else []
                         except (OSError,ValueError,TypeError):pass
-                    rows.append((flag,copy.deepcopy(saved)))
+                    if not any(not getattr(existing,'available',True) and ref==saved for existing,ref in rows):
+                        rows.append((flag,copy.deepcopy(saved)))
             self.rows[field] = rows
             origins={}
             for ref in sources(group):
@@ -299,6 +304,10 @@ class FileSelection:
             if self.stage['operation']=='redocking' and field=='base_input_path':
                 from .redocking_files import RedockingFilePicker
                 picker_class=RedockingFilePicker
+            if self.stage['operation'] in ('docking_vina','docking_dock6'):
+                from .docking_files import DockingFilePicker
+                picker_class=lambda rows,origins,page,extras,writable:DockingFilePicker(
+                    rows,origins,page,extras,writable,ligands=field=='base_selected_mols')
             self.pickers[field]=picker_class(rows,origins,page,self.extras,writable=writable)
             controls.append(self.pickers[field].control)
         if self.stage['operation']=='retrieve_pubchem':
@@ -341,6 +350,18 @@ class FileSelection:
         self.pdb_reviews.update(copy.deepcopy(statuses))
         for picker in self.pickers.values():
             if hasattr(picker,'apply_reviews'):picker.apply_reviews(statuses)
+
+    @staticmethod
+    def same_file_reference(saved,current):
+        if saved.get('stage')!=current.get('stage') or saved.get('asset')!=current.get('asset'):
+            return False
+        if saved.get('asset'):return True
+        if saved.get('mode')=='pinned' and (saved.get('run_id')!=current.get('run_id') or
+                current.get('mode')!='pinned'):return False
+        if saved.get('artifact_id'):
+            return saved['artifact_id']==current.get('artifact_id')
+        return saved.get('selector','auto')!='auto' and matches_selector(
+            current.get('selector','auto'),saved['selector'])
 
     def add_docking_choice(self,field,check,ref,records,controls,page):
         if self.stage['operation'] not in ('docking_vina','docking_dock6') or field!='base_selected_mols':return

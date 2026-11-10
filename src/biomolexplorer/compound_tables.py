@@ -41,6 +41,7 @@ class CompoundTables:
         self.store=store
         self._snapshot=None
         self._view=None
+        self._stage_snapshot=None
 
     @contextmanager
     def _reader(self,path):
@@ -68,12 +69,21 @@ class CompoundTables:
                 yield version,SimpleNamespace(fieldnames=reader.fieldnames,rows=reader)
 
     def _stage(self,token,project_id,run_id,stage_id):
+        project=self.store.project(token,project_id)
+        with self.store.connect() as db:
+            revision=db.execute('SELECT project_id,updated,status FROM runs WHERE id=?',(run_id,)).fetchone()
+        if revision is None or revision['project_id']!=project_id:
+            raise AccessDenied('Resultado de outro projeto.')
+        key=(project_id,run_id,stage_id,revision['updated'],revision['status'],project.get('revision'))
+        if self._stage_snapshot and self._stage_snapshot[0]==key:
+            return self._stage_snapshot[1:]
         run=self.store.get_run(token,run_id)
         if run['project_id']!=project_id:
             raise AccessDenied('Resultado de outro projeto.')
         stage=next((s for s in run['stages'] if s['id']==stage_id and s['status'] in self.available_statuses),None)
         if stage is None:
             raise ValueError('A tabela estará disponível após concluir a recuperação.')
+        self._stage_snapshot=(key,run,stage)
         return run,stage
 
     def tables(self,token,project_id,run_id,stage_id):

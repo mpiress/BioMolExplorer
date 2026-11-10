@@ -48,6 +48,8 @@ def snapshot(store, db, project_id):
     for folder, subfolders, filenames in os.walk(root, followlinks=False):
         relative = Path(folder).relative_to(root)
         subfolders[:] = [name for name in subfolders if name not in EXCLUDED and not (Path(folder) / name).is_symlink()
+                         and not (name in ('cache','.calculation-cache','matplotlib','__pycache__') and
+                                  ('.biomolexplorer' in relative.parts or 'artifacts' in relative.parts))
                          and not (relative == Path('runs') and name in active)
                          and not (relative == Path('assets') and name not in registered_assets)]
         if relative.parts:

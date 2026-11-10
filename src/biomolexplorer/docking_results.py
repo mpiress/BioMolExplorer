@@ -7,13 +7,16 @@ from .workspace import AccessDenied
 
 
 class DockingResults(CompoundTables):
+    available_statuses=('succeeded','running','failed','cancelled','interrupted')
     def page(self,token,pid,rid,sid,filename,*args,**kwargs):
         result=super().page(token,pid,rid,sid,filename,*args,**kwargs)
         path=self._path(token,pid,rid,sid,filename)
         _,stage=self._stage(token,pid,rid,sid)
+        if stage.get('operation')=='docking_vina':return result
+        allowed={str(self.store.scoped_path(pid,name)) for name in stage.get('artifacts',[])}
         for row in result['rows']:
             try:
-                self._footprint_path(pid,path,row['properties'],stage)
+                self._footprint_path(pid,path,row['properties'],stage,allowed=allowed)
                 row['footprint_available']=True
             except (ValueError,AccessDenied):row['footprint_available']=False
         return result
@@ -21,7 +24,11 @@ class DockingResults(CompoundTables):
     def tables(self,token,pid,rid,sid):
         _,stage=self._stage(token,pid,rid,sid)
         result=[]
-        for name in stage.get('artifacts',[]):
+        artifacts=stage.get('artifacts',[]) if stage['status']=='succeeded' else list(dict.fromkeys(
+            path for batch in stage.get('batches',[]) if batch.get('status')=='succeeded'
+            for path in batch.get('artifacts',[])))
+        for name in artifacts:
+            if not str(name).lower().endswith('.csv'):continue
             path=self.store.scoped_path(pid,name)
             if path.suffix=='.csv' and path.is_file() and {'molecule_chembl_id','canonical_smiles'}<=columns(path):
                 fields=columns(path)
@@ -110,8 +117,8 @@ class DockingResults(CompoundTables):
         if len(data)>MAX_VIEW_BYTES:raise ValueError('O PDF ultrapassa o limite de 32 MB.')
         return data
 
-    def _footprint_path(self,pid,path,row,stage):
-        allowed={str(self.store.scoped_path(pid,name)) for name in stage.get('artifacts',[])}
+    def _footprint_path(self,pid,path,row,stage,allowed=None):
+        if allowed is None:allowed={str(self.store.scoped_path(pid,name)) for name in stage.get('artifacts',[])}
         def authorized(candidate):
             # Native runs historically did not list PDFs in their manifests.
             native=stage.get('operation') in ('docking_dock6','consensus') and not stage.get('configuration',{}).get('provided_results')

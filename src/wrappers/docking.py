@@ -295,6 +295,16 @@ def perform_docking_dock6(base_input_path:str, target:str, base_output_path:str,
         records=pd.read_csv(data/'pdb_codes.csv')[['PDB_CODE','LIGAND','RESNUM','CHAIN']].values.tolist()
     elif isinstance(pdb_code[0],(list,tuple)):records=list(pdb_code)
     else:records=[pdb_code]
+    shared_ligands=None;shared_rows={}
+    if not base_vina_path:
+        token=CURRENT_REPORT.set(failures)
+        try:
+            shared_ligands=prepare_ligands(dataset,output/'Molecules','mol2',charge_type=charge_type,ph=pH,
+                preparation_options=preparation_options or {})
+        finally:CURRENT_REPORT.reset(token)
+        prepared_index=output/'Molecules'/'compounds.csv'
+        shared_rows={row['molecule_chembl_id']:row for row in read_compounds(
+            prepared_index if prepared_index.is_file() else dataset)}
     for record in records:
         receptor=f'{record[0]}_{record[3]}'
         root=output/target.replace(' ','')/receptor
@@ -317,8 +327,20 @@ def perform_docking_dock6(base_input_path:str, target:str, base_output_path:str,
         center=binding_center(data/'Prepared',record)
         token=CURRENT_REPORT.set(failures)
         try:
-            ligands=prepare_ligands(prepared_dataset,root/'Molecules','mol2',charge_type=charge_type,center=center,ph=pH,
-                            preparation_options=preparation_options or {})
+            if shared_ligands is None:
+                ligands=prepare_ligands(prepared_dataset,root/'Molecules','mol2',charge_type=charge_type,center=center,ph=pH,
+                                preparation_options=preparation_options or {})
+            else:
+                from biomolexplorer.calculation_cache import copy_artifact
+                from biomolexplorer.docking_data import center_mol2
+                ligands=[]
+                for source in shared_ligands:
+                    source=Path(source);destination=root/'Molecules'/source.name
+                    code=source.name.removesuffix('.lig.mol2');row=shared_rows.get(code,{})
+                    copy_artifact(source,destination)
+                    if row.get('prepared_origin') in ('smiles','library'):
+                        center_mol2(destination,center)
+                    ligands.append(destination)
         finally:CURRENT_REPORT.reset(token)
         if not ligands:continue
         dock6=Dock6(dock6_path=dock6_app_path,ligand_input_path=str(root/'Molecules'),

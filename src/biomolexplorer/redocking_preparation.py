@@ -20,22 +20,27 @@ def recoverable(error):
 def prepare_pairs(dock,records,settings,charge_type,pH,ready=None,engine='vina'):
     """Reuse receptors, but isolate ligand failures and clean partial outputs."""
     from .redocking_config import chimera_pairs
+    complexpath=Path(dock.complexpath).resolve();outputpath=Path(dock.outputpath).resolve()
+    if not complexpath.is_dir():raise ValueError('A pasta de estruturas do redocking não existe.')
+    outputpath.mkdir(parents=True,exist_ok=True)
+    if len({pair_key(record) for record in records})!=len(records):
+        raise ValueError('Há pares de redocking duplicados nos metadados de entrada.')
     settings=chimera_pairs(records,settings)
     ready=set(ready or ());failed_receptors={};prepared=[];failures=[]
     from .structure_cache import StructureCache
-    cache=StructureCache(dock.complexpath, dock.outputpath, settings, charge_type, pH)
+    cache=StructureCache(complexpath,outputpath,settings,charge_type,pH)
     dock.receptor_checkpoint=cache.remember_receptor
     for record in records:
         receptor=(record[0],record[3]);key=pair_key(record)
         try:
             if receptor in failed_receptors:raise ValueError(failed_receptors[receptor])
-            validate_structure_pairs(dock.complexpath,[record],{key:settings[key]} if key in settings else {},engine=engine)
+            validate_structure_pairs(complexpath,[record],{key:settings[key]} if key in settings else {},engine=engine)
             with cache.locked(record):
                 receptor_reused,ligand_reused=cache.restore(record)
                 if receptor_reused:ready.add(receptor)
                 completed=[record] if receptor_reused and ligand_reused else dock.prepare_for_docking([record],charge_type,pH,True,
                     preparation_pairs=settings,_prepared_receptors=ready,**({'docking_engine':engine} if engine!='vina' else {}))
-                validate_structure_pairs(dock.complexpath,[record],{key:settings[key]} if key in settings else {},prepared=True,engine=engine,prepared_directory=dock.outputpath)
+                validate_structure_pairs(complexpath,[record],{key:settings[key]} if key in settings else {},prepared=True,engine=engine,prepared_directory=outputpath)
                 if not (receptor_reused and ligand_reused):cache.remember(record)
             prepared.extend(completed)
         except Exception as error:
@@ -44,7 +49,7 @@ def prepare_pairs(dock,records,settings,charge_type,pH,ready=None,engine='vina')
             if receptor not in ready:failed_receptors[receptor]=reason
             prefix=f'{record[0]}_{record[1]}_{record[2]}{record[3]}.'
             receptor_prefix=f'{record[0]}_{record[3]}.'
-            for path in Path(dock.outputpath).iterdir():
+            for path in outputpath.iterdir():
                 if path.is_file() and (path.name.startswith(prefix) or
                         receptor not in ready and path.name.startswith(receptor_prefix)):
                     path.unlink()
@@ -52,7 +57,7 @@ def prepare_pairs(dock,records,settings,charge_type,pH,ready=None,engine='vina')
             status='UNSUPPORTED' if report and report.get('interaction_type')=='COVALENT' else 'preparation_failed'
             if report:
                 write_json(dict(report,outcome='COVALENT_DOCKING_UNAVAILABLE',status=status,
-                    reason=reason),Path(dock.outputpath)/(f'{record[0]}_{record[1]}_{record[2]}{record[3]}.interaction.json'))
+                    reason=reason),outputpath/(f'{record[0]}_{record[1]}_{record[2]}{record[3]}.interaction.json'))
             failures.append(dict(zip(FIELDS[:5],list(record[:4])+[record[4] if len(record)>4 else None]),
                 STATUS=status,FAILED_STEP='Classificação do complexo' if report else 'Preparação do complexo',ERROR=reason))
             dock.logger.warning('Redocking: complexo ignorado %s: %s',key,reason,exc_info=True)
