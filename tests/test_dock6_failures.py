@@ -81,7 +81,7 @@ class Dock6FailureTests(unittest.TestCase):
         self.assertEqual(len(self.report.records),len(self.codes))
         self.assertFalse(self.engine._ligand_files(self.engine.ligandpath))
 
-    def test_footprint_failure_is_isolated_and_removes_docking_pose(self):
+    def test_footprint_failure_is_isolated_and_preserves_docking_pose(self):
         self.minimized()
         folder=Path(self.engine._Dock6__base_output_path)/'flex';folder.mkdir()
         for code in self.codes:(folder/(code+'_scored.mol2')).write_text(SCORED)
@@ -92,7 +92,7 @@ class Dock6FailureTests(unittest.TestCase):
             (prefix.parent/(prefix.name+'_footprint_scored.txt')).write_text('ALA 1 -1.0 -2.0 x -1.0 -2.0 x\n')
             return True
         with patch.object(self.engine,'perform_subprocess',side_effect=footprint):self.engine.prepare_footprint(docked=True)
-        self.assertFalse((folder/'BAD_scored.mol2').exists())
+        self.assertTrue((folder/'BAD_scored.mol2').exists())
         self.assertTrue((folder/'A.B_scored.mol2').exists())
         self.assertEqual(self.report.records[0]['preparation_step'],'Footprint DOCK6')
 

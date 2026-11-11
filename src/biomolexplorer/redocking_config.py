@@ -45,6 +45,7 @@ def validate_redocking_parameters(parameters):
             value=parameters.get(key,20 if key=='exhaustiveness' else 10)
             if type(value) is not int or value<1:raise ValueError('Os parâmetros de busca Vina devem ser inteiros positivos.')
     else:
+        if parameters.get('dock6_mode','redock') not in ('redock','score_only','restrained'):raise ValueError('Escolha redocking, avaliação da referência ou minimização restrita.')
         if parameters.get('conformer_search_type','flex') not in ('flex','rigid'):raise ValueError('Escolha busca flexível ou rígida no DOCK6.')
         for key,default in (('density',.5),('radius',1.4),('distance',10.)):
             value=parameters.get(key,default)

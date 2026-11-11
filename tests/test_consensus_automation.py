@@ -2,6 +2,7 @@
 import asyncio
 import csv
 import json
+import math
 import time
 import unittest
 from pathlib import Path
@@ -95,8 +96,21 @@ class ConsensusSortingTests(unittest.TestCase):
         with patch('wrappers.docking.plot_scatter_comparison'):
             frame=generate_consensus(str(root),str(root/'output'),'consensus',base_vina_path=str(root/'vina'),base_dock6_path=str(root/'dock6'))
         self.assertEqual(frame['molecule_chembl_id'].tolist(),['M3','M2','M1'])
-        self.assertEqual(frame['normalized_score'].tolist(),[1.0,0.5,0.0])
+        self.assertEqual(frame['normalized_score'].tolist(),[1.0,math.exp(-5),math.exp(-10)])
+        self.assertEqual(frame['vina_raw'].tolist(),[-3,-2,-1])
         with (root/'output/consensus.csv').open() as stream:
             self.assertIn('normalized_score',next(csv.DictReader(stream)))
+
+    def test_new_model_headers_preserve_table_actions(self):
+        async def scenario():
+            async def call(fn,*args,**kwargs):return fn(*args,**kwargs)
+            async def guard(fn):return await fn()
+            self.path.write_text('molecule_chembl_id,canonical_smiles,vina,dock6,normalized_score,consensus_model,conformer_file\nM1,CCO,1,1,1,target-balanced-ecr-v1,pose.mol2\n')
+            ui=SimpleNamespace(store=self.store,token=self.owner,current={'id':self.pid},page=SimpleNamespace(update=lambda:None),call=call,guard=guard)
+            viewer=DockingResultsTable(ui,self.pid,self.rid,self.sid,self.tables.tables(self.owner,self.pid,self.rid,self.sid),inline=True)
+            await viewer.load()
+            self.assertEqual([c.label.value for c in viewer.table.columns],['Código do composto','Relevância Vina','Relevância DOCK6','Consenso','Ações'])
+            self.assertEqual([button.content for button in viewer.table.rows[0].cells[-1].content.controls],['3D','Resíduos','Remover'])
+        asyncio.run(scenario())
 
 if __name__=='__main__':unittest.main()

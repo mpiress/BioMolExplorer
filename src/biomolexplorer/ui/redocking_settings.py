@@ -4,7 +4,7 @@ from .localization import Translator
 from .runtime_messages import session_language
 
 VINA={'pH','sizeof_box','exhaustiveness','num_modes'}
-DOCK6={'dock6_app_path','density','radius','distance','conformer_search_type','max_orientations','num_scored_conformers','dock6_seed'}
+DOCK6={'dock6_app_path','density','radius','distance','conformer_search_type','max_orientations','num_scored_conformers','dock6_seed','dock6_mode'}
 
 
 class RedockingSettings:
@@ -83,6 +83,7 @@ class RedockingSettings:
             'max_orientations':'Inteiro positivo; padrão: 1000 orientações.',
             'num_scored_conformers':'Inteiro positivo. As poses são selecionadas pelo menor Grid Score.',
             'dock6_seed':'Inteiro positivo fixo para reprodutibilidade; padrão: 73.',
+            'dock6_mode':'Redocking testa recuperação independente da pose. Avaliação da referência preserva as coordenadas; seu RMSD não mede recuperação por busca.',
         }
         for key,helper in helpers.items():
             control=form.field_controls[key]
@@ -100,7 +101,7 @@ class RedockingSettings:
                 tile.controls_padding=24;tile.tile_padding=20
                 tile._redocking_fields_wrapped=True
         engine_cards=[]
-        keys_by_engine=[('vina',('pH','exhaustiveness','num_modes')),('dock6',('dock6_app_path','conformer_search_type','density','radius','distance','max_orientations','num_scored_conformers','dock6_seed'))]
+        keys_by_engine=[('vina',('pH','exhaustiveness','num_modes')),('dock6',('dock6_app_path','dock6_mode','conformer_search_type','density','radius','distance','max_orientations','num_scored_conformers','dock6_seed'))]
         for engine,keys in keys_by_engine:
             advanced=[tile for name,tile in form.template_tiles.items() if name.startswith(engine+'/')]
             controls=[self.fields([form.field_controls[k] for k in keys])]

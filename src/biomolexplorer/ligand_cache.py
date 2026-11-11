@@ -25,7 +25,16 @@ def validate_prepared_ligand(path, format):
         raise ValueError('Arquivo preparado ausente ou vazio: '+path.name)
     if format=='pdbqt':
         atoms=[]
-        for line in path.read_text(errors='replace').splitlines():
+        lines=path.read_text(errors='replace').splitlines()
+        # Output poses may contain multiple MODEL blocks; each model must have
+        # exactly one torsion tree. Open Babel exports salts as multiple trees.
+        roots=0
+        for line in lines:
+            if line.startswith('MODEL '):roots=0
+            if line.strip()=='ROOT':
+                roots+=1
+                if roots>1:
+                    raise ValueError('PDBQT contém múltiplos fragmentos ROOT incompatíveis com Vina; revise os contraíons sem descartar componentes automaticamente: '+path.name)
             if not line.startswith(('ATOM  ','HETATM')):continue
             try:
                 coordinates=[float(line[start:end]) for start,end in ((30,38),(38,46),(46,54))]

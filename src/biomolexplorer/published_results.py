@@ -25,10 +25,21 @@ def artifact_integrity(store,pid,entry,*,include_batches=False,root=None):
     if include_batches:
         for batch in entry.get('batches',[]):manifest.update(batch.get('artifact_manifest',{}))
     if not paths:return False
-    if not include_batches and set(manifest)!={str(Path(p).resolve()) for p in paths}:return False
     try:
         root=store.project_dir(pid).resolve() if root is None else root
-        return all(input_digest(_scoped(root,p))==manifest.get(str(Path(p).resolve())) for p in paths)
+        parents={};resolved=[]
+        for value in paths:
+            path=Path(value)
+            if path.name in ('','.','..'):return False
+            parent=parents.get(path.parent)
+            if parent is None:
+                parent=path.parent.resolve();parents[path.parent]=parent
+            target=parent/path.name
+            if target.is_symlink():target=target.resolve()
+            if not target.is_relative_to(root):return False
+            resolved.append(target)
+        if not include_batches and set(manifest)!={str(path) for path in resolved}:return False
+        return all(input_digest(path)==manifest.get(str(path)) for path in resolved)
     except (OSError,ValueError):return False
 
 
@@ -156,21 +167,39 @@ def adopted(entry,run_id):
     return result
 
 
-def histories(store,pid,*,include_active=False):
+class ReviewHistory:
+    """Replayable lazy history: older runs are opened only when needed."""
+    def __init__(self,store,ids):
+        self.store=store;self.ids=ids;self.loaded=[];self.position=0
+
+    def __iter__(self):
+        for entry in self.loaded:yield entry
+        from .result_catalog import read_proofs
+        while self.position<len(self.ids):
+            rid=self.ids[self.position];self.position+=1
+            stages=read_proofs(self.store,rid)
+            if stages is not None:
+                entry=(rid,stages);self.loaded.append(entry);yield entry
+
+
+def histories(store,pid,*,include_active=False,compact=False):
     clause='' if include_active else " AND status NOT IN ('queued','running','awaiting_input')"
     with store.connect() as db:
+        if compact:
+            ids=[row[0] for row in db.execute('SELECT id FROM runs WHERE project_id=?'+clause+' ORDER BY created DESC',(pid,))]
+            return ReviewHistory(store,ids)
         return [(row[0],json.loads(row[1])) for row in db.execute(
             'SELECT id,stages FROM runs WHERE project_id=?'+clause+' ORDER BY created DESC',(pid,))]
 
 
-def catalog(store,pid,pipeline,*,include_checkpoints=False):
+def catalog(store,pid,pipeline,*,include_checkpoints=False,compact=False):
     """Current block results, optionally collecting verified completed checkpoints."""
     by_id={s['id']:s for s in pipeline};pending={s['id']:dependencies(s) for s in pipeline};order=[]
     while pending:
         ready=[identifier for identifier,owners in pending.items() if owners<=set(order)]
         if not ready:break
         for identifier in ready:order.append(identifier);pending.pop(identifier)
-    history=histories(store,pid,include_active=include_checkpoints)
+    history=histories(store,pid,include_active=include_checkpoints,compact=compact)
     results={};found={};projected_history={}
     for identifier in order:
         stage=by_id[identifier]
@@ -178,6 +207,7 @@ def catalog(store,pid,pipeline,*,include_checkpoints=False):
         for run_id,snapshot in history:
             entry=next((item for item in snapshot if item['id']==identifier),None)
             if entry and retained_configuration(store,pid,stage,entry,snapshot,results) is not None:
+                if compact:entry=_hydrate(store,run_id,entry)
                 found[identifier]=adopted(entry,run_id);results[identifier]=list(entry['artifacts']);break
         if include_checkpoints and identifier not in found:
             from .result_visibility import project_run,retained
@@ -202,7 +232,7 @@ def catalog(store,pid,pipeline,*,include_checkpoints=False):
                         valid.append(unit);seen_units.add(unit_identity)
                 paths=list(dict.fromkeys(p for unit in valid for p in unit.get('artifacts',[])))
                 if not paths:continue
-                part=adopted(entry,run_id);part['coverage_pending']=True
+                part=adopted(_hydrate(store,run_id,entry) if compact else entry,run_id);part['coverage_pending']=True
                 part['reuse_kind']='verified_checkpoint'
                 provenance=part['reuse_provenance']
                 provenance['policy']='verified_completed_units_v1'
@@ -221,6 +251,17 @@ def catalog(store,pid,pipeline,*,include_checkpoints=False):
                 if len(parts)>1:combined['_result_sources']=parts
                 found[identifier]=combined;results[identifier]=combined['artifacts']
     return found
+
+
+def _hydrate(store,run_id,entry):
+    from .result_catalog import read_stage
+    full=read_stage(store,run_id,entry['id'])
+    if not full:return entry
+    result=dict(entry);allowed=set(entry.get('artifacts',[]))
+    result['artifact_records']=[record for record in full.get('artifact_records',[]) if record['path'] in allowed]
+    for key in ('_review_input_groups','_review_naming_groups'):
+        if key in full:result[key]=full[key]
+    return result
 
 
 def compatible_configuration(stage,entry,snapshot,results):

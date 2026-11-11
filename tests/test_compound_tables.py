@@ -171,7 +171,8 @@ class CompoundTablesTests(unittest.TestCase):
             self.assertEqual(link.url.url,url);self.assertEqual(link.url.target.value,'_blank')
         viewer.selector.value=next(t['path'] for t in viewer.tables if t['name']=='CHEMBL220_MOLS.csv')
         asyncio.run(viewer.change_table(None))
-        self.assertIn('CHEMBL220_MOLS.csv',viewer.count.value)
+        selected=next(table for table in viewer.tables if table['path']==viewer.selector.value)
+        self.assertIn(selected.get('public_name',selected['name']),viewer.count.value)
         self.assertEqual(viewer.offset,0)
         asyncio.run(viewer.preview(viewer.data['rows'][0],False));self.assertTrue(dialogs[-1].title.value.endswith('2D'))
         # A success notification must not receive the molecule's close command.

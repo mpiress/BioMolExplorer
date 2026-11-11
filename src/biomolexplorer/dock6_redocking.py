@@ -15,7 +15,7 @@ def heavy_atom_rmsd(reference,pose):
     return float(rdMolAlign.CalcRMS(pose,reference))
 
 
-def redock(records, prepared, output, dock6_path, search_type, checkpoint, settings=None):
+def redock(records, prepared, output, dock6_path, search_type, checkpoint, settings=None, dock6_mode='redock'):
     from caad.docking import Dock6
     from .docking_data import binding_center, convert_structure
     from .storage import write_dataframe
@@ -43,6 +43,8 @@ def redock(records, prepared, output, dock6_path, search_type, checkpoint, setti
             receptor_input_path=str(prepared),base_output_path=str(root/'results'),
             pdb_code=f'{code}_{chain}',conformer_search_type=search_type,
             binding_site_center=binding_center(prepared,record))
+        from .dock6_protocol import resolve_mode
+        dock.dock6_mode=resolve_mode(dock6_mode,True)
         try:
             dock.validate_setup();dock.prepare_site()
             dock.prepare_minimization();dock.perform_dock6_evaluation()

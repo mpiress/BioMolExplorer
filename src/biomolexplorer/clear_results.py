@@ -91,8 +91,8 @@ def clear_project_results(store,token,pid,*,reset_configuration=True):
                         for name in ('artifacts','inputs','redocking-inputs'):
                             candidates.update(p.resolve() for p in stage_root.rglob(name) if p.is_dir() and not p.is_symlink())
                     item.update(artifacts=[],artifact_manifest={},artifact_records=[],input_files={},batches=[],
-                        outputs_removed=True,curated_at=time.time(),reused=False,redocking_failures=0,redocking_reused=0,excluded_records=0)
-                    for key in ('cache_key','cache_software','reused_from_run','current_batch','progress','input_manifest'):item.pop(key,None)
+                        outputs_removed=True,curated_at=time.time(),reused=False,redocking_failures=0,redocking_reused=0,excluded_records=0,docking_failures=0)
+                    for key in ('cache_key','cache_software','reused_from_run','current_batch','progress','input_manifest','docking_accounting'):item.pop(key,None)
             if (root/'.input-cache').is_dir():candidates.add(root/'.input-cache')
             if (root/'.biomolexplorer/cache/preparation').is_dir():candidates.add(root/'.biomolexplorer/cache/preparation')
             if (root/'.biomolexplorer/cache/calculations/molecular').is_dir():candidates.add(root/'.biomolexplorer/cache/calculations/molecular')
@@ -120,7 +120,10 @@ def clear_project_results(store,token,pid,*,reset_configuration=True):
                 pipeline,links_reset=reset_selections(pipeline)
                 pipeline=reset_defaults(pipeline)
             # Run timestamps describe execution, not the later cleanup duration.
-            for rid,stages in runs:db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(stages),rid))
+            from .artifact_registry import register_run
+            for rid,stages in runs:
+                register_run(db,pid,rid,stages)
+                db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(stages),rid))
             db.execute('UPDATE projects SET pipeline=?,revision=revision+1,updated=? WHERE id=?',(json.dumps(pipeline),time.time(),pid))
     except BaseException:
         for path,saved in reversed(moved):

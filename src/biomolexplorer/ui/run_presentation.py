@@ -44,7 +44,11 @@ def outcome_overview(run,actions,language='pt'):
     color,background,_=STATES.get(display_status,STATES['interrupted'])
     completed=sum(s['status']=='succeeded' and not any(s.get(key) for key in ('outputs_removed','results_stale','dependency_obsolete')) for s in stages)
     total=sum(s.get('configuration',{}).get('enabled',True) for s in stages)
-    files=len({str(p) for s in stages for p in s.get('artifacts',[])})
+    # Manifests are historical; the metric describes files still available now.
+    from pathlib import Path
+    files=sum(Path(p).is_file() for p in {str(p) for s in stages
+        if not s.get('results_stale') and not s.get('dependency_obsolete')
+        for p in s.get('artifacts',[])})
     reused=sum(s['status']=='succeeded' and not any(s.get(key) for key in ('outputs_removed','results_stale','dependency_obsolete')) and bool(s.get('reused')) for s in stages)
     description=messages('run.overview.'+('paused' if paused else 'cleared' if display_status=='cleared' else 'succeeded' if run['status']=='succeeded' else 'active' if run['status'] in ACTIVE else 'stopped'))
     metrics=[(messages('run.metric.completed'),f'{completed} / {total}'),(messages('run.metric.files'),str(files)),

@@ -17,9 +17,11 @@ class DockingResultsTable(CompoundTableViewer):
     def render_rows(self,result):
         properties=self.data.get('columns',[]) or (self.data['rows'][0]['properties'] if self.data['rows'] else {})
         consensus='vina' in properties and 'dock6' in properties
+        relevance='consensus_model' in properties
         scores=['vina','dock6','normalized_score'] if consensus else [k for k in ('score','vina','dock6','z-score','min-max') if k in properties]
         columns=[('molecule_chembl_id','Código do composto')]+([] if consensus else [('receptor_id','Alvo')])+[
-            (key,{'vina':'Score Vina','dock6':'Score DOCK6','normalized_score':'Score normalizado'}.get(key,key)) for key in scores]+([] if consensus else [('canonical_smiles','SMILES')])
+            (key,({'vina':'Relevância Vina','dock6':'Relevância DOCK6','normalized_score':'Consenso'} if relevance else
+                  {'vina':'Score Vina','dock6':'Score DOCK6','normalized_score':'Score normalizado'}).get(key,key)) for key in scores]+([] if consensus else [('canonical_smiles','SMILES')])
         self.table.columns=[]
         for index,(key,label) in enumerate(columns):
             self.table.columns.append(ft.DataColumn(ft.Text(label),numeric=key in scores))

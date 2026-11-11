@@ -99,7 +99,17 @@ class RedockingMethodsTests(unittest.TestCase):
             shared=layout.controls[2]
             self.assertEqual(shared.content.controls[0].value,'Shared preparation for the collection' if language=='en' else 'Preparação única do conjunto')
             role=form.preparation_settings.settings['receptor']
-            self.assertEqual(role['remove_solvent'].label,'Remove solvent' if language=='en' else 'Remover solvente')
+            label=next(control.label for control in localization.walk(shared)
+                       if isinstance(control,ft.Semantics) and control.content is role['remove_solvent'])
+            self.assertEqual(label,'Remove solvent' if language=='en' else 'Remover solvente')
+
+    def test_reference_operation_mode_survives_configuration_round_trip(self):
+        form=self.form();form.field_controls['redocking_engine'].value='dock6'
+        form.field_controls['dock6_mode'].value='score_only'
+        form.layout();result=form.read()
+        self.assertEqual(result['parameters']['dock6_mode'],'score_only')
+        reopened=GuidedForm(form.ui,result,[],True)
+        self.assertEqual(reopened.read()['parameters']['dock6_mode'],'score_only')
 
     def test_engine_parameters_validate_only_current_engine(self):
         validate_redocking_parameters({'redocking_engine':'dock6','sizeof_box':[],'exhaustiveness':0})

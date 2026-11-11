@@ -157,6 +157,15 @@ class RunProgress:
     async def configure_pending(self, e):
         if self.valid():await self.ui.guard(lambda:self.ui.configure_pending(self.run['id']))
 
+    def tick(self,now=None):
+        end=(now if now is not None else time.time()) if self.run['status'] in ACTIVE else self.run['updated']
+        self.timing.value=self.messages('run.time.elapsed',time=elapsed(self.run['created'],end))
+        current=next((stage for stage in self.run['stages'] if stage['status']=='running'),None)
+        if current and current.get('started_at'):
+            self.timing.value+=self.messages('run.time.stage',time=elapsed(current['started_at'],end))
+        prefix=self.badge_text.value.rsplit(' · ',1)[0]
+        self.badge_text.value=prefix+' · '+elapsed(self.run['created'],end)
+
     def update(self, run, now=None):
         self.run = run
         m = self.messages

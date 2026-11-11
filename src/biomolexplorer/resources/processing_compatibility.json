@@ -1,5 +1,5 @@
 {
-  "reason": "2026-10-28: stage_sources filters removed pairs from partial indexes; no change to preparation, docking, scoring, RMSD, PairCache keys or native tool contracts.",
+  "reason": "Audited compatibility: existing aliases preserve unchanged preparation and Vina/default independent-redocking science. New DOCK6 refinement/reference modes include their explicit policy and templates in cache keys; receptor-grid compatibility is validated separately.",
   "aliases": {
     "8e745195a496c39e2add6499735cd740bdae1c82a6091a6dc2ccb83f2951c24b": "b501d3cf2f2c7e137410e3f1f65a3b5c09be09169cf55be3485e63b456ccdb57",
     "7ab5d79a60ddb8cebd908879a96168ebd3bebb0255a65c2472b9793a28695f3b": "cfd172638586c6b3adf132c225c13ccdae3d45341a2b7d89b522542f20b08e7e",
@@ -31,7 +31,13 @@
     "7dce715ca01bbf42ced7f95e7401cb063d69ce7e651ff9d548b21bb0e1ac8f97": "5b0dec85d0a0f78cfca2d17aed6d632dd60f300145a8017b4929576933bda1fb",
     "e617d9c169706b6a5f03ef88946c0ccb0c9ca689e881f439b7ae25d2d651e4e3": "0dc18ff9d42dc73d8088783dd393bee4c128eac1362f6b22fffd632cf2ed6d8c",
     "f32157edf572481d1744ed9bf1b485044095169abb5ea8e41580e061e2b5dd6b": "e58cccaf2715a8db73772511f3edbfc5a2318b6a7da9daaf568cb3038e2adef6",
-    "a2c8345778cc212244611f9e64e115343b46143ec45548774fddcadabf8fb9a3": "4f34736243b28a919d1e07588de82a2903f3a545c3a6dc33079150ddbca79857"
+    "a2c8345778cc212244611f9e64e115343b46143ec45548774fddcadabf8fb9a3": "4f34736243b28a919d1e07588de82a2903f3a545c3a6dc33079150ddbca79857",
+    "8f60ae16aabcfb737d2e4021cd5201ab0236b8abec1f23ef572cf6fdf3d46103": "47a57afc69a84c2f5bc72dbefc2d9ebfe7c47362aaedae995464900870e40176",
+    "e431f456a207c536e858ca5f36ee679c0d5da322a810d0a987d7802fa689496e": "cfd172638586c6b3adf132c225c13ccdae3d45341a2b7d89b522542f20b08e7e",
+    "69b34ecc0bedaa65a4ba24e651efcfbf0efce1058ed86d2e2a94ef4a4bbfaa39": "b501d3cf2f2c7e137410e3f1f65a3b5c09be09169cf55be3485e63b456ccdb57",
+    "06f5f2b88c22db38711f51cb6fba589a172273857a0f0afb87ff64797ec68f75": "bc65d1bf30d64f6e89d5111f56b91a4cd66658bf547e534823cf8a2ab767b64a",
+    "953650f5202cc1cf7b63508246027a89c9024c7a5ce21183a0e8afded5dcc023": "4e672e3c3d6b1fd2e70498571856baf331735a87e54ec32ed85997cb6186ba81",
+    "8b5c85bd814d53a06ee6f740c206254b267d14825ad69532c4bb4ea756b1d7af": "4e672e3c3d6b1fd2e70498571856baf331735a87e54ec32ed85997cb6186ba81"
   },
   "operations": [
     "prepare_structures",
@@ -273,6 +279,23 @@
         "scope": "implementation",
         "current": "a2c8345778cc212244611f9e64e115343b46143ec45548774fddcadabf8fb9a3",
         "previous": "4f34736243b28a919d1e07588de82a2903f3a545c3a6dc33079150ddbca79857"
+      }
+    ]
+  },
+  "consensus_model_audit": {
+    "date": "2026-11-11",
+    "model": "target-balanced-ecr-v1",
+    "reason": "Only generate_consensus and its normalized plot branch changed in the shared scientific wrapper. Unchanged operation entry points retain their processing identities. Consensus has a distinct contract and never aliases the previous model.",
+    "unchanged_operations": [
+      {
+        "operation": "docking_vina",
+        "current": "8b5c85bd814d53a06ee6f740c206254b267d14825ad69532c4bb4ea756b1d7af",
+        "previous": "4e672e3c3d6b1fd2e70498571856baf331735a87e54ec32ed85997cb6186ba81"
+      },
+      {
+        "operation": "docking_dock6",
+        "current": "8b5c85bd814d53a06ee6f740c206254b267d14825ad69532c4bb4ea756b1d7af",
+        "previous": "4e672e3c3d6b1fd2e70498571856baf331735a87e54ec32ed85997cb6186ba81"
       }
     ]
   }

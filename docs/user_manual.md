@@ -283,9 +283,9 @@ Confira a caixa, pH e esforço do Vina e as cargas, superfície, distância, rai
 
 O botão **Footprint** do DOCK6 abre um popup integrado com o gráfico das energias de Van der Waals e eletrostáticas por resíduo, comparando a referência com a pose final calculada. Use o zoom e arraste para explorar o gráfico; **Recentrar** restaura a visualização inicial e **Baixar PDF** salva o documento original. O mesmo popup está disponível no consenso quando há um footprint associado. A geração valida o conteúdo das energias e interrompe a etapa se o motor produzir um arquivo vazio. Resultados antigos podem ter usado o ligante minimizado antes do docking; a interface avisa sobre essa origem. Reexecute esses experimentos para obter o gráfico da pose final.
 
-**Consenso de docking** reúne os resultados selecionados de cada motor, incluindo vários lotes e ramificações. Calcula somente a interseção por código molecular e receptor, usando o menor score quando há poses repetidas. Resultados do mesmo código com estruturas diferentes são recusados. Não havendo interseção, o bloco é marcado como não executado e explica que os motores não avaliaram compostos em comum para o mesmo receptor.
+**Consenso de docking** reúne lotes e ramificações dos dois motores e produz uma única linha por composto com pelo menos um par alvo/composto comum. Deduplica poses pelo menor score bruto e valida a identidade estereoquímica entre motores e alvos.
 
-Após conectar os resultados Vina e DOCK6, o consenso segue automaticamente na execução do pipeline, sem confirmação de arquivos ou parâmetros adicionais. A tabela apresenta código do composto, score Vina, score DOCK6 e score normalizado (0 a 1). Clique no cabeçalho de uma coluna para alternar a ordenação crescente e decrescente; a ordenação considera toda a tabela antes da paginação. O score normalizado é a média das normalizações min-max dos dois motores, e valores maiores indicam posições melhores no ranking. O CSV também preserva z-score e min-max. Há botões **3D Vina**, **3D DOCK6** e **Remover** em cada linha. O consenso usa os scores originais dos dois motores, sem exigir receptor, ligante de referência ou pose. Arquivos estruturais disponíveis são anexos opcionais para visualização e sua ausência não bloqueia o cálculo. Para um composto ou scores constantes, as normalizações são zero. A remoção exige permissão de edição, fica registrada e afeta próximas entradas; não recalcula análises já concluídas. As tabelas principais de cada lote são usadas sem reintroduzir linhas removidas a partir das tabelas auxiliares.
+O modelo normaliza ranks por motor e alvo com transformação exponencial (ECR), agrega alvos por média geométrica com penalização de cobertura e calcula o consenso como a média das relevâncias Vina e DOCK6. As colunas **Relevância Vina**, **Relevância DOCK6** e **Consenso** variam de 0 a 1; maior é melhor. Os botões, a ordenação paginada e a remoção auditada permanecem disponíveis. As ações estruturais usam um único alvo representativo, enquanto o CSV preserva os scores e ranks de todos os alvos. Arquivos estruturais são opcionais. Consulte a [formulação matemática e os limites do modelo](docking_consensus.md). Resultados antigos mantêm seus valores; reexecute apenas o consenso para aplicar o novo modelo.
 
 ### Amber Score nativo · DOCK6 6.11
 
@@ -587,7 +587,7 @@ Execute e inspecione scores, poses 3D e footprint disponível.
 ```text
 Conecte resultados Vina e DOCK6 às respectivas entradas.
 Use compostos e receptores correspondentes nos dois resultados.
-Revise o peso de repulsão e execute o consenso.
+Execute o consenso automático, sem ajuste de peso de repulsão.
 Ordene os scores normalizados e inspecione as poses disponíveis.
 ```
 

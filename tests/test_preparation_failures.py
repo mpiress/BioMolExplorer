@@ -129,6 +129,7 @@ class PreparationFailureTests(unittest.TestCase):
             with self.subTest(engine=engine),patch('wrappers.docking.prepare_docking_receptor',return_value=str(self.root)),patch('biomolexplorer.docking_preparation._prepare_one',side_effect=prepare_one),patch('biomolexplorer.docking_data.convert_structure',side_effect=convert),patch('biomolexplorer.docking_data.binding_center',return_value=[0,0,0]),patch('wrappers.docking.DockVina') as vina,patch('wrappers.docking.Dock6') as dock6:
                 vina.return_value.docking.side_effect=run_vina
                 dock6.return_value.perform_dock6_evaluation.side_effect=run_dock6
+                dock6.return_value.excluded_compounds=set()
                 if engine=='vina':perform_docking_vina(str(self.root),'Target',str(output),str(self.root),'compounds',pdb_code=['1ABC','LIG',1,'A'],preparation_options={'ligand':{'minimize':False}})
                 else:perform_docking_dock6(str(self.root),'Target',str(output),str(self.root),'/dock6','gas','compounds',pdb_code=['1ABC','LIG',1,'A'],preparation_options={'ligand':{'minimize':False}})
             self.assertEqual({r['molecule_chembl_id'] for r in read_compounds(output/'docking_results.csv')},{'FIRST','LAST'})

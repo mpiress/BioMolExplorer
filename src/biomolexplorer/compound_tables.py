@@ -42,6 +42,7 @@ class CompoundTables:
         self._snapshot=None
         self._view=None
         self._stage_snapshot=None
+        self._table_access=None
 
     @contextmanager
     def _reader(self,path):
@@ -71,13 +72,14 @@ class CompoundTables:
     def _stage(self,token,project_id,run_id,stage_id):
         project=self.store.project(token,project_id)
         with self.store.connect() as db:
-            revision=db.execute('SELECT project_id,updated,status FROM runs WHERE id=?',(run_id,)).fetchone()
+            revision=db.execute('''SELECT r.project_id,r.updated,r.status,coalesce(v.revision,0) AS result_revision
+                FROM runs r LEFT JOIN result_read_versions v ON v.run_id=r.id WHERE r.id=?''',(run_id,)).fetchone()
         if revision is None or revision['project_id']!=project_id:
             raise AccessDenied('Resultado de outro projeto.')
-        key=(project_id,run_id,stage_id,revision['updated'],revision['status'],project.get('revision'))
+        key=(project_id,run_id,stage_id,revision['updated'],revision['status'],revision['result_revision'],project.get('revision'))
         if self._stage_snapshot and self._stage_snapshot[0]==key:
             return self._stage_snapshot[1:]
-        run=self.store.get_run(token,run_id)
+        run=getattr(self.store,'get_result_run',self.store.get_run)(token,run_id)
         if run['project_id']!=project_id:
             raise AccessDenied('Resultado de outro projeto.')
         stage=next((s for s in run['stages'] if s['id']==stage_id and s['status'] in self.available_statuses),None)
@@ -111,10 +113,28 @@ class CompoundTables:
         return result
 
     def _path(self,token,project_id,run_id,stage_id,filename):
-        choices=self.tables(token,project_id,run_id,stage_id)
         path=self.store.scoped_path(project_id,filename)
-        if str(path) not in {t['path'] for t in choices}:
+        _,stage=self._stage(token,project_id,run_id,stage_id)
+        from .result_index import file_stamp
+        try:stamp=file_stamp(path)
+        except OSError:raise AccessDenied('Tabela não autorizada para esta etapa.') from None
+        scope=[]
+        for value in stage.get('artifacts',[]):
+            if not str(value).lower().endswith('.csv'):continue
+            candidate=self.store.scoped_path(project_id,value)
+            try:current=stamp if candidate==path else file_stamp(candidate)
+            except OSError:current=None
+            scope.append((str(candidate),current))
+        key=(self._stage_snapshot[0],tuple(scope))
+        cached=self._table_access
+        if cached and cached[0]==key and cached[2].get(str(path))==stamp:return path
+        choices=self.tables(token,project_id,run_id,stage_id)
+        allowed={table['path'] for table in choices}
+        if str(path) not in allowed:
             raise AccessDenied('Tabela não autorizada para esta etapa.')
+        stamps=dict(cached[2]) if cached and cached[0]==key else {}
+        stamps[str(path)]=stamp
+        self._table_access=(key,allowed,stamps)
         return path
 
     @staticmethod
@@ -133,6 +153,18 @@ class CompoundTables:
         if sort_by is not None and (not isinstance(sort_by,str) or type(ascending) is not bool):
             raise ValueError('Ordenação de tabela inválida.')
         path=self._path(token,project_id,run_id,stage_id,filename)
+        from .result_index import MIN_INDEX_BYTES,ResultIndex
+        if path.stat().st_size>=MIN_INDEX_BYTES:
+            indexed=ResultIndex(self.store.project_dir(project_id),path,self._digest).page(
+                offset,limit,query,sort_by,ascending,self.requires_compounds)
+            rows=[]
+            for index,row in indexed.pop('visible'):
+                identifier=row.get('molecule_chembl_id',row.get(indexed['columns'][0],'')) or ''
+                rows.append(dict(index=index,id=identifier,smiles=row.get('canonical_smiles') or '',links=compound_links(row),properties=row))
+            project=self.store.project(token,project_id)
+            with self.store.connect() as db:
+                active=db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running','awaiting_input')",(project_id,)).fetchone()
+            return dict(indexed,rows=rows,offset=offset,limit=limit,name=path.name,can_edit=project['role']!='viewer' and active is None)
         rows=[];matched=total=0;selected=[]
         with self._reader(path) as (version,reader):
             if self.requires_compounds and not {'molecule_chembl_id','canonical_smiles'}.issubset(reader.fieldnames or []):
@@ -181,6 +213,21 @@ class CompoundTables:
             active=db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running','awaiting_input')",(project_id,)).fetchone()
         return {'rows':rows,'total':total,'matched':matched,'version':version,'offset':offset,'limit':limit,'name':path.name,
                 'can_edit':project['role']!='viewer' and active is None,'columns':fields}
+
+    def _record(self,path,index,version,*,root):
+        if type(index) is not int or index<0:raise ValueError('Seleção de linha inválida.')
+        from .result_index import MIN_INDEX_BYTES,ResultIndex
+        if path.stat().st_size>=MIN_INDEX_BYTES:
+            return ResultIndex(root,path,self._digest).row(index,version)
+        with self._reader(path) as (current,reader):
+            if current!=version:raise ValueError('Atualize a tabela antes de visualizar a conformação.')
+            if isinstance(reader.rows,list):
+                if index>=len(reader.rows):raise IndexError('A linha não está mais nesta tabela.')
+                return dict(reader.rows[index])
+            from itertools import islice
+            row=next(islice(reader.rows,index,index+1),None)
+            if row is None:raise IndexError('A linha não está mais nesta tabela.')
+            return dict(row)
 
     def remove(self,token,project_id,run_id,stage_id,filename,index,expected_version):
         self.store.project(token,project_id,'editor')

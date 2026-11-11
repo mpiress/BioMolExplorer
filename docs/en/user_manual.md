@@ -277,9 +277,9 @@ Review Vina box, pH and search effort and DOCK6 charges, surface, distance, radi
 
 The DOCK6 **Footprint** button opens an integrated popup showing per-residue Van der Waals and electrostatic energies comparing the reference with the final docked pose. Zoom and drag to explore the chart; **Recenter** restores the initial view and **Download PDF** saves the original document. The same popup is available in consensus results when a footprint is attached. Generation validates energy data and stops the stage if the engine produces an empty file. Older results may have evaluated the minimized ligand before docking; the interface flags that origin. Rerun those experiments to obtain a final-pose graph.
 
-**Docking consensus** gathers selected results from both engines, including multiple batches and branches. It computes only the intersection by compound ID and receptor, choosing the lowest score for repeated poses. Matching identifiers with different structures are rejected. With no intersection, the block is skipped and explains that the engines did not evaluate common compounds against the same receptor.
+**Docking consensus** collects batches and branches and outputs one row per compound with at least one compound/target pair evaluated by both engines. Repeated poses use the lowest raw energy; isomeric identities must match across targets and engines.
 
-After connecting Vina and DOCK6 results, consensus runs automatically in the pipeline without file confirmation or additional parameters. The table shows compound code, Vina score, DOCK6 score and normalized score (0 to 1). Click a column header to toggle ascending and descending order across the complete table before pagination. The normalized score averages the two engines’ min-max normalizations; higher values rank better. The CSV also retains z-score and min-max. Each row has **3D Vina**, **3D DOCK6** and **Remove** buttons per row. Consensus uses the original scores from both engines without requiring receptor, reference ligand or pose files. Available structural files are optional visualization attachments; missing files do not block computation. Singleton or constant scores normalize to zero. Removal requires editing permission, is audited and affects subsequent inputs; completed analyses are not recalculated. Each batch summary is authoritative, preventing deleted rows from returning from auxiliary tables.
+Scores are normalized separately for each engine/target using exponential ranks (ECR). A geometric mean across targets penalizes narrow profiles, with an explicit coverage penalty for missing scores. The consensus is the arithmetic mean of the two engine relevance factors. **Vina relevance**, **DOCK6 relevance** and **Consensus** range from 0 to 1; higher is better. Existing buttons, sorting and audited removal remain available. Structural actions share one representative target; the CSV retains all target scores and ranks. Structures are optional. See the [mathematical model and limitations](../docking_consensus.md). Existing results retain their original values; rerun the consensus block to apply the new model.
 
 ### Native Amber Score · DOCK6 6.11
 
@@ -579,7 +579,7 @@ Run and inspect scores, 3D poses and available footprints.
 ```text
 Connect Vina and DOCK6 results at their respective inputs.
 Use matching compounds and receptors in both result sets.
-Review repulsion weight and run consensus.
+Run the automatic consensus without a repulsion-weight adjustment.
 Sort normalized scores and inspect the available poses.
 ```
 

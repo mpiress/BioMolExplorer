@@ -73,6 +73,9 @@ def records(item, run_id=None, *, decorate=True):
         from .artifact_naming import publication_metadata
         publication=publication_metadata(path)
         prior=previous.get(path, {})
+        prior_naming=prior.get('naming') or publication.get('naming',{})
+        if prior.get('_review_naming_group') is not None:
+            prior_naming=dict(prior_naming,source_artifact_ids=item.get('_review_naming_groups',{}).get(prior['_review_naming_group'],[]))
         identity=prior.get('artifact_id') or publication.get('artifact_id') or slot_id(item['id'],locator(item['id'],path))
         batch=batches.get(path,{})
         origin=prior.get('run_id') or batch.get('reused_from_run') or item.get('reused_from_run') or run_id
@@ -86,7 +89,7 @@ def records(item, run_id=None, *, decorate=True):
             original_name=prior.get('original_name') or publication.get('legacy_name') or Path(path).name,
             provenance=dict(prior.get('provenance',{}),legacy_name=publication.get('legacy_name',Path(path).name)),
             record_count=prior.get('record_count',publication.get('record_count')),
-            naming=prior.get('naming') or publication.get('naming',{}),
+            naming=prior_naming,
             occurrence_id=prior.get('occurrence_id') or publication.get('naming',{}).get('identifier') or hashlib.sha256(json.dumps([identity, origin]).encode()).hexdigest(),
             stage_id=item['id'], stage_name=item.get('name', item['id']),
             operation=item.get('operation', config.get('operation', 'unknown')),
@@ -100,7 +103,7 @@ def records(item, run_id=None, *, decorate=True):
             batch_label=batch.get('label'),
             context=prior.get('context', {'target':config.get('parameters', {}).get('target'),
                      'search_term':config.get('parameters', {}).get('search_term')}),
-            inputs=prior.get('inputs', {})))
+            inputs=prior.get('inputs') or item.get('_review_input_groups',{}).get(prior.get('_review_input_group'),{})))
     if decorate:
         from .artifact_naming import name_records
         name_records([(r,item) for r in result])

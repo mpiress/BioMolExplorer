@@ -26,7 +26,7 @@ class ResultFiles:
     def origins(self, token, pid, rid):
         from .result_origins import ResultOrigins
         def load(run_id):
-            try:run=self.store.get_run(token,run_id)
+            try:run=getattr(self.store,'get_result_run',self.store.get_run)(token,run_id)
             except ValueError:return None
             if run['project_id']!=pid:raise AccessDenied('Resultado de outro projeto.')
             return run
@@ -34,7 +34,7 @@ class ResultFiles:
         return ResultOrigins(run['stages'],rid,load_run=load)
 
     def stage(self, token, pid, rid, sid):
-        run = self.store.get_run(token, rid)
+        run = getattr(self.store,'get_result_run',self.store.get_run)(token, rid)
         if run['project_id'] != pid:
             raise AccessDenied('Resultado de outro projeto.')
         stage = next((s for s in run['stages'] if s['id'] == sid), None)
@@ -232,6 +232,8 @@ class ResultFiles:
                             self._detach(item,{str(path)})
                             changed = True
                     if changed:
+                        from .artifact_registry import register_run
+                        register_run(db,pid,row[0],stages)
                         db.execute('UPDATE runs SET stages=? WHERE id=?', (json.dumps(stages), row[0]))
         except Exception:
             if backup and backup.exists():
@@ -270,7 +272,10 @@ class ResultFiles:
                     for item in stages:
                         if item['id']==sid and paths.intersection(item.get('artifacts',[])):
                             self._detach(item,paths);changed=True
-                    if changed:db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(stages),row[0]))
+                    if changed:
+                        from .artifact_registry import register_run
+                        register_run(db,pid,row[0],stages)
+                        db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(stages),row[0]))
         except Exception:
             for path,backup in reversed(backups):
                 if backup.exists():backup.replace(path)
@@ -300,6 +305,7 @@ class ResultFiles:
             entry['artifact_records']=[r for r in entry.get('artifact_records',[]) if r['path'] not in paths]
             entry['outputs_removed']=True;entry['curated_at']=time.time();entry['reused']=False
             entry.pop('cache_key',None)
+            entry.pop('docking_accounting',None)
 
     def remove_project_results(self,token,pid):
         """Remove generated results, preserving the entire configured pipeline."""
@@ -414,7 +420,7 @@ class ResultFiles:
 
     def graph_sources(self,token,pid,rid):
         from .artifact_sources import records
-        run=self.store.get_run(token,rid)
+        run=getattr(self.store,'get_result_run',self.store.get_run)(token,rid)
         if run['project_id']!=pid:raise AccessDenied('Resultado de outro projeto.')
         result=[]
         origins=self.origins(token,pid,rid)

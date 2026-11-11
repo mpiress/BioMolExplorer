@@ -1,4 +1,12 @@
 {
+  "DOCK6 operation mode": "Modo de operação DOCK6",
+  "Automatic from input provenance": "Automático pela origem da entrada",
+  "Local pose refinement": "Refinamento local da pose",
+  "De novo docking": "Docking de novo",
+  "Score without moving the reference": "Pontuar sem mover a referência",
+  "Reference-restrained minimization": "Minimizar com restrição à referência",
+  "Redocking with independent search": "Redocking com busca independente",
+  "Redocking tests independent pose recovery. Reference evaluation preserves coordinates; its RMSD does not measure search recovery.": "Redocking testa recuperação independente da pose. Avaliação da referência preserva as coordenadas; seu RMSD não mede recuperação por busca.",
   "Esta tabela é somente leitura.": "Esta tabela é somente leitura.",
   "Ver tabela": "Ver tabela",
   "Preparando a execução…": "Preparando a execução…",
@@ -5209,5 +5217,13 @@
   "PubChem references": "referências PubChem",
   "Operação configurada do pipeline BioMolExplorer.": "Operação configurada do pipeline BioMolExplorer.",
   "Configured BioMolExplorer pipeline operation.": "Operação configurada do pipeline BioMolExplorer.",
-  "Revisão do projeto": "Revisão do projeto"
+  "Revisão do projeto": "Revisão do projeto",
+  "Relevância Vina": "Relevância Vina",
+  "Vina relevance": "Relevância Vina",
+  "Relevância DOCK6": "Relevância DOCK6",
+  "DOCK6 relevance": "Relevância DOCK6",
+  "Consenso": "Consenso",
+  "Consensus": "Consenso",
+  "Consenso: código molecular vazio.": "Consenso: código molecular vazio.",
+  "Consensus: empty compound identifier.": "Consenso: código molecular vazio."
 }

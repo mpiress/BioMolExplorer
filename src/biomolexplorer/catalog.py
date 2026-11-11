@@ -25,6 +25,7 @@ TITLES = {
  'dynamics_dock6': ('Amber Score · DOCK6','Refine poses receptor–ligante com o Amber Score nativo do DOCK6 6.11 em solvente implícito.','Dinâmica Molecular'),
 }
 LABELS = {
+ 'dock6_mode':'Modo de operação DOCK6',
  'redocking_engine':'Motor de redocking',
  'preparation_options': 'Preparação do receptor e ligante',
  'redocking_engine':'Método de redocking','max_orientations':'Máximo de orientações DOCK6',
@@ -68,6 +69,7 @@ PATH_FIELDS = {'base_input_path','base_selected_mols','base_vina_path','base_doc
 from .retrieval import MODES
 
 ENUMS = {
+ 'dock6_mode':['auto','guided','denovo','score_only','restrained','redock'],
  'redocking_engine':['vina','dock6'],
  'ligand_selection':['recommended','all'],
  'docking_engines':['vina','dock6','both'],
@@ -79,7 +81,10 @@ ENUMS = {
 ENUM_DEFAULTS = {'metric': 'Tanimoto', 'fingerprint': 'morgan'}
 CHOICE_LABELS={'conformer_search_type':{'flex':'Flexível','rigid':'Rígida'},'redocking_engine':{'vina':'AutoDock Vina','dock6':'DOCK6 6.11'},'ligand_selection':{'recommended':'Priorizar candidatos para redocking','all':'Manter todos os ligantes'},'docking_engines':{'vina':'Vina','dock6':'DOCK6','both':'Vina e DOCK6'},'reference_source':{'compounds':'Arquivos ou compostos de outros blocos','manual':'Informar minha referência'},
               'reference_type':{'smiles':'SMILES','cid':'CID PubChem','name':'Nome do composto'},
-              'selection_mode':{'all':'Todos os compostos de entrada','single':'Um composto específico'}}
+              'selection_mode':{'all':'Todos os compostos de entrada','single':'Um composto específico'},
+              'dock6_mode':{'auto':'Automático pela origem da entrada','guided':'Refinamento local da pose',
+                  'denovo':'Docking de novo','score_only':'Pontuar sem mover a referência',
+                  'restrained':'Minimizar com restrição à referência','redock':'Redocking com busca independente'}}
 PRESETS = {
  'ChEMBL + PubChem → ADMET': ['retrieve_compounds','retrieve_pubchem','admet'],
  'Compostos → ADMET': ['retrieve_compounds', 'admet'],
@@ -114,8 +119,10 @@ def operation_fields(operation):
         label=field_label(operation,key)
         if operation=='retrieve_pubchem' and key in ('threshold','max_records'):
             label=LABELS['pubchem_threshold' if key=='threshold' else 'pubchem_max_records']
+        choices=ENUMS.get(key)
+        if key=='dock6_mode':choices=['redock','score_only','restrained'] if operation=='redocking' else ['auto','guided','denovo','score_only','restrained']
         fields.append({'name': key, 'label': label, 'required': key in spec.required,
-                       'default': default, 'path': key in PATH_FIELDS, 'choices': ENUMS.get(key)})
+                       'default': default, 'path': key in PATH_FIELDS, 'choices': choices})
     return fields
 
 
@@ -143,7 +150,7 @@ def template_names(operation):
     if operation in ('redocking','docking_vina'):
         names += ['vina/config.template']
     if operation=='redocking':
-        names += ['dock6/'+name+'.template' for name in ('redocking','grid','showbox','INSPH')]
+        names += ['dock6/'+name+'.template' for name in ('redocking','min','grid','showbox','INSPH')]
     if operation == 'docking_dock6':
         names += [f'dock6/{p.name}' for p in sorted((SOURCE_ROOT / 'biomolexplorer/resources/dock6').glob('*.template'))]
     return names

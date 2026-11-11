@@ -39,13 +39,13 @@ OPERATIONS = {
         (), ('similarity_path','base_input_path',
              'mcs_timeout','mcs_ring_matches_ring_only','mcs_complete_rings_only','graph_inputs')),
     'redocking': OperationSpec('wrappers.redocking', 'perform_redocking', ('base_input_path', 'target'),
-        ('pdb_codes', 'pH', 'sizeof_box', 'exhaustiveness', 'num_modes', 'prepare_complex', 'charge_type', 'preparation_pairs','preparation_options','redocking_engine','dock6_app_path','density','radius','distance','conformer_search_type','max_orientations','num_scored_conformers','dock6_seed')),
+        ('pdb_codes', 'pH', 'sizeof_box', 'exhaustiveness', 'num_modes', 'prepare_complex', 'charge_type', 'preparation_pairs','preparation_options','redocking_engine','dock6_app_path','density','radius','distance','conformer_search_type','max_orientations','num_scored_conformers','dock6_seed','dock6_mode')),
     'docking_vina': OperationSpec('wrappers.docking', 'perform_docking_vina',
         ('base_input_path', 'target', 'base_selected_mols', 'mol_filename'),
         ('pdb_code', 'pH', 'sizeof_box', 'exhaustiveness', 'num_modes', 'preparation_options', 'receptor_prepared')),
     'docking_dock6': OperationSpec('wrappers.docking', 'perform_docking_dock6',
         ('base_input_path', 'target', 'base_selected_mols', 'dock6_app_path', 'charge_type', 'mol_filename'),
-        ('pdb_code', 'base_vina_path','density', 'radius', 'distance', 'conformer_search_type', 'plot_max_residues', 'pH', 'preparation_options', 'receptor_prepared')),
+        ('pdb_code', 'base_vina_path','density', 'radius', 'distance', 'conformer_search_type', 'plot_max_residues', 'pH', 'preparation_options', 'receptor_prepared','dock6_mode')),
     'consensus': OperationSpec('wrappers.docking', 'generate_consensus', ('base_input_path', 'target'),
         ('repulsion_weight', 'base_vina_path', 'base_dock6_path')),
 }
@@ -140,6 +140,9 @@ def validate_operation(operation, parameters, *, defer_redocking_selection=False
     if operation=='redocking':
         from .redocking_config import validate_redocking_parameters
         validate_redocking_parameters(parameters)
+    if operation=='docking_dock6':
+        from .dock6_protocol import MODES
+        if parameters.get('dock6_mode','auto') not in MODES:raise ValueError('Modo de operação DOCK6 inválido.')
     if operation=='prepare_structures' and parameters.get('docking_engines','both') not in ('vina','dock6','both'):
         raise ValueError('Selecione Vina, DOCK6 ou ambos para a saída de preparação.')
     if operation in ('prepare_structures','docking_vina','docking_dock6') and 'preparation_options' in parameters:
@@ -208,6 +211,10 @@ def execute_operation(operation, parameters, output_path):
         path = report.write(output)
         preparation_path=preparation.write(output)
         details = dict(result.details,excluded_records=len(report.records))
+        accounting=output/'docking_accounting.json'
+        if operation in ('docking_vina','docking_dock6') and accounting.is_file():
+            import json
+            details['docking_accounting']=json.loads(accounting.read_text())
         if preparation_path:
             details['preparation_failures']=len(preparation.records)
             details['preparation_report']=str(preparation_path)

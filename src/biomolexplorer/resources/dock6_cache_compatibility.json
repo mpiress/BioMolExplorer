@@ -1,0 +1,6 @@
+{
+  "reason": "Only fixed-center receptor grids from the unchanged surface/grid protocol may be reused; search/refinement compound results are never interchanged.",
+  "legacy_site_adapters": [
+    "acc32f450198eaecec95bc8711450ae87ee5a3ef5438e59dfdb7d871c1aee634"
+  ]
+}

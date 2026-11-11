@@ -1,6 +1,7 @@
 """Consensus scores remain usable without receptor, reference or pose files."""
 import csv
 import json
+import math
 import unittest
 from pathlib import Path
 from unittest.mock import patch
@@ -43,8 +44,9 @@ class ConsensusOptionalStructureTests(unittest.TestCase):
             table=next(Path(p) for p in result.artifacts if Path(p).name=='MeuAlvo.csv')
             with table.open() as stream:rows=list(csv.DictReader(stream))
             self.assertEqual([r['molecule_chembl_id'] for r in rows],['M2','M1'])
-            self.assertEqual([float(r['dock6']) for r in rows],[-20,-10])
-            self.assertEqual([float(r['normalized_score']) for r in rows],[1,0])
+            self.assertEqual([float(r['dock6_raw']) for r in rows],[-20,-10])
+            self.assertEqual([float(r['dock6']) for r in rows],[1,math.exp(-10)])
+            self.assertEqual([float(r['normalized_score']) for r in rows],[1,math.exp(-10)])
             self.assertTrue(all(not r['conformer_file'] for r in rows))
         finally:service.close()
 
@@ -58,7 +60,8 @@ class ConsensusOptionalStructureTests(unittest.TestCase):
         frame=generate_consensus(str(root),str(root/'direct'),'scores',
             base_vina_path=str(root/'vina'),base_dock6_path=str(root/'dock6'))
         self.assertEqual(frame['molecule_chembl_id'].tolist(),['M2','M1'])
-        self.assertEqual(frame['dock6'].tolist(),[-20,-10])
+        self.assertEqual(frame['dock6_raw'].tolist(),[-20,-10])
+        self.assertEqual(frame['dock6'].tolist(),[1,math.exp(-10)])
 
     def test_legacy_dock6_pdf_reaches_consensus_without_a_pose(self):
         stage,results,producers=self.inputs(False)

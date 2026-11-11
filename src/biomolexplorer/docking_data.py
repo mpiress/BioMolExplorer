@@ -234,6 +234,20 @@ def score(path, engine):
     return value
 
 
+def best_vina_model(path):
+    """Return the lowest-energy model index, retaining its original coordinates."""
+    best=None;index=0
+    for line in Path(path).read_text().splitlines():
+        if line.startswith('MODEL '):index+=1
+        if line.startswith('REMARK VINA RESULT:'):
+            try:value=float(line.split(':',1)[1].split()[0])
+            except (ValueError,IndexError):raise ValueError('Score Vina inválido: '+str(path)) from None
+            if not math.isfinite(value):raise ValueError('Score Vina não finito: '+str(path))
+            if best is None or value<best[1]:best=(index or 1,value)
+    if best is None:raise ValueError('A conformação Vina não contém um score: '+str(path))
+    return best
+
+
 def write_results(engine, poses, dataset, records, output, prepared=None):
     """Retain input SMILES/IDs and link to the actual docked pose, not a new conformer."""
     output=Path(output);output.mkdir(parents=True,exist_ok=True)
@@ -251,6 +265,9 @@ def write_results(engine, poses, dataset, records, output, prepared=None):
         rows.append(dict(molecule_chembl_id=row['molecule_chembl_id'],canonical_smiles=row['canonical_smiles'],
                          receptor_id=f'{record[0]}_{record[3]}',engine=engine,score=score(pose,engine),
                          conformer_file=pose.resolve().relative_to(output.resolve()).as_posix()))
+        if engine=='dock6' and row.get('engine')=='vina':
+            rows[-1].update(vina_input_score=float(row['score']),
+                            vina_input_model=int(row.get('conformer_index') or 1))
     if prepared is not None:
         import shutil
         prepared=Path(prepared)

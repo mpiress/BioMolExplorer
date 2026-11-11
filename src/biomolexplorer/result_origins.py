@@ -12,17 +12,33 @@ class ResultOrigins:
         self.by_path = {}
         self.memo = {}
         self.stages = {}
+        self.previous = {}
+        self.batches = {}
         self.add(stages, run_id)
 
     def add(self, stages, run_id):
         for stage in stages:
             self.stages[(run_id, stage['id'])] = stage
-            for record in records(stage, run_id,decorate=False):
-                key = (record['run_id'], record['stage_id'], record['path'])
-                self.catalog[key] = (record, stage)
-                self.by_path.setdefault(record['path'], []).append(key)
-        from .artifact_naming import name_records
-        name_records(self.catalog.values())
+            previous={record['path']:record for record in stage.get('artifact_records',[])}
+            batches={str(path):batch for batch in stage.get('batches',[]) for path in batch.get('artifacts',[])}
+            self.previous[id(stage)]=previous;self.batches[id(stage)]=batches
+            for path in dict.fromkeys(stage.get('artifacts',[])):
+                prior=previous.get(path,{})
+                origin=prior.get('run_id') or batches.get(path,{}).get('reused_from_run') or stage.get('reused_from_run') or run_id
+                key=(origin,stage['id'],path)
+                self.catalog[key]=(None,stage)
+                keys=self.by_path.setdefault(path,[])
+                if key not in keys:keys.append(key)
+
+    def materialize(self,key):
+        record,stage=self.catalog[key]
+        if record is None:
+            prior=self.previous[id(stage)].get(key[2])
+            batch=self.batches[id(stage)].get(key[2])
+            subset=dict(stage,artifacts=[key[2]],artifact_records=[prior] if prior else [],batches=[batch] if batch else [])
+            record=records(subset,key[0],decorate=False)[0]
+            self.catalog[key]=(record,stage)
+        return record,stage
 
     def find(self, reference):
         path = reference.get('path')
@@ -61,7 +77,7 @@ class ResultOrigins:
             return []
         if key in self.memo:
             return self.memo[key]
-        record, stage = self.catalog[key]
+        record, stage = self.materialize(key)
         config = stage.get('configuration', stage)
         params = config.get('parameters', {})
         step = dict(stage_id=record['stage_id'], stage_name=record['stage_name'],
@@ -95,6 +111,8 @@ class ResultOrigins:
             return dict(source_label=Path(path).name, origin=Path(path).name,
                         display_name=Path(path).name, source_trace='', source_routes=[])
         routes = self.routes(key)
+        from .artifact_naming import name_records
+        name_records((record,stage) for record,stage in self.catalog.values() if record is not None)
         roots = []; branches = []; traces = []
         for route in routes:
             root = route[0]

@@ -68,10 +68,13 @@ def heavy_atom_rmsd(reference, pose):
 
 def run_pairs(source, output, records, *, dock6_app_path, density=.5, radius=1.4,
               distance=10., conformer_search_type='flex', max_orientations=1000,
-              num_scored_conformers=1, dock6_seed=73):
+              num_scored_conformers=1, dock6_seed=73, dock6_mode='redock'):
     from caad.docking import Dock6
     from .docking_scene import best_pose
     from .dock6_validation import validate_mol2
+    from .dock6_protocol import apply_policy
+    from .docking_data import binding_center
+    if dock6_mode not in ('redock','score_only','restrained'):raise ValueError('Modo de avaliação estrutural DOCK6 inválido.')
     source,output=Path(source),Path(output);prepared=source/'Prepared';output.mkdir(parents=True,exist_ok=True)
     rows={};failures=[]
     with tempfile.TemporaryDirectory(prefix='bme-redock-') as temp:
@@ -89,26 +92,31 @@ def run_pairs(source, output, records, *, dock6_app_path, density=.5, radius=1.4
                     shutil.copy2(prepared/(receptor+suffix),receptor_files/(receptor+suffix))
                 dock=Dock6(dock6_path=dock6_app_path,ligand_input_path=str(ligands),
                     receptor_input_path=str(receptor_files),base_output_path=str(stage/'protocol'),pdb_code=receptor,
-                    density=density,radius=radius,distance=distance,conformer_search_type=conformer_search_type)
+                    density=density,radius=radius,distance=distance,conformer_search_type=conformer_search_type,
+                    binding_site_center=binding_center(prepared,record) if dock6_mode!='redock' else None)
                 # Native full-receptor surface and spheres are independent of the selected ligand.
                 dock.precomputed_surface=surface_cache/receptor
-                dock.validate_setup();dock.prepare_surface()
+                dock.validate_setup()
+                if dock6_mode=='redock':dock.prepare_surface()
+                else:dock.prepare_site()
                 surface=Path(dock.runtime_path)/'out/surface'
                 cached=surface_cache/receptor;cached.mkdir(exist_ok=True)
                 for extension in ('.dms','.sph'):shutil.copy2(surface/(receptor+extension),cached/(receptor+extension))
-                dock.prepare_showbox();dock.prepare_gridbox()
+                if dock6_mode=='redock':dock.prepare_showbox();dock.prepare_gridbox()
                 run=Path(dock.runtime_path)/'out/search';dock.set_outputpath(str(run))
                 local_reference=Path(dock.runtime_path)/'reference.mol2';shutil.copy2(reference,local_reference)
                 ligand=Path(dock.ligandpath)/(prefix+'.lig.mol2')
                 script=run/'redocking.in';outprefix=run/prefix
-                dock.generate_docking_script('src/scripts/dock6/redocking.template',str(script),
-                    conformer_search_type=conformer_search_type,ligand_atom_file=str(ligand),
+                template='redocking.template' if dock6_mode=='redock' else 'min.template'
+                dock.generate_docking_script('src/scripts/dock6/'+template,str(script),
+                    conformer_search_type=conformer_search_type,ligand_atom_file=str(ligand if dock6_mode=='redock' else local_reference),
                     rmsd_reference_filename=str(local_reference),
                     receptor_site_file=str(surface/'Molecules'/(prefix+'.sph')),
                     ligand_sphere_file=str(surface/'Molecules'/(prefix+'.sph')),
                     grid_score_grid_prefix=dock._grid_prefix(prefix),dock6_path=str(Path(dock6_app_path).resolve())+'/',
                     ligand_outfile_prefix=str(outprefix),max_orientations=max_orientations,
                     num_scored_conformers=num_scored_conformers,dock6_seed=dock6_seed)
+                apply_policy(script,dock6_mode,seed=dock6_seed)
                 dock.perform_subprocess(['dock6','-i',str(script),'-o',str(run/'redocking.out')],str(run))
                 log=(run/'redocking.out').read_text()
                 version=re.search(r'DOCK\s+v?(6\.\d+)',log)
@@ -119,12 +127,14 @@ def run_pairs(source, output, records, *, dock6_app_path, density=.5, radius=1.4
                 text,selection=best_pose(raw.read_text(),'mol2')
                 pose=output/(prefix+'.lig.mol2');pose.write_text(text)
                 value=heavy_atom_rmsd(reference,pose)
+                if dock6_mode=='score_only' and value>0.002:raise ValueError('A avaliação score-only alterou as coordenadas da referência.')
                 if selection['score'] is None:raise ValueError('Score ausente no resultado: Grid_Score')
                 if raw.read_text().count('@<TRIPOS>MOLECULE')>1:
                     shutil.copy2(raw,output/(prefix+'.poses.mol2'))
                 shutil.copy2(run/'redocking.out',output/(prefix+'.dock6.out'))
                 shutil.copy2(script,output/(prefix+'.dock6.in'))
-                info=dict(ENGINE='dock6',ENGINE_VERSION=version[1],RMSD=value,SCORE=selection['score'],
+                info=dict(ENGINE='dock6',ENGINE_VERSION=version[1],DOCK6_MODE=dock6_mode,
+                    VALIDATION_KIND='redocking' if dock6_mode=='redock' else 'reference_evaluation',RMSD=value,SCORE=selection['score'],
                     RMSD_REFERENCE=kind,RMSD_METHOD='heavy_atom_symmetry_no_fit',POSE_FILE=pose.name,
                     max_symmetry_matches=100000,pose_selection=selection)
                 (output/(prefix+'.dock6.json')).write_text(json.dumps(info,indent=2)+'\n')

@@ -247,7 +247,10 @@ def apply(store,db,pid,proposal,moved,journal):
         backup.mkdir(parents=True,exist_ok=True)
         journal.move(path,saved);moved.append((path,saved))
     journal.flush()
-    for rid,items in proposal['runs']:db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(items),rid))
+    from .artifact_registry import register_run
+    for rid,items in proposal['runs']:
+        register_run(db,pid,rid,items)
+        db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(items),rid))
 
 
 def finish(moved,rollback=False):

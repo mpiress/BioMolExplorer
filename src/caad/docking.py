@@ -979,7 +979,14 @@ class Dock6(Docking):
     def _compound_guard(self, code, step):
         self._ensure_compounds()
         index,row=self.compound_rows.get(code,(None,{'molecule_chembl_id':code}))
-        names={code+'.lig.min_scored.mol2',code+'_scored.mol2',code+'_footprint_scored.txt',code+'.pdf'}
+        if step=='Gráfico do footprint DOCK6':
+            names={code+'.pdf'}
+        elif 'footprint' in step.lower():
+            names={code+'_footprint_scored.txt',code+'.pdf'}
+        elif step=='Docking DOCK6':
+            names={code+'_scored.mol2'}
+        else:
+            names={code+'.lig.min_scored.mol2'}
         cleanup=[p for p in Path(self.__base_output_path).rglob('*') if p.is_file() and p.name in names]
         return self.failure_report.compound(self.compound_dataset,index,row,self.export_path,cleanup,step=step)
 
@@ -1073,7 +1080,10 @@ class Dock6(Docking):
     def _ligand_files(self, folder):
         from biomolexplorer.dock6_validation import compound_code
         self._ensure_compounds()
-        return [p.name for p in sorted(Path(folder).glob('*.mol2')) if compound_code(p) not in self.excluded_compounds]
+        selected=getattr(self,'selected_compound_ids',None)
+        return [p.name for p in sorted(Path(folder).glob('*.mol2'))
+                if compound_code(p) not in self.excluded_compounds
+                and (selected is None or compound_code(p) in selected)]
 
 
 
@@ -1299,6 +1309,7 @@ class Dock6(Docking):
         jobs=[]
         for tid,ligand in enumerate(self._ligand_files(self.ligandpath)):
             code=compound_code(ligand)
+            if code in getattr(self,'compound_modes',{}) or self.protocol_for(code) not in ('denovo','redock'):continue
             self.generate_docking_script(input_template='src/scripts/dock6/min.template',
                 output_script=str(Path(self.outputpath)/f'{tid}_min.in'),
                 ligand_atom_file=str(Path(self.ligandpath)/ligand),
@@ -1589,21 +1600,35 @@ class Dock6(Docking):
 
         sync_directory(directory(self.outputpath))
 
+    def protocol_for(self,code):
+        return getattr(self,'compound_modes',{}).get(code,getattr(self,'dock6_mode','denovo'))
+
     def perform_dock6_evaluation(self):
         from biomolexplorer.dock6_validation import compound_code
+        from biomolexplorer.dock6_protocol import apply_policy
         self.set_outputpath(f'{self.__base_output_path}/{self.__conformer_search_type}/')
         jobs=[]
-        for tid,ligand in enumerate(self._ligand_files(Path(self.__base_output_path)/'energy_min')):
+        modes=getattr(self,'compound_modes',{})
+        search=getattr(self,'dock6_mode','denovo') in ('denovo','redock') and not modes
+        folder=Path(self.__base_output_path)/'energy_min' if search else Path(self.ligandpath)
+        for tid,ligand in enumerate(self._ligand_files(folder)):
             code=compound_code(ligand)
+            mode=self.protocol_for(code)
+            legacy_search=mode in ('denovo','redock') and code not in modes
+            source=Path(self.__base_output_path)/'energy_min'/(code+'.lig.min_scored.mol2') if legacy_search else Path(self.ligandpath)/ligand
+            if not source.is_file():continue
             spheres='binding_site' if getattr(self,'binding_site_center',None) is not None else code
-            self.generate_docking_script(input_template='src/scripts/dock6/docking.template',
-                output_script=str(Path(self.outputpath)/f'{tid}_docking.in'),
+            template='docking.template' if mode in ('denovo','redock') else 'min.template'
+            script=Path(self.outputpath)/f'{tid}_docking.in'
+            self.generate_docking_script(input_template='src/scripts/dock6/'+template,
+                output_script=str(script),
                 conformer_search_type=self.__conformer_search_type,
-                ligand_atom_file=str(Path(self.__base_output_path)/'energy_min'/ligand),
-                rmsd_reference_filename=str(Path(self.__base_output_path)/'energy_min'/ligand),
+                ligand_atom_file=str(source),
+                rmsd_reference_filename=str(source),
                 receptor_site_file=str(Path(self.__base_output_path)/'surface/Molecules'/(spheres+'.sph')),
                 ligand_sphere_file=str(Path(self.__base_output_path)/'surface/Molecules'/(spheres+'.sph')),
                 grid_score_grid_prefix=self._grid_prefix(code),dock6_path=self.__dock6_path,
                 ligand_outfile_prefix=str(Path(self.outputpath)/code))
+            apply_policy(script,mode)
             jobs.append((code,(tid,),Path(self.outputpath)/(code+'_scored.mol2')))
         self._run_compound_jobs('perform_parallel_docking',jobs,'Docking DOCK6')

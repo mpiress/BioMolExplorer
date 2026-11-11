@@ -9,7 +9,7 @@ import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from biomolexplorer.catalog import new_stage
 from biomolexplorer.diagnostics import log_directory
@@ -243,6 +243,24 @@ class RunFeedbackTests(unittest.TestCase):
         self.assertIsNone(self.ui.current_run)
         self.assertTrue(self.progress.is_open)
         self.assertEqual(self.progress.heading.value, 'Pipeline concluído')
+
+    def test_unchanged_run_polls_only_revision_and_ticks_without_loading_metadata(self):
+        self.ui.current_run='run';self.ui.tab='Execuções'
+        read=Mock(return_value=self.run)
+        self.ui.store=SimpleNamespace(result_revision=Mock(return_value=(1,'queued',100,1)),
+            get_result_run=read,get_run=Mock(side_effect=AssertionError('Full history loaded')))
+        async def local_call(function,*args):return function(*args)
+        self.ui.call=local_call
+        turns=[]
+        async def wait_once(delay):
+            turns.append(delay)
+            if len(turns)==4:self.ui.token=None
+        with patch('biomolexplorer.ui.app.asyncio.sleep',side_effect=wait_once), \
+             patch.object(self.progress,'tick',wraps=self.progress.tick) as ticks:
+            asyncio.run(self.ui.poll_runs())
+        self.assertEqual(read.call_count,1)
+        self.assertEqual(ticks.call_count,2)
+        self.ui.store.get_run.assert_not_called()
 
     def test_follow_reopens_without_waiting_for_client_dismissal(self):
         self.progress.show()

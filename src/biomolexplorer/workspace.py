@@ -89,6 +89,8 @@ class WorkspaceStore:
                     reference_index INTEGER NOT NULL,producer_stage_id TEXT NOT NULL,reason TEXT NOT NULL,details TEXT NOT NULL,
                     PRIMARY KEY(project_id,consumer_stage_id,input_port,reference_index));
             ''')
+            from .result_catalog import create_schema
+            create_schema(db)
             from .artifact_registry import backfill,migrate_schema
             migrate_schema(db)
             backfill(db)
@@ -355,10 +357,10 @@ class WorkspaceStore:
         from .execution_order import save
         return save(self,token,project_id,order)
 
-    def available_results(self,token,project_id,*,include_checkpoints=False):
+    def available_results(self,token,project_id,*,include_checkpoints=False,review=False):
         project=self.project(token,project_id)
         from .published_results import catalog
-        return list(catalog(self,project_id,project['pipeline'],include_checkpoints=include_checkpoints).values())
+        return list(catalog(self,project_id,project['pipeline'],include_checkpoints=include_checkpoints,compact=review).values())
 
     def result_removal_plan(self,token,project_id,stages):
         self.project(token,project_id,'editor')
@@ -510,6 +512,39 @@ class WorkspaceStore:
         from .result_visibility import project_run
         with self.connect() as db:
             return [project_run(self._run_row(row),project['pipeline']) for row in db.execute('SELECT * FROM runs WHERE project_id=? ORDER BY created DESC LIMIT 100', (project_id,))]
+
+    def has_active_run(self,token,project_id):
+        self.project(token,project_id)
+        with self.connect() as db:
+            return db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running','awaiting_input')",(project_id,)).fetchone() is not None
+
+    def get_result_run(self,token,run_id):
+        with self.connect() as db:
+            owner=db.execute('SELECT project_id FROM runs WHERE id=?',(run_id,)).fetchone()
+        if owner is None:raise AccessDenied('Execução não encontrada.')
+        project=self.project(token,owner['project_id'])
+        from .result_catalog import read_run
+        from .result_visibility import project_run
+        run=read_run(self,run_id)
+        if run is None or run['project_id']!=owner['project_id']:raise AccessDenied('Execução não encontrada.')
+        project=self.project(token,owner['project_id'])
+        return project_run(run,project['pipeline'])
+
+    def list_result_runs(self,token,project_id,*,limit=20):
+        if type(limit) is not int or not 1<=limit<=100:raise ValueError('Limite de execuções inválido.')
+        self.project(token,project_id)
+        with self.connect() as db:
+            ids=[row[0] for row in db.execute('''SELECT id FROM runs WHERE project_id=?
+                ORDER BY CASE WHEN status IN ('queued','running','awaiting_input') THEN 0 ELSE 1 END,created DESC LIMIT ?''',(project_id,limit))]
+        return [self.get_result_run(token,rid) for rid in ids]
+
+    def result_revision(self,token,run_id):
+        with self.connect() as db:
+            row=db.execute('''SELECT r.project_id,r.status,r.updated,coalesce(v.revision,0) AS revision FROM runs r
+                LEFT JOIN result_read_versions v ON v.run_id=r.id WHERE r.id=?''',(run_id,)).fetchone()
+        if row is None:raise AccessDenied('Execução não encontrada.')
+        project=self.project(token,row['project_id'])
+        return row['revision'],row['status'],row['updated'],project['revision']
 
     @staticmethod
     def _run_row(row):

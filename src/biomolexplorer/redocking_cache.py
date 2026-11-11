@@ -193,6 +193,7 @@ class PairCache:
         from .templates import quiet_template, RESOURCE_ROOT
         names=['chimera/prepare_complex.template','chimera/prepare_receptor.template','chimera/prepare_ligand.template']
         names+=['vina/config.template'] if self.engine=='vina' else ['dock6/'+n+'.template' for n in ('redocking','grid','showbox','INSPH')]
+        if self.engine=='dock6' and self.parameters.get('dock6_mode','redock')!='redock':names.append('dock6/min.template')
         for name in names:
             if template_overrides is None:
                 text = resolve_path('src/scripts/' + name).read_text()
@@ -200,6 +201,9 @@ class PairCache:
                 text = template_overrides.get(name, (RESOURCE_ROOT / name).read_text())
             templates[name] = hashlib.sha256(quiet_template(name, text).encode()).hexdigest()
         self.science = dict(code=operation_digest('redocking'), templates=templates)
+        if self.engine=='dock6' and self.parameters.get('dock6_mode','redock')!='redock':
+            from .dock6_protocol import policy
+            self.science['dock6_policy']=policy(self.parameters['dock6_mode'])
         import sys
         self.science['runtime']=runtime_signature('redocking',runtime_python or sys.executable,dict(self.parameters,redocking_engine=self.engine))
         if self.engine=='dock6':

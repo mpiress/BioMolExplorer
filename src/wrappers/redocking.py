@@ -38,7 +38,7 @@ def perform_redocking(base_input_path:str, target:str, base_output_path:str, pdb
                       pH:Optional[float]=7.4, sizeof_box:Optional[List]=[24,24,24], exhaustiveness:Optional[int]=20,
                       num_modes:Optional[int]=10, prepare_complex:Optional[bool]=True, charge_type:Optional[ChargeType]='gas', preparation_pairs:Optional[dict]=None,
                       preparation_options=None, redocking_engine='vina', dock6_app_path=None, density=.5, radius=1.4,
-                      distance=10., conformer_search_type='flex', max_orientations=1000,num_scored_conformers=1,dock6_seed=73) -> None:
+                      distance=10., conformer_search_type='flex', max_orientations=1000,num_scored_conformers=1,dock6_seed=73,dock6_mode='redock') -> None:
 
     logger = LoggerManager.get_logger('wrapper_redocking', log_file='logs/redocking.log')
 
@@ -82,7 +82,8 @@ def perform_redocking(base_input_path:str, target:str, base_output_path:str, pdb
         from biomolexplorer.redocking_cache import PairCache
         method_parameters=dict(redocking_engine=redocking_engine,dock6_app_path=dock6_app_path,density=density,
             radius=radius,distance=distance,conformer_search_type=conformer_search_type,
-            max_orientations=max_orientations,num_scored_conformers=num_scored_conformers,dock6_seed=dock6_seed) if redocking_engine=='dock6' else {}
+            max_orientations=max_orientations,num_scored_conformers=num_scored_conformers,dock6_seed=dock6_seed,dock6_mode=dock6_mode) if redocking_engine=='dock6' else {}
+        if method_parameters.get('dock6_mode')=='redock':method_parameters.pop('dock6_mode')
         cache=PairCache(base_input_path,base_output_path,
             [list(r) for r in selected.to_records(index=False)],preparation_pairs or {},
             dict(pH=pH,sizeof_box=sizeof_box,exhaustiveness=exhaustiveness,num_modes=num_modes,

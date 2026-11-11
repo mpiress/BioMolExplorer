@@ -48,7 +48,7 @@ class StageResults:
             if parts:
                 for child in self.checkpoint_children:child.close()
                 self.checkpoint_children=[]
-                active=any(r['status'] in ('queued','running','awaiting_input') for r in await self.ui.call(self.ui.store.list_runs,self.token,self.project_id))
+                active=await self.ui.call(self.ui.store.has_active_run,self.token,self.project_id)
                 if not self.valid():return
                 controls=[ft.Text('Resultados preservados em checkpoints distintos. Cada arquivo mantém sua origem e versão de processamento.',size=13,color='#64748B')]
                 for part in parts:
@@ -88,7 +88,12 @@ class StageResults:
                     if not self.valid():return
                     if tables:
                         self.child=DockingResultsTable(self.ui,self.project_id,self.run_id,self.stage['id'],tables,inline=True)
-                        self.root.controls=[self.child.build()];await self.child.load()
+                        accounting=self.stage.get('docking_accounting',{})
+                        summary=[]
+                        if accounting:
+                            summary=[ft.Text(f"Pares receptor–composto: {accounting['successful_pairs']} / {accounting['expected_pairs']} · "
+                                f"Sem resultado: {accounting['unsuccessful_pairs']} · Compostos únicos: {accounting['unique_compounds']}",selectable=True)]
+                        self.root.controls=[*summary,self.child.build()];await self.child.load()
                         self.loaded=True;return
             if operation=='redocking' and self.stage['status']=='succeeded':
                 from biomolexplorer.redocking_results import RedockingResults
@@ -124,7 +129,7 @@ class StageResults:
                     self.dataset=ft.Dropdown(label='Análise de grafos · entrada e origem',value=next((d['path'] for d in datasets if not d.get('unavailable')),None),expand=True,enable_filter=True,enable_search=True,
                         options=[verbatim(ft.DropdownOption(key=d['path'],text=d.get('label',d['name']),disabled=bool(d.get('unavailable'))),'text') for d in datasets],on_select=self.change_graph)
                     files=await self.ui.call(self.service.files,self.token,self.project_id,self.run_id,self.stage['id'])
-                    active=any(r['status'] in ('queued','running','awaiting_input') for r in await self.ui.call(self.ui.store.list_runs,self.token,self.project_id))
+                    active=await self.ui.call(self.ui.store.has_active_run,self.token,self.project_id)
                     if not self.valid():return
                     async def remove(item):
                         await self.ui.call(self.service.remove,self.token,self.project_id,self.run_id,self.stage['id'],item['path'])
@@ -140,6 +145,7 @@ class StageResults:
                         for f in files if not f['name'].endswith('.biomol-view.json')]
                     self.graph_files=FileTable(self.ui,self.project_id,[],
                         self.writable and not active,remove=remove,preview=preview,run_id=self.run_id,stage_id=self.stage['id'])
+                    self.graph_files.after_remove=getattr(self.ui,'draw_project',None)
                     self.root.controls=[ft.Row([self.dataset]),ft.Text('Cada opção corresponde a um arquivo de entrada. As relações e os compostos de análises diferentes são apresentados separadamente.',size=12,color='#64748B'),
                         self.loading,self.graph,ft.ExpansionTile(title=ft.Text('Arquivos desta análise'),controls=[ft.Container(self.graph_files.build(),padding=20)])]
                     if any(d.get('unavailable') for d in datasets):self.root.controls.insert(1,ft.Text('Arquivos acima de 32 MB permanecem disponíveis para download, mas não são carregados no dashboard.',size=12,color='#B45309'))
@@ -148,7 +154,7 @@ class StageResults:
                     self.loaded=True;return
             files=await self.ui.call(self.service.files,self.token,self.project_id,self.run_id,self.stage['id'])
             if not self.valid():return
-            active=any(r['status'] in ('queued','running','awaiting_input') for r in await self.ui.call(self.ui.store.list_runs,self.token,self.project_id))
+            active=await self.ui.call(self.ui.store.has_active_run,self.token,self.project_id)
             if not self.valid():return
             if self.stage.get('_checkpoint_subset'):
                 allowed=set(self.stage.get('artifacts',[]));files=[item for item in files if item['path'] in allowed]
@@ -164,6 +170,7 @@ class StageResults:
                 self.pdb_actions=PDBActions(self,self.writable and not running)
                 extra=self.pdb_actions.actions
             self.child=FileTable(self.ui,self.project_id,files,self.writable and not active,remove=remove,preview=preview,extra_actions=extra,run_id=self.run_id,stage_id=self.stage['id'])
+            self.child.after_remove=getattr(self.ui,'draw_project',None)
             self.root.controls=[self.child.build()] if files else [ft.Text('Nenhum arquivo de resultado disponível.',size=13,color='#64748B')]
             self.loaded=True;self.ui.page.update()
         except Exception:

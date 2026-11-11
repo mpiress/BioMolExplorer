@@ -1,5 +1,4 @@
 """Authorized score tables with audited row removal and actual-pose previews."""
-import csv
 from pathlib import Path
 from .compound_tables import CompoundTables
 from .input_validation import columns
@@ -8,12 +7,20 @@ from .workspace import AccessDenied
 
 class DockingResults(CompoundTables):
     available_statuses=('succeeded','running','failed','cancelled','interrupted')
+    def _allowed(self,pid,stage):
+        key=(pid,self._stage_snapshot[0] if self._stage_snapshot else None,stage.get('id'),tuple(stage.get('artifacts',[])))
+        cached=getattr(self,'_allowed_snapshot',None)
+        if cached and cached[0]==key:return cached[1]
+        allowed={str(self.store.scoped_path(pid,name)) for name in stage.get('artifacts',[])}
+        self._allowed_snapshot=(key,allowed)
+        return allowed
+
     def page(self,token,pid,rid,sid,filename,*args,**kwargs):
         result=super().page(token,pid,rid,sid,filename,*args,**kwargs)
         path=self._path(token,pid,rid,sid,filename)
         _,stage=self._stage(token,pid,rid,sid)
         if stage.get('operation')=='docking_vina':return result
-        allowed={str(self.store.scoped_path(pid,name)) for name in stage.get('artifacts',[])}
+        allowed=self._allowed(pid,stage)
         for row in result['rows']:
             try:
                 self._footprint_path(pid,path,row['properties'],stage,allowed=allowed)
@@ -43,11 +50,10 @@ class DockingResults(CompoundTables):
 
     def pose(self,token,pid,rid,sid,table,index,version,column='conformer_file'):
         path=self._path(token,pid,rid,sid,table)
-        with path.open('rb') as stream:
-            if self._digest(stream)!=version:raise ValueError('Atualize a tabela antes de visualizar a conformação.')
-        with path.open(encoding='utf-8-sig',newline='') as stream:rows=list(csv.DictReader(stream))
-        if not 0<=index<len(rows) or column not in ('conformer_file','vina_pose','dock6_pose'):raise AccessDenied('Conformação não autorizada.')
-        value=rows[index].get(column)
+        if type(index) is not int or index<0 or column not in ('conformer_file','vina_pose','dock6_pose'):raise AccessDenied('Conformação não autorizada.')
+        try:row=self._record(path,index,version,root=self.store.project_dir(pid))
+        except IndexError:raise AccessDenied('Conformação não autorizada.') from None
+        value=row.get(column)
         if not value:raise ValueError('A conformação selecionada não está disponível.')
         pose=self.store.scoped_path(pid,Path(value) if Path(value).is_absolute() else path.parent/value)
         _,stage=self._stage(token,pid,rid,sid)
@@ -57,13 +63,14 @@ class DockingResults(CompoundTables):
     def _row(self,token,pid,rid,sid,table,index,version,column):
         pose=Path(self.pose(token,pid,rid,sid,table,index,version,column))
         path=self._path(token,pid,rid,sid,table)
-        with path.open(encoding='utf-8-sig',newline='') as stream:row=list(csv.DictReader(stream))[index]
+        try:row=self._record(path,index,version,root=self.store.project_dir(pid))
+        except IndexError:raise AccessDenied('Conformação não autorizada.') from None
         _,stage=self._stage(token,pid,rid,sid)
         return pose,path,row,stage
 
     def _context(self,token,pid,rid,sid,table,index,version,column):
         pose,path,row,stage=self._row(token,pid,rid,sid,table,index,version,column)
-        artifacts={str(self.store.scoped_path(pid,name)) for name in stage.get('artifacts',[])}
+        artifacts=self._allowed(pid,stage)
         batches=[b for b in stage.get('batches',[]) if str(path) in b.get('artifacts',[])]
         if len(batches)==1:contexts=[batches[0]]
         elif not batches:contexts=[stage]
@@ -83,7 +90,7 @@ class DockingResults(CompoundTables):
         receptor=linked(engine+'_receptor_file') or linked('receptor_file')
         if receptor is None:
             receptor_id=row.get('receptor_id','')
-            candidates=[Path(name) for name in allowed if Path(name).name in
+            candidates=[self.store.scoped_path(pid,name) for name in allowed if Path(name).name in
                 (receptor_id+'.noH.pdb',receptor_id+'.dockprep.pdbqt',receptor_id+'.dockprep.mol2')]
             for suffix in ('.noH.pdb','.dockprep.pdbqt','.dockprep.mol2'):
                 selected=[p for p in candidates if p.name.endswith(suffix) and p.is_file()]
@@ -103,12 +110,11 @@ class DockingResults(CompoundTables):
 
     def footprint(self,token,pid,rid,sid,table,index,version):
         path=self._path(token,pid,rid,sid,table)
-        with path.open('rb') as stream:
-            if self._digest(stream)!=version:raise ValueError('Atualize a tabela antes de visualizar o footprint.')
-        with path.open(encoding='utf-8-sig',newline='') as stream:rows=list(csv.DictReader(stream))
-        if type(index) is not int or not 0<=index<len(rows):raise AccessDenied('Footprint não autorizado.')
+        if type(index) is not int or index<0:raise AccessDenied('Footprint não autorizado.')
+        try:row=self._record(path,index,version,root=self.store.project_dir(pid))
+        except IndexError:raise AccessDenied('Footprint não autorizado.') from None
         _,stage=self._stage(token,pid,rid,sid)
-        return self._footprint_path(pid,path,rows[index],stage)
+        return self._footprint_path(pid,path,row,stage)
 
     def footprint_pdf(self,token,pid,rid,sid,table,index,version):
         from .visualizations import MAX_VIEW_BYTES
@@ -118,16 +124,23 @@ class DockingResults(CompoundTables):
         return data
 
     def _footprint_path(self,pid,path,row,stage,allowed=None):
-        if allowed is None:allowed={str(self.store.scoped_path(pid,name)) for name in stage.get('artifacts',[])}
+        if allowed is None:allowed=self._allowed(pid,stage)
         def authorized(candidate):
             # Native runs historically did not list PDFs in their manifests.
             native=stage.get('operation') in ('docking_dock6','consensus') and not stage.get('configuration',{}).get('provided_results')
             return str(candidate) in allowed or native and candidate.is_relative_to(path.parent.resolve())
         def checked(candidate):
             companion=candidate.parent.parent/(row['molecule_chembl_id']+'_footprint_scored.txt')
+            companion=self.store.scoped_path(pid,companion)
             if authorized(companion) and companion.is_file():
                 from .footprints import footprint_rows
-                footprint_rows(companion)
+                from .result_index import file_stamp
+                stamp=(str(companion),file_stamp(companion))
+                validated=getattr(self,'_validated_footprints',{})
+                if stamp not in validated:
+                    footprint_rows(companion)
+                    if len(validated)>=128:validated.pop(next(iter(validated)))
+                    validated[stamp]=True;self._validated_footprints=validated
             return str(candidate)
         value=row.get('footprint_file')
         if value:
@@ -138,6 +151,6 @@ class DockingResults(CompoundTables):
         value=row.get('dock6_pose') or row.get('conformer_file')
         if not value:raise ValueError('O gráfico footprint associado a esta pose não está disponível.')
         pose=self.store.scoped_path(pid,Path(value) if Path(value).is_absolute() else path.parent/value)
-        expected=pose.parent.parent/'footprint/plots'/(row['molecule_chembl_id']+'.pdf')
+        expected=self.store.scoped_path(pid,pose.parent.parent/'footprint/plots'/(row['molecule_chembl_id']+'.pdf'))
         if authorized(expected) and expected.is_file():return checked(expected)
         raise ValueError('O gráfico footprint associado a esta pose não está disponível.')

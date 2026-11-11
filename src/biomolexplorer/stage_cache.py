@@ -150,6 +150,10 @@ def operation_digest(operation):
                 if node.level:base='.'.join(module.split('.')[:-node.level])+('.'+base if base else '')
                 names=[base]+[base+'.'+a.name for a in node.names]
             pending.extend(sorted(n for n in names if n.split('.')[0] in ('biomolexplorer','wrappers','kernel','caad','crawlers')))
+    if operation=='consensus':
+        # The shared docking wrapper must not let an audited compatibility alias
+        # for unchanged Vina/DOCK6 science revive a previous consensus model.
+        digest.update(b'compound-consensus-target-balanced-ecr-v1')
     version=digest.hexdigest()
     return compatible_processing_digest(version)
 

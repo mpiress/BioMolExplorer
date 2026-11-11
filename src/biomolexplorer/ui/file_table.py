@@ -104,6 +104,8 @@ class FileTable:
                 self.files=[f for f in self.files if f is not item]
                 self.redraw();close_dialog(self.ui.page,dialog);self.ui.page.update()
                 self.ui.notify('Arquivo removido. A alteração foi registrada no histórico do projeto.')
+                after_remove=getattr(self,'after_remove',None)
+                if after_remove:await after_remove()
             await progress.run(action)
         dialog=ft.AlertDialog(modal=True,title=ft.Text('Remover arquivo?',size=22),
             content=ft.Column([verbatim(ft.Text(item['name'])),ft.Text('O arquivo deixará de estar disponível. A próxima execução recalculará a etapa se necessário. O histórico permite restaurar o estado anterior.')],tight=True,spacing=16),

@@ -1277,15 +1277,13 @@ class WorkspaceUI(ProjectTools):
         if not hasattr(self,'results_focus'):self.results_focus=None
         token = self.token
         project_id = self.current['id']
-        runs=await self.call(self.store.list_runs,token,project_id)
+        read_runs=getattr(self.store,'list_result_runs',None)
+        runs=await self.call(read_runs,token,project_id,limit=1) if read_runs else await self.call(self.store.list_runs,token,project_id)
         if self.token != token or not self.current or self.current['id'] != project_id:
             return ft.Column([])
-        available=await self.call(self.store.available_results,token,project_id,include_checkpoints=True)
-        listed={run['id'] for run in runs}
-        for source_run in dict.fromkeys(entry['publication_run_id'] for entry in available):
-            if source_run not in listed:
-                recovered=await self.call(self.store.get_run,token,source_run)
-                if recovered['project_id']==project_id:runs.append(recovered)
+        options={'include_checkpoints':True}
+        if read_runs:options['review']=True
+        available=await self.call(self.store.available_results,token,project_id,**options)
         if self.token!=token or not self.current or self.current['id']!=project_id:return ft.Column([])
         active=next((run for run in runs if run['status'] in ('queued','running','awaiting_input')),None)
         if active and getattr(self,'run_progress',None) is None:
@@ -1791,13 +1789,22 @@ class WorkspaceUI(ProjectTools):
     @background
     async def poll_runs(self):
         previous = None
+        last_revision=None
         while self.token and self.current_run:
             token, run_id = self.token, self.current_run
             await asyncio.sleep(1)
             if self.token != token or self.current_run != run_id:
                 continue
             try:
-                run=await self.call(self.store.get_run,token,run_id)
+                revision_reader=getattr(self.store,'result_revision',None)
+                revision=(run_id,await self.call(revision_reader,token,run_id)) if revision_reader else object()
+                if self.token!=token or self.current_run!=run_id:continue
+                if revision==last_revision:
+                    progress=getattr(self,'run_progress',None)
+                    if progress and progress.valid():progress.tick();self.page.update()
+                    continue
+                run=await self.call(getattr(self.store,'get_result_run',self.store.get_run),token,run_id)
+                last_revision=revision
                 if self.token != token or self.current_run != run_id:
                     continue
                 progress = getattr(self,'run_progress',None)

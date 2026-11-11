@@ -83,10 +83,13 @@ class DockingPerformanceTests(unittest.TestCase):
             return [ligand]
         def engine(**kwargs):
             instance=MagicMock()
+            instance.excluded_compounds=set()
             def dock():
                 folder=Path(kwargs['base_output_path'])/'flex';folder.mkdir(parents=True,exist_ok=True)
                 (folder/'A_scored.mol2').write_text(MOL2+'\n########## Grid_Score: -5\n')
             instance.perform_dock6_evaluation.side_effect=dock
+            # An optional footprint failure must not erase a valid docking score.
+            instance.prepare_footprint.side_effect=lambda **options:instance.excluded_compounds.add('A')
             return instance
         with patch('wrappers.docking.prepare_docking_receptor',return_value=str(self.root)), \
              patch('biomolexplorer.docking_data.prepare_ligands',side_effect=prepare) as preparation, \
@@ -114,7 +117,7 @@ class DockingPerformanceTests(unittest.TestCase):
             db.execute('INSERT INTO runs VALUES(?,?,?,?,?,?,?,?)',('checkpoint',pid,store.user(token)['id'],
                 'running',json.dumps([stage]),1.,1.,None))
         service=DockingResults(store)
-        with patch.object(store,'get_run',wraps=store.get_run) as reader:
+        with patch.object(store,'get_result_run',wraps=store.get_result_run) as reader:
             self.assertEqual([row['path'] for row in service.tables(token,pid,'checkpoint',stage['id'])],[str(table)])
             page=service.page(token,pid,'checkpoint',stage['id'],str(table))
             self.assertEqual(page['total'],1);self.assertFalse(page['can_edit'])

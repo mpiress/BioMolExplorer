@@ -522,6 +522,8 @@ class PipelineService:
                 register_run(db,prior['project_id'],run_id,stages)
             db.execute('UPDATE runs SET status=?,stages=?,updated=?,error=? WHERE id=?',
                        (status,json.dumps(stages),time.time(),error,run_id))
+            from .result_catalog import store_snapshot
+            store_snapshot(db,run_id,stages,unchanged=not changed)
             if prior and prior['status'] in ACTIVE_RUNS and status not in ACTIVE_RUNS:
                 from .project_state import read_snapshot,record
                 last=db.execute('SELECT id FROM project_history WHERE project_id=? ORDER BY created DESC LIMIT 1',(prior['project_id'],)).fetchone()
@@ -545,7 +547,9 @@ class PipelineService:
                 selected.append(assets[ref['asset']]);available.extend(assets.values());continue
             files=[self.store.scoped_path(project_id,p) for p in
                    (ref.get('_resolved_paths') or results.get(ref['stage'],[]))]
-            available.extend(files);selector=ref.get('selector','auto')
+            companions=[self.store.scoped_path(project_id,p) for p in
+                        (ref.get('_bundle_paths') or results.get(ref['stage'],[]))]
+            available.extend(companions);selector=ref.get('selector','auto')
             if ref.get('artifact_id'):
                 from .artifacts import validate_reference
                 matches=[Path(validate_reference(ref,files))]
@@ -625,11 +629,19 @@ class PipelineService:
             return destination,'compounds',list(dict.fromkeys(selected))
         selected=list(dict.fromkeys(selected));available=list(dict.fromkeys(available))
         destination=self._docking_destination(project_id,stage,field,available,directory)
-        path=self._write_docking_compounds(selections,destination)
+        receptors=set()
+        if stage['operation']=='docking_dock6':
+            from .docking_inputs import prepared_receptor
+            from .artifact_naming import native_name
+            for ref in input_sources(stage.get('bindings',{}).get('base_input_path',{})):
+                paths=([ref['selector']] if ref.get('selector','auto')!='auto' else
+                       ref.get('_resolved_paths') or results.get(ref.get('stage'),[]))
+                receptors.update(native_name(p).split('.dockprep.',1)[0] for p in paths if prepared_receptor(p))
+        path=self._write_docking_compounds(selections,destination,by_receptor=stage['operation']=='docking_dock6',receptors=receptors)
         return destination,path.stem,selected
 
     @staticmethod
-    def _write_docking_compounds(selections,destination):
+    def _write_docking_compounds(selections,destination,*,by_receptor=False,receptors=()):
         from .docking_data import input_records,copy_input_records
         from .molecule_quality import sanitize_csv
         best={}
@@ -639,10 +651,12 @@ class PipelineService:
                 records=[r for r in records if r['molecule_chembl_id']==ref['compound_id']]
                 if not records:raise ValueError('O composto selecionado não está no arquivo de entrada do docking.')
             for row in records:
+                if receptors and row.get('receptor_id') and row['receptor_id'] not in receptors:continue
                 code=row['molecule_chembl_id'];value=row.get('score')
                 score=float(value) if value not in (None,'') else float('inf')
-                previous=best.get(code);old=previous.get('score') if previous else None
-                if previous is None or score<(float(old) if old not in (None,'') else float('inf')):best[code]=row
+                identity=(row.get('receptor_id',''),code) if by_receptor and (row.get('conformer_file') or row.get('pose_file')) else ('',code)
+                previous=best.get(identity);old=previous.get('score') if previous else None
+                if previous is None or score<(float(old) if old not in (None,'') else float('inf')):best[identity]=row
         path=copy_input_records(list(best.values()),destination)
         sanitize_csv(path,path)
         return path
@@ -1293,6 +1307,8 @@ class PipelineService:
                 for batch in batches:
                     if batch.get('status')!='succeeded':continue
                     if batch.get('redocking_failures'):continue
+                    if item.get('operation') in ('docking_vina','docking_dock6') and (
+                            batch.get('docking_failures') or batch.get('excluded_records')):continue
                     if batch.get('cache_key')!=key:
                         if unit is not None and results is not None:
                             from .published_results import verify,adopted
@@ -1451,6 +1467,8 @@ class PipelineService:
             item['redocking_failures']=job['result'].get('details',{}).get('redocking_failures',0)
             item['redocking_reused']=job['result'].get('details',{}).get('redocking_reused',0)
             item['docking_failures']=job['result'].get('details',{}).get('docking_failures',0)
+            if job['result'].get('details',{}).get('docking_accounting'):
+                item['docking_accounting']=job['result']['details']['docking_accounting']
             for name in ('md_pairs','md_failures','md_reused'):
                 if name in job['result'].get('details',{}):item[name]=job['result']['details'][name]
             if job['result'].get('details',{}).get('skipped_reason'):
@@ -1542,6 +1560,8 @@ class PipelineService:
                       and (s.get('artifacts') or stage['operation']=='redocking')),None)
             if old is None:
                 continue
+            if stage['operation'] in ('docking_vina','docking_dock6') and (
+                    old.get('docking_failures') or old.get('excluded_records')):continue
             known_version=old.get('processing_version') or old.get('adopted_processing_version')
             if known_version and known_version!=operation_digest(stage['operation']):continue
             if stage['operation']=='redocking':

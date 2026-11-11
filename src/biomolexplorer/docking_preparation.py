@@ -49,6 +49,8 @@ def _prepare_one(original,dataset,destination,options,ph,engines,formats,cache,o
     logger=get_logger('scientific_tools')
     started=time.monotonic()
     row=dict(original);code=row['molecule_chembl_id']
+    if row.get('dock6_operation') in ('guided','score_only','restrained'):
+        options=dict(options,minimize=False)
     if not re.fullmatch(r'[A-Za-z0-9_.+-]{1,100}',code) or '..' in code:
         raise ValueError('Código molecular inválido para o docking.')
     compatible=True
