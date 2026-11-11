@@ -48,6 +48,58 @@ class IndexedCacheTests(unittest.TestCase):
         self.assertFalse((self.root/'out').exists())
         self.assertIsNone(cache.restore('missing',{'pose':self.root/'out'}))
 
+    def test_warm_restore_across_instances_neither_hashes_nor_copies(self):
+        cache=CalculationCache('test',self.root)
+        source=self.root/'source';source.write_text('complete')
+        cache.remember('one',{'pose':source})
+        output=self.root/'out'
+        self.assertIsNotNone(cache.restore('one',{'pose':output}))
+        stamp=output.stat()
+        cache=CalculationCache('test',self.root)
+        with patch('biomolexplorer.calculation_cache.file_digest',side_effect=AssertionError('rehashed unchanged artifact')), \
+             patch('biomolexplorer.calculation_cache.copy_artifact',side_effect=AssertionError('recopied unchanged artifact')):
+            self.assertIsNotNone(cache.restore('one',{'pose':output}))
+        self.assertEqual(output.stat().st_ino,stamp.st_ino)
+        self.assertEqual(output.stat().st_mtime_ns,stamp.st_mtime_ns)
+
+    def test_same_size_corruption_with_restored_mtime_is_not_a_hit(self):
+        cache=CalculationCache('test',self.root)
+        source=self.root/'source';source.write_text('complete')
+        cache.remember('one',{'pose':source})
+        with cache.connect() as db:
+            digest=db.execute('SELECT sha256 FROM objects').fetchone()[0]
+        obj=cache.object_path(digest);stamp=obj.stat()
+        obj.write_text('tampered')
+        os.utime(obj,ns=(stamp.st_atime_ns,stamp.st_mtime_ns))
+        self.assertIsNone(cache.restore('one',{'pose':self.root/'out'}))
+
+    def test_existing_edited_output_is_replaced_from_verified_object(self):
+        cache=CalculationCache('test',self.root)
+        source=self.root/'source';source.write_text('complete')
+        cache.remember('one',{'pose':source})
+        output=self.root/'out';cache.restore('one',{'pose':output})
+        stamp=output.stat();output.write_text('tampered')
+        os.utime(output,ns=(stamp.st_atime_ns,stamp.st_mtime_ns))
+        self.assertIsNotNone(cache.restore('one',{'pose':output}))
+        self.assertEqual(output.read_text(),'complete')
+
+    def test_legacy_database_without_receipts_is_adopted_without_recomputation(self):
+        cache=CalculationCache('test',self.root)
+        source=self.root/'source';source.write_text('complete')
+        cache.remember('one',{'pose':source})
+        with cache.connect() as db:db.execute('DROP TABLE content_checks')
+        cache=CalculationCache('test',self.root)
+        self.assertIsNotNone(cache.restore('one',{'pose':self.root/'out'}))
+
+    def test_validation_callback_still_runs_on_unchanged_artifacts(self):
+        cache=CalculationCache('test',self.root)
+        source=self.root/'source';source.write_text('complete')
+        cache.remember('one',{'pose':source})
+        validate=unittest.mock.Mock()
+        for attempt in range(2):
+            self.assertIsNotNone(cache.restore('one',{'pose':self.root/'out'},validate))
+        self.assertEqual(validate.call_count,2)
+
     def test_automatic_docking_binding_does_not_restore_an_outdated_file_selection(self):
         from biomolexplorer.catalog import new_stage
         from biomolexplorer.pipeline import PipelineService

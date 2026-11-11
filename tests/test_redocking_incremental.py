@@ -225,6 +225,23 @@ class IncrementalRedockingTests(unittest.TestCase):
             self.assertEqual(self.last_scripts,['prepare_complex_2ABC_A.com','prepare_receptor_2ABC_A.com',
                                                  'prepare_ligand_2ABC_LIG_1A.com'])
 
+    def test_complete_project_checkpoint_skips_preparation_preflight_and_legacy_scan(self):
+        with patch.dict(os.environ,{'BIOMOL_PREPARATION_CACHE':str(self.root/'shared/ligands'),
+                                   'BIOMOL_REUSE_PREPARATIONS':'1'}):
+            self.run_pairs([['1ABC','LIG',1,'A']])
+            original=Path.glob
+            def glob(path,pattern):
+                if pattern=='redocking-*/'+NAME:
+                    raise AssertionError('Legacy history scanned after complete indexed hit')
+                return original(path,pattern)
+            with patch('biomolexplorer.redocking_config.validate_structure_pairs',side_effect=AssertionError('Repeated preparation preflight')), \
+                 patch('biomolexplorer.redocking_config.validate_redocking_tools',side_effect=AssertionError('Repeated tool preflight')), \
+                 patch.object(Path,'glob',glob):
+                _,_,rows,docked=self.run_pairs([['1ABC','LIG',1,'A']])
+            self.assertEqual(docked,[])
+            self.assertEqual(self.last_scripts,[])
+            self.assertEqual(len(rows),1)
+
     def test_changed_docking_parameters_do_not_repeat_reference_preparation(self):
         with patch.dict(os.environ,{'BIOMOL_PREPARATION_CACHE':str(self.root/'shared/ligands'),
                                    'BIOMOL_REUSE_PREPARATIONS':'1'}):

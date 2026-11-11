@@ -666,6 +666,15 @@ class PipelineService:
         engine='dock6' if field=='base_dock6_path' else 'vina'
         selected,available=self._docking_sources(project_id,refs,results,engine)
         rows=score_input_records(selected,available,engine)
+        if stage['operation']=='consensus':
+            from .consensus_io import materialize_scores
+            from .calculation_cache import identity
+            # A supplied run directory already isolates this materialization.
+            # Unrelated producer poses must not be hashed or copied here.
+            key=identity([str(p) for p in selected]+[stage['id'],field])
+            destination=(directory or self.store.project_dir(project_id)/'.input-cache'/key)/field
+            materialize_scores(rows,selected,destination)
+            return destination,None,selected
         destination=self._docking_destination(project_id,stage,field,available,directory)
         path=copy_input_records(rows,destination);path.rename(destination/'docking_results.csv')
         return destination,None,selected
@@ -931,7 +940,11 @@ class PipelineService:
                 bindings['base_input_path'] = bindings['base_vina_path']
             elif params.get('base_vina_path'):
                 params['base_input_path'] = params['base_vina_path']
+        consensus_alias = (stage['operation']=='consensus' and 'base_vina_path' in bindings
+                           and bindings.get('base_input_path')==bindings['base_vina_path'])
         for field,group in bindings.items():
+            if consensus_alias and field=='base_input_path':
+                continue
             refs=input_sources(group)
             if (stage.get('_process_all_inputs') or stage['operation']=='consensus' or
                     field=='base_selected_mols' and stage['operation'] in ('docking_vina','docking_dock6','prepare_structures') or
@@ -1022,6 +1035,10 @@ class PipelineService:
             if params.get(field):
                 path = Path(params[field])
                 params[field] = str(self.store.scoped_path(project_id,path if path.is_absolute() else self.store.project_dir(project_id) / path))
+        if consensus_alias:
+            params['base_input_path']=params['base_vina_path']
+            if item is not None:
+                item.setdefault('input_files',{})['base_input_path']=list(item['input_files']['base_vina_path'])
         self._validate_parameters(project_id,dict(stage,parameters=params),cache_only=cache_only)
         if stage['operation']=='redocking' and not cache_only:
             from .redocking_config import validate_structure_pairs,effective_preparation
@@ -1443,13 +1460,17 @@ class PipelineService:
                 item['log_path'] = job['log_path']
                 item['job_id'] = job['id']
                 self._update(run_id,'running',stages)
+            consensus_progress_at=time.monotonic()
             while True:
                 self.store._require_user(user_id,project_id,'editor')
                 job = manager.get(job['id'])
                 item['log_path'] = job['log_path']
                 if job.get('progress') != item.get('progress'):
                     item['progress'] = job.get('progress')
-                    self._update(run_id,'running',stages)
+                    if (stage['operation']!='consensus' or
+                            job['status'] not in TERMINAL and time.monotonic()-consensus_progress_at>=10):
+                        self._update(run_id,'running',stages)
+                        consensus_progress_at=time.monotonic()
                 if state['event'].is_set():
                     manager.cancel(job['id'])
                 if job['status'] in TERMINAL:

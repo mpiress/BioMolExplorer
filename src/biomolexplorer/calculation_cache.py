@@ -65,7 +65,30 @@ class CalculationCache:
                     FOREIGN KEY(namespace,experiment_key) REFERENCES experiments(namespace,key));
                 CREATE INDEX IF NOT EXISTS subjects_identifier ON subjects(role,identifier);
                 CREATE INDEX IF NOT EXISTS subjects_content ON subjects(input_sha256);
+                CREATE TABLE IF NOT EXISTS content_checks (
+                    path TEXT PRIMARY KEY, stamp TEXT NOT NULL, sha256 TEXT NOT NULL);
             ''')
+
+    @staticmethod
+    def _stamp(path):
+        stat = Path(path).stat()
+        return json.dumps((stat.st_dev, stat.st_ino, stat.st_size,
+                           stat.st_mtime_ns, stat.st_ctime_ns))
+
+    def _fingerprint(self, path, db):
+        """Reuse verified bytes only while the complete filesystem stamp matches."""
+        path = Path(path).absolute()
+        stamp = self._stamp(path)
+        row = db.execute('SELECT stamp,sha256 FROM content_checks WHERE path=?',
+                         (str(path),)).fetchone()
+        if row and row[0] == stamp:
+            return row[1]
+        digest = file_digest(path)
+        if self._stamp(path) != stamp:
+            raise ValueError('Cache artifact changed during verification: '+str(path))
+        db.execute('INSERT OR REPLACE INTO content_checks VALUES (?,?,?)',
+                   (str(path), stamp, digest))
+        return digest
 
     @contextmanager
     def connect(self):
@@ -119,14 +142,28 @@ class CalculationCache:
             metadata=json.loads(record[0])
             if not isinstance(metadata,dict):return None
             # Validate every object before materializing any output.
-            for role, digest in rows:
-                source = self.object_path(digest)
-                if file_digest(source) != digest:
-                    return None
-                if validate:
-                    validate(role, source)
-            for role, digest in rows:
-                copy_artifact(self.object_path(digest), targets[role])
+            with self.connect() as db:
+                verified = []
+                for role, digest in rows:
+                    source = self.object_path(digest)
+                    if self._fingerprint(source, db) != digest:
+                        return None
+                    stamp = self._stamp(source)
+                    if validate:
+                        validate(role, source)
+                        if self._stamp(source) != stamp:
+                            return None
+                    verified.append((role, digest, source, stamp))
+                for role, digest, source, stamp in verified:
+                    target = Path(targets[role])
+                    if self._stamp(source) != stamp:
+                        return None
+                    if target.is_file() and self._fingerprint(target, db) == digest:
+                        continue
+                    copy_artifact(source, target)
+                    # Register the materialized bytes, not an assumed copy result.
+                    if self._fingerprint(target, db) != digest:
+                        return None
             from .diagnostics import event,get_logger
             event(get_logger('scientific_tools'),'calculation.reused','Checkpoint científico validado e reutilizado.',
                   tool=self.namespace,configuration=key,
@@ -146,9 +183,13 @@ class CalculationCache:
                 raise ValueError('Cache output is absent or empty: ' + str(source))
             if validate:
                 validate(role, source)
-            digest = file_digest(source); target = self.object_path(digest)
-            if not target.is_file() or file_digest(target) != digest:
-                copy_artifact(source, target)
+            with self.connect() as db:
+                digest = self._fingerprint(source, db)
+                target = self.object_path(digest)
+                if not target.is_file() or self._fingerprint(target, db) != digest:
+                    copy_artifact(source, target)
+                    if self._fingerprint(target, db) != digest:
+                        raise ValueError('Cache object changed during publication: '+str(target))
             entries.append((role, digest, source.stat().st_size))
         with self.connect() as db:
             db.execute('INSERT OR REPLACE INTO experiments VALUES (?,?,?)',

@@ -19,6 +19,7 @@ def consensus_rows(vina, dock6, weight=1.):
     """
     from .molecular_parsing import mol_from_smiles
     from rdkit import Chem
+    from .progress import report_progress
 
     best = {'vina': {}, 'dock6': {}}
     structures = {}
@@ -57,6 +58,7 @@ def consensus_rows(vina, dock6, weight=1.):
     if not codes:
         return []
     targets = sorted(targets)
+    report_progress(key='consensus.normalizing')
     ranks = {'vina': {}, 'dock6': {}}
     for engine in best:
         groups = defaultdict(list)
@@ -77,7 +79,9 @@ def consensus_rows(vina, dock6, weight=1.):
                 start = stop
 
     rows = []
-    for code in codes:
+    for index, code in enumerate(codes):
+        if index % 100 == 0:
+            report_progress(key='consensus.aggregating',completed=index,total=len(codes))
         details = []
         factors = {}
         for engine in best:

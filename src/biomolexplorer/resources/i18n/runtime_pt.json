@@ -120,5 +120,10 @@
   "run.overview.paused": "A execução está pausada para análise. Os resultados concluídos permanecem disponíveis.",
   "run.action.pause": "Pausar execução",
   "run.action.resume": "Continuar execução",
-  "redocking.failures": "{count} complexos com falha. Consulte os diagnósticos nas linhas destacadas."
+  "redocking.failures": "{count} complexos com falha. Consulte os diagnósticos nas linhas destacadas.",
+  "consensus.reading": "Lendo os scores selecionados de Vina e DOCK6…",
+  "consensus.normalizing": "Normalizando os scores por motor e alvo…",
+  "consensus.aggregating": "Agregando os alvos por composto…",
+  "consensus.exporting": "Publicando a tabela e as estruturas representativas…",
+  "consensus.done": "Consenso concluído."
 }

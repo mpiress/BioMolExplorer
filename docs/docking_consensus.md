@@ -114,3 +114,32 @@ Os testes verificam fórmula fechada, sinais positivos/negativos, invariância d
 escala, empates, singleton, cobertura ausente, duplicação, ordem de entrada,
 estereoisômeros, contexto estrutural e cardinalidade de 1.000 × 3 alvos.
 Essas verificações não substituem validação prospectiva com ativos e decoys.
+
+## Execução e finalização
+
+O transporte das entradas conserva referências absolutas já autorizadas às
+estruturas produtoras. Não copia todas as poses para cada entrada; somente as
+poses representativas são materializadas na saída do consenso. A entrada Vina
+e seu alias legado base_input_path compartilham uma única preparação. Um
+manifesto de transporte registra os arquivos estruturais referenciados e suas
+assinaturas de dispositivo, inode, tamanho, mtime e ctime, para detectar mudanças.
+
+Quando existe docking_results.csv na raiz da entrada, essa tabela é a fonte
+autoritativa, inclusive vazia: a leitura não percorre as árvores de poses.
+Diretórios legados continuam usando a resolução anterior como alternativa.
+
+A tabela é publicada atomicamente antes do gráfico. A figura utiliza o backend
+Agg diretamente, sem fábrica de janelas; falhas de visualização registram um
+consensus_report.json e não invalidam a tabela calculada. Gráficos incompletos
+ou antigos são removidos quando essa geração falha.
+
+O worker informa leitura, normalização, agregação, exportação e conclusão.
+Atualizações intermediárias persistidas do consenso são limitadas a uma a cada
+dez segundos. A confirmação terminal do worker segue diretamente para finalizar
+o bloco, evitando regravar todo o histórico como running apenas para publicar
+a última mensagem. As demais operações mantêm seu fluxo de atualização.
+
+Validação local: um worker real concluiu com 1.729 compostos em aproximadamente
+6,4 segundos, usando scores e anexos existentes, com equivalência dos fatores
+calculados e hashes inalterados dos CSVs originais. Essa medição cobre o worker,
+não a renderização completa da interface ou a publicação de todo o pipeline.

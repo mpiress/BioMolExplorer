@@ -54,8 +54,6 @@ def perform_redocking(base_input_path:str, target:str, base_output_path:str, pdb
         from biomolexplorer.redocking_config import effective_preparation
         preparation_pairs=effective_preparation(dict(pdb_codes=records,preparation_pairs=preparation_pairs,
             preparation_options=preparation_options))
-        validate_structure_pairs(base_input_path, records, preparation_pairs or {}, prepared=not prepare_complex,engine=redocking_engine)
-        validate_redocking_tools(prepare_complex,engine=redocking_engine,dock6_path=dock6_app_path)
         f1 = fileHandling(input_path=base_input_path, output_path=base_input_path)
 
         if pdb_codes is None:
@@ -94,6 +92,13 @@ def perform_redocking(base_input_path:str, target:str, base_output_path:str, pdb
         for seed in (Path(base_input_path)/'cache').glob('redocking-*'):
             if seed.is_dir():shutil.rmtree(seed)
         pdb_codes=pdb_codes[[pair_key(list(r)) not in cache.restored for r in pdb_codes.to_records(index=False)]]
+        if not pdb_codes.empty:
+            pending_records = [list(r) for r in pdb_codes.to_records(index=False)]
+            pending_settings = {pair_key(r): preparation_pairs[pair_key(r)]
+                                for r in pending_records if pair_key(r) in preparation_pairs}
+            validate_structure_pairs(base_input_path, pending_records, pending_settings,
+                                     prepared=not prepare_complex, engine=redocking_engine)
+            validate_redocking_tools(prepare_complex,engine=redocking_engine,dock6_path=dock6_app_path)
         if prepare_complex and not pdb_codes.empty:
             dock = Docking(complex_input_path=base_input_path, output_path=base_prepared_complexes)
             from biomolexplorer.redocking_preparation import prepare_pairs,write_failures

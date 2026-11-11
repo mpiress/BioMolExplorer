@@ -53,6 +53,22 @@ class ConsensusOptionalStructureTests(unittest.TestCase):
     def test_codes_and_scores_alone_reach_worker_and_produce_consensus(self):self.run_consensus(False)
     def test_stale_structural_metadata_does_not_block_consensus(self):self.run_consensus(True)
 
+    def test_vina_alias_materializes_once_without_pose_transport(self):
+        stage,results,producers=self.inputs(False)
+        service=PipelineService(self.store)
+        try:
+            item={}
+            with patch.object(service,'_materialize_inputs',wraps=service._materialize_inputs) as materialize, \
+                 patch.object(service,'_docking_destination',side_effect=AssertionError('Unrelated artifact hashing')), \
+                 patch('biomolexplorer.docking_data.copy_input_records',side_effect=AssertionError('Input pose copying')):
+                params=service._resolve(self.project_id,self.store.user(self.token)['id'],stage,results,
+                    self.store.project_dir(self.project_id)/'isolated',item,pipeline=producers+[stage])
+            self.assertEqual([call.args[2] for call in materialize.call_args_list],['base_vina_path','base_dock6_path'])
+            self.assertEqual(params['base_input_path'],params['base_vina_path'])
+            self.assertEqual(item['input_files']['base_input_path'],item['input_files']['base_vina_path'])
+            self.assertFalse((Path(params['base_vina_path'])/'poses').exists())
+        finally:service.close()
+
     def test_direct_score_tables_need_no_structural_metadata(self):
         from wrappers.docking import generate_consensus
         stage,results,producers=self.inputs(False)

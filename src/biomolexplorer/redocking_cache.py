@@ -208,7 +208,7 @@ class PairCache:
         self.science['runtime']=runtime_signature('redocking',runtime_python or sys.executable,dict(self.parameters,redocking_engine=self.engine))
         if self.engine=='dock6':
             root=Path(self.parameters.get('dock6_app_path') or '')
-            self.science['dock6_files']={name:file_digest(root/name) for name in ('bin/dock6','bin/sphgen','bin/sphere_selector','bin/showbox','bin/grid','parameters/vdw_AMBER_parm99.defn','parameters/flex.defn','parameters/flex_drive.tbl')}
+            self.science['dock6_files']={name:file_digest(root/name) if (root/name).is_file() else None for name in ('bin/dock6','bin/sphgen','bin/sphere_selector','bin/showbox','bin/grid','parameters/vdw_AMBER_parm99.defn','parameters/flex.defn','parameters/flex_drive.tbl')}
         self.records = records
         self.restored = {}
         from .calculation_cache import CalculationCache
@@ -284,7 +284,9 @@ class PairCache:
                 ready.add((record[0],record[3]))
                 centers[self.prefix(record)]=entry['center']
             except (OSError,ValueError,KeyError,TypeError):continue
-        for index in sorted((self.source / 'cache').glob('redocking-*/' + NAME)):
+        indexes = () if selected.keys() <= self.restored.keys() else sorted(
+            (self.source / 'cache').glob('redocking-*/' + NAME))
+        for index in indexes:
             try:
                 entries = json.loads(index.read_text())['entries']
             except (OSError, ValueError, KeyError):

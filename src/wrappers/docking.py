@@ -103,13 +103,17 @@ def normalized_score(values, method):
 
 def plot_scatter_comparison(df:DataFrame, output_path:str):
     if 'consensus_model' in df:
-        fig, ax = plt.subplots(figsize=(7, 6))
+        from matplotlib.figure import Figure
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        fig = Figure(figsize=(7, 6))
+        canvas = FigureCanvasAgg(fig)
+        ax = fig.subplots()
         ax.scatter(df['vina'], df['dock6'], c=df['normalized_score'], cmap='viridis', s=14)
         ax.set(xlabel='Relevância Vina', ylabel='Relevância DOCK6',
                title='Consenso normalizado por composto', xlim=(0, 1.02), ylim=(0, 1.02))
         fig.tight_layout()
-        fig.savefig(Path(output_path)/'correlation.png')
-        plt.close(fig)
+        canvas.print_png(str(Path(output_path)/'correlation.png'))
+        fig.clear()
         return
     df_minmax = df.copy()
     df_zscore = df.copy()
@@ -143,11 +147,15 @@ def plot_scatter_comparison(df:DataFrame, output_path:str):
 
 def generate_consensus(base_input_path:str, base_output_path:str, target:str, repulsion_weight: float = 1.0,
                        base_vina_path:str=None, base_dock6_path:str=None):
-    from biomolexplorer.docking_data import read_results, NO_INTERSECTION
+    from biomolexplorer.docking_data import NO_INTERSECTION
+    from biomolexplorer.consensus_io import read_scores, write_table
+    from biomolexplorer.calculation_cache import copy_artifact
+    from biomolexplorer.progress import report_progress
     from biomolexplorer.consensus_model import consensus_rows
     output=Path(base_output_path);output.mkdir(parents=True,exist_ok=True)
-    rows=consensus_rows(read_results(base_vina_path or Path(base_input_path)/'Vina','vina'),
-                        read_results(base_dock6_path or Path(base_input_path)/'Dock6','dock6'),repulsion_weight)
+    report_progress(key='consensus.reading')
+    rows=consensus_rows(read_scores(base_vina_path or Path(base_input_path)/'Vina','vina'),
+                        read_scores(base_dock6_path or Path(base_input_path)/'Dock6','dock6'),repulsion_weight)
     if not rows:
         import json
         (output/(target+'.csv')).unlink(missing_ok=True)
@@ -156,13 +164,15 @@ def generate_consensus(base_input_path:str, base_output_path:str, target:str, re
     (output/'consensus_report.json').unlink(missing_ok=True)
     copied_context = {}
     for index,row in enumerate(rows):
+        if index % 100 == 0:
+            report_progress(key='consensus.exporting',completed=index,total=len(rows))
         for key in ('vina_pose','dock6_pose'):
             if not row.get(key):continue
             source=Path(row[key])
             if not source.is_file():
                 row.pop(key,None);continue
             destination=output/'poses'/f'{index}_{key}{source.suffix}'
-            destination.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(source,destination)
+            destination.parent.mkdir(parents=True,exist_ok=True);copy_artifact(source,destination)
             row[key]=destination.relative_to(output).as_posix()
         for field in ('vina_receptor_file','dock6_receptor_file','vina_reference_file','dock6_reference_file','footprint_file'):
             if row.get(field):
@@ -174,14 +184,22 @@ def generate_consensus(base_input_path:str, base_output_path:str, target:str, re
                 destination=output/'context'/(key+'_'+source.name)
                 destination.parent.mkdir(exist_ok=True)
                 if source not in copied_context:
-                    shutil.copy2(source,destination)
+                    copy_artifact(source,destination)
                     copied_context[source] = destination
                 row[field]=destination.relative_to(output).as_posix()
         row['conformer_file']=row.get('dock6_pose') or row.get('vina_pose') or ''
     df=DataFrame(rows)
     df=df.sort_values('normalized_score',ascending=False,kind='stable')
-    plot_scatter_comparison(df,str(output))
-    df.to_csv(output/(target+'.csv'),index=False)
+    write_table(df,output/(target+'.csv'))
+    try:
+        plot_scatter_comparison(df,str(output))
+    except (OSError,ValueError,RuntimeError) as error:
+        import json
+        (output/'correlation.png').unlink(missing_ok=True)
+        (output/'consensus_report.json').write_text(json.dumps(
+            {'rows':len(df),'visualization_error':str(error)},ensure_ascii=False),encoding='utf-8')
+        logger.warning('Consensus visualization failed; score table is complete.',exc_info=True)
+    report_progress(key='consensus.done',completed=len(rows),total=len(rows))
     return df
 
 

@@ -120,5 +120,10 @@
   "run.overview.paused": "Execution is paused for review. Completed results remain available.",
   "run.action.pause": "Pause Run",
   "run.action.resume": "Resume Run",
-  "redocking.failures": "{count} failed complexes. Review diagnostics in the highlighted rows."
+  "redocking.failures": "{count} failed complexes. Review diagnostics in the highlighted rows.",
+  "consensus.reading": "Reading selected Vina and DOCK6 scores…",
+  "consensus.normalizing": "Normalizing scores by engine and target…",
+  "consensus.aggregating": "Aggregating targets by compound…",
+  "consensus.exporting": "Publishing scores and representative structures…",
+  "consensus.done": "Consensus completed."
 }
