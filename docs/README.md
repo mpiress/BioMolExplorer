@@ -107,3 +107,9 @@ Generation retains the new design in both languages and requires no manual summa
 [Relatório da auditoria documental e lista de arquivos alterados](documentation_audit_2026-11-13.md). Os guias adicionais são acessíveis por estes links e pelos manuais; o registro executável do gerador não foi alterado. Relatórios em [validation](validation/README.md) são evidências datadas, não instruções atuais de instalação.
 
 [Documentation audit and per-file change list](documentation_audit_2026-11-13.md). Additional references are linked here and from the manuals; the executable builder registry was not changed. [Validation reports](validation/README.md) are dated evidence rather than current installation instructions.
+
+## Acesso direto ao modelo de consenso / Direct consensus model access
+
+O [portal principal `index_doc.html`](../index_doc.html) agora reúne 19 cartões pesquisáveis, com os guias novos e destaque para o [modelo matemático do consenso](pt/docking_consensus.html). O guia explica ranks, transformação exponencial, média geométrica, cobertura ausente, média entre motores, exemplos completos e limites de interpretação. Também estão no catálogo a referência do código atual, o suporte estrutural AMBER e o relatório da auditoria anterior.
+
+The [main `index_doc.html` portal](../index_doc.html) now offers 19 searchable cards, including the new references and a prominent link to the [mathematical consensus guide](en/docking_consensus.html). Its examples explain ranks, exponential relevance, geometric target aggregation, missing coverage, engine averaging and interpretation limits. Code reference, AMBER structural support and the previous audit report are also in the catalog.

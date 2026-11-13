@@ -1,117 +1,284 @@
-# Consenso de docking por composto
+# Consenso de docking: modelo matemático e interpretação
 
-Modelo `target-balanced-ecr-v1`. Cada composto produz **uma única linha**, mesmo
-quando avaliado em vários alvos. Os botões existentes da tabela são preservados.
-O cálculo não executa novamente docking, preparação, minimização ou footprint.
+[Portal de documentos](../index_doc.html) · [English](en/docking_consensus.md) · [Parâmetros da API](backend_usage.md#api-consensus)
 
-## Fundamentação
+O bloco **Docking consensus** transforma avaliações do AutoDock Vina e DOCK6 em uma lista única de prioridades **por composto**. O modelo implementado é `target-balanced-ecr-v1`, definido por `consensus_model.py`, com `TAU = 0.1`. Este guia explica exatamente o cálculo atual, com exemplos reproduzíveis, sem alterar o algoritmo.
 
-Usamos uma adaptação normalizada do Exponential Consensus Ranking (ECR), robusta
-a unidades, deslocamentos, escalas e valores extremos das energias. Ordenamos
-sempre os scores brutos em ordem crescente, sem aplicar valor absoluto: energias
-positivas grandes não podem ser promovidas artificialmente.
+**Leitura rápida:** o score bruto indica energia segundo um motor; o rank indica a posição relativa do composto; a relevância transforma esse rank para uma escala adimensional; o consenso combina as relevâncias dos dois motores. **Menor score bruto é melhor; maior relevância/consenso é melhor.** O valor final não é energia, probabilidade de ligação, p-valor nem confiança estatística calibrada.
 
-ECR tem suporte em benchmarks, mas **não existe normalização universalmente
-superior para todos os alvos**. O parâmetro de cauda de 10% segue a prática ECR;
-a média geométrica entre alvos e a penalização de cobertura abaixo são decisões
-explícitas deste modelo para priorizar amplitude terapêutica. Não constituem uma
-alegação de superioridade experimental ou uma probabilidade de ligação.
+## 1. O problema que o modelo resolve
 
-- Palacio-Rodríguez et al. (2019), [ECR original](https://doi.org/10.1038/s41598-019-41594-3).
-- [Combinação de consenso de poses e ranks](https://pmc.ncbi.nlm.nih.gov/articles/PMC8965822/) (2022).
-- [Comparação de normalizações e consensos](https://pmc.ncbi.nlm.nih.gov/articles/PMC9941253/) (2023).
-- [DockM8](https://doi.org/10.1186/s13321-026-01287-2) (2026): resultados dependem do alvo e do protocolo.
+Vina e DOCK6 usam funções de pontuação diferentes. Seus valores não devem ser somados ou promediados diretamente como se tivessem a mesma calibração. Mesmo dentro de um motor, alvos distintos podem produzir distribuições diferentes. O BioMolExplorer compara posições relativas **separadamente em cada combinação motor/alvo**, depois agrega essas informações.
 
-## Normalização por motor e alvo
+Se 1.000 compostos forem avaliados nos mesmos três alvos por ambos os motores, há 3.000 avaliações Vina e 3.000 DOCK6, mas o consenso retorna **1.000 linhas**. Isso exige que todos os compostos tenham pelo menos um par composto/alvo comum aos dois motores. Sem qualquer par comum, a operação informa que não há interseção; não inventa resultados.
 
-Sejam i o composto, e o motor (Vina ou DOCK6) e t o alvo. Primeiro selecionamos
-o menor score bruto de cada par (i,t,e); repetir arquivos, poses ou execuções não
-aumenta seu peso. Ordenamos os N_et compostos observados nesse motor/alvo.
-Empates recebem rank médio r_iet, começando em 1:
+O bloco não realiza docking, preparação de estruturas, minimização ou geração de footprint. Ele usa os scores e as referências estruturais já produzidos.
+
+## 2. Notação e dados necessários
+
+| Símbolo | Significado |
+| --- | --- |
+| i | Identificador do composto, em `molecule_chembl_id` |
+| e | Motor: Vina ou DOCK6 |
+| t | Identificador do alvo, em `receptor_id` |
+| x_iet | Menor score bruto observado para o composto i no motor e e alvo t |
+| N_et | Número de compostos distintos observados naquele motor/alvo |
+| r_iet | Rank de x_iet, começando em 1 e usando média em empates |
+| q_iet | Rank normalizado entre 0 e 1 |
+| p_iet | Relevância exponencial do composto naquele motor/alvo |
+| T | Quantidade de alvos na união das entradas dos dois motores |
+| c_ie | Fração dos T alvos com observação para o composto i no motor e |
+| R_ie | Relevância global do composto no motor e, após agregar os alvos |
+| C_i | Consenso final entre R_i,Vina e R_i,DOCK6 |
+
+As linhas precisam identificar corretamente composto, alvo e score finito. Os identificadores são correspondências textuais: o modelo não descobre que `AChE`, `ACHE` e `4M0E_A` representam o mesmo alvo. Uma identificação ausente/ambígua compromete a comparação; um rótulo vazio não permite interpretar biologicamente aquela categoria.
+
+Os SMILES isoméricos não vazios são canonizados para conferir a identidade: o mesmo código com estruturas ou estereoisômeros diferentes causa erro. Se o SMILES não foi fornecido, o modelo não reconstrói a estereoquímica nem comprova a identidade estrutural apenas pelo código. Códigos diferentes não são fundidos automaticamente.
+
+### Exemplo mínimo do formato de entrada
+
+Para reproduzir o exemplo 1, as tabelas podem estar em `Vina/docking_results.csv` e `Dock6/docking_results.csv` sob a pasta de entrada. Os nomes de motor são `vina` e `dock6`.
+
+Tabela Vina:
+
+```csv
+molecule_chembl_id,canonical_smiles,receptor_id,engine,score
+A,CCO,T,vina,-9
+B,CCC,T,vina,-8
+C,CCN,T,vina,-7
+```
+
+Tabela DOCK6:
+
+```csv
+molecule_chembl_id,canonical_smiles,receptor_id,engine,score
+A,CCO,T,dock6,-30
+B,CCC,T,dock6,-40
+C,CCN,T,dock6,-20
+```
+
+Esses arquivos demonstram o cálculo dos fatores. Não incluem anexos estruturais: para abrir 3D/footprint, as entradas reais precisam conservar os respectivos arquivos e referências de origem. **Ausência de observação significa ausência da linha do par**, não preencher `score` com texto vazio, NaN ou infinito; linhas com score não numérico/não finito são inválidas.
+
+
+## 3. Seleção de observações e população de referência
+
+Antes de normalizar, o algoritmo conserva o menor score de cada chave `(motor, alvo, composto)`. Repetir uma pose ou importar o mesmo resultado em mais de um arquivo não aumenta seu peso. Scores iguais para a mesma chave usam o caminho estrutural como desempate determinístico, sem mudar o valor numérico.
+
+A normalização usa todos os compostos observados em cada motor/alvo, **inclusive aqueles que depois não forem elegíveis para a saída final**. A elegibilidade é aplicada à lista final: é necessário pelo menos um alvo em que o composto tenha sido avaliado pelos dois motores. Assim, populações diferentes entre motores podem gerar ranks diferentes mesmo para um composto compartilhado.
+
+T é a união dos alvos encontrados nas entradas, não apenas a interseção dos alvos completamente avaliados. Um alvo presente somente em um motor participa da política de cobertura. Por isso, confira a correspondência e a completude dos conjuntos antes de interpretar o ranking.
+
+## 4. Normalização ordinal por motor e alvo
+
+Os scores x são ordenados em ordem crescente. O melhor recebe rank 1. Quando os valores empatam, usa-se a média das posições ocupadas pelo empate:
 
 ```text
+r_iet = média das posições de x_iet na ordenação crescente
 q_iet = (r_iet - 1) / max(N_et - 1, 1)
-p_iet = exp(-q_iet / tau),   tau = 0,10
 ```
 
-q varia de 0 (melhor) a 1 (pior); p varia de exp(-10) a 1. Trata-se de uma
-versão deslocada e reescalada do ECR, não da sua densidade original. Todos os
-scores entram no consenso exclusivamente após essa normalização. A transformação
-é invariante a transformações estritamente crescentes dos scores.
-Um singleton recebe q=0 e p=1, sem implicar evidência estatística de afinidade;
-uma distribuição constante com N>1 recebe q=0,5 para todos. Os tamanhos das
-bibliotecas e a cobertura devem ser considerados na interpretação do ranking.
+Com N>1, q=0 indica a primeira posição e q=1 a última. Se quatro compostos têm scores `[-10, -8, -8, -6]`, os ranks são `[1, 2.5, 2.5, 4]` e q é `[0, 0.5, 0.5, 1]`. O identificador não resolve artificialmente um empate energético nesta etapa.
 
-## Agregação entre alvos e motores
+Casos especiais:
 
-T é a união dos identificadores de receptores presentes nas entradas. Todos os
-alvos e ambos os motores têm pesos iguais, sem pesos inferidos a partir das
-energias. Para cada motor, c_ie é a fração de alvos com score observado.
-Atribuímos q*=1 aos scores ausentes, sem inventar energia bruta:
+- **Um composto:** N=1, r=1 e q=0. Isso indica somente que não há concorrentes observados.
+- **Todos empatados com N>1:** r=(N+1)/2 e q=0.5 para todos. A distribuição não permite discriminação entre compostos.
+- **Score positivo:** permanece positivo na ordenação. Não é substituído por zero nem convertido para valor absoluto.
+- **Score ausente:** não recebe energia inventada; seu tratamento ocorre na agregação descrita adiante.
+- **NaN/infinito:** são recusados como scores não finitos.
+
+A transformação usa a ordem, não a distância energética. Uma transformação estritamente crescente dos scores preserva os ranks. Isso reduz dependência de unidade/escala e da magnitude dos extremos, mas descarta a informação de quanto duas energias diferem. Acrescentar ou remover concorrentes pode mudar N e os ranks normalizados; relevâncias de execuções com bibliotecas diferentes não são diretamente comparáveis.
+
+## 5. Relevância exponencial e relação com ECR
+
+O ECR publicado por Palacio-Rodríguez et al. usa contribuições exponenciais de ranks e sua soma entre funções de pontuação. Na expressão original, cada contribuição tem a forma `(1/σ) × exp(-r/σ)`. O BioMolExplorer **adapta essa ideia**, usando rank reescalado e uma relevância relativa adimensional; não afirma reproduzir literalmente a densidade original. A agregação multialvo abaixo é uma política adicional da plataforma. [Fonte primária do ECR](https://doi.org/10.1038/s41598-019-41594-3).
 
 ```text
-R_ie = c_ie × exp(-sum_t(q*_iet) / (T × tau))
-C_i  = (R_i,Vina + R_i,DOCK6) / 2
+τ = 0.1
+p_iet = exp(-q_iet / τ)
 ```
 
-Com cobertura completa, R é a média geométrica das relevâncias por alvo. Isso
-penaliza compostos fortes em apenas um alvo e fracos nos demais. A cobertura
-evita favorecer compostos com avaliações ausentes. Em alvo único completo,
-C=(p_Vina+p_DOCK6)/2: consenso ECR direto com pesos iguais. C está entre 0 e 1;
-**maior é melhor**. Não se aplica outra normalização após agregar.
+Para N>1, a mesma expressão pode ser escrita como `p = exp(-(r-1)/(τ × (N-1)))`: o melhor rank recebe 1 e não é usado o prefator de densidade do ECR original.
 
-A lista inclui os compostos com ao menos um par alvo/composto avaliado pelos
-dois motores, preservando o contrato de correspondência entre entradas.
-Compostos sem qualquer par comum são excluídos; ausência total de pares mantém
-o comportamento de bloco não executado com explicação. Coberturas parciais
-continuam visíveis no CSV e não são confundidas com dados completos.
-Para 1.000 compostos avaliados nos mesmos três alvos pelos dois motores,
-as 6.000 avaliações geram exatamente **1.000 linhas**.
+τ é fixo na implementação atual; não há controle desse parâmetro no formulário. Não é um corte que remove automaticamente 90% das moléculas. Todos os compostos elegíveis continuam na saída; o decaimento concentra a relevância relativa nos melhores ranks.
 
-## Identidade e estereoquímica
+| q | Relevância p = exp(-q/0.1) |
+| --- | --- |
+| 0.0 | 1.000000 |
+| 0.1 | 0.367879 |
+| 0.2 | 0.135335 |
+| 0.5 | 0.006738 |
+| 1.0 | 0.000045 |
 
-O agrupamento usa o identificador molecular existente, sem fundir códigos
-distintos pela semelhança dos nomes ou SMILES. Validamos o SMILES canônico
-isomérico em todos os alvos e motores: o mesmo código associado a enantiômeros
-ou estruturas distintas causa erro. Não inferimos configuração estereoquímica
-ausente, nem convertemos concordância energética em qualidade geométrica.
-RMSD de poses, atividade experimental, seletividade e toxicidade exigem
-validação própria e não recebem pesos arbitrários neste consenso.
+As relevâncias não somam necessariamente 1. Logo, p não é uma probabilidade. Um singleton recebe p=1 sem demonstrar afinidade; uma distribuição constante com mais de um composto recebe `exp(-5) ≈ 0.006738` para todos, não zero. O [estudo de combinação de poses e ranks](https://pubs.rsc.org/en/content/articlehtml/2021/ra/d1ra05785e) exemplifica o uso de uma escala exponencial de 10% da biblioteca; isso não demonstra que a adaptação atual seja universalmente ótima.
 
-## Tabela e rastreabilidade
+## 6. Agregação de alvos e tratamento de dados ausentes
 
-| Coluna visível | Campo CSV | Conteúdo |
+Para cada composto/motor, contamos os alvos em que há observação. Um alvo ausente recebe **q*=1**, correspondente à pior posição relativa, sem preencher um score bruto:
+
+```text
+q*_iet = q_iet, se houver observação
+q*_iet = 1,     se não houver observação
+
+c_ie = número de alvos observados / T
+R_ie = c_ie × exp( -sum_t(q*_iet) / (T × τ) )
+```
+
+A forma equivalente torna explícita a média geométrica:
+
+```text
+p*_iet = exp(-q*_iet / τ)
+R_ie = c_ie × (produto_t p*_iet)^(1/T)
+```
+
+O cálculo usa a soma de ranks no expoente, evitando multiplicar diretamente muitos fatores pequenos. Todos os alvos têm o mesmo peso. Com cobertura completa, c=1 e R é a média geométrica das relevâncias por alvo. Com ausência, há duas consequências explícitas: o rank pior é incluído na média e o fator de cobertura reduz o resultado.
+
+**Importante:** esta fórmula depende da média de q*, não de uma variância ou de um termo específico para o pior alvo. Ela não garante um desempenho mínimo em cada alvo. Dois perfis com a mesma média de ranks e cobertura produzem o mesmo R, mesmo que um seja mais desigual. Esse limite é demonstrado no exemplo 4.
+
+## 7. Consenso entre Vina e DOCK6
+
+As relevâncias globais dos dois motores são combinadas por média aritmética de pesos iguais:
+
+```text
+C_i = (R_i,Vina + R_i,DOCK6) / 2
+```
+
+Maior C implica maior prioridade segundo a política implementada. Não existe uma segunda normalização, teste de hipótese ou penalidade explícita de discordância entre motores. Um motor pode compensar parcialmente o outro: `(0.9 + 0.1)/2` e `(0.5 + 0.5)/2` produzem 0.5. Consenso não significa, por si só, concordância entre as poses ou entre as energias.
+
+A ordenação final usa C decrescente e, em empate exato, o identificador do composto em ordem textual crescente. O código não calcula intervalo de confiança, erro-padrão ou significância estatística para C.
+
+## 8. Exemplos numéricos completos
+
+### Exemplo 1 — um alvo e três compostos
+
+Entradas brutas, com menor valor melhor dentro de cada motor:
+
+| Composto | Score Vina | Score DOCK6 |
 | --- | --- | --- |
-| Código do composto | molecule_chembl_id | Uma referência por composto |
-| Relevância Vina | vina | R_i,Vina, normalizado e agregado nos alvos |
-| Relevância DOCK6 | dock6 | R_i,DOCK6, normalizado e agregado nos alvos |
-| Consenso | normalized_score | C_i, também exportado como consensus |
-| Ações | Campos estruturais existentes | Mesmos botões e mecanismos de acesso |
+| A | -9 | -30 |
+| B | -8 | -40 |
+| C | -7 | -20 |
 
-O CSV inclui consensus_model, canonical_smiles, target_count,
-paired_target_count, vina_target_coverage, dock6_target_coverage e target_scores.
-Este último é JSON com energias brutas, ranks normalizados e relevâncias de
-**todos** os alvos; valores ausentes são null. Não arredondamos o cálculo.
-z-score e min-max deixam de ser produzidos pelo novo modelo; leitores de
-resultados antigos continuam aceitando esses campos.
+A população de cada motor tem N=3. Aplicando ranks, exponencial e média:
 
-Com múltiplos alvos, as ações 3D Vina, 3D DOCK6, resíduos e footprint abrem
-um popup com combobox pesquisável antes de apresentar o resultado. A opção
-Continuar é habilitada após selecionar um alvo. A lista não valida poses
-antecipadamente; somente o resultado escolhido é validado ao abrir. Cada ação recupera a pose,
-o receptor ou o PDF correspondente ao composto e alvo escolhidos nas tabelas
-de origem, inclusive nas execuções anteriores do mesmo projeto que
-produziram entradas reutilizadas, validando as referências e os hashes
-disponíveis. Anexos ausentes ou alterados impedem abrir aquele resultado; nunca são substituídos pelo alvo representativo.
-Com um único alvo, o acesso permanece direto.
+| Composto | q Vina | q DOCK6 | R Vina | R DOCK6 | Consenso C |
+| --- | --- | --- | --- | --- | --- |
+| A | 0.0 | 0.5 | 1.000000 | 0.006738 | 0.503369 |
+| B | 0.5 | 0.0 | 0.006738 | 1.000000 | 0.503369 |
+| C | 1.0 | 1.0 | 0.000045 | 0.000045 | 0.000045 |
 
-O consenso mantém apenas uma linha por composto. receptor_id, vina_raw e
-dock6_raw descrevem o contexto representativo salvo, sem serem tratados como
-scores globais. A seleção utiliza resultados já existentes, sem recalcular o
-docking nem alterar os arquivos persistidos. A remoção continua auditada pelos
-serviços existentes.
+A e B empatam no fator; a ordenação textual coloca A antes de B. O resultado tem três linhas. Na UI, C aparece como `0.000` por arredondamento, embora seu valor interno seja positivo. Não compare `-9` diretamente com `-30`: seus ranks foram calculados em populações e motores distintos.
 
-## Cache e validação
+### Exemplo 2 — AChE, BChE e BACE1
+
+Considere ranks já normalizados em bibliotecas de 11 compostos por motor/alvo, de modo que incrementos de 0.1 são possíveis. Para um composto X:
+
+| Alvo | q Vina | p Vina | q DOCK6 | p DOCK6 |
+| --- | --- | --- | --- | --- |
+| AChE | 0.0 | 1.000000 | 0.1 | 0.367879 |
+| BChE | 0.1 | 0.367879 | 0.2 | 0.135335 |
+| BACE1 | 0.2 | 0.135335 | 0.3 | 0.049787 |
+
+A cobertura é completa nos dois motores:
+
+```text
+R_X,Vina  = exp(-(0.0 + 0.1 + 0.2)/(3 × 0.1)) = exp(-1) = 0.367879
+R_X,DOCK6 = exp(-(0.1 + 0.2 + 0.3)/(3 × 0.1)) = exp(-2) = 0.135335
+C_X       = (0.3678794412 + 0.1353352832)/2 = 0.2516073622
+```
+
+A tabela exibe aproximadamente Vina `0.368`, DOCK6 `0.135` e Consenso `0.252`. As três avaliações de X se tornam **uma linha**, com detalhes por alvo preservados em `target_scores`.
+
+### Exemplo 3 — um alvo ausente
+
+Um composto tem q=0 em AChE/BChE, mas não foi avaliado em BACE1, em determinado motor:
+
+```text
+q* = [0, 0, 1]
+c  = 2/3
+R  = (2/3) × exp(-(0 + 0 + 1)/(3 × 0.1))
+R  = 0.0237826622
+```
+
+Se isso ocorre nos dois motores, C também vale 0.0237826622. Se o outro motor tivesse cobertura completa e q=0 nos três alvos, seu R seria 1 e C seria 0.5118913311. Portanto, a ausência é penalizada, mas não equivale a exclusão automática quando existe pelo menos um par comum. Se nenhum alvo do composto for compartilhado pelos dois motores, ele não é elegível, ainda que cada motor tenha avaliado o composto em alvos diferentes.
+
+### Exemplo 4 — limite da política de amplitude
+
+| Perfil, com cobertura completa | q por alvo | Média de q | R |
+| --- | --- | --- | --- |
+| Equilibrado | 0.3, 0.3, 0.3 | 0.3 | 0.049787 |
+| Desigual | 0.0, 0.0, 0.9 | 0.3 | 0.049787 |
+
+Não há penalização adicional de dispersão: os dois valores são iguais. Para exigir relevância mínima em todos os alvos, é necessário avaliar os detalhes por alvo e estabelecer um critério científico separado; esse filtro não é aplicado silenciosamente pelo consenso.
+
+## 9. Estrutura da tabela final e auditoria
+
+| Coluna/campo | Significado |
+| --- | --- |
+| `molecule_chembl_id` | Uma referência por composto elegível |
+| `vina` | R_i,Vina global, não a energia bruta |
+| `dock6` | R_i,DOCK6 global, não a energia bruta |
+| `normalized_score`, `consensus` | Mesmo C_i final |
+| `consensus_model` | Identidade do modelo `target-balanced-ecr-v1` |
+| `target_count` | Número T de alvos na união das entradas |
+| `paired_target_count` | Quantos alvos desse composto têm avaliações nos dois motores |
+| `vina_target_coverage`, `dock6_target_coverage` | Cobertura de cada motor, entre 0 e 1 |
+| `target_scores` | JSON com alvo, raw scores, ranks normalizados e relevâncias de cada motor; ausências são null |
+| `receptor_id`, `vina_raw`, `dock6_raw` | Contexto representativo salvo, não resultados globais |
+| Campos de pose/receptor/footprint | Referências estruturais para as ações existentes |
+
+O alvo representativo é escolhido entre os alvos compartilhados do composto, pela maior soma das relevâncias dos dois motores naquele alvo; o identificador do alvo resolve empates. Essa escolha fornece o contexto estrutural salvo e **não modifica** os fatores globais.
+
+Vina relevance, DOCK6 relevance e Consensus mostram três casas decimais. O cálculo, a ordenação e o CSV conservam a precisão original. Os botões existentes são mantidos: com vários alvos, 3D Vina, 3D DOCK6 e footprint abrem uma combobox pesquisável de alvo; com um alvo, abrem diretamente. O arquivo escolhido deve corresponder ao composto e alvo. Ausência de anexo não autoriza substituir outro alvo nem executar novamente docking para criar o anexo.
+
+## 10. Por que não z-score, min-max ou uma soma de energias?
+
+O modelo atual foi definido para usar ordem relativa em vez da escala energética. Min-max depende das amplitudes/extremos; z-score depende da média e do desvio da população; uma soma direta exige calibração entre motores. Essas alternativas não são calculadas nesta implementação. Isso não prova que o ranking exponencial supere todos os métodos em todos os alvos: a adequação deve ser validada com dados do estudo.
+
+`repulsion_weight` é um argumento legado sem efeito em `consensus_rows`; não muda os pesos dos motores nem aplica correção de repulsão ao fator atual. τ e os pesos 1/2 são fixos. O resultado não inclui bônus de estereoquímica, lipofilicidade, QED, toxicidade ou similaridade estrutural. Compatibilidade estereoquímica verifica identidade quando há SMILES, não uma pontuação extra.
+
+## 11. Como interpretar e validar cientificamente
+
+1. Confira se identificadores de composto/alvo, sinais dos scores e populações de referência estão corretos.
+2. Inspecione `target_count`, coberturas e alvos compartilhados; não interprete ausência como medida de baixa afinidade experimental.
+3. Use os valores não arredondados para seleção automática; a UI pode mostrar `0.000` para fatores positivos pequenos.
+4. Inspecione `target_scores` e poses dos alvos de interesse. O fator global não substitui análise de seletividade, contatos ou qualidade geométrica.
+5. Para avaliar utilidade preditiva, use ativos/decoys ou referências experimentais adequadas ao estudo e métricas de enriquecimento previamente definidas. O bloco não calcula essa validação automaticamente.
+6. Evite comparar C entre execuções com bibliotecas/targets diferentes sem avaliar a mudança de população. Não traduza C em probabilidade de sucesso clínico ou afinidade absoluta.
+
+## 12. Reproduzir a agregação com Python padrão
+
+O exemplo abaixo recebe **q já normalizado**, não energias brutas. Reproduz o exemplo 2 usando somente a biblioteca padrão; não é uma nova API nem executa docking. Os vetores dos dois motores devem representar a mesma união de alvos, na mesma ordem; use `None` para observação ausente.
+
+```python
+from math import exp, fsum
+
+def relevance(q_values):
+    if not q_values:
+        raise ValueError("A união de alvos deve ser não vazia")
+    if any(q is not None and not 0 <= q <= 1 for q in q_values):
+        raise ValueError("Informe ranks normalizados entre 0 e 1")
+    coverage = sum(q is not None for q in q_values) / len(q_values)
+    average_rank = fsum(1.0 if q is None else q for q in q_values) / len(q_values)
+    return coverage * exp(-average_rank / 0.1)
+
+vina = relevance([0.0, 0.1, 0.2])
+dock6 = relevance([0.1, 0.2, 0.3])
+consensus = (vina + dock6) / 2
+print(vina, dock6, consensus)
+```
+
+Resultado aproximado: `0.3678794412 0.1353352832 0.2516073622`. Os quatro exemplos e suas variantes de cobertura foram conferidos contra a função atual `consensus_rows`, sem executar Vina, DOCK6 ou modificar o código da plataforma. Trata-se de verificação aritmética da documentação, não de validação preditiva ou experimental.
+
+## 13. Referências e origem das decisões
+
+- [ECR, Palacio-Rodríguez et al. (2019)](https://doi.org/10.1038/s41598-019-41594-3): fundamento de combinar ranks exponencialmente.
+- [Combinação de consenso de poses e ranks (2021)](https://pubs.rsc.org/en/content/articlehtml/2021/ra/d1ra05785e): exemplo do uso da escala exponencial relativa à biblioteca.
+- `consensus_model.py`, `consensus_io.py` e `wrappers/docking.py`: fonte da verdade para a adaptação, deduplicação, cobertura, exportação e modos de finalização implementados.
+
+A normalização em [0,1], a agregação geométrica entre alvos e a penalização de cobertura são escolhas explícitas do BioMolExplorer. A documentação distingue essas escolhas dos resultados publicados na literatura; não apresenta o modelo inteiro como fórmula original do ECR.
+
+## Persistência, desempenho e evidências anteriores
 
 O modelo possui identidade científica própria: consensos legados não podem ser
 reutilizados como resultados deste cálculo. Mudanças de entradas invalidam o
