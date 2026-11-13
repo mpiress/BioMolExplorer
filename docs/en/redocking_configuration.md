@@ -107,7 +107,9 @@ The new result table combines new pairs with compatible previous results from th
 
 Compatibility uses PDB contents, chain, cofactors, preparation options, pH, charges, templates, Vina parameters and scientific implementation. Changing the structure or receptor preparation invalidates receptor reuse; changing docking parameters requires a new pose calculation. SHA-256 hashes verify reused files. Older native results can also be adopted when their configuration, prepared files, pose, RMSD and integrity manifest are available.
 
-Only successfully completed pipeline runs supply reusable data. Cancelled, interrupted, failed or awaiting-input runs never supply incremental results, even if an individual stage finished. Partial files may remain in history for diagnostics but are discarded as sources for subsequent calculations. Preparation failures and removed outputs are also excluded. **No, run again** bypasses reuse.
+A completed stage with every selected pair accounted for can be retained in full, including preparation exclusions documented in the result table and `redocking_failures.csv`. Excluded pairs retain their error and blank RMSD and are never offered as valid prepared complexes. Tables, reports and hashes must match the current selection and per-pair preparation options, with equivalent defaults normalized. Engine/RMSD failures, incomplete data and modified files prevent whole-stage reuse. Verified completed pairs can remain available as checkpoints when a later stage fails. **No, run again** disables whole-stage retention and allows excluded pairs to be retried.
+
+History and checkpoint lookup are incremental. Without changes to pairs, structures or configuration, a verified complete result is returned before materializing inputs or starting a worker.
 
 
 ## Target and best RMSDs per target

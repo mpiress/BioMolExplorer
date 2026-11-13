@@ -125,5 +125,6 @@
   "consensus.normalizing": "Normalizing scores by engine and target…",
   "consensus.aggregating": "Aggregating targets by compound…",
   "consensus.exporting": "Publishing scores and representative structures…",
-  "consensus.done": "Consensus completed."
+  "consensus.done": "Consensus completed.",
+  "consensus.checking": "Checking available results for consensus…"
 }

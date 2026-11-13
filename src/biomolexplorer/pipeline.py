@@ -400,12 +400,15 @@ class PipelineService:
             event = threading.Event()
             self._active[run_id] = {'event': event, 'manager': None, 'job_id': None, 'reuse_results': reuse_results,'stages':snapshot,'pause_event':threading.Event()}
             try:
+                # Read the small accepted snapshot before the worker can replace
+                # it with hundreds of MB of reused producer descriptors.
+                submitted=self.store.get_run(token,run_id)
                 self._executor.submit(self._run, run_id, project_id, user['id'], snapshot)
             except Exception:
                 self._update(run_id,'failed',snapshot,'Não foi possível iniciar a execução.')
                 self._active.pop(run_id,None)
                 raise
-        return self.store.get_run(token,run_id)
+        return submitted
 
     def _runtime_parameters(self, stage):
         params=dict(stage['parameters'])
@@ -527,8 +530,14 @@ class PipelineService:
             if prior and prior['status'] in ACTIVE_RUNS and status not in ACTIVE_RUNS:
                 from .project_state import read_snapshot,record
                 last=db.execute('SELECT id FROM project_history WHERE project_id=? ORDER BY created DESC LIMIT 1',(prior['project_id'],)).fetchone()
-                before=read_snapshot(self.store,prior['project_id'],last['id'],'after',db=db) if last else None
-                record(self.store,db,prior['project_id'],prior['user_id'],'execution',f'Execução {run_id[:8]}: {status}',before)
+                compact_audit=any(item.get('operation') in ('consensus','docking_vina','docking_dock6','redocking') for item in stages)
+                if compact_audit:
+                    before={'_snapshot_reference':last['id'],'side':'after'} if last else None
+                    record(self.store,db,prior['project_id'],prior['user_id'],'execution',
+                           f'Execução {run_id[:8]}: {status}',before,compact_runs=True)
+                else:
+                    before=read_snapshot(self.store,prior['project_id'],last['id'],'after',db=db) if last else None
+                    record(self.store,db,prior['project_id'],prior['user_id'],'execution',f'Execução {run_id[:8]}: {status}',before)
         indexed[run_id]=signature
         self._indexed_run_signatures=indexed
         updates[run_id]=(time.monotonic(),status)
@@ -865,6 +874,9 @@ class PipelineService:
                 results[producer['id']]=[str(p) for p in produced_files(dict(producer,artifacts=results[producer['id']]))]
         stage=copy.deepcopy(stage)
         from .artifact_registry import SemanticArtifactResolver
+        if stage['operation']=='dynamics_dock6':
+            from .md_semantic import semantic_context
+            pipeline=semantic_context(pipeline,results,stage)
         semantic=SemanticArtifactResolver(self.store,project_id,pipeline,results,current_run_id)
         for field,group in stage.get('bindings',{}).items():
             for ref in input_sources(group):
@@ -1303,10 +1315,16 @@ class PipelineService:
 
     def _cached_batch(self,project_id,stage_id,key,user_id=None,software=None,unit=None,results=None):
         """Completed batches survive later failures, cancellation and restarts."""
+        compact=bool(unit and unit.get('operation') in ('docking_vina','docking_dock6','redocking'))
         with self.store.connect() as db:
-            rows=db.execute("SELECT id,stages FROM runs WHERE project_id=? AND status NOT IN ('queued','running','awaiting_input') ORDER BY created DESC",(project_id,)).fetchall()
+            column='NULL' if compact else 'stages'
+            rows=db.execute(f"SELECT id,{column} FROM runs WHERE project_id=? AND status NOT IN ('queued','running','awaiting_input') ORDER BY created DESC",(project_id,)).fetchall()
         for row in rows:
-            snapshot=json.loads(row[1])
+            if compact:
+                from .result_catalog import read_proofs
+                snapshot=read_proofs(self.store,row[0])
+                if snapshot is None:continue
+            else:snapshot=json.loads(row[1])
             for item in snapshot:
                 if item['id']!=stage_id or item.get('outputs_removed') and not item.get('artifacts'):continue
                 batches=item.get('batches',[]) or ([item] if item.get('status')=='succeeded' else [])
@@ -1323,9 +1341,12 @@ class PipelineService:
                         except (OSError,ValueError,KeyError):pass
                 for batch in batches:
                     if batch.get('status')!='succeeded':continue
-                    if batch.get('redocking_failures'):continue
-                    if item.get('operation') in ('docking_vina','docking_dock6') and (
-                            batch.get('docking_failures') or batch.get('excluded_records')):continue
+                    if batch.get('redocking_failures'):
+                        from .redocking_reuse import accounted_preparation_exclusions
+                        if not accounted_preparation_exclusions(batch,self.store.project_dir(project_id)):continue
+                    if item.get('operation') in ('docking_vina','docking_dock6') and batch.get('docking_failures'):
+                        from .docking_reuse import accounted_preparation_exclusions
+                        if not accounted_preparation_exclusions(batch,item['operation'],self.store.project_dir(project_id)):continue
                     if batch.get('cache_key')!=key:
                         if unit is not None and results is not None:
                             from .published_results import verify,adopted
@@ -1549,9 +1570,8 @@ class PipelineService:
     def _verified_legacy_keys(self,project_id,user_id,stage_id,software):
         from .legacy_cache import compatible
         verified=set()
-        with self.store.connect() as db:rows=db.execute('SELECT stages FROM runs WHERE project_id=?',(project_id,)).fetchall()
-        for row in rows:
-            snapshot=json.loads(row[0])
+        from .published_results import histories
+        for _,snapshot in histories(self.store,project_id,include_active=True,compact=True):
             for item in snapshot:
                 if item['id']!=stage_id or item['status']!='succeeded' or item.get('outputs_removed') or item.get('dependency_obsolete'):continue
                 config=execution_stage(item['configuration'],item.get('input_mode'));provenance=item.get('cache_software')
@@ -1567,13 +1587,21 @@ class PipelineService:
         return verified
 
     def _cached_stage(self,project_id,user_id,stage,key,software):
+        compact=stage['operation'] in ('consensus','docking_vina','docking_dock6','redocking')
         with self.store.connect() as db:
-            previous=db.execute('SELECT id,stages,status FROM runs WHERE project_id=? ORDER BY created DESC',(project_id,)).fetchall()
+            if compact:
+                previous=db.execute('SELECT id,NULL,status FROM runs WHERE project_id=? ORDER BY created DESC',(project_id,)).fetchall()
+            else:
+                previous=db.execute('SELECT id,stages,status FROM runs WHERE project_id=? ORDER BY created DESC',(project_id,)).fetchall()
         latest_redocking_seen=False
         for run_id,encoded,run_status in previous:
             # A committed succeeded stage may be shared within the active run;
             # pending/running stages are excluded by the candidate predicate.
-            snapshot=json.loads(encoded)
+            if compact:
+                from .result_catalog import read_proofs
+                snapshot=read_proofs(self.store,run_id)
+                if snapshot is None:continue
+            else:snapshot=json.loads(encoded)
             old=next((s for s in snapshot if (s['id']==stage['id'] or
                       run_status in ACTIVE_RUNS and
                       s.get('operation')==stage['operation'] and s.get('cache_key')==key)
@@ -1581,8 +1609,9 @@ class PipelineService:
                       and (s.get('artifacts') or stage['operation']=='redocking')),None)
             if old is None:
                 continue
-            if stage['operation'] in ('docking_vina','docking_dock6') and (
-                    old.get('docking_failures') or old.get('excluded_records')):continue
+            if stage['operation'] in ('docking_vina','docking_dock6') and old.get('docking_failures'):
+                from .docking_reuse import accounted_preparation_exclusions
+                if not accounted_preparation_exclusions(old,stage['operation'],self.store.project_dir(project_id)):continue
             known_version=old.get('processing_version') or old.get('adopted_processing_version')
             if known_version and known_version!=operation_digest(stage['operation']):continue
             if stage['operation']=='redocking':
@@ -1590,7 +1619,9 @@ class PipelineService:
                 # run. Reconcile per pair instead of returning that stale table.
                 if latest_redocking_seen:return None
                 latest_redocking_seen=True
-                if old.get('redocking_failures'):return None
+                if old.get('redocking_failures'):
+                    from .redocking_reuse import accounted_preparation_exclusions
+                    if not accounted_preparation_exclusions(old,self.store.project_dir(project_id)):return None
             if old.get('outputs_removed') or old.get('dependency_obsolete'):
                 continue
             if not old.get('artifacts'):continue
@@ -1646,6 +1677,9 @@ class PipelineService:
                     candidate_key=self._cache_key(project_id,user_id,execution_stage(old['configuration'],old.get('input_mode')),prior_results,software,
                         pipeline=execution_context([s for s in snapshot if s.get('configuration')]))
                 if candidate_key==key:
+                    if compact:
+                        from .published_results import _hydrate
+                        old=_hydrate(self.store,run_id,old)
                     result=dict(old,artifact_manifest=manifest,reused_from_run=run_id)
                     if legacy_adopted:
                         result['adopted_processing_version']=operation_digest(stage['operation'])
@@ -1657,9 +1691,16 @@ class PipelineService:
 
     def existing_results(self, token, project_id):
         """Report intact results persisted in this project's execution history."""
-        self.store.project(token,project_id,'editor')
+        project=self.store.project(token,project_id,'editor')
         found=set()
-        for run in self.store.list_runs(token,project_id):
+        if any(stage.get('operation') in ('consensus','docking_vina','docking_dock6','redocking') for stage in project['pipeline']):
+            from .result_catalog import read_proofs
+            from .result_visibility import project_run
+            with self.store.connect() as db:
+                ids=db.execute('SELECT id,status FROM runs WHERE project_id=? ORDER BY created DESC LIMIT 100',(project_id,)).fetchall()
+            runs=(project_run(dict(id=rid,status=status,stages=read_proofs(self.store,rid) or []),project['pipeline']) for rid,status in ids)
+        else:runs=self.store.list_runs(token,project_id)
+        for run in runs:
             for item in run['stages']:
                 if item['id'] in found or item['status']!='succeeded' or not item.get('artifacts') or item.get('outputs_removed'):
                     continue
@@ -1701,24 +1742,23 @@ class PipelineService:
     def _reuse_stage(self, project_id, user_id, stage, results, software, stages,history=None):
         if history is None:
             from .published_results import histories
-            history=histories(self.store,project_id)
-        histories=[dict(id=run_id,stages=snapshot) for run_id,snapshot in history]
-        from .published_results import retained_configuration,compatible_configuration,adopted
+            history=histories(self.store,project_id,compact=stage['operation'] in ('consensus','docking_vina','docking_dock6','redocking'))
+        from .published_results import retained_configuration,compatible_configuration,adopted,ReviewHistory,_hydrate
         from .result_state import digest
-        for row in histories:
-            snapshot=row['stages']
+        for run_id,snapshot in history:
             for old in snapshot:
                 if old['id']!=stage['id']:continue
                 configuration=retained_configuration(self.store,project_id,stage,old,snapshot,results)
                 if configuration is not None:
-                    cached=adopted(old,row['id'])
+                    if isinstance(history,ReviewHistory):old=_hydrate(self.store,run_id,old)
+                    cached=adopted(old,run_id)
                     key=digest(dict(policy='published_result_v1',request=cached['reuse_provenance']['request_signature'],
                         artifacts=cached['artifact_manifest'],source_run_id=cached['reused_from_run']))
                     return configuration,key,cached
-        for row in histories:
-            for old in row['stages']:
+        for run_id,snapshot in history:
+            for old in snapshot:
                 if old['id']!=stage['id'] or old['status']!='succeeded' or not old.get('artifacts'):continue
-                configuration=compatible_configuration(stage,old,row['stages'],results)
+                configuration=compatible_configuration(stage,old,snapshot,results)
                 if configuration is None:continue
                 try:
                     key=self._cache_key(project_id,user_id,execution_stage(configuration,'curated'),results,software,pipeline=execution_context(stages))
@@ -1756,7 +1796,8 @@ class PipelineService:
             software=implementation_digest() + ':' + str(self.worker_python or os.sys.executable)
             state['cache_software']=software
             from .published_results import histories
-            published_history=histories(self.store,project_id) if state.get('reuse_results',True) else []
+            published_history=histories(self.store,project_id,compact=any(
+                item['operation'] in ('consensus','docking_vina','docking_dock6','redocking') for item in stages)) if state.get('reuse_results',True) else []
             run_dir = self.store.project_dir(project_id) / 'runs' / run_id
             run_dir.mkdir(parents=True,exist_ok=True)
             self._update(run_id,'running',stages)
@@ -1803,6 +1844,11 @@ class PipelineService:
                     item.update(requires_curation=True,curation_confirmed=False,
                         selection_notice='Os arquivos selecionados anteriormente não estão disponíveis. Revise as entradas usando os conjuntos atuais.')
                 else:item.pop('selection_notice',None)
+                if stage['operation']=='consensus':
+                    item.update(status='running',started_at=time.time(),progress={
+                        'message_key':'consensus.checking','message_args':{},
+                        'message':'Verificando os resultados disponíveis para o consenso…'})
+                    self._update(run_id,'running',stages)
                 reusable=self._reuse_stage(project_id,user_id,stage,results,software,stages,published_history) if state.get('reuse_results',True) and not missing_selection else None
                 if reusable:
                     stage,key,cached=reusable
@@ -1818,7 +1864,8 @@ class PipelineService:
                     return
                 stage = execution_stage(stage,item.get('input_mode'))
                 item['status'] = 'running'
-                item['started_at'] = time.time()
+                if stage['operation']!='consensus' or not item.get('started_at'):
+                    item['started_at'] = time.time()
                 self._update(run_id,'running',stages)
                 try:
                     if not reusable:
@@ -1843,6 +1890,9 @@ class PipelineService:
                     item['cache_software']=software
                     item['software_version']=software.split(':',1)[0]
                     if cached and cached.get('artifact_records'):item['artifact_records']=copy.deepcopy(cached['artifact_records'])
+                    if cached:
+                        for group in ('_review_input_groups','_review_naming_groups'):
+                            if group in cached:item[group]=copy.deepcopy(cached[group])
                     if cached and cached.get('input_files'):item['input_files']=cached['input_files']
                     if cached and cached.get('input_manifest'):item['input_manifest']=cached['input_manifest']
                     if cached and cached.get('source_manifest'):item['source_manifest']=cached['source_manifest']
@@ -1851,6 +1901,9 @@ class PipelineService:
                     if cached and cached.get('excluded_records'):item['excluded_records']=cached['excluded_records']
                     if cached and cached.get('redocking_failures'):item['redocking_failures']=cached['redocking_failures']
                     if cached and cached.get('redocking_reused'):item['redocking_reused']=cached['redocking_reused']
+                    if cached:
+                        for name in ('docking_failures','docking_accounting'):
+                            if name in cached:item[name]=copy.deepcopy(cached[name])
                     if cached:
                         for name in ('md_pairs','md_failures','md_reused'):
                             if name in cached:item[name]=cached[name]

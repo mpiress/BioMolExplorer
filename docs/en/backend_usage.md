@@ -319,6 +319,8 @@ Ranges are inclusive and combine with AND; `null` leaves one side open. These th
 
 ## Batch docking and excluded-compound reports
 
+Completed runs with documented preparation exclusions can be reused without repeating docking, preserving their original counters and reasons. See the [docking cache criteria](../docking_cache.md).
+
 Prepared receptors are validated and reused. Vina's Python API reuses maps per receptor/box/configuration within a batch; unsupported templates or a missing API use the logged CLI fallback. DOCK6 shares surface, spheres and grids per receptor/site, validates MOL2 and runs minimization/docking/footprint per compound. Individual failures exclude the candidate; global failures stop the stage. See [Vina reuse](user_manual.md#reusing-receptors-in-vina) and [DOCK6 validation](user_manual.md#dock6-validation-and-exclusions).
 
 `preparation_failures.csv` remains the report filename for later DOCK6 failures too. Columns: `compound_identifier`, `submitted_smiles`, `input_file`, `input_row`, `preparation_step`, `preparation_context`, `reason`. Step/context fields identify the concrete operation, including docking/footprint. Operation details include `preparation_failures`, counts and the report path when available. Record exclusions when interpreting how many compounds produced usable results.

@@ -30,15 +30,18 @@ def digest(path):
     return result.hexdigest()
 
 
-def snapshot(store, db, project_id):
+def snapshot(store, db, project_id, *, compact_runs=False):
     root = store.project_dir(project_id,db)
     project = dict(db.execute('SELECT * FROM projects WHERE id=?', (project_id,)).fetchone())
     project['pipeline'] = json.loads(project['pipeline'])
     project['tags'] = json.loads(project['tags'])
     assets = [dict(r) for r in db.execute('SELECT * FROM assets WHERE project_id=?', (project_id,))]
-    runs = [dict(r) for r in db.execute("SELECT * FROM runs WHERE project_id=? AND status NOT IN ('queued','running','awaiting_input')", (project_id,))]
-    for run in runs:
-        run['stages'] = json.loads(run['stages'])
+    if compact_runs:
+        runs=_snapshot_runs(db,project_id,root)
+    else:
+        runs = [dict(r) for r in db.execute("SELECT * FROM runs WHERE project_id=? AND status NOT IN ('queued','running','awaiting_input')", (project_id,))]
+        for run in runs:
+            run['stages'] = json.loads(run['stages'])
     members = [dict(r) for r in db.execute('SELECT m.*,u.email FROM members m JOIN users u ON u.id=m.user_id WHERE project_id=?', (project_id,))]
     active = {r[0] for r in db.execute("SELECT id FROM runs WHERE project_id=? AND status IN ('queued','running','awaiting_input')", (project_id,))}
     registered_assets = {a['id'] for a in assets}
@@ -93,7 +96,7 @@ def mirror(store, db, project_id):
     temporary.replace(root / 'project.json')
 
 
-def record(store, db, project_id, user_id, action, summary, before=None, reuse_snapshot=False):
+def record(store, db, project_id, user_id, action, summary, before=None, reuse_snapshot=False, *, compact_runs=False):
     root = store.project_dir(project_id,db)
     if reuse_snapshot and before is not None:
         # Pipeline-only saves do not modify assets, results, members or files.
@@ -106,7 +109,8 @@ def record(store, db, project_id, user_id, action, summary, before=None, reuse_s
         state['block_registry']=[dict(id=row[0],block_id=row[1]) for row in db.execute(
             'SELECT stage_id,block_id FROM block_ids WHERE project_id=?',(project_id,))]
     else:
-        state = snapshot(store, db, project_id)
+        state = snapshot(store, db, project_id, compact_runs=compact_runs)
+        if compact_runs:state={'_compact_runs':True,**state}
     folder = root / '.history' / 'snapshots'
     folder.mkdir(parents=True, exist_ok=True)
     event_id = uuid4().hex
@@ -122,9 +126,76 @@ def record(store, db, project_id, user_id, action, summary, before=None, reuse_s
     return event_id
 
 
+def _snapshot_runs(db,project_id,root):
+    """Archive exact execution JSON as immutable blobs, bounded to 1 MiB RAM."""
+    folder=root/'.history'/'run-stages'
+    folder.mkdir(parents=True,exist_ok=True)
+    index_path=folder/'index.json'
+    try:index=json.loads(index_path.read_text())
+    except (OSError,ValueError):index={}
+    revisions={row[0]:row[1] for row in db.execute('SELECT run_id,revision FROM result_read_versions')} if db.execute(
+        "SELECT 1 FROM sqlite_master WHERE name='result_read_versions'").fetchone() else {}
+    revisioned=db.execute("SELECT 1 FROM sqlite_master WHERE type='trigger' AND name='result_read_update'").fetchone() is not None
+    runs=[]
+    for row in db.execute("SELECT rowid AS blob_id,id,project_id,user_id,status,created,updated,error FROM runs WHERE project_id=? AND status NOT IN ('queued','running','awaiting_input')",(project_id,)):
+        run=dict(row);rowid=run.pop('blob_id')
+        stamp=[rowid,revisions.get(run['id'],0 if revisioned else None),run['updated']]
+        previous=index.get(run['id'],{})
+        key=previous.get('sha256','')
+        valid_key=isinstance(key,str) and len(key)==64 and all(c in '0123456789abcdef' for c in key)
+        blob_stamp=None
+        if valid_key:
+            try:
+                stat=(folder/(key+'.json')).stat()
+                blob_stamp=[stat.st_dev,stat.st_ino,stat.st_size,stat.st_mtime_ns,stat.st_ctime_ns]
+            except OSError:blob_stamp=None
+        if previous.get('stamp')!=stamp or stamp[1] is None or not valid_key or blob_stamp is None or previous.get('blob_stamp')!=blob_stamp:
+            temporary=folder/('pending-'+uuid4().hex)
+            digest_value=hashlib.sha256()
+            try:
+                with db.blobopen('runs','stages',rowid,readonly=True) as blob,temporary.open('wb') as stream:
+                    for chunk in iter(lambda:blob.read(1024*1024),b''):
+                        digest_value.update(chunk);stream.write(chunk)
+                key=digest_value.hexdigest()
+                temporary.replace(folder/(key+'.json'))
+            finally:temporary.unlink(missing_ok=True)
+            stat=(folder/(key+'.json')).stat()
+            index[run['id']]={'stamp':stamp,'sha256':key,
+                'blob_stamp':[stat.st_dev,stat.st_ino,stat.st_size,stat.st_mtime_ns,stat.st_ctime_ns]}
+        run['stages']={'_stage_blob':key,'source_root_json':json.dumps(str(root))}
+        runs.append(run)
+    temporary=index_path.with_name('index-'+uuid4().hex)
+    try:
+        temporary.write_text(json.dumps(index));temporary.replace(index_path)
+    finally:temporary.unlink(missing_ok=True)
+    return runs
+
+
 def read_snapshot(store, project_id, event_id, side='before', db=None):
-    path = store.project_dir(project_id,db) / '.history' / 'snapshots' / f'{event_id}-{side}.json'
-    return json.loads(path.read_text(encoding='utf-8'))
+    root=store.project_dir(project_id,db)
+    seen=set()
+    while True:
+        key=(event_id,side)
+        if key in seen:raise ValueError('Cyclic audit snapshot reference')
+        seen.add(key)
+        path=root/'.history'/'snapshots'/f'{event_id}-{side}.json'
+        state=json.loads(path.read_text(encoding='utf-8'))
+        if '_snapshot_reference' not in state:break
+        event_id=state['_snapshot_reference'];side=state['side']
+        if (not isinstance(event_id,str) or len(event_id)!=32 or
+                any(c not in '0123456789abcdef' for c in event_id) or side not in ('before','after')):
+            raise ValueError('Invalid audit snapshot reference')
+    for run in state.get('runs',[]):
+        reference=run.get('stages')
+        if not isinstance(reference,dict) or '_stage_blob' not in reference:continue
+        key=reference['_stage_blob']
+        if not isinstance(key,str) or len(key)!=64 or any(c not in '0123456789abcdef' for c in key):
+            raise ValueError('Invalid audit stage blob')
+        blob=root/'.history'/'run-stages'/(key+'.json')
+        if blob.is_symlink():raise ValueError('Invalid audit stage blob link')
+        if digest(blob)!=key:raise ValueError('Corrupt audit stage blob')
+        run['stages']=translate(json.loads(blob.read_text()),json.loads(reference['source_root_json']),'@project')
+    return state
 
 
 def restore_database(store, db, project_id, state, owner=None):

@@ -58,7 +58,13 @@
     "cc8b73bb48bc15b097b85f234bcba904fab88c936492726ad194023efad93a6e": "4e672e3c3d6b1fd2e70498571856baf331735a87e54ec32ed85997cb6186ba81",
     "262ec9b5dd9a4ed2ac974a082671b3b1b93ebad04a2198861337382ee481a034": "8bd62e322da333b855dcbe7f300d754698a85f4aa2cf3dce026e5cd3555a2e14",
     "5f3b4a2b77195d5b8eb28a8ecca1435470f5ee7d6bd1cecb67f944d138da8e06": "4e672e3c3d6b1fd2e70498571856baf331735a87e54ec32ed85997cb6186ba81",
-    "04740904bfba1208a05c9b4814d74be77aa83cf1e778c37c2ac275648488f4b3": "8bd62e322da333b855dcbe7f300d754698a85f4aa2cf3dce026e5cd3555a2e14"
+    "04740904bfba1208a05c9b4814d74be77aa83cf1e778c37c2ac275648488f4b3": "8bd62e322da333b855dcbe7f300d754698a85f4aa2cf3dce026e5cd3555a2e14",
+    "98c85e21b94c5227fcbdd675c6979e31ef41bd08a37e659f10d71180301b6583": "bc65d1bf30d64f6e89d5111f56b91a4cd66658bf547e534823cf8a2ab767b64a",
+    "3440e7a5649c96d1b39221348c00a86ffb22757d0de85c77279517a29846de8f": "4e672e3c3d6b1fd2e70498571856baf331735a87e54ec32ed85997cb6186ba81",
+    "ffc573d7895ee3f64514c2160247c9c9f869798a9030eb5b78bf8dbe9de8ef74": "8bd62e322da333b855dcbe7f300d754698a85f4aa2cf3dce026e5cd3555a2e14",
+    "ec711ba260631d0bcbe19d69c0a8f2eba287e08b976f142f6d483d1ca36f3321": "bc65d1bf30d64f6e89d5111f56b91a4cd66658bf547e534823cf8a2ab767b64a",
+    "7e3065cc6bf55d4fb9da06729f1b4f7c00ef5cdab444b3530c6197c9c0444f41": "4e672e3c3d6b1fd2e70498571856baf331735a87e54ec32ed85997cb6186ba81",
+    "ca458f2b7795ca1c32cfa68f0b3c735d8b148f4fac3ff672be82b5d4d8b246df": "8bd62e322da333b855dcbe7f300d754698a85f4aa2cf3dce026e5cd3555a2e14"
   },
   "operations": [
     "prepare_structures",
@@ -406,6 +412,36 @@
       {
         "operation": "consensus",
         "current": "04740904bfba1208a05c9b4814d74be77aa83cf1e778c37c2ac275648488f4b3",
+        "previous": "8bd62e322da333b855dcbe7f300d754698a85f4aa2cf3dce026e5cd3555a2e14"
+      }
+    ]
+  },
+  "redocking_reuse_audit": {
+    "reason": "Only history transport and completed-outcome eligibility changed; preparation, PairCache recipes, engine settings and RMSD calculations are unchanged. Existing scientific identities are preserved.",
+    "operations": [
+      {
+        "operation": "prepare_structures",
+        "current": "ec711ba260631d0bcbe19d69c0a8f2eba287e08b976f142f6d483d1ca36f3321",
+        "previous": "bc65d1bf30d64f6e89d5111f56b91a4cd66658bf547e534823cf8a2ab767b64a"
+      },
+      {
+        "operation": "redocking",
+        "current": "ec711ba260631d0bcbe19d69c0a8f2eba287e08b976f142f6d483d1ca36f3321",
+        "previous": "bc65d1bf30d64f6e89d5111f56b91a4cd66658bf547e534823cf8a2ab767b64a"
+      },
+      {
+        "operation": "docking_vina",
+        "current": "7e3065cc6bf55d4fb9da06729f1b4f7c00ef5cdab444b3530c6197c9c0444f41",
+        "previous": "4e672e3c3d6b1fd2e70498571856baf331735a87e54ec32ed85997cb6186ba81"
+      },
+      {
+        "operation": "docking_dock6",
+        "current": "7e3065cc6bf55d4fb9da06729f1b4f7c00ef5cdab444b3530c6197c9c0444f41",
+        "previous": "4e672e3c3d6b1fd2e70498571856baf331735a87e54ec32ed85997cb6186ba81"
+      },
+      {
+        "operation": "consensus",
+        "current": "ca458f2b7795ca1c32cfa68f0b3c735d8b148f4fac3ff672be82b5d4d8b246df",
         "previous": "8bd62e322da333b855dcbe7f300d754698a85f4aa2cf3dce026e5cd3555a2e14"
       }
     ]

@@ -1,0 +1,60 @@
+{
+  "files_verified": 185,
+  "changed_files": [],
+  "installed_wheel_sha256": "d28525a4c69eb50ba91026da76ed42a7ae7cc3364fa1ec0d9841fb25e9c6316a",
+  "installed_regression_tests": 71,
+  "final_installed_tests": 32,
+  "scientific_operation_identities_preserved": 15,
+  "cache_validation": {
+    "ui_configuration_seconds": 0.0,
+    "target_resolution_seconds": 4.5505694830208085,
+    "settings": {
+      "amber_score_type": "dock6",
+      "amber_score_movable_region": "ligand",
+      "amber_score_minimization_rmsgrad": 0.01,
+      "amber_score_before_md_minimization_cycles": 100,
+      "amber_score_md_steps": 1000,
+      "amber_score_after_md_minimization_cycles": 10000,
+      "amber_score_gb_model": 5,
+      "amber_score_nonbonded_cutoff": 18.0,
+      "amber_score_temperature": 300.0,
+      "amber_score_movable_distance_cutoff": 10.0,
+      "amber_score_receptor_movable_atom_expr": "::",
+      "amber_score_complex_movable_atom_expr": "::",
+      "amber_score_abort_on_unprepped_ligand": true,
+      "use_existing_ligand_charges": false
+    },
+    "repeat_seconds": 0.15888665401143953,
+    "repeat": {
+      "md_pairs": 2,
+      "md_failures": 0,
+      "md_reused": 2
+    }
+  },
+  "css_validation": {
+    "ui_configuration_seconds": 0.0,
+    "target_resolution_seconds": 4.450271582987625,
+    "settings": {
+      "amber_score_type": "dock6",
+      "amber_score_movable_region": "ligand",
+      "amber_score_minimization_rmsgrad": 0.01,
+      "amber_score_before_md_minimization_cycles": 100,
+      "amber_score_md_steps": 1000,
+      "amber_score_after_md_minimization_cycles": 10000,
+      "amber_score_gb_model": 5,
+      "amber_score_nonbonded_cutoff": 18.0,
+      "amber_score_temperature": 300.0,
+      "amber_score_movable_distance_cutoff": 10.0,
+      "amber_score_receptor_movable_atom_expr": "::",
+      "amber_score_complex_movable_atom_expr": "::",
+      "amber_score_abort_on_unprepped_ligand": true,
+      "use_existing_ligand_charges": false
+    },
+    "repeat_seconds": 1.2503939869930036,
+    "repeat": {
+      "md_pairs": 1,
+      "md_failures": 1,
+      "md_reused": 0
+    }
+  }
+}

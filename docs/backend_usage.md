@@ -320,6 +320,8 @@ Os limites são inclusivos e combinados com E; `null` deixa um lado aberto. Os c
 
 ## Docking em lotes e relatório de compostos não utilizados
 
+Execuções concluídas com exclusões de preparação documentadas podem ser reutilizadas integralmente, mantendo os contadores e motivos originais. Veja os [critérios de cache de docking](docking_cache.md).
+
 Receptores preparados são validados e reutilizados. A API Python Vina reutiliza mapas por receptor/caixa/configuração dentro do lote; templates não suportados ou API ausente usam CLI, registrado no log. DOCK6 compartilha superfície, esferas e grid por receptor/sítio, valida os MOL2 e executa minimização/docking/footprint por composto. Falhas individuais excluem somente o candidato; falhas globais interrompem a etapa. Veja [reutilização Vina](user_manual.md#reutilizacao-do-receptor-no-vina) e [validação DOCK6](user_manual.md#validacao-e-exclusoes-no-dock6).
 
 `preparation_failures.csv` é o nome preservado do relatório também para falhas posteriores do DOCK6. Colunas: `compound_identifier`, `submitted_smiles`, `input_file`, `input_row`, `preparation_step`, `preparation_context`, `reason`. Campos `preparation_step/context` identificam a operação concreta, mesmo para docking/footprint. Os detalhes da operação incluem `preparation_failures`, contagem e caminho do relatório quando disponíveis. Não inclua esses compostos no denominador de resultados utilizáveis sem registrar as exclusões.

@@ -82,7 +82,7 @@ def input_ports(stage):
         return []
     if operation=='retrieve_pubchem' and stage['parameters'].get('reference_source')=='manual':return []
     fields={f['name']:f for f in operation_fields(operation)}
-    return [{'field':field,'label':'Receptores' if operation=='dynamics_dock6' and field=='base_input_path' else field_label(operation,field) if field=='base_input_path' else PORT_LABELS[field], 'types':input_types(stage,field),
+    return [{'field':field,'label':'Targets' if operation=='dynamics_dock6' and field=='base_input_path' else field_label(operation,field) if field=='base_input_path' else PORT_LABELS[field], 'types':input_types(stage,field),
              'required': fields[field]['required'] or operation in ('retrieve_pubchem','expand_similar_compounds','consensus') or operation=='prepare_structures' and field=='base_selected_mols'}
             for field,types in INPUTS.get(operation,{}).items()]
 

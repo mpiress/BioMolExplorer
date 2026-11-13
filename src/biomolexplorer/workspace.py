@@ -237,15 +237,17 @@ class WorkspaceStore:
         return self.project(token, project_id)
 
     @contextmanager
-    def change(self, token, project_id, role, action, summary, *, reuse_snapshot=False):
+    def change(self, token, project_id, role, action, summary, *, reuse_snapshot=False, compact_runs=False):
         from .project_state import snapshot, record
         user = self.user(token)
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
             self._require_user(user['id'], project_id, role)
-            before = snapshot(self, db, project_id)
+            before = snapshot(self, db, project_id,compact_runs=True) if compact_runs else snapshot(self, db, project_id)
+            if compact_runs:before={'_compact_runs':True,**before}
             yield db
-            record(self, db, project_id, user['id'], action, summary, before,reuse_snapshot=reuse_snapshot)
+            record(self, db, project_id, user['id'], action, summary, before,reuse_snapshot=reuse_snapshot,
+                   **({'compact_runs':True} if compact_runs else {}))
 
     def history(self, token, project_id):
         self.project(token, project_id)
@@ -302,10 +304,31 @@ class WorkspaceStore:
             existing=db.execute('SELECT pipeline,revision FROM projects WHERE id=?',(project_id,)).fetchone()
         if expected_revision>0 and existing and existing['revision']==expected_revision and json.loads(existing['pipeline'])==stages:
             return self.project(token,project_id)
+        # MD configuration never needs to inflate immutable docking execution
+        # JSON into the audit snapshot. Keep exact native blobs and rollback
+        # semantics while limiting this optimization to an MD-only revision.
+        compact_md=False
+        if existing and existing['revision']==expected_revision:
+            before={stage['id']:stage for stage in json.loads(existing['pipeline'])}
+            after={stage['id']:stage for stage in stages}
+            changed={key for key in before.keys()|after.keys() if before.get(key)!=after.get(key)}
+            compact_md=bool(changed) and all(
+                all(item is None or item.get('operation')=='dynamics_dock6' for item in (before.get(key),after.get(key)))
+                for key in changed)
+        def md_run_versions(connection):
+            return [tuple(row) for row in connection.execute('''SELECT r.id,r.updated,r.status,coalesce(v.revision,0)
+                FROM runs r LEFT JOIN result_read_versions v ON v.run_id=r.id WHERE r.project_id=? ORDER BY r.id''',(project_id,))]
+        md_versions=None;md_history=None
+        if compact_md:
+            from .result_catalog import read_proofs
+            with self.connect() as db:md_versions=md_run_versions(db)
+            # Warm compact proofs before BEGIN IMMEDIATE: a cold read model
+            # may publish its derived index on a separate connection.
+            md_history=[(rid,read_proofs(self,rid) or [],status) for rid,updated,status,revision in md_versions]
         from .result_sync import finish
         moved=[];journal=None
         try:
-            with self.change(token, project_id, 'editor', 'pipeline', 'Pipeline e configurações dos blocos alterados',reuse_snapshot=not prune_results) as db:
+            with self.change(token, project_id, 'editor', 'pipeline', 'Pipeline e configurações dos blocos alterados',reuse_snapshot=not prune_results,**({'compact_runs':True} if compact_md else {})) as db:
                 current = db.execute('SELECT pipeline,revision FROM projects WHERE id=?', (project_id,)).fetchone()
                 if current['revision'] != expected_revision:
                     if base_pipeline is None:
@@ -322,10 +345,16 @@ class WorkspaceStore:
                     if any(stage_id not in candidate or candidate[stage_id]!=value for stage_id,value in previous.items()):
                         raise ValueError('Uma alteração científica não pode usar o salvamento somente de apresentação.')
                 from .result_sync import plan,apply
-                proposal = (dict(affected=0, active_conflicts=[], pipeline=stages,
-                                 paths=[], runs=[], confirmation=None)
-                            if presentation_only else
-                            plan(db, project_id, stages, self.project_dir(project_id, db)))
+                proposal=None
+                if presentation_only:
+                    proposal=dict(affected=0, active_conflicts=[], pipeline=stages,paths=[], runs=[], confirmation=None)
+                elif compact_md and md_run_versions(db)==md_versions:
+                    lightweight=plan(db,project_id,stages,self.project_dir(project_id,db),history=md_history)
+                    # Only a no-removal decision can use proofs. Pruning must
+                    # hydrate complete native records, never serialize proofs
+                    # in place of the authoritative execution/provenance JSON.
+                    if not lightweight['affected']:proposal=lightweight
+                if proposal is None:proposal=plan(db,project_id,stages,self.project_dir(project_id,db))
                 if proposal['affected']:
                     if not prune_results:
                         raise ValueError('Confirme a invalidação dos resultados antes de salvar esta alteração.')
@@ -365,7 +394,13 @@ class WorkspaceStore:
     def result_removal_plan(self,token,project_id,stages):
         self.project(token,project_id,'editor')
         from .result_sync import plan
-        with self.connect() as db:proposal=plan(db,project_id,stages,self.project_dir(project_id,db))
+        with self.connect() as db:
+            history=None
+            if any(stage.get('operation') in ('consensus','docking_vina','docking_dock6','redocking') for stage in stages):
+                from .result_catalog import read_proofs
+                ids=db.execute('SELECT id,status FROM runs WHERE project_id=?',(project_id,)).fetchall()
+                history=((rid,read_proofs(self,rid) or [],status) for rid,status in ids)
+            proposal=plan(db,project_id,stages,self.project_dir(project_id,db),history=history)
         return {key:proposal[key] for key in ('affected','shared_preserved','blocks','active_conflicts','confirmation')}
 
     def invite(self, token, project_id, email, role='viewer'):

@@ -1,5 +1,5 @@
 """Grouped AMBER settings and paged, exact receptor/ligand selection."""
-import copy
+import json
 from pathlib import Path
 import re
 import flet as ft
@@ -10,11 +10,13 @@ from .feedback import close_dialog
 from .settings_layout import section
 from .pair_table import PairTable
 
+UI_HELP={key:value.replace('receptores','targets').replace('receptor','target') for key,value in HELP.items()}
+
 LABELS=dict(zip(DEFAULTS,(
  'Protocolo de pontuação','Região móvel no AMBER Score','Convergência da minimização (RMS gradiente)',
  'Minimização antes do refinamento (ciclos)','Refinamento interno (passos)','Minimização após o refinamento (ciclos)',
  'Modelo de solvente implícito GB/SA','Corte de interações (Å)','Temperatura (K)',
- 'Raio da região móvel (Å)','Expressão NAB do receptor','Expressão NAB do complexo',
+ 'Raio da região móvel (Å)','Expressão NAB do target','Expressão NAB do complexo',
  'Interromper o par sem preparação AMBER','Preservar as cargas da pose MOL2',
 )))
 
@@ -22,15 +24,16 @@ LABELS=dict(zip(DEFAULTS,(
 class MDSettings:
     def __init__(self,form):
         self.form=form;self.controls={};self.pairs=[];self.offset=0;self.limit=50
+        self._input_cache={};self._annotation_cache={};self._match_cache=None;self._search_cache=None;self._pair_sources=None
         params=form.stage['parameters']
         self.selected=set(params.get('selected_pairs') or [])
         self.excluded=set(params.get('excluded_pairs') or [])
         self.summary=ft.Text();self.page_count=ft.Text(size=12)
         self.error=ft.Text(color='#B91C1C',visible=False)
-        self.search=ft.TextField(label='Buscar receptor ou ligante',on_change=self.filter)
+        self.search=ft.TextField(label='Buscar target ou ligante',on_change=self.filter)
         self.target=ft.Dropdown(label='Alvo dos pares',value='all',options=[],on_select=self.filter,
             enable_filter=True,enable_search=True)
-        self.pair_table=PairTable(('Alvo','PDB / receptor','Ligante','Cadeia','Ações'),
+        self.pair_table=PairTable(('Alvo','PDB / target','Ligante','Cadeia','Ações'),
             form.ui.page,min_width=700,selectable=True,pin_actions=True)
         self.table=self.pair_table.table;self.table.column_spacing=24
         self.table.on_select_all=self.select_view
@@ -41,7 +44,7 @@ class MDSettings:
         from biomolexplorer.result_origins import ResultOrigins
         self.origins=ResultOrigins(list(getattr(form.ui,'artifact_items',{}).values()))
         self.pair_control=ft.Column([ft.Text('Ligantes e pares selecionados',size=16,weight=ft.FontWeight.W_600),
-            ft.Text('Confirme as poses e os receptores. Cada combinação selecionada é uma execução independente.',size=12),
+            ft.Text('Confirme as poses e os targets. Cada combinação selecionada é uma execução independente.',size=12),
             ft.ResponsiveRow([ft.Container(self.target,col={'xs':12,'md':4}),
                 ft.Container(self.search,col={'xs':12,'md':8})],spacing=24,run_spacing=16),
             ft.Row([ft.TextButton('Selecionar pares desta visualização',on_click=self.all,disabled=not form.writable),
@@ -54,13 +57,15 @@ class MDSettings:
                 control=ft.Switch(label=LABELS[key],value=value,disabled=not form.writable);getter=lambda c=control:bool(c.value)
             elif key in CHOICES:
                 control=ft.Dropdown(label=LABELS[key],value=str(value),disabled=not form.writable,
-                    options=[ft.DropdownOption(key=str(v),text={'dock6':'AMBER Score (DOCK6)','dock6_legacy':'Unsupported legacy protocol'}.get(str(v),str(v))) for v in CHOICES[key]])
+                    options=[ft.DropdownOption(key=str(v),text={'dock6':'AMBER Score (DOCK6)',
+                        'ligand':'Somente o ligante','everything':'Todo o complexo','nothing':'Somente energia (sem refinamento)',
+                        'distance':'Resíduos próximos ao ligante','nab_atom_expression':'Expressões de átomos NAB'}.get(str(v),str(v))) for v in CHOICES[key]])
                 getter=(lambda c=control:int(c.value)) if key=='amber_score_gb_model' else (lambda c=control:c.value)
             else:
                 control=ft.TextField(label=LABELS[key],value=str(value),disabled=not form.writable)
                 kind=int if key in INTEGER else float if isinstance(default,(float,int)) else str
                 getter=lambda c=control,kind=kind:kind(c.value)
-            control.tooltip=HELP[key]
+            control.tooltip=UI_HELP[key]
             form.readers[key]=getter;form.field_controls[key]=control;self.controls[key]=control
         form.readers['selected_pairs']=lambda:sorted(p['id'] for p in self.pairs if self.checked(p['id']))
         form.readers['excluded_pairs']=lambda:sorted(self.excluded & {p['id'] for p in self.pairs})
@@ -68,10 +73,10 @@ class MDSettings:
             cells=[]
             for key in keys:
                 def help(e,key=key):
-                    dialog=ft.AlertDialog(title=ft.Text(LABELS[key]),content=ft.Text(HELP[key]),
+                    dialog=ft.AlertDialog(title=ft.Text(LABELS[key]),content=ft.Text(UI_HELP[key]),
                         actions=[ft.TextButton('Fechar',on_click=lambda e:close_dialog(form.ui.page,dialog))])
                     form.ui.page.show_dialog(dialog)
-                self.controls[key].tooltip=HELP[key]
+                self.controls[key].tooltip=UI_HELP[key]
                 cells.append(self.controls[key])
             return section(title,cells,expanded=expanded)
         self.control=ft.Column([ft.Text('Amber Score: refinamento curto em solvente implícito GB/SA. Sem caixa de solvatação explícita, simulação convencional ou trajetória para RMSF.',size=13),
@@ -86,11 +91,14 @@ class MDSettings:
         """Recover old automatic bindings only from explicitly saved pair IDs."""
         ui=self.form.ui
         if not self.selected or not getattr(ui,'store',None) or not ui.current.get('id'):return
+        from biomolexplorer.bindings import sources
+        if not any(ref.get('selector','auto')=='auto' for binding in self.form.stage.get('bindings',{}).values()
+                   for ref in sources(binding)):return
         inputs=MDInputs(ui.store,ui.current['id'],{key:item.get('artifacts',[]) for key,item in getattr(ui,'artifact_items',{}).items()})
         from biomolexplorer.workspace import AccessDenied
         try:
-            receptors=inputs.files(self.form.stage,'base_input_path')
-            ligands=inputs.files(self.form.stage,'base_selected_mols')
+            receptors=self.input_files(inputs,self.form.stage,'base_input_path')
+            ligands=self.input_files(inputs,self.form.stage,'base_selected_mols')
             if len(receptors)*len(ligands)>100000:return
             paths={'base_input_path':set(),'base_selected_mols':set()}
             for receptor in receptors:
@@ -110,17 +118,37 @@ class MDSettings:
             return
 
     def annotate(self,source):
+        key=(source['identity'],str(source['path']))
+        if key in self._annotation_cache:return self._annotation_cache[key]
         result=dict(source)
         identity=source['identity']
         origin=identity.split(':',2)[1] if identity.startswith('stage:') else None
         description=self.origins.describe(source['path'],origin) if origin else {}
         result['target']=description.get('source_label') if description.get('source_routes') else ''
+        self._annotation_cache[key]=result
         return result
 
+    def input_files(self,inputs,candidate,field):
+        from biomolexplorer.result_index import file_stamp
+        key=json.dumps([candidate.get('bindings',{}).get(field),candidate['parameters'].get(field)],sort_keys=True)
+        cached=self._input_cache.get(field)
+        if cached and cached[0]==key:
+            try:
+                if all(file_stamp(path)==stamp for path,stamp in cached[2]):return cached[1]
+            except OSError:self._input_cache.pop(field,None)
+        rows=inputs.files(candidate,field)
+        paths={str(row['path']) for row in rows}
+        direct=candidate['parameters'].get(field)
+        if direct:paths.add(str(inputs.store.scoped_path(inputs.pid,direct)))
+        stamps=[(path,file_stamp(path)) for path in sorted(paths)]
+        self._input_cache[field]=(key,rows,stamps)
+        return rows
+
     def refresh(self):
+        previous=self.pairs
         self.pairs=[];self.error.visible=False;ui=self.form.ui
         if getattr(ui,'store',None) and ui.current.get('id'):
-            candidate=copy.deepcopy(self.form.stage)
+            candidate=dict(self.form.stage,parameters=dict(self.form.stage['parameters']),bindings=dict(self.form.stage.get('bindings',{})))
             for field,editor in self.form.input_editors.items():
                 if editor.selection:
                     from biomolexplorer.bindings import pack
@@ -132,21 +160,30 @@ class MDSettings:
                 if direct:candidate['parameters'][field]=direct
                 else:candidate['parameters'].pop(field,None)
             inputs=MDInputs(ui.store,ui.current['id'],{key:item.get('artifacts',[]) for key,item in getattr(ui,'artifact_items',{}).items()})
+            self._pose_inputs=inputs
             from biomolexplorer.workspace import AccessDenied
             try:
-                receptors=[self.annotate(r) for r in inputs.files(candidate,'base_input_path')]
-                ligands=[self.annotate(l) for l in inputs.files(candidate,'base_selected_mols')]
+                receptors=[self.annotate(r) for r in self.input_files(inputs,candidate,'base_input_path')]
+                ligands=self.input_files(inputs,candidate,'base_selected_mols')
                 if len(receptors)*len(ligands)>100000:
                     raise ValueError('Selecione menos de 100000 combinações para a dinâmica.')
-                self.pairs=[dict(id=pair_id(r,l),receptor=r,ligand=l) for r in receptors for l in ligands]
+                source_key=tuple((field,self._input_cache[field][0],tuple(self._input_cache[field][2]))
+                    for field in ('base_input_path','base_selected_mols'))
+                if source_key==self._pair_sources:self.pairs=previous
+                else:
+                    self.pairs=[dict(id=pair_id(r,l),receptor=r,ligand=l) for r in receptors for l in ligands]
+                    self._pair_sources=source_key
             except (ValueError,AccessDenied) as error:
                 # A draft may temporarily reference unavailable outputs. Keep
                 # editing usable; execution still performs strict validation.
-                self.error.value=str(error);self.error.visible=True
+                self.error.value=str(error);self.error.visible=True;self._pair_sources=None
         targets=sorted({p['receptor'].get('target','') for p in self.pairs}-{''})
         self.target.options=[ft.DropdownOption(key='all',text='Todos os alvos')]+[
             verbatim(ft.DropdownOption(key=name,text=name),'text') for name in targets]
         if self.target.value not in {'all',*targets}:self.target.value='all'
+        self._match_cache=None
+        if not self._search_cache or self._search_cache[:2]!=(id(self.pairs),len(self.pairs)):
+            self._search_cache=(id(self.pairs),len(self.pairs),[self.search_text(pair) for pair in self.pairs])
         self.offset=0;self.redraw()
 
     def checked(self,key):return key not in self.excluded and key in self.selected
@@ -163,10 +200,19 @@ class MDSettings:
         if match:name=match[2];residue=match[3];chain=match[4]
         return pdb,name,residue,chain
 
+    def search_text(self,pair):
+        return ' '.join((pair['receptor']['name'],pair['ligand']['name'],pair['receptor'].get('target',''),*self.details(pair))).casefold()
+
     def matches(self):
         term=(self.search.value or '').casefold()
-        return [p for p in self.pairs if (self.target.value=='all' or p['receptor'].get('target')==self.target.value)
-            and term in ' '.join((p['receptor']['name'],p['ligand']['name'],p['receptor'].get('target',''),*self.details(p))).casefold()]
+        key=(id(self.pairs),len(self.pairs),term,self.target.value)
+        if self._match_cache and self._match_cache[0]==key:return self._match_cache[1]
+        if not self._search_cache or self._search_cache[:2]!=key[:2]:
+            self._search_cache=(*key[:2],[self.search_text(pair) for pair in self.pairs])
+        result=[pair for pair,text in zip(self.pairs,self._search_cache[2])
+            if (self.target.value=='all' or pair['receptor'].get('target')==self.target.value) and term in text]
+        self._match_cache=(key,result)
+        return result
 
     def redraw(self):
         matches=self.matches()
@@ -185,9 +231,15 @@ class MDSettings:
                 source=pair[kind];path=source['path']
                 if kind=='ligand' and source.get('compound'):
                     path=next((source['compound'].get(k) for k in ('pose_file','conformer_file','prepared_mol2','prepared_pdbqt') if source['compound'].get(k)),path)
-                async def open(e,path=path):
-                    await self.form.ui.guard(lambda:self.form.ui.preview_artifact(self.form.ui.current['id'],path))
-                actions.append(ft.IconButton(ft.Icons.VIEW_IN_AR,tooltip='Visualizar receptor' if kind=='receptor' else 'Visualizar ligante',on_click=open))
+                async def open(e,path=path,pair=pair):
+                    async def preview():
+                        selected=path
+                        if pair['ligand'].get('compound',{}).get('target_scores'):
+                            ligand=await self.form.ui.call(self._pose_inputs.targeted_ligand,pair['receptor'],pair['ligand'])
+                            selected=ligand['compound']['conformer_file']
+                        await self.form.ui.preview_artifact(self.form.ui.current['id'],selected)
+                    await self.form.ui.guard(preview)
+                actions.append(ft.IconButton(ft.Icons.VIEW_IN_AR,tooltip='Visualizar target' if kind=='receptor' else 'Visualizar ligante',on_click=open))
             def remove(e,key=pair['id']):
                 if not self.form.writable:return
                 self.selected.discard(key);self.excluded.add(key);self.redraw();self.form.ui.page.update()

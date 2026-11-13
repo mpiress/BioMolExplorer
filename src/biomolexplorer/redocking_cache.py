@@ -62,9 +62,14 @@ def legacy_indexes(batch,runtime_python=None):
 def stage_sources(store, project_id, stage_id, destination, source=None, configuration=None,
                   only_codes=None, exclude_codes=(),verified_legacy_keys=(),runtime_python=None):
     """Copy only manifest-verified files from committed runs of this block."""
-    with store.connect() as db:
-        runs = db.execute("SELECT stages FROM runs WHERE project_id=? AND status NOT IN ('queued','running','awaiting_input') ORDER BY created DESC",
-                          (project_id,)).fetchall()
+    if hasattr(store,'database'):
+        from .published_results import histories
+        runs=histories(store,project_id,compact=True)
+    else:
+        with store.connect() as db:
+            snapshots=db.execute("SELECT stages FROM runs WHERE project_id=? AND status NOT IN ('queued','running','awaiting_input') ORDER BY created DESC",
+                                 (project_id,)).fetchall()
+        runs=((None,json.loads(row['stages'])) for row in snapshots)
     count = 0
     seen = set()
     source = Path(source or destination)
@@ -75,8 +80,8 @@ def stage_sources(store, project_id, stage_id, destination, source=None, configu
         if not path.is_file():return False
         if path not in original_hashes:original_hashes[path] = file_digest(path)
         return original_hashes[path] in hashes
-    for run in runs:
-        for stage in json.loads(run['stages']):
+    for _,snapshot in runs:
+        for stage in snapshot:
             if stage['id'] != stage_id or stage.get('outputs_removed') or stage.get('dependency_obsolete') and not stage.get('partial_results'):
                 continue
             if stage['status']!='succeeded' and not stage.get('batches'):continue

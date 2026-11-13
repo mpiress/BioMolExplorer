@@ -22,7 +22,7 @@ TITLES = {
  'docking_vina': ('Docking com Vina', 'Execute a seleção de compostos contra receptores preparados.', 'Docking'),
  'docking_dock6': ('Docking com DOCK6', 'Refine conformações e obtenha scores e footprints.', 'Docking'),
  'consensus': ('Consenso de docking', 'Combine resultados Vina e DOCK6.', 'Docking'),
- 'dynamics_dock6': ('Amber Score · DOCK6','Refine poses receptor–ligante com o Amber Score nativo do DOCK6 6.11 em solvente implícito.','Dinâmica Molecular'),
+ 'dynamics_dock6': ('Amber Score · DOCK6','Refine poses target–ligante com o Amber Score nativo do DOCK6 6.11 em solvente implícito.','Dinâmica Molecular'),
 }
 LABELS = {
  'dock6_mode':'Modo de operação DOCK6',
@@ -128,7 +128,7 @@ def operation_fields(operation):
 
 def field_label(operation, key):
     if operation=='dynamics_dock6':
-        if key=='base_input_path':return 'Receptores PDB para dinâmica'
+        if key=='base_input_path':return 'Targets PDB para Amber Score'
         if key=='base_selected_mols':return 'Compostos para dinâmica'
     if operation=='retrieve_zinc' and key=='download_workers':return 'Downloads simultâneos'
     if operation=='retrieve_zinc' and key=='base_input_path':return 'Lista de downloads das tranches ZINC'

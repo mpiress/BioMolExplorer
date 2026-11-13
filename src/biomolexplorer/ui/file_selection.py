@@ -194,8 +194,12 @@ class FileSelection:
                         from biomolexplorer.md_inputs import receptor_input_files
                         matching=receptor_input_files(matching)
                     else:
-                        from biomolexplorer.molecular_roles import small_molecule_file
-                        matching=[p for p in matching if small_molecule_file(p)]
+                        from biomolexplorer.artifact_choices import consolidated_docking_tables
+                        tables=consolidated_docking_tables(matching,item.get('operation'))
+                        if tables:matching=tables
+                        else:
+                            from biomolexplorer.molecular_roles import small_molecule_file
+                            matching=[p for p in matching if small_molecule_file(p)]
                 if item.get('operation') in ('docking_vina','docking_dock6','consensus') and not item.get('configuration',{}).get('provided_results') and not kinds<={'structures','receptor_pdb','prepared_structures'}:
                     from biomolexplorer.artifact_choices import consolidated_docking_tables
                     allowed=set(consolidated_docking_tables(files,item['operation']))

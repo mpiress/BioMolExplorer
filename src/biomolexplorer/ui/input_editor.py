@@ -39,7 +39,7 @@ class InputEditor:
                 ft.TextButton('Enviar meus arquivos',icon=ft.Icons.UPLOAD_FILE,on_click=self.upload,disabled=not writable)],wrap=True),
             ft.Text('Use a opção de processamento do bloco para manter os arquivos separados ou mesclar as entradas.',size=12,color='#64748B'),
             ft.Text('Selecione um complexo PDB ou reutilize um receptor preparado. Escolha os compostos ou resultados de docking em “Compostos selecionados”.'
-                if stage['operation'] in ('docking_vina','docking_dock6') else '\n'.join(contract(k,'graphs' if stage['operation']=='graphs' else None)
+                if stage['operation'] in ('docking_vina','docking_dock6') else 'Selecione targets PDB e poses de ligantes para o Amber Score.' if stage['operation']=='dynamics_dock6' else '\n'.join(contract(k,'graphs' if stage['operation']=='graphs' else None)
                 for k in sorted(self.expected) if k!='chembl'),size=12,color='#64748B')],spacing=18,data='input')
         self.refresh_selection(self.initial_references)
 
@@ -188,6 +188,13 @@ class InputEditor:
         return bool(value=='configured-path' and self.stage['parameters'].get('receptor_prepared',False))
 
     def selectors(self,value):
+        if self.stage['operation']=='dynamics_dock6':
+            # Physical files are chosen by the paginated picker. This hidden
+            # legacy dropdown must not materialize thousands of pose options.
+            saved={ref.get('selector','auto') for ref in self.initial_references
+                if value=='stage:'+ref.get('stage','')}
+            return [ft.DropdownOption(key='auto',text='Identificar automaticamente')]+[
+                verbatim(ft.DropdownOption(key=name,text=name)) for name in sorted(saved-{'auto'})]
         is_target=self.prepared_source(value)
         names=getattr(self.ui,'artifact_choices',{}).get(value.split(':',1)[1],set()) if value and value.startswith('stage:') else set()
         if is_target and value and value.startswith('stage:') and value.split(':',1)[1] not in getattr(self.ui,'artifact_choices',{}):

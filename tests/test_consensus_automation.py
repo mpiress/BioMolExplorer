@@ -105,11 +105,13 @@ class ConsensusSortingTests(unittest.TestCase):
         async def scenario():
             async def call(fn,*args,**kwargs):return fn(*args,**kwargs)
             async def guard(fn):return await fn()
-            self.path.write_text('molecule_chembl_id,canonical_smiles,vina,dock6,normalized_score,consensus_model,conformer_file\nM1,CCO,1,1,1,target-balanced-ecr-v1,pose.mol2\n')
+            self.path.write_text('molecule_chembl_id,canonical_smiles,vina,dock6,normalized_score,consensus_model,conformer_file\nM1,CCO,0.123456789,0.987654321,0.555555555,target-balanced-ecr-v1,pose.mol2\n')
             ui=SimpleNamespace(store=self.store,token=self.owner,current={'id':self.pid},page=SimpleNamespace(update=lambda:None),call=call,guard=guard)
             viewer=DockingResultsTable(ui,self.pid,self.rid,self.sid,self.tables.tables(self.owner,self.pid,self.rid,self.sid),inline=True)
             await viewer.load()
             self.assertEqual([c.label.value for c in viewer.table.columns],['Código do composto','Relevância Vina','Relevância DOCK6','Consenso','Ações'])
+            self.assertEqual([cell.content.value for cell in viewer.table.rows[0].cells[1:4]],['0.123','0.988','0.556'])
+            self.assertEqual(float(viewer.data['rows'][0]['properties']['vina']),0.123456789)
             self.assertEqual([button.content for button in viewer.table.rows[0].cells[-1].content.controls],['3D','Resíduos','Remover'])
         asyncio.run(scenario())
 

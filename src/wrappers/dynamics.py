@@ -48,6 +48,7 @@ def perform_dynamics_dock6(base_input_path,base_selected_mols,base_output_path,
         report_progress('Dinâmica: '+str(index)+'/'+str(len(pairs))+' · '+record['receptor']+' / '+record['ligand'],index-1,len(pairs))
         started=time.monotonic()
         try:
+            if pair.get('input_error'):raise ValueError(pair['input_error'])
             from biomolexplorer.md_inputs import molecular_identity
             ligand_identity=molecular_identity(pair['ligand'])
             request=dict(version=2,settings=execution_settings(settings),software=identity,

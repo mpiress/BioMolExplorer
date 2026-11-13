@@ -65,7 +65,7 @@ def pair_removals(entry,current):
     return lost
 
 
-def plan(db,pid,pipeline,project_root=None):
+def plan(db,pid,pipeline,project_root=None,*,history=None):
     pipeline=copy.deepcopy(pipeline)
     stored=db.execute('SELECT pipeline FROM projects WHERE id=?',(pid,)).fetchone()
     baseline={s['id']:s for s in json.loads(stored[0])} if stored else {}
@@ -83,8 +83,9 @@ def plan(db,pid,pipeline,project_root=None):
         item['outputs_removed']=not item['artifacts'];item['reused']=False
         item['dependency_obsolete']=True;item.pop('cache_key',None)
     active_ids=set()
-    for row in db.execute('SELECT id,stages,status FROM runs WHERE project_id=?',(pid,)):
-        items=json.loads(row[1]);runs.append((row[0],items))
+    for row in (history if history is not None else db.execute('SELECT id,stages,status FROM runs WHERE project_id=?',(pid,))):
+        items=json.loads(row[1]) if isinstance(row[1],str) else copy.deepcopy(row[1])
+        runs.append((row[0],items))
         if row[2] in ('queued','running','awaiting_input'):active_ids.add(row[0])
         for item in items:
             if item.get('outputs_removed') and not item.get('artifacts'):continue

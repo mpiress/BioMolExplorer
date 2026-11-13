@@ -1,0 +1,163 @@
+{
+  "baseline_ui": {
+    "form_open_seconds": 6.510065337992273,
+    "refresh_seconds": 2.347288396966178,
+    "search_seconds": 0.05854553997050971,
+    "select_seconds": 0.11009111499879509,
+    "read_settings_seconds": 0.0012049240176565945,
+    "pairs": 5187,
+    "selected": 3
+  },
+  "updated_ui": {
+    "form_open_seconds": 3.087625508022029,
+    "refresh_seconds": 0.00895746995229274,
+    "search_seconds": 0.0020913369953632355,
+    "select_seconds": 0.0010090029682032764,
+    "read_settings_seconds": 0.0011670709936879575,
+    "pairs": 5187,
+    "selected": 3
+  },
+  "native_run": {
+    "target_resolution_seconds": 3.2932110910187475,
+    "settings": {
+      "amber_score_type": "dock6",
+      "amber_score_movable_region": "ligand",
+      "amber_score_minimization_rmsgrad": 0.01,
+      "amber_score_before_md_minimization_cycles": 100,
+      "amber_score_md_steps": 1000,
+      "amber_score_after_md_minimization_cycles": 10000,
+      "amber_score_gb_model": 5,
+      "amber_score_nonbonded_cutoff": 18.0,
+      "amber_score_temperature": 300.0,
+      "amber_score_movable_distance_cutoff": 10.0,
+      "amber_score_receptor_movable_atom_expr": "::",
+      "amber_score_complex_movable_atom_expr": "::",
+      "amber_score_abort_on_unprepped_ligand": true,
+      "use_existing_ligand_charges": false
+    },
+    "execution_seconds": 25.34804296598304,
+    "result": {
+      "md_pairs": 1,
+      "md_failures": 0,
+      "md_reused": 0
+    },
+    "repeat_seconds": 0.13387185998726636,
+    "repeat": {
+      "md_pairs": 1,
+      "md_failures": 0,
+      "md_reused": 1
+    }
+  },
+  "ui_to_execution": {
+    "ui_configuration_seconds": 3.4739517709822394,
+    "target_resolution_seconds": 5.639899255998898,
+    "settings": {
+      "amber_score_type": "dock6",
+      "amber_score_movable_region": "ligand",
+      "amber_score_minimization_rmsgrad": 0.01,
+      "amber_score_before_md_minimization_cycles": 100,
+      "amber_score_md_steps": 1000,
+      "amber_score_after_md_minimization_cycles": 10000,
+      "amber_score_gb_model": 5,
+      "amber_score_nonbonded_cutoff": 18.0,
+      "amber_score_temperature": 300.0,
+      "amber_score_movable_distance_cutoff": 10.0,
+      "amber_score_receptor_movable_atom_expr": "::",
+      "amber_score_complex_movable_atom_expr": "::",
+      "amber_score_abort_on_unprepped_ligand": true,
+      "use_existing_ligand_charges": false
+    },
+    "execution_seconds": 25.92679479799699,
+    "result": {
+      "md_pairs": 1,
+      "md_failures": 0,
+      "md_reused": 0
+    },
+    "repeat_seconds": 0.15159795997897163,
+    "repeat": {
+      "md_pairs": 1,
+      "md_failures": 0,
+      "md_reused": 1
+    }
+  },
+  "energies": {
+    "units": "kcal/mol",
+    "receptor_and_ligand_terms": "Signed contributions reported by DOCK6",
+    "amber_score": 2391.533691,
+    "complex_energy": -17393.140872,
+    "receptor_contribution": 19769.696901,
+    "ligand_contribution": 14.977599
+  },
+  "analysis": {
+    "initial_complex_rg": 22.496959881180082,
+    "final_complex_rg": 22.496667580756608,
+    "hydrogen_atoms": 4055,
+    "final_protein_backbone_rmsd": 7.787906217593702e-14,
+    "final_ligand_rmsd": 0.5840317388181789
+  },
+  "receptor_normalization": [
+    {
+      "residue": "A 401",
+      "input": "CYS",
+      "output": "CYX",
+      "evidence": "Explicit PDB SSBOND/CONECT SG-SG bond; coordinates preserved"
+    },
+    {
+      "residue": "A 519",
+      "input": "CYS",
+      "output": "CYX",
+      "evidence": "Explicit PDB SSBOND/CONECT SG-SG bond; coordinates preserved"
+    },
+    {
+      "residue": "A  66",
+      "input": "CYS",
+      "output": "CYX",
+      "evidence": "Explicit PDB SSBOND/CONECT SG-SG bond; coordinates preserved"
+    },
+    {
+      "residue": "A  93",
+      "input": "CYS",
+      "output": "CYX",
+      "evidence": "Explicit PDB SSBOND/CONECT SG-SG bond; coordinates preserved"
+    },
+    {
+      "residue": "A 254",
+      "input": "CYS",
+      "output": "CYX",
+      "evidence": "Explicit PDB SSBOND/CONECT SG-SG bond; coordinates preserved"
+    },
+    {
+      "residue": "A 264",
+      "input": "CYS",
+      "output": "CYX",
+      "evidence": "Explicit PDB SSBOND/CONECT SG-SG bond; coordinates preserved"
+    },
+    {
+      "residue": "A 257",
+      "input": "unseparated backbone gap",
+      "output": "TER",
+      "evidence": "Consecutive residue C-N distance >2.0 A; no atoms moved or invented"
+    },
+    {
+      "residue": "A 487",
+      "input": "unseparated backbone gap",
+      "output": "TER",
+      "evidence": "Consecutive residue C-N distance >2.0 A; no atoms moved or invented"
+    }
+  ],
+  "final_ui_energies": {
+    "units": "kcal/mol",
+    "receptor_and_ligand_terms": "Signed contributions reported by DOCK6",
+    "amber_score": 2391.533691,
+    "complex_energy": -17393.140872,
+    "receptor_contribution": 19769.696901,
+    "ligand_contribution": 14.977599
+  },
+  "final_ui_analysis": {
+    "initial_complex_rg": 22.496959881180082,
+    "final_complex_rg": 22.496667580756608,
+    "hydrogen_atoms": 4055,
+    "final_protein_backbone_rmsd": 7.787906217593702e-14,
+    "final_ligand_rmsd": 0.5840317388181789
+  }
+}

@@ -4,6 +4,7 @@ import os
 import shutil
 import stat
 import zipfile
+import tempfile
 from pathlib import Path
 from uuid import uuid4
 
@@ -14,6 +15,13 @@ MAX_FILES = 100000
 
 
 def export_project(store, token, project_id):
+    # Keep exported history compatible with the established portable format.
+    # Expansion happens only on explicit export, never when consensus finishes.
+    with tempfile.TemporaryDirectory(prefix='biomol-export-history-') as temporary:
+        return _export_project(store,token,project_id,Path(temporary))
+
+
+def _export_project(store, token, project_id, temporary):
     store.project(token, project_id)
     root = store.project_dir(project_id)
     folder = root / '.exports'
@@ -27,15 +35,28 @@ def export_project(store, token, project_id):
         state = snapshot(store, db, project_id)
         history = [dict(row) for row in db.execute('SELECT * FROM project_history WHERE project_id=? ORDER BY created', (project_id,))]
         files = {name: info for name, info in state['files'].items()}
+        history_files={}
         for path in (root / '.history').rglob('*'):
             if path.is_file() and not path.is_symlink() and not any(p.startswith('restore-') for p in path.relative_to(root).parts):
-                files[path.relative_to(root).as_posix()] = {'sha256': digest(path), 'size': path.stat().st_size, 'mtime_ns': path.stat().st_mtime_ns}
+                if path.is_relative_to(root/'.history'/'run-stages'):continue
+                original=path
+                if path.parent==root/'.history'/'snapshots':
+                    with path.open('rb') as stream:prefix=stream.read(200)
+                    if b'"_compact_runs"' in prefix or b'"_snapshot_reference"' in prefix:
+                        from .project_state import read_snapshot
+                        event_id,side=path.stem.rsplit('-',1)
+                        expanded=read_snapshot(store,project_id,event_id,side,db=db)
+                        original=temporary/path.name
+                        original.write_text(json.dumps(expanded,ensure_ascii=False),encoding='utf-8')
+                name=path.relative_to(root).as_posix()
+                history_files[name]=original
+                files[name] = {'sha256': digest(original), 'size': original.stat().st_size, 'mtime_ns': path.stat().st_mtime_ns}
         manifest = {'format': 'biomolexplorer-project', 'version': 1, 'state': state, 'history': history, 'files': files}
         raw_runs=[store._run_row(row) for row in db.execute('SELECT * FROM runs WHERE project_id=?',(project_id,))]
         # Compress immutable version contents after releasing SQLite's write
         # lock, so exporting a large project does not stop other running jobs.
         originals={name:root/'.history'/'blobs'/info['sha256'] for name,info in state['files'].items()}
-        originals.update({name:root/name for name in files if name not in originals})
+        originals.update({name:history_files.get(name,root/name) for name in files if name not in originals})
     from .artifacts import index_run
     from .artifact_naming import bundle_manifest
     from .project_state import translate

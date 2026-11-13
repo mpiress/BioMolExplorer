@@ -1,0 +1,33 @@
+{
+  "input_source": "snapshot of the actual failed run; PipelineService._resolve exercised before MDInputs",
+  "pairs": [
+    {
+      "target": "4M0E_A.noH.pdb",
+      "ligand": "CHEMBL92663 · 4M0E_A · DOCK6",
+      "status": "succeeded",
+      "amber_score": 2391.533691,
+      "limitation": null
+    },
+    {
+      "target": "2WSL_A.noH.pdb",
+      "ligand": "CHEMBL92663 · 2WSL_A · DOCK6",
+      "status": "failed",
+      "amber_score": null,
+      "limitation": "DOCK6 has no parameters for modified residue CSS"
+    },
+    {
+      "target": "2QMG_A.noH.pdb",
+      "ligand": "CHEMBL92663 · 2QMG_A",
+      "status": "succeeded",
+      "amber_score": 2406.961426,
+      "limitation": null
+    }
+  ],
+  "repeat": {
+    "md_pairs": 2,
+    "md_failures": 0,
+    "md_reused": 2
+  },
+  "repeat_seconds": 0.2555410839850083,
+  "scientific_operation_identities_changed": []
+}

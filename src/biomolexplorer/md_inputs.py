@@ -67,7 +67,7 @@ class MDInputs:
             if path.suffix.lower() not in suffixes:continue
             if kind!='ligand' or path.suffix.lower()!='.csv':
                 result.append(candidate);continue
-            for row in read_compounds(path):
+            for source_row,row in enumerate(read_compounds(path)):
                 code=row.get('molecule_chembl_id')
                 if not code or compound_id and code!=compound_id:continue
                 if selection:
@@ -81,12 +81,12 @@ class MDInputs:
                         pose=row.get(engine+'_pose')
                         if not pose:continue
                         origin=str(row.get('receptor_id',''));index=str(row.get('conformer_index',1))
-                        result.append(dict(candidate,name=code+' · '+engine+(' · '+origin if origin else ''),
+                        result.append(dict(candidate,source_row=source_row,name=code+' · '+engine+(' · '+origin if origin else ''),
                             identity=candidate['identity']+':compound:'+code+':'+origin+':'+index+':'+engine,
                             compound=dict(row,conformer_file=pose,engine=engine)))
                     continue
                 origin=str(row.get('receptor_id',''));index=str(row.get('conformer_index',1))
-                result.append(dict(candidate,name=code+(' · '+origin if origin else ''),
+                result.append(dict(candidate,source_row=source_row,name=code+(' · '+origin if origin else ''),
                     identity=candidate['identity']+':compound:'+code+':'+origin+':'+index,compound=row))
         return result
 
@@ -140,6 +140,13 @@ class MDInputs:
         unique={c['identity']:c for c in result}
         return [dict(c,path=str(self.store.scoped_path(self.pid,c['path']))) for c in unique.values()]
 
+    def targeted_ligand(self,receptor,ligand):
+        from .md_consensus import ConsensusPoses
+        resolver=getattr(self,'_consensus_poses',None)
+        if resolver is None:
+            resolver=self._consensus_poses=ConsensusPoses(self.store,self.pid)
+        return resolver.ligand(receptor,ligand)
+
     def resolve(self,stage,item=None,check_files=True):
         from .md_config import validate_settings
         params=dict(stage['parameters']);validate_settings(params)
@@ -156,7 +163,10 @@ class MDInputs:
                 if key in excluded or key not in selected:continue
                 # Scientific validation runs per pair in the worker so that a
                 # malformed molecule cannot prevent unrelated pairs completing.
-                pairs.append(dict(id=key,receptor=receptor,ligand=ligand))
+                try:resolved=self.targeted_ligand(receptor,ligand)
+                except (ValueError,OSError) as error:
+                    pairs.append(dict(id=key,receptor=receptor,ligand=ligand,input_error=str(error)))
+                else:pairs.append(dict(id=key,receptor=receptor,ligand=resolved))
         if not pairs:raise ValueError('Nenhum par ativo de receptor e ligante foi selecionado.')
         if item is not None:item['input_files']={field:[c['path'] for c in values] for field,values in (('base_input_path',receptors),('base_selected_mols',ligands))}
         params.update(md_inputs=pairs,base_input_path=str(Path(receptors[0]['path']).parent),base_selected_mols=str(Path(ligands[0]['path']).parent))
@@ -164,13 +174,61 @@ class MDInputs:
 
 
 def normalize_receptor_variants(source,destination):
-    """Disambiguate HIS only from explicit hydrogen names; preserve coordinates."""
-    lines=Path(source).read_text().splitlines(keepends=True);atoms={}
+    """Preserve coordinates and explicit bonds in the execution-local PDB."""
+    lines=Path(source).read_text().splitlines(keepends=True)
+    atoms={};serials={};residues={};changes=[]
     for line in lines:
-        if line.startswith(('ATOM  ','HETATM')) and line[17:20]=='HIS':atoms.setdefault(line[21:27],set()).add(line[12:16].strip())
-    variants={key:('HIP' if {'HD1','HE2'}<=names else 'HID' if 'HD1' in names else 'HIE') for key,names in atoms.items() if {'HD1','HE2'}&names}
-    Path(destination).write_text(''.join(line[:17]+variants[line[21:27]]+line[20:] if line.startswith(('ATOM  ','HETATM')) and line[17:20]=='HIS' and line[21:27] in variants else line for line in lines))
-    return [dict(residue=key.strip(),input='HIS',output=value,evidence='Explicit HD1/HE2 hydrogen names; coordinates preserved') for key,value in variants.items()]
+        if not line.startswith(('ATOM  ','HETATM')):continue
+        key=line[21:27];name=line[12:16].strip()
+        atoms.setdefault(key,set()).add(name)
+        serials[int(line[6:11])]=(key,name,line[17:20])
+        residues.setdefault(key,{})[name]=tuple(float(line[i:i+8]) for i in (30,38,46))
+    variants={key:('HIP' if {'HD1','HE2'}<=names else 'HID' if 'HD1' in names else 'HIE')
+        for key,names in atoms.items() if {'HD1','HE2'}&names and any(
+            entry[0]==key and entry[2]=='HIS' for entry in serials.values())}
+    changes.extend(dict(residue=key.strip(),input='HIS',output=value,
+        evidence='Explicit HD1/HE2 hydrogen names; coordinates preserved') for key,value in variants.items())
+    bonds=set()
+    for line in lines:
+        if line.startswith('CONECT'):
+            ids=[int(line[i:i+5]) for i in range(6,len(line.rstrip()),5) if line[i:i+5].strip()]
+            if not ids:continue
+            first=serials.get(ids[0])
+            if not first or first[1]!='SG' or first[2] not in ('CYS','CYX'):continue
+            for serial in ids[1:]:
+                other=serials.get(serial)
+                if other and other[1]=='SG' and other[2] in ('CYS','CYX') and other[0]!=first[0]:
+                    bonds.add(tuple(sorted((first[0],other[0]))))
+        elif line.startswith('SSBOND'):
+            first=line[15]+line[17:21]+line[21]
+            other=line[29]+line[31:35]+line[35]
+            if first in atoms and other in atoms:bonds.add(tuple(sorted((first,other))))
+    partners={}
+    for first,other in bonds:
+        partners.setdefault(first,set()).add(other);partners.setdefault(other,set()).add(first)
+    for key,linked in partners.items():
+        if len(linked)!=1 or any(name in atoms[key] for name in ('HG','HG1')):
+            raise ValueError('A ligação dissulfeto explícita é incompatível com o estado da cisteína.')
+        variants[key]='CYX'
+        changes.append(dict(residue=key.strip(),input='CYS',output='CYX',
+            evidence='Explicit PDB SSBOND/CONECT SG-SG bond; coordinates preserved'))
+    output=[];previous=None;separated=True
+    for line in lines:
+        if line.startswith(('TER','MODEL','ENDMDL')):separated=True
+        if line.startswith(('ATOM  ','HETATM')):
+            key=line[21:27]
+            if key!=previous:
+                if previous and not separated and previous[0]==key[0]:
+                    before=residues[previous].get('C');after=residues[key].get('N')
+                    if before and after and math.dist(before,after)>2.0:
+                        output.append('TER\n')
+                        changes.append(dict(residue=key.strip(),input='unseparated backbone gap',output='TER',
+                            evidence='Consecutive residue C-N distance >2.0 A; no atoms moved or invented'))
+                previous=key;separated=False
+            if key in variants:line=line[:17]+variants[key]+line[20:]
+        output.append(line)
+    Path(destination).write_text(''.join(output))
+    return changes
 
 
 def receptor_input_files(paths):

@@ -326,5 +326,8 @@
   "Falha nativa isolada do Vina (código {0}): {1}": "Isolated native Vina failure (code {0}): {1}",
   "Vina CLI terminou com código {0}: {1}": "Vina CLI exited with code {0}: {1}",
   "Este documento inclui as {0} execuções mais recentes e os {1} registros de artefatos mais recentes; as contagens totais permanecem registradas no manifesto.": "This document includes the {0} most recent executions and {1} most recent artifact records; total counts remain recorded in the manifest.",
-  "Consenso: score não finito para {0}": "Consensus: non-finite score for {0}"
+  "Consenso: score não finito para {0}": "Consensus: non-finite score for {0}",
+  "Dinâmica: {0}/{1} · {2} / {3}": "Amber Score: {0}/{1} · {2} / {3}",
+  "Dinâmica concluída: {0} sucessos; {1} falhas.": "Amber Score completed: {0} succeeded; {1} failed.",
+  "Etapa da dinâmica: {0}": "Amber Score phase: {0}"
 }

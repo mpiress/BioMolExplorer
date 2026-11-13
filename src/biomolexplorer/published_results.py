@@ -45,8 +45,16 @@ def artifact_integrity(store,pid,entry,*,include_batches=False,root=None):
 
 def intact(store,pid,entry,root=None):
     if entry.get('status')!='succeeded' or any(entry.get(k) for k in
-            ('outputs_removed','dependency_obsolete','partial_results','redocking_failures','docking_failures','md_failures')):
+            ('outputs_removed','dependency_obsolete','partial_results','md_failures')):
         return False
+    if entry.get('redocking_failures'):
+        from .redocking_reuse import accounted_preparation_exclusions
+        if not accounted_preparation_exclusions(entry,root or store.project_dir(pid)):return False
+    operation=entry.get('operation') or entry.get('configuration',{}).get('operation')
+    if entry.get('docking_failures'):
+        from .docking_reuse import accounted_preparation_exclusions
+        if not accounted_preparation_exclusions(entry,operation,root or store.project_dir(pid)):
+            return False
     return artifact_integrity(store,pid,entry,root=root)
 
 
@@ -65,8 +73,16 @@ def _input_hashes(entry):
 
 def _protocol(stage):
     params=stage.get('parameters',{})
+    extra={}
+    if stage.get('operation')=='redocking':
+        from .redocking_config import effective_preparation,chimera_preparation,chimera_pairs
+        from .result_state import preparation
+        selected=set(request(stage)['axes'].get('pairs',[]))
+        normalized=dict(params,preparation_pairs=chimera_pairs(params.get('pdb_codes') or [],params.get('preparation_pairs')))
+        extra['preparation_pairs']={key:dict(chimera_preparation(value),**preparation(value,params.get('charge_type','gas')))
+            for key,value in effective_preparation(normalized).items() if key in selected}
     # These explicit protocol choices must not disappear in request defaults.
-    return {key:params.get(key) for key in ('preparation_backend','amber_score_type')}, {
+    return dict({key:params.get(key) for key in ('preparation_backend','amber_score_type')},**extra), {
         key:(params.get(key) or {}).get('preparation_backend') for key in ('preparation_options',)}
 
 
@@ -168,18 +184,21 @@ def adopted(entry,run_id):
 
 
 class ReviewHistory:
-    """Replayable lazy history: older runs are opened only when needed."""
+    """Replayable lazy history with a bounded decoded working set."""
     def __init__(self,store,ids):
         self.store=store;self.ids=ids;self.loaded=[];self.position=0
 
     def __iter__(self):
-        for entry in self.loaded:yield entry
         from .result_catalog import read_proofs
-        while self.position<len(self.ids):
-            rid=self.ids[self.position];self.position+=1
-            stages=read_proofs(self.store,rid)
-            if stages is not None:
-                entry=(rid,stages);self.loaded.append(entry);yield entry
+        for rid in self.ids:
+            entry=next((entry for entry in self.loaded if entry[0]==rid),None)
+            if entry is None:
+                stages=read_proofs(self.store,rid)
+                if stages is None:continue
+                entry=(rid,stages)
+                self.loaded.append(entry)
+                if len(self.loaded)>2:self.loaded.pop(0)
+            yield entry
 
 
 def histories(store,pid,*,include_active=False,compact=False):

@@ -109,6 +109,33 @@ class ConsensusCompletionTests(unittest.TestCase):
         self.assertEqual(item['progress'],job['progress'])
         manager.close.assert_called_once()
 
+    def test_history_is_replayable_without_retaining_all_decoded_runs(self):
+        from biomolexplorer.published_results import ReviewHistory
+        history=ReviewHistory(object(),list(range(12)))
+        with patch('biomolexplorer.result_catalog.read_proofs',side_effect=lambda store,rid:[{'id':str(rid)}]):
+            self.assertEqual([rid for rid,stages in history],list(range(12)))
+            self.assertLessEqual(len(history.loaded),2)
+            self.assertEqual([rid for rid,stages in history],list(range(12)))
+            self.assertLessEqual(len(history.loaded),2)
+
+    def test_reuse_stops_history_scan_at_first_valid_match(self):
+        from biomolexplorer.pipeline import PipelineService
+        from biomolexplorer.catalog import new_stage
+        from biomolexplorer.published_results import ReviewHistory
+        stage=new_stage('consensus')
+        history=ReviewHistory(object(),['new','must-not-open'])
+        service=object.__new__(PipelineService)
+        service.store=object()
+        previous={'id':stage['id'],'configuration':stage,'status':'succeeded','artifacts':['table.csv'],
+                  'artifact_manifest':{'table.csv':'sha'},'artifact_records':[{'path':'table.csv'}]}
+        with patch('biomolexplorer.result_catalog.read_proofs',return_value=[previous]) as read, \
+             patch('biomolexplorer.published_results.retained_configuration',return_value=stage), \
+             patch('biomolexplorer.published_results._hydrate',side_effect=lambda store,rid,entry:entry):
+            reused=service._reuse_stage('project','user',stage,{},'software',[],history)
+        self.assertIsNotNone(reused)
+        self.assertEqual(read.call_count,1)
+        self.assertEqual(history.loaded[0][0],'new')
+
 
 if __name__=='__main__':
     unittest.main()

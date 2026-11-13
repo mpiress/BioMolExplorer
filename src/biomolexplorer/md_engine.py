@@ -35,7 +35,7 @@ def tool_identity(root,found):
     library=root/'parameters/leap'
     return dict(tools={name:file_digest(path) for name,path in found.items()},
         parameters={p.relative_to(library).as_posix():file_digest(p) for p in sorted(library.rglob('*')) if p.is_file()},
-        adapter={name:file_digest(Path(__file__).with_name(name)) for name in ('md_engine.py','md_analysis.py','md_config.py','md_cache.py','md_inputs.py','processes.py')})
+        adapter={name:file_digest(Path(__file__).with_name(name)) for name in ('md_engine.py','md_analysis.py','md_config.py','md_cache.py','md_inputs.py','md_consensus.py','processes.py')})
 
 
 def prepare(directory,root,found,existing_charges):
@@ -132,7 +132,12 @@ def energies(path):
         match=re.search(r'\b'+source+r':\s*([-+0-9.eE]+)',text)
         if match is None or not math.isfinite(float(match[1])):raise ValueError('Energia AMBER ausente ou não finita: '+source)
         result[target]=float(match[1])
-    if not math.isclose(result['amber_score'],sum(result[k] for k in ('complex_energy','receptor_contribution','ligand_contribution')),abs_tol=5e-5):raise ValueError('Termos AMBER incompatíveis com o score total.')
+    total=math.fsum(result[k] for k in ('complex_energy','receptor_contribution','ligand_contribution'))
+    # DOCK6 6.11 returns the total as float32 but prints the component
+    # energies as doubles (score_amber.cpp). Include its rounding bound and
+    # the six-decimal output precision, without accepting arbitrary errors.
+    tolerance=max(5e-5,abs(total)*2**-24+2e-6)
+    if not math.isclose(result['amber_score'],total,rel_tol=0.,abs_tol=tolerance):raise ValueError('Termos AMBER incompatíveis com o score total.')
     return result
 
 

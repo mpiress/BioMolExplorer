@@ -125,5 +125,6 @@
   "consensus.normalizing": "Normalizando os scores por motor e alvo…",
   "consensus.aggregating": "Agregando os alvos por composto…",
   "consensus.exporting": "Publicando a tabela e as estruturas representativas…",
-  "consensus.done": "Consenso concluído."
+  "consensus.done": "Consenso concluído.",
+  "consensus.checking": "Verificando os resultados disponíveis para o consenso…"
 }

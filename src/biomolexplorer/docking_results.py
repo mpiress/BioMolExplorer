@@ -48,7 +48,37 @@ class DockingResults(CompoundTables):
         from .artifacts import annotate_files
         return annotate_files(stage,result,rid)
 
-    def pose(self,token,pid,rid,sid,table,index,version,column='conformer_file'):
+    def _target_route(self,token,pid,rid,sid,table,index,version,column,target):
+        from .consensus_targets import target_route
+        return target_route(self,token,pid,rid,sid,table,index,version,target,column)
+
+    def target_choices(self,token,pid,rid,sid,table,index,version,column='vina_pose',action='pose',validate=True):
+        from .consensus_targets import target_details,target_label
+        if column not in ('vina_pose','dock6_pose','conformer_file') or action not in ('pose','footprint'):
+            raise AccessDenied('Conformação não autorizada.')
+        if type(index) is not int or index<0:raise AccessDenied('Conformação não autorizada.')
+        path=self._path(token,pid,rid,sid,table)
+        row=self._record(path,index,version,root=self.store.project_dir(pid))
+        run,stage=self._stage(token,pid,rid,sid)
+        result=[]
+        for target in target_details(row):
+            available=True
+            try:
+                if not validate:available=True
+                elif action=='footprint':self.footprint(token,pid,rid,sid,table,index,version,target=target)
+                else:self.scene(token,pid,rid,sid,table,index,version,column=column,target=target)
+            except (OSError,ValueError,AccessDenied):available=False
+            result.append(dict(id=target,label=target_label(self,pid,run,row,target),available=available))
+        self.store.project(token,pid)
+        return result
+
+    def pose(self,token,pid,rid,sid,table,index,version,column='conformer_file',target=None):
+        if column not in ('conformer_file','vina_pose','dock6_pose'):raise AccessDenied('Conformação não autorizada.')
+        if target is not None:
+            route=self._target_route(token,pid,rid,sid,table,index,version,column,target)
+            if route:
+                child,source_rid,source_sid,selection=route
+                return child.pose(token,pid,source_rid,source_sid,**selection)
         path=self._path(token,pid,rid,sid,table)
         if type(index) is not int or index<0 or column not in ('conformer_file','vina_pose','dock6_pose'):raise AccessDenied('Conformação não autorizada.')
         try:row=self._record(path,index,version,root=self.store.project_dir(pid))
@@ -98,7 +128,13 @@ class DockingResults(CompoundTables):
                 if len(selected)>1:raise ValueError('O receptor associado a esta pose é ambíguo.')
         return pose,path,row,stage,receptor,linked,engine
 
-    def scene(self,token,pid,rid,sid,table,index,version,column='conformer_file'):
+    def scene(self,token,pid,rid,sid,table,index,version,column='conformer_file',target=None):
+        if column not in ('conformer_file','vina_pose','dock6_pose'):raise AccessDenied('Conformação não autorizada.')
+        if target is not None:
+            route=self._target_route(token,pid,rid,sid,table,index,version,column,target)
+            if route:
+                child,source_rid,source_sid,selection=route
+                return child.scene(token,pid,source_rid,source_sid,**selection)
         pose,path,row,stage,receptor,linked,engine=self._context(token,pid,rid,sid,table,index,version,column)
         if receptor is None:raise ValueError('O receptor associado a esta pose não está disponível.')
         reference=linked(engine+'_reference_file') or linked('reference_file')
@@ -108,7 +144,13 @@ class DockingResults(CompoundTables):
         return dict(name=row['molecule_chembl_id']+' · '+row.get('receptor_id','')+' · '+engine.upper(),
             layers=layers,reference_kind='prepared' if reference else None,ligand_smiles=row.get('canonical_smiles'))
 
-    def footprint(self,token,pid,rid,sid,table,index,version):
+    def footprint(self,token,pid,rid,sid,table,index,version,target=None):
+        if target is not None:
+            route=self._target_route(token,pid,rid,sid,table,index,version,'footprint_file',target)
+            if route:
+                child,source_rid,source_sid,selection=route
+                selection.pop('column')
+                return child.footprint(token,pid,source_rid,source_sid,**selection)
         path=self._path(token,pid,rid,sid,table)
         if type(index) is not int or index<0:raise AccessDenied('Footprint não autorizado.')
         try:row=self._record(path,index,version,root=self.store.project_dir(pid))
@@ -116,9 +158,9 @@ class DockingResults(CompoundTables):
         _,stage=self._stage(token,pid,rid,sid)
         return self._footprint_path(pid,path,row,stage)
 
-    def footprint_pdf(self,token,pid,rid,sid,table,index,version):
+    def footprint_pdf(self,token,pid,rid,sid,table,index,version,target=None):
         from .visualizations import MAX_VIEW_BYTES
-        path=self.footprint(token,pid,rid,sid,table,index,version)
+        path=self.footprint(token,pid,rid,sid,table,index,version,target=target)
         data=self.store.read_file(token,pid,path,MAX_VIEW_BYTES+1)
         if len(data)>MAX_VIEW_BYTES:raise ValueError('O PDF ultrapassa o limite de 32 MB.')
         return data

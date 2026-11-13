@@ -697,7 +697,10 @@ class WorkspaceUI(ProjectTools):
         assets=await self.call(self.store.assets,token,project['id'])
         if self.token != token or self.current is not project or self._dialog_request!=request:
             return
-        runs=await self.call(self.store.list_runs,token,project['id'])
+        if draft['operation']=='dynamics_dock6' and hasattr(self.store,'list_result_runs'):
+            runs=await self.call(self.store.list_result_runs,token,project['id'],limit=100)
+        else:
+            runs=await self.call(self.store.list_runs,token,project['id'])
         if self.token != token or self.current is not project or self._dialog_request!=request:
             return
         if waiting_run_id:
@@ -830,7 +833,10 @@ class WorkspaceUI(ProjectTools):
                 draft=reader()
             mode=new_mode
             if mode=='visual':
-                form=GuidedForm(self,draft,assets,writable)
+                if draft['operation']=='dynamics_dock6':
+                    form=await self.call(GuidedForm,self,draft,assets,writable)
+                    if self._dialog_request!=request or self.token!=token or self.current is not project:return
+                else:form=GuidedForm(self,draft,assets,writable)
                 reader=form.read
                 body.content=form.layout()
             else:
@@ -854,7 +860,12 @@ class WorkspaceUI(ProjectTools):
             if applied or self.token!=token or self.current is not project or self._dialog_request!=request or not dialog.open:return
             await self.call(self.store.project,self.token,self.current['id'],'editor')
             if applied or self.token!=token or self.current is not project or self._dialog_request!=request:return
-            updated=reader()
+            updated=await self.call(reader) if draft['operation']=='dynamics_dock6' else reader()
+            if applied or self.token!=token or self.current is not project or self._dialog_request!=request or not dialog.open:return
+            if draft['operation']=='dynamics_dock6' and not waiting_run_id and not self.dirty and updated==original:
+                applied=True
+                self._finish_configuration_dialogs(waiting_run_id,stage_id)
+                return
             if updated.get('provided_results'):
                 from biomolexplorer.input_validation import validate_bundle
                 provided=updated['provided_results']
