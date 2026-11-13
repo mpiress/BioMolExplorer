@@ -55,3 +55,7 @@ remove o indicador de outra que ainda está trabalhando. As mensagens e os
 rótulos de acessibilidade possuem traduções em português e inglês.
 
 A consulta periódica de atualizações também usa `@background`: mesmo com uma janela de configuração, remoção ou cancelamento aberta, essa tarefa não cria splash. A consulta manual de atualizações continua com feedback quando solicitada.
+
+## Falhas de exclusão
+
+`RemovalProgress` executa a mutação dentro do escopo de processamento e deixa `guard` apresentar erros somente após o fechamento desse escopo. Assim, uma notificação não é empilhada sobre o splash modal de exclusão. Falhas e cancelamentos liberam o estado single-flight e restauram os controles que estavam habilitados; uma remoção concluída continua impedindo cliques duplicados. A garantia é de ciclo de vida da interface, não de autorização para remover resultados durante uma execução ativa.

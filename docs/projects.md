@@ -1,5 +1,8 @@
 # Projetos, arquivos e versões
 
+> Sincronização com o código: 13/11/2026. Consulte a [referência do código atual](current_reference.md) para parâmetros registrados, padrões, compatibilidade e comportamentos não oferecidos. O texto descreve o checkout, não comprova instalação ou aceitação global da release.
+
+
 [Documentação](README.md) · Português · [English](en/projects.md)
 
 ## Escolher a pasta do projeto
@@ -158,3 +161,9 @@ Ambas as limpezas exigem confirmação e permissão de edição; uma execução 
 `TG[ALVO]-SRC[ORIGEM]-OP[OPERAÇÃO]-TIPO-ID[hash].ext` identifica alvo, entrada imediata, produtor e conteúdo. Exemplo real: `TG[ACHE]-SRC[MOL]-OP[ADMET]-BBB+-ID[24113d53].csv`. `TG[NA]` evita inventar alvos para coleções independentes. O sufixo determinístico distingue ocorrências; IDs completos, parâmetros, entradas e histórico continuam nos metadados.
 
 Os nomes exibidos e baixados são aliases persistentes. Nomes físicos nativos, referências relativas e arquivos legados permanecem compatíveis. ZIPs científicos mantêm sua estrutura e incluem um índice; backups `.bme.zip` preservam a configuração, os resultados e os descritores. Isso não atribui validade química a um arquivo. Consulte a [convenção detalhada](artifact_naming.md).
+
+## Excluir resultados AMBER e solicitar novo cálculo
+
+A remoção por arquivo/etapa é autorizada, confirmada e auditada, e fica bloqueada enquanto houver execução ativa no projeto. A exclusão lê metadados autoritativos na própria transação SQLite, sem entrar no escritor da projeção de resultados por outra conexão. Uma mutação malsucedida restaura arquivos movidos e metadados; o splash fecha antes de apresentar o erro e os controles de confirmação permitem nova tentativa.
+
+Para `dynamics_dock6`, remover arquivos ou todos os resultados da etapa renova o `result_cache_epoch` interno. O pipeline fornece `md_cache_epoch` ao cache de pares concluídos para não restaurar silenciosamente o resultado final excluído. Isso não muda parâmetros científicos nem descarta caches compatíveis de preparo/grid/kernel. Outros blocos conservam suas identidades de cache. O valor não é uma opção científica visível no formulário. A limpeza global também renova gerações MD. Remover um par na tabela de pares é uma ação distinta de exclusão da seleção: atualiza `excluded_pairs` e conserva arquivos históricos para auditoria; selecione/configure o par novamente se ele deve voltar a executar.

@@ -1,5 +1,8 @@
 # Validation of pipeline stages and connections
 
+> Source synchronization: 2026-11-13. See [current source reference](current_reference.md) for exact registered parameters, defaults, compatibility and unsupported behaviors. This describes the checkout, not an installation or global release acceptance.
+
+
 [Documentation](../README.md) · English · [Português](../pipeline_validation.md)
 
 The review covers the operation catalog, file contracts, block relationships, input selection and materialization, individual/merge processing, branch execution, persistence and reuse. The [user manual](user_manual.md) teaches the operational workflow; this page records how to verify it and the limits of the evidence.

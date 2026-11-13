@@ -159,3 +159,7 @@ O RMSD usa somente átomos pesados na referência cristalográfica e na melhor p
 sem alinhamento que esconda deslocamentos. RMSD alto é um resultado de avaliação,
 não uma falha de execução. Erros de topologia, ferramentas ou configuração continuam
 visíveis, com o passo e o diagnóstico, sem impedir os demais pares de executar.
+
+## DOCK6: busca e avaliação de poses
+
+`dock6_mode` é independente de `conformer_search_type`. No docking de candidatos, o padrão é `auto`: uma pose vinculada a alvo seleciona `guided`; caso contrário seleciona `denovo`. Um conformero genérico de biblioteca não comprova pose vinculada a alvo. `denovo` executa a busca conformacional configurada; `guided` desabilita reorientação e minimiza localmente a pose fornecida; `score_only` desabilita reorientação e minimização do ligante; `restrained` minimiza com restrição de coordenadas. Esses três modos de avaliação exigem coordenadas estruturais. No Redocking, o padrão é `redock`; as alternativas expostas são `score_only` e `restrained`. Os controles que definem o modo são impostos mesmo em templates personalizados. Caches de sítio/grid e moléculas permanecem reutilizáveis quando suas assinaturas coincidem. Consulte `dock6_protocol.py`; grid scoring não equivale ao bloco separado de Amber Score nativo.

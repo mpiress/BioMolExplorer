@@ -1,5 +1,8 @@
 # Uso da camada de aplicação
 
+> Sincronização com o código: 13/11/2026. Consulte a [referência do código atual](current_reference.md) para parâmetros registrados, padrões, compatibilidade e comportamentos não oferecidos. O texto descreve o checkout, não comprova instalação ou aceitação global da release.
+
+
 [Documentação](README.md) · Português · [English](en/backend_usage.md)
 
 Para utilizar a interface pronta com autenticação e projetos, consulte o
@@ -13,6 +16,7 @@ Crie/ative o ambiente Conda e instale o projeto a partir da raiz do código baix
 ```bash
 conda env create -f requirements.yml
 conda activate BioMolExplorer
+python -m pip install -e '.[ui]'
 export PYTHONPATH="$PWD/src${PYTHONPATH:+:$PYTHONPATH}"
 ```
 
@@ -252,7 +256,7 @@ Confira a caixa, pH e esforço do Vina e as cargas, superfície, distância, rai
 
 **Consenso de docking** reúne os resultados selecionados de cada motor, incluindo vários lotes e ramificações. Calcula somente a interseção por código molecular e receptor, usando o menor score quando há poses repetidas. Resultados do mesmo código com estruturas diferentes são recusados. Não havendo interseção, o bloco é marcado como não executado e explica que os motores não avaliaram compostos em comum para o mesmo receptor.
 
-A tabela de consenso apresenta os scores Vina e DOCK6, SMILES, receptor e normalizações z-score/min-max, com botões **3D Vina**, **3D DOCK6** e **Remover** em cada linha. O score DOCK6 usado no consenso é `min(0, Grid_Score + repulsion_weight × Internal_energy_repulsive)`; a repulsão ausente vale zero. Para um composto ou scores constantes, as normalizações são zero. A remoção exige permissão de edição, fica registrada e afeta próximas entradas; não recalcula análises já concluídas. As tabelas principais de cada lote são usadas sem reintroduzir linhas removidas a partir das tabelas auxiliares.
+A tabela de consenso usa `target-balanced-ecr-v1`: uma linha por composto, com relevância Vina, relevância DOCK6 e a média dos dois fatores; maior é melhor. Cada motor/alvo usa ranks médios nos empates e `exp(-q/0,1)`. Entre alvos, agregação geométrica e cobertura observada penalizam avaliações ausentes. As três colunas exibem três casas decimais, preservando a precisão no CSV. Z-score/min-max e truncamento de energias positivas para zero não integram o modelo ativo; `repulsion_weight` permanece como argumento de compatibilidade sem efeito. Um singleton tem relevância 1; uma distribuição constante com mais de um composto tem `q=0,5`. Com múltiplos alvos, 3D Vina, 3D DOCK6 e footprint abrem primeiro um seletor pesquisável de alvo; com um alvo o acesso é direto. A remoção permanece auditada e os resumos publicados são a referência. Consulte o [modelo de consenso](docking_consensus.md).
 
 As saídas nativas usam `docking_results.csv`: `molecule_chembl_id,canonical_smiles,receptor_id,engine,score,conformer_file`. Caminhos de pose são relativos à tabela. Importe também os arquivos de conformação. No backend direto, `base_selected_mols` é a pasta da tabela e `mol_filename` é seu nome sem `.csv`; `base_vina_path` do DOCK6 é opcional. O consenso recebe pastas em `base_vina_path` e `base_dock6_path`, exporta as duas poses em `poses/` e retorna `skipped_reason` quando não há interseção.
 
@@ -402,7 +406,7 @@ Inventário extraído do registro atual, sem executar cálculos. Obrigatório si
 
 | Obrigatórios | Opcionais |
 | --- | --- |
-| `base_input_path`, `base_selected_mols` | `dock6_app_path`, `md_inputs`, `md_seed_path`, `selected_pairs`, `excluded_pairs`, `amber_score_type`, `amber_score_movable_region`, `amber_score_minimization_rmsgrad`, `amber_score_before_md_minimization_cycles`, `amber_score_md_steps`, `amber_score_after_md_minimization_cycles`, `amber_score_gb_model`, `amber_score_nonbonded_cutoff`, `amber_score_temperature`, `amber_score_movable_distance_cutoff`, `amber_score_receptor_movable_atom_expr`, `amber_score_complex_movable_atom_expr`, `amber_score_abort_on_unprepped_ligand`, `use_existing_ligand_charges` |
+| `base_input_path`, `base_selected_mols` | `dock6_app_path`, `md_inputs`, `md_seed_path`, `selected_pairs`, `excluded_pairs`, `amber_score_type`, `amber_score_movable_region`, `amber_score_minimization_rmsgrad`, `amber_score_before_md_minimization_cycles`, `amber_score_md_steps`, `amber_score_after_md_minimization_cycles`, `amber_score_gb_model`, `amber_score_nonbonded_cutoff`, `amber_score_temperature`, `amber_score_movable_distance_cutoff`, `amber_score_receptor_movable_atom_expr`, `amber_score_complex_movable_atom_expr`, `amber_score_abort_on_unprepped_ligand`, `use_existing_ligand_charges`, `residue_parameter_policy`, `md_cache_epoch` |
 
 ### API retrieve_pubchem
 
@@ -490,7 +494,7 @@ Inventário extraído do registro atual, sem executar cálculos. Obrigatório si
 
 | Obrigatórios | Opcionais |
 | --- | --- |
-| `base_input_path`, `target` | `pdb_codes`, `pH`, `sizeof_box`, `exhaustiveness`, `num_modes`, `prepare_complex`, `charge_type`, `preparation_pairs`, `preparation_options`, `redocking_engine`, `dock6_app_path`, `density`, `radius`, `distance`, `conformer_search_type`, `max_orientations`, `num_scored_conformers`, `dock6_seed` |
+| `base_input_path`, `target` | `pdb_codes`, `pH`, `sizeof_box`, `exhaustiveness`, `num_modes`, `prepare_complex`, `charge_type`, `preparation_pairs`, `preparation_options`, `redocking_engine`, `dock6_app_path`, `density`, `radius`, `distance`, `conformer_search_type`, `max_orientations`, `num_scored_conformers`, `dock6_seed`, `dock6_mode` |
 
 ### API docking_vina
 
@@ -506,7 +510,7 @@ Inventário extraído do registro atual, sem executar cálculos. Obrigatório si
 
 | Obrigatórios | Opcionais |
 | --- | --- |
-| `base_input_path`, `target`, `base_selected_mols`, `dock6_app_path`, `charge_type`, `mol_filename` | `pdb_code`, `base_vina_path`, `density`, `radius`, `distance`, `conformer_search_type`, `plot_max_residues`, `pH`, `preparation_options`, `receptor_prepared` |
+| `base_input_path`, `target`, `base_selected_mols`, `dock6_app_path`, `charge_type`, `mol_filename` | `pdb_code`, `base_vina_path`, `density`, `radius`, `distance`, `conformer_search_type`, `plot_max_residues`, `pH`, `preparation_options`, `receptor_prepared`, `dock6_mode` |
 
 ### API consensus
 
@@ -538,5 +542,20 @@ O verificador exige DOCK6 que se identifique como **6.11**, `bin/` e `parameters
 | `amber_score_complex_movable_atom_expr` | `::` | Expressão NAB do complexo |
 | `amber_score_abort_on_unprepped_ligand` | true | Não pontuar ligante sem preparo AMBER válido |
 | `use_existing_ligand_charges` | false | true preserva cargas MOL2; false usa a preparação AM1-BCC do bundle DOCK6 |
+| `residue_parameter_policy` | `auto_curated` | `auto_curated`, `native_ff94`, `ff03_ffptm`; perfil coerente da proteína/PTM |
 
 O resultado contém score e contribuições de complexo/receptor/ligante, protocolo, estruturas e arquivos de diagnóstico. Havendo estrutura final compatível, a análise compara RMSD, raio de giro e contagem de hidrogênios inicial/final. Contagem de hidrogênios não mede ligações H. Não se oferece RMSF ou ocupância temporal sem trajetória; o modo `nothing` pode não fornecer estrutura final. Não há controle de caixa explícita, pressão ou protocolo convencional de equilíbrio. Defeitos de tipagem, metais/cofatores não parametrizados e inconsistências de carga devem ser tratados explicitamente; a documentação não garante que todo par seja viável.
+
+## Suporte estrutural AMBER nativo
+
+O Amber Score inclui saneamento independente do alvo, 32 modelos ff03/PTM, parâmetros baseados no CCD para componentes orgânicos isolados e compatibilidade de torções DOCK6 em cópia local quando necessária. A instalação original DOCK6 é preservada. `residue_parameter_policy` usa `auto_curated` por padrão; `native_ff94` e `ff03_ffptm` são alternativas. Compiladores/make/flex/zlib e a licença não comercial **CC BY-NC 4.0** dos dados PTM são distintos da licença MIT do código. PTMs covalentes desconhecidos e metais não suportados exigem parâmetros validados. Consulte o [suporte estrutural](amber_score_structural_support.md) para estados químicos, cache, limites e reprodução.
+
+## DOCK6: busca e avaliação de poses
+
+`dock6_mode` é independente de `conformer_search_type`. No docking de candidatos, o padrão é `auto`: uma pose vinculada a alvo seleciona `guided`; caso contrário seleciona `denovo`. Um conformero genérico de biblioteca não comprova pose vinculada a alvo. `denovo` executa a busca conformacional configurada; `guided` desabilita reorientação e minimiza localmente a pose fornecida; `score_only` desabilita reorientação e minimização do ligante; `restrained` minimiza com restrição de coordenadas. Esses três modos de avaliação exigem coordenadas estruturais. No Redocking, o padrão é `redock`; as alternativas expostas são `score_only` e `restrained`. Os controles que definem o modo são impostos mesmo em templates personalizados. Caches de sítio/grid e moléculas permanecem reutilizáveis quando suas assinaturas coincidem. Consulte `dock6_protocol.py`; grid scoring não equivale ao bloco separado de Amber Score nativo.
+
+## Excluir resultados AMBER e solicitar novo cálculo
+
+A remoção por arquivo/etapa é autorizada, confirmada e auditada, e fica bloqueada enquanto houver execução ativa no projeto. A exclusão lê metadados autoritativos na própria transação SQLite, sem entrar no escritor da projeção de resultados por outra conexão. Uma mutação malsucedida restaura arquivos movidos e metadados; o splash fecha antes de apresentar o erro e os controles de confirmação permitem nova tentativa.
+
+Para `dynamics_dock6`, remover arquivos ou todos os resultados da etapa renova o `result_cache_epoch` interno. O pipeline fornece `md_cache_epoch` ao cache de pares concluídos para não restaurar silenciosamente o resultado final excluído. Isso não muda parâmetros científicos nem descarta caches compatíveis de preparo/grid/kernel. Outros blocos conservam suas identidades de cache. O valor não é uma opção científica visível no formulário. A limpeza global também renova gerações MD. Remover um par na tabela de pares é uma ação distinta de exclusão da seleção: atualiza `excluded_pairs` e conserva arquivos históricos para auditoria; selecione/configure o par novamente se ele deve voltar a executar.

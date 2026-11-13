@@ -1,5 +1,8 @@
 # Instalação e configuração do BioMolExplorer
 
+> Sincronização com o código: 13/11/2026. Consulte a [referência do código atual](current_reference.md) para parâmetros registrados, padrões, compatibilidade e comportamentos não oferecidos. O texto descreve o checkout, não comprova instalação ou aceitação global da release.
+
+
 [Documentação](README.md) · Português · [English](en/installation.md)
 
 Siga esta ordem: baixar o projeto → instalar as ferramentas externas → preparar o ambiente Conda → configurar e verificar os executáveis → iniciar o BioMolExplorer. Os exemplos de terminal deste guia usam Linux e Bash, ambiente de execução do backend atual. Instale previamente Git e Anaconda ou Miniconda.
@@ -145,3 +148,7 @@ Em um novo terminal, execute `conda activate BioMolExplorer`, reaplique os camin
 O caminho recomendado usa `requirements.yml` para as dependências científicas e `python -m pip install -e '.[ui]'` para registrar o aplicativo. Chimera, DOCK6 e Conda são ferramentas externas, não dependências pip. O extra `ui` sozinho não instala o ambiente científico completo. ADMET-AI permanece opcional e isolado; não instale `.[admet-ml]` no ambiente de docking.
 
 Este guia usa Linux/Bash e Python 3.12. Não há lock Linux distribuído neste checkout; não use um arquivo de lock inexistente. Uma instalação limpa requer rede e disponibilidade dos pacotes declarados. `pip check` verifica metadados Python, não executa os protocolos científicos. Valide as ferramentas externas e um caso de referência antes de usar os resultados em pesquisa.
+
+## Suporte estrutural AMBER nativo
+
+O Amber Score inclui saneamento independente do alvo, 32 modelos ff03/PTM, parâmetros baseados no CCD para componentes orgânicos isolados e compatibilidade de torções DOCK6 em cópia local quando necessária. A instalação original DOCK6 é preservada. `residue_parameter_policy` usa `auto_curated` por padrão; `native_ff94` e `ff03_ffptm` são alternativas. Compiladores/make/flex/zlib e a licença não comercial **CC BY-NC 4.0** dos dados PTM são distintos da licença MIT do código. PTMs covalentes desconhecidos e metais não suportados exigem parâmetros validados. Consulte o [suporte estrutural](amber_score_structural_support.md) para estados químicos, cache, limites e reprodução.

@@ -2,6 +2,8 @@
 
 Updated: 2026-11-06
 
+> Historical implementation/validation snapshot. The statuses and test counts below are dated evidence, not a fresh certification of the current checkout. See the [current source reference](en/current_reference.md) and [documentation audit](documentation_audit_2026-11-13.md).
+
 This file records verified progress for the semantic artifact migration. A
 step is marked complete only after its focused regressions pass.
 

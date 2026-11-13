@@ -95,3 +95,15 @@ python scripts/validate_docs.py
 A geração preserva o novo layout nos dois idiomas e não exige mais correção manual dos resumos após a geração. A validação inclui destinos PT/EN usados dinamicamente e ignora o template, que é fonte e não uma página publicada.
 
 Generation retains the new design in both languages and requires no manual summary patch afterwards. Validation includes dynamic PT/EN destinations and excludes the source template from published-page checks.
+
+## Auditoria de 13/11/2026 / 2026-11-13 audit
+
+| Português | English |
+| --- | --- |
+| [Referência derivada do código](current_reference.md) | [Source-derived reference](en/current_reference.md) |
+| [Consenso por composto](docking_consensus.md) | [Compound-level consensus](en/docking_consensus.md) |
+| [Suporte estrutural AMBER](amber_score_structural_support.md) | [AMBER structural support](en/amber_score_structural_support.md) |
+
+[Relatório da auditoria documental e lista de arquivos alterados](documentation_audit_2026-11-13.md). Os guias adicionais são acessíveis por estes links e pelos manuais; o registro executável do gerador não foi alterado. Relatórios em [validation](validation/README.md) são evidências datadas, não instruções atuais de instalação.
+
+[Documentation audit and per-file change list](documentation_audit_2026-11-13.md). Additional references are linked here and from the manuals; the executable builder registry was not changed. [Validation reports](validation/README.md) are dated evidence rather than current installation instructions.

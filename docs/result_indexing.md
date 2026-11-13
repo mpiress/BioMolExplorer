@@ -64,3 +64,9 @@ O custo de construção e a latência posterior são medidos separadamente. Os
 tempos representam o backend de leitura, não FPS da interface nem execução
 científica. `tests/test_result_index.py` cobre ordenação, buscas, versões,
 reutilização entre instâncias, recuperação de corrupção e autorização.
+
+## Leitura, escrita e exclusão
+
+Os índices de consulta são derivados. A remoção usa `ResultFiles._transaction_stage` na transação de escrita já aberta; não chama o leitor de projeção para preencher caches por outra conexão durante a exclusão. `result_read_versions` continua sendo atualizado pelos triggers quando o JSON autoritativo muda, e a próxima leitura reconstrói uma projeção obsoleta. Consulte [exclusão e nova execução AMBER](projects.md#excluir-resultados-amber-e-solicitar-novo-calculo).
+
+`CalculationCache` não é necessariamente exclusivo de um projeto: com `BIOMOL_PREPARATION_CACHE`, usa `Path(valor).parent / calculations`; sem essa variável, usa `.calculation-cache` no destino. A configuração do worker pode compartilhar caches entre jobs. Não apague todo o índice compartilhado para solicitar novo cálculo de um único bloco; a geração de resultados MD trata esse caso sem invalidar preparos ou outros consumidores.

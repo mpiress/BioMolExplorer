@@ -1,5 +1,8 @@
 # Workspace Flet
 
+> Sincronização com o código: 13/11/2026. Consulte a [referência do código atual](current_reference.md) para parâmetros registrados, padrões, compatibilidade e comportamentos não oferecidos. O texto descreve o checkout, não comprova instalação ou aceitação global da release.
+
+
 [Documentação](README.md) · Português · [English](en/frontend.md)
 
 A interface reúne autenticação, projetos privados, convites, biblioteca de arquivos,
@@ -32,7 +35,7 @@ Na raiz do código baixado, com o ambiente científico preparado:
 
 ```bash
 conda activate BioMolExplorer
-# Execução pelo checkout; veja a limitação de empacotamento abaixo.
+# Alternativa pelo checkout; a instalação também registra comandos de terminal.
 biomolexplorer-ui --web --language pt --dock6-path /caminho/para/dock6-6.11
 ```
 
@@ -497,7 +500,7 @@ Confira a caixa, pH e esforço do Vina e as cargas, superfície, distância, rai
 
 **Consenso de docking** reúne os resultados selecionados de cada motor, incluindo vários lotes e ramificações. Calcula somente a interseção por código molecular e receptor, usando o menor score quando há poses repetidas. Resultados do mesmo código com estruturas diferentes são recusados. Não havendo interseção, o bloco é marcado como não executado e explica que os motores não avaliaram compostos em comum para o mesmo receptor.
 
-A tabela de consenso apresenta os scores Vina e DOCK6, SMILES, receptor e normalizações z-score/min-max, com botões **3D Vina**, **3D DOCK6** e **Remover** em cada linha. O score DOCK6 usado no consenso é `min(0, Grid_Score + repulsion_weight × Internal_energy_repulsive)`; a repulsão ausente vale zero. Para um composto ou scores constantes, as normalizações são zero. A remoção exige permissão de edição, fica registrada e afeta próximas entradas; não recalcula análises já concluídas. As tabelas principais de cada lote são usadas sem reintroduzir linhas removidas a partir das tabelas auxiliares.
+A tabela de consenso usa `target-balanced-ecr-v1`: uma linha por composto, com relevância Vina, relevância DOCK6 e a média dos dois fatores; maior é melhor. Cada motor/alvo usa ranks médios nos empates e `exp(-q/0,1)`. Entre alvos, agregação geométrica e cobertura observada penalizam avaliações ausentes. As três colunas exibem três casas decimais, preservando a precisão no CSV. Z-score/min-max e truncamento de energias positivas para zero não integram o modelo ativo; `repulsion_weight` permanece como argumento de compatibilidade sem efeito. Um singleton tem relevância 1; uma distribuição constante com mais de um composto tem `q=0,5`. Com múltiplos alvos, 3D Vina, 3D DOCK6 e footprint abrem primeiro um seletor pesquisável de alvo; com um alvo o acesso é direto. A remoção permanece auditada e os resumos publicados são a referência. Consulte o [modelo de consenso](docking_consensus.md).
 
 
 Em **Preparar para docking**, conecte **Receptor PDB (retrieval ou redocking)** e **Compostos selecionados** separadamente. Para um PDB bruto do retrieval, informe os registros `[PDB, ligante de referência, resíduo, cadeia]` ou forneça `pdb_codes.csv`; as opções de preparo do receptor permanecem disponíveis. Para receptores do redocking, escolha o arquivo `.dockprep.pdbqt` no campo **Receptor que deseja utilizar**: os arquivos exclusivos do ligante ficam ocultos e as opções de preparo do receptor são desabilitadas. Os arquivos complementares e os centros acompanham o receptor; ele é reutilizado sem novo preparo.
@@ -514,31 +517,11 @@ Na configuração do docking e no popup de arquivos, cada tabela de compostos of
 
 ## Atualizações pela branch master
 
-O botão **Atualizações**, no cabeçalho, consulta a branch `master` de
-[mpiress/BioMolExplorer](https://github.com/mpiress/BioMolExplorer) ao abrir a
-interface e a cada hora. Quando há uma revisão nova, passa a mostrar
-**Atualização disponível**. Clique para consultar o commit e escolher
-**Baixar atualização** ou **Lembrar em 24 horas**. O adiamento é salvo por conta
-no workspace; o botão continua permitindo uma consulta manual.
+**Atualizações** consulta `master` na abertura e usa intervalo de uma hora para novas consultas de rede; o polling da interface acorda a cada 60 segundos. **Instalar atualização** baixa o arquivo do commit GitHub exibido, valida caminhos e estrutura do pacote, reúne apenas `src/` e os arquivos de empacotamento e chama o interpretador atual com `pip install --no-deps --upgrade`. A instalação ocorre no computador que hospeda a aplicação, inclusive no modo web; não é um ZIP enviado ao navegador para extração manual.
 
-O download é um ZIP do commit mostrado no aviso e vai para o computador do
-usuário, inclusive quando a interface está em um servidor web. A instalação
-continua sendo uma etapa manual: encerre as análises, extraia o código e siga o
-[guia de instalação](installation.md), depois reinicie o aplicativo. O download
-não altera o código em execução, as contas ou os projetos. Falhas de conexão não
-impedem o uso da interface; a consulta manual permite tentar novamente.
+Após a instalação, reinicie o BioMolExplorer para carregar os novos módulos. Não há reinício automático do processo nem atualização automática do Conda ou das ferramentas científicas. O atualizador não reescreve deliberadamente projetos, contas, resultados científicos ou as instalações originais DOCK6/Chimera. O log fica em `updates/install-<sha>.log` no diretório de dados da aplicação. **Lembrar em 24 horas** é salvo por conta. Falhas de rede/instalação são apresentadas e permitem nova tentativa; uma falha de consulta não comprova que a instalação esteja atualizada.
 
-Checkouts Git usam o commit instalado como referência; pacotes wheel construídos
-pelo projeto incluem essa referência. ZIPs baixados pelo botão preservam o commit
-no nome da pasta `BioMolExplorer-<commit>`: mantenha esse nome. ZIPs sem referência
-(como `BioMolExplorer-master`) registram o primeiro commit consultado e avisam
-sobre mudanças posteriores. As preferências ficam em `updates.json` no diretório
-de dados da aplicação.
-
-Seleções de resultados guardam o lote e o caminho lógico do arquivo, sem o
-identificador temporário do worker. Assim, uma nova execução do PDB ou do docking
-mantém a seleção do mesmo resultado. Configurações anteriores também são aceitas;
-resultados ausentes ou ambíguos continuam exigindo uma nova seleção.
+Metadados Git, uma pasta de distribuição `BioMolExplorer-<commit>` ou a baseline registrada identificam a revisão. Uma instalação sem versão registra o primeiro commit observado como baseline. Consulte a [referência do código atual](current_reference.md) para caminhos e limites.
 
 ## Visualizador molecular e interações 3D
 
@@ -720,3 +703,9 @@ do resumo do resultado, com tradução dos textos dinâmicos em português e ing
 ## Contrato atual de execução e resultados
 
 [Ordem do DAG, seleção tardia, pausa/cancelamento, limpeza e reúso incremental](projects.md#execucao-selecao-tardia-e-preservacao-de-resultados). [Nomes públicos e linhagem](projects.md#nomes-publicos-e-rastreabilidade).
+
+## Excluir resultados AMBER e solicitar novo cálculo
+
+A remoção por arquivo/etapa é autorizada, confirmada e auditada, e fica bloqueada enquanto houver execução ativa no projeto. A exclusão lê metadados autoritativos na própria transação SQLite, sem entrar no escritor da projeção de resultados por outra conexão. Uma mutação malsucedida restaura arquivos movidos e metadados; o splash fecha antes de apresentar o erro e os controles de confirmação permitem nova tentativa.
+
+Para `dynamics_dock6`, remover arquivos ou todos os resultados da etapa renova o `result_cache_epoch` interno. O pipeline fornece `md_cache_epoch` ao cache de pares concluídos para não restaurar silenciosamente o resultado final excluído. Isso não muda parâmetros científicos nem descarta caches compatíveis de preparo/grid/kernel. Outros blocos conservam suas identidades de cache. O valor não é uma opção científica visível no formulário. A limpeza global também renova gerações MD. Remover um par na tabela de pares é uma ação distinta de exclusão da seleção: atualiza `excluded_pairs` e conserva arquivos históricos para auditoria; selecione/configure o par novamente se ele deve voltar a executar.

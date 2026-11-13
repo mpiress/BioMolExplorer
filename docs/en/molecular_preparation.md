@@ -30,12 +30,11 @@ chemistry options and tool identities; native historical preparations are not
 silently relabeled as Chimera results. Pair failures remain isolated and logged.
 
 Chimera runs structural Dock Prep before AddH/AddCharge, resolving alternate
-locations for receptors and ligands and repairing incomplete receptor side
-chains. Minimization then uses `prep false` to preserve the chosen charges.
+locations for receptors and ligands without reconstructing incomplete receptor side
+chains (`incompleteSideChains=False`). Minimization then uses `prep false` to preserve the chosen charges.
 
 Available local CCD definitions guide carbon hybridization and oxime/nitrone
-atom types before protonation. Failed charge assignment may retrieve a
-component definition and retry in Chimera with the same charge method.
+atom types before protonation. The active ligand path applies available CCD-backed typing before hydrogenation/charging. A historical retry helper exists, but `Docking.prepare_on_chimera` does not invoke a general failed-charge retry; inspect the preserved diagnostics.
 The application does not substitute gas charges for AM1 failures.
 
 MOL2 export may repair heavy-bond orders from the component definition while
@@ -56,3 +55,11 @@ Set `BIOMOL_PREPARATION_WORKERS=1` in the application's environment to reduce co
 Per-molecule native files and verified cache manifests remain durable. The growing `compounds.csv` index is coalesced with a five-second minimum interval between periodic writes and forced on completion/handled fatal error, reducing repeated I/O. This does not promise a CSV checkpoint for every molecule; valid rows can be rebuilt from verified cache after interruption. Explicitly disabled reuse remains disabled. Exact version equivalences were audited so scheduling changes do not invalidate existing scientific caches.
 
 Speedup depends on molecules, hardware and cache state. Parallelism does not repair chemical typing or convergence failures. See the [benchmark scope and limitations](../validation/chimera_parallel_2026-11-02/README.md).
+
+## Native AMBER structural support
+
+Native Amber Score includes target-independent sanitation, 32 ff03/PTM models, CCD-backed isolated-organic-component parameters and execution-local DOCK6 torsion compatibility when required. It preserves the original DOCK6 installation. The default `residue_parameter_policy` is `auto_curated`; `native_ff94` and `ff03_ffptm` are alternatives. Compiler/make/flex/zlib requirements and the noncommercial **CC BY-NC 4.0** license of bundled PTM data are separate from the MIT code license. Unknown covalent PTMs and unsupported metals require validated parameters. See [structural support](amber_score_structural_support.md) for supported states, caches, limits and reproduction.
+
+## DOCK6 search versus pose evaluation
+
+`dock6_mode` is independent of `conformer_search_type`. For candidate docking its default is `auto`: a target-bound input pose selects `guided`; otherwise it selects `denovo`. A generic library conformer alone is not evidence of a target-bound pose. `denovo` performs the configured conformational search; `guided` disables reorientation and locally minimizes the supplied pose; `score_only` disables both reorientation and ligand minimization; `restrained` applies coordinate-restraint minimization. These three pose-evaluation modes require structural coordinates. Redocking defaults to `redock`; the exposed alternatives are `score_only` and `restrained`. Mode-defining switches are enforced even for customized templates. Grid/site and molecule caches remain reusable when their signatures match. See `dock6_protocol.py`; do not equate grid scoring with the separate native Amber Score operation.

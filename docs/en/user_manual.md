@@ -1,5 +1,8 @@
 # User manual: from first sign-in to results
 
+> Source synchronization: 2026-11-13. See [current source reference](current_reference.md) for exact registered parameters, defaults, compatibility and unsupported behaviors. This describes the checkout, not an installation or global release acceptance.
+
+
 [Documentation](../README.md) · English · [Português](../user_manual.md)
 
 This manual follows a study from choosing a language to exporting the project. Button names below refer to the English interface. For technical parameters and APIs, see the [Flet workspace](frontend.md), [backend usage](backend_usage.md), [projects and versions](projects.md) and [pipeline validation](pipeline_validation.md) guides.
@@ -27,7 +30,7 @@ Without Git, use **Code → Download ZIP**, extract the archive and open a termi
 ```bash
 conda env create -f requirements.yml
 conda activate BioMolExplorer
-# Source-checkout execution; see the packaging limitation below.
+# Source-checkout alternative; package installation also provides console commands.
 biomolexplorer-ui --web --language en --dock6-path /path/to/dock6-6.11
 ```
 
@@ -287,7 +290,7 @@ Under **Molecular Dynamics**, **Amber Score · DOCK6** runs native Amber Score o
 
 1. Connect receptor PDB files and ligand 3D poses, then explicitly select pairs.
 2. Configure pre/post minimization, internal refinement steps, temperature, implicit GB solvent (1/2/5), cutoff and movable region.
-3. Enable preservation of input charges to use Chimera-prepared MOL2 charges. DOCK6 supplies GAFF typing, topologies and complex preparation; receptor force field is ff94. No silent substitution for ff14SB/GAFF2 occurs.
+3. Enable preservation of input charges to use Chimera-prepared MOL2 charges. DOCK6 supplies GAFF typing, topologies and complex preparation; standard proteins use ff94 while supported PTMs use a coherent ff03/FF_PTM profile under `auto_curated`; check `residue_parameter_policy`. No silent substitution for ff14SB/GAFF2 occurs.
 4. Inspect the four energy terms, structures, logs and `protocol.json`. Valid pairs reuse checkpoints; individual failures preserve other pairs.
 
 Native refinement uses a fixed 0.001 ps step, Langevin (gamma 2), without RATTLE constraints. The `nothing` mode evaluates energy without moving atoms. Explicit solvent boxes, pressure, conventional heating/equilibration and trajectory controls are unavailable because they are not Amber Score 6.11 parameters. Implicit solvent is not a water box.
@@ -709,3 +712,13 @@ Inspect energies, protocol and available endpoint metrics; do not expect RMSF.
 ## Current execution and result contract
 
 [DAG order, lazy selection, pause/cancellation, cleanup and incremental reuse](projects.md#execution-lazy-selection-and-result-preservation). [Public names and lineage](projects.md#public-names-and-traceability).
+
+## Native AMBER structural support
+
+Native Amber Score includes target-independent sanitation, 32 ff03/PTM models, CCD-backed isolated-organic-component parameters and execution-local DOCK6 torsion compatibility when required. It preserves the original DOCK6 installation. The default `residue_parameter_policy` is `auto_curated`; `native_ff94` and `ff03_ffptm` are alternatives. Compiler/make/flex/zlib requirements and the noncommercial **CC BY-NC 4.0** license of bundled PTM data are separate from the MIT code license. Unknown covalent PTMs and unsupported metals require validated parameters. See [structural support](amber_score_structural_support.md) for supported states, caches, limits and reproduction.
+
+## Detailed reference guides
+
+- [Exact commands, parameters and defaults](current_reference.md)
+- [Compound-level multi-target consensus](docking_consensus.md)
+- [Native AMBER profiles, sanitation and compatibility](amber_score_structural_support.md)

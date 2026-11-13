@@ -59,3 +59,7 @@ RMSD e scores com referências adequadas ao estudo.
 
 Consulte [instalação](installation.md), [redocking](redocking_configuration.md),
 [manual](user_manual.md) e [superfícies moleculares](dms_migration.md).
+
+## Suporte estrutural AMBER nativo
+
+O Amber Score inclui saneamento independente do alvo, 32 modelos ff03/PTM, parâmetros baseados no CCD para componentes orgânicos isolados e compatibilidade de torções DOCK6 em cópia local quando necessária. A instalação original DOCK6 é preservada. `residue_parameter_policy` usa `auto_curated` por padrão; `native_ff94` e `ff03_ffptm` são alternativas. Compiladores/make/flex/zlib e a licença não comercial **CC BY-NC 4.0** dos dados PTM são distintos da licença MIT do código. PTMs covalentes desconhecidos e metais não suportados exigem parâmetros validados. Consulte o [suporte estrutural](amber_score_structural_support.md) para estados químicos, cache, limites e reprodução.

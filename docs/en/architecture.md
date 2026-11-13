@@ -1,5 +1,8 @@
 # Architecture and technical review
 
+> Source synchronization: 2026-11-13. See [current source reference](current_reference.md) for exact registered parameters, defaults, compatibility and unsupported behaviors. This describes the checkout, not an installation or global release acceptance.
+
+
 [Documentation](../README.md) · English · [Português](../architecture.md)
 
 The application has a dedicated Python layer and a Flet workspace, with explicit
@@ -9,7 +12,7 @@ environment configuration and documentation. Scientific method validation and
 external engine execution have a different scope from the architecture
 verification described here.
 
-> Historical problem/treatment sections and dated checks record earlier reviews, not approval of the current release. This documentation audit did not execute scientific algorithms. Current packaging has a TOML limitation documented in installation; pyproject presence does not establish installability.
+> Historical problem/treatment sections and dated checks record earlier reviews, not approval of the current release. This documentation audit did not execute scientific algorithms. The current `pyproject.toml` declares console commands and the `ui` extra; scientific dependencies remain in `requirements.yml`. This audit did not repeat a clean installation or certify dependency resolution.
 
 ## Structure
 
@@ -30,6 +33,14 @@ src/
     workspace.py      accounts, permissions, projects and files
     pipeline.py       dependencies, snapshots and pipeline execution
     stage_cache.py    output integrity and incremental stage reuse
+    result_catalog.py compact read models derived from authoritative runs
+    result_index.py   disposable SQLite indexes for large CSV tables
+    calculation_cache.py verified scientific checkpoints
+    consensus_model.py compound-level target-balanced ECR
+    structure_sanitation.py biological-role-aware execution-local cleanup
+    md_residue_support.py coherent protein/PTM profiles and topology checks
+    md_cofactor_support.py CCD-backed isolated-component parameters
+    md_torsion_support.py cached execution-local DOCK6 compatibility build
     compound_tables.py paginated tables and authorized, audited curation
     graph_inputs.py   independent graph inputs and compound provenance
     flow.py           port types, connections and visual layout
@@ -407,8 +418,7 @@ delimits geometric and WebGL coverage.
 
 ## Incremental docking calculation index
 
-`calculation_cache.py` complements whole-stage caching with project-scoped
-SQLite tables: `experiments(namespace,key,metadata)`,
+`calculation_cache.py` complements whole-stage caching with SQLite in the configured cache directory, which may be shared between jobs/projects. Tables include `experiments(namespace,key,metadata)`,
 `artifacts(namespace,experiment_key,role,sha256)` and `objects(sha256,size)`.
 `subjects(namespace,experiment_key,role,identifier,input_sha256)` provides
 indexed lookup by compound, receptor, reference identity or input hash.
@@ -426,8 +436,7 @@ executables and parameter files. Large-file hashes are memoized by file
 signature within a batch to avoid rereading grids for each compound.
 
 The scheduler retains whole-stage/batch shortcuts and includes scientific tool
-identity in reuse checks. Batches with individual failures are retried through
-per-item reuse rather than treated as wholly complete. The existing reuse
+identity in reuse checks. Complete batches with exclusions fully explained by matching preparation/docking reports may be reused with their original accounting. Incomplete, unaccounted or changed inputs are retried through per-item reuse. The existing reuse
 choice controls these worker checkpoints without adding interface options.
 
 ## Current execution and result contract
@@ -462,3 +471,26 @@ On startup, save and import, a legacy reference receives a port only when one
 compatible choice exists. Incompatible or ambiguous cases remain unchanged for
 review and are recorded in `artifact_migration_issues`. Backfill is idempotent
 and never silently moves, renames or reassociates scientific files.
+
+
+## Current structural and result flow
+
+```mermaid
+flowchart LR
+    Inputs[Typed targets and compounds] --> Preparation[Chimera preparation or compatible checkpoints]
+    Preparation --> Vina[Vina docking]
+    Preparation --> Dock[DOCK6 mode-specific search or pose evaluation]
+    Vina --> Consensus[One ECR row per compound]
+    Dock --> Consensus
+    Consensus --> Poses[Target-matched structural references]
+    Poses --> Sanitation[Generic sanitation and coherent parameters]
+    Sanitation --> Amber[Native or execution-local compatible Amber Score]
+    Amber --> Results[Structures, energies, provenance and verified cache]
+```
+
+See [the consensus model](docking_consensus.md), [AMBER support](amber_score_structural_support.md), [exact API reference](current_reference.md) and [result deletion contract](projects.md#removing-amber-results-and-requesting-a-new-calculation). Indexes support presentation; no separate relational-analysis scientific operation is registered.
+
+
+## Legacy MD semantic-port compatibility
+
+`md_semantic.semantic_context` creates a detached current-run context for target producers consumed by Amber Score. In a mixed legacy manifest it can supply a missing receptor-PDB port only for a typed target producer, an available current-run PDB and a descriptor without a declared output port. It preserves identities, paths and provenance; it does not rewrite saved artifacts, fill another declared port or borrow another run's publication. Pinned references and genuinely missing outputs remain subject to strict resolution.

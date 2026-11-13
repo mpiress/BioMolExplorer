@@ -81,7 +81,7 @@ Referências primárias:
 - [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).
 - [Chemical Component Dictionary](https://www.wwpdb.org/data/ccd) e [política de uso wwPDB](https://www.wwpdb.org/about/usage-policies).
 
-## Validação desta revisão
+## Evidência histórica de validação — 13/11/2026
 
 O utilitário `scripts/validate_amber_support.py --dock6-root /caminho/dock6 --output /tmp/validacao` reproduz a validação da biblioteca; `--pairs-json` permite validar pares exportados e o reaproveitamento completo.
 
@@ -113,4 +113,4 @@ Um AMBER Score finito comprova a execução numérica, não afinidade favorável
 | Instalação do aplicativo | 347 arquivos conferidos contra o wheel; sem diferenças |
 | Dependências instaladas | pip check sem dependências quebradas |
 
-O pacote foi aplicado no ambiente Python do BioMolExplorer. A aplicação que já estiver aberta precisa ser reaberta para carregar os módulos atualizados. A instalação original do DOCK6 conserva o SHA-256 `62ddcc919069b6d7af3872b6b06ad344a75ca1d6be2a34013df265579d92f4f2`. O executável local de compatibilidade deste teste tem SHA-256 `57a4b0ea566d4712297301889d6b032eb35938529065ceee51c2e70262bd0322`. Nenhuma edição manual do 2WSL ou da pose foi necessária.
+Na validação de 13/11/2026 registrada neste relatório, o pacote foi aplicado no ambiente Python do BioMolExplorer. Esta observação histórica não comprova a instalação de alterações posteriores do checkout. A aplicação que já estiver aberta precisa ser reaberta para carregar os módulos atualizados. A instalação original do DOCK6 conserva o SHA-256 `62ddcc919069b6d7af3872b6b06ad344a75ca1d6be2a34013df265579d92f4f2`. O executável local de compatibilidade deste teste tem SHA-256 `57a4b0ea566d4712297301889d6b032eb35938529065ceee51c2e70262bd0322`. Nenhuma edição manual do 2WSL ou da pose foi necessária.

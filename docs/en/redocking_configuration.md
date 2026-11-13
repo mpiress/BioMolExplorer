@@ -156,3 +156,7 @@ RMSD compares heavy atoms in the crystal reference and best pose without alignme
 that would hide displacement. A high RMSD is an evaluation result, not an execution
 failure. Topology, tool and configuration errors remain visible with their failing
 step and diagnostics, while other pairs continue independently.
+
+## DOCK6 search versus pose evaluation
+
+`dock6_mode` is independent of `conformer_search_type`. For candidate docking its default is `auto`: a target-bound input pose selects `guided`; otherwise it selects `denovo`. A generic library conformer alone is not evidence of a target-bound pose. `denovo` performs the configured conformational search; `guided` disables reorientation and locally minimizes the supplied pose; `score_only` disables both reorientation and ligand minimization; `restrained` applies coordinate-restraint minimization. These three pose-evaluation modes require structural coordinates. Redocking defaults to `redock`; the exposed alternatives are `score_only` and `restrained`. Mode-defining switches are enforced even for customized templates. Grid/site and molecule caches remain reusable when their signatures match. See `dock6_protocol.py`; do not equate grid scoring with the separate native Amber Score operation.

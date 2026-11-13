@@ -1,5 +1,8 @@
 # Manual do usuário: do primeiro acesso aos resultados
 
+> Sincronização com o código: 13/11/2026. Consulte a [referência do código atual](current_reference.md) para parâmetros registrados, padrões, compatibilidade e comportamentos não oferecidos. O texto descreve o checkout, não comprova instalação ou aceitação global da release.
+
+
 [Documentação](README.md) · Português · [English](en/user_manual.md)
 
 Este manual acompanha um estudo desde a escolha do idioma até a exportação do projeto. Os nomes dos botões abaixo correspondem à interface em português. Para conhecer parâmetros técnicos e APIs, consulte [Workspace Flet](frontend.md), [uso do backend](backend_usage.md), [projetos e versões](projects.md) e [validação do pipeline](pipeline_validation.md).
@@ -27,7 +30,7 @@ Sem Git, use **Code → Download ZIP**, extraia o arquivo e abra um terminal na 
 ```bash
 conda env create -f requirements.yml
 conda activate BioMolExplorer
-# Execução pelo checkout; veja a limitação de empacotamento abaixo.
+# Alternativa pelo checkout; a instalação também registra comandos de terminal.
 biomolexplorer-ui --web --language pt --dock6-path /caminho/para/dock6-6.11
 ```
 
@@ -293,7 +296,7 @@ Na categoria **Dinâmica Molecular**, o bloco **Amber Score · DOCK6** executa e
 
 1. Conecte os receptores PDB e poses 3D dos ligantes; selecione os pares explicitamente.
 2. Configure minimização antes/depois, passos do refinamento interno, temperatura, solvente implícito GB (1/2/5), corte e região móvel.
-3. Ative a preservação de cargas para usar as cargas MOL2 preparadas pelo Chimera. O DOCK6 gera sua própria tipagem GAFF, topologias e complexo; proteína ff94. Não há substituição silenciosa por ff14SB/GAFF2.
+3. Ative a preservação de cargas para usar as cargas MOL2 preparadas pelo Chimera. O DOCK6 gera sua própria tipagem GAFF, topologias e complexo. Em `auto_curated`, proteínas padrão usam ff94 e PTMs suportados usam um perfil coerente ff03/FF_PTM; confira `residue_parameter_policy`. Não há substituição silenciosa por ff14SB/GAFF2.
 4. Execute e inspecione as quatro contribuições energéticas, estruturas, logs e `protocol.json`. Pares íntegros reutilizam os checkpoints; falhas não descartam os demais pares.
 
 O refinamento nativo usa passo fixo de 0.001 ps, Langevin (gamma 2), sem restrições RATTLE. O modo `nothing` calcula energia sem mover átomos. Não há caixa explícita, pressão, aquecimento/equilibração convencional ou controles de trajetória nessa interface, pois não são parâmetros do Amber Score 6.11. Os parâmetros do solvente implícito não equivalem a uma caixa de água.
@@ -719,3 +722,13 @@ Inspecione energias, protocolo e métricas inicial/final disponíveis; não espe
 ## Contrato atual de execução e resultados
 
 [Ordem do DAG, seleção tardia, pausa/cancelamento, limpeza e reúso incremental](projects.md#execucao-selecao-tardia-e-preservacao-de-resultados). [Nomes públicos e linhagem](projects.md#nomes-publicos-e-rastreabilidade).
+
+## Suporte estrutural AMBER nativo
+
+O Amber Score inclui saneamento independente do alvo, 32 modelos ff03/PTM, parâmetros baseados no CCD para componentes orgânicos isolados e compatibilidade de torções DOCK6 em cópia local quando necessária. A instalação original DOCK6 é preservada. `residue_parameter_policy` usa `auto_curated` por padrão; `native_ff94` e `ff03_ffptm` são alternativas. Compiladores/make/flex/zlib e a licença não comercial **CC BY-NC 4.0** dos dados PTM são distintos da licença MIT do código. PTMs covalentes desconhecidos e metais não suportados exigem parâmetros validados. Consulte o [suporte estrutural](amber_score_structural_support.md) para estados químicos, cache, limites e reprodução.
+
+## Guias de referência detalhados
+
+- [Comandos, parâmetros e padrões exatos](current_reference.md)
+- [Consenso multialvo por composto](docking_consensus.md)
+- [Perfis AMBER, saneamento e compatibilidade](amber_score_structural_support.md)

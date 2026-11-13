@@ -1,5 +1,8 @@
 # Validação das etapas e conexões do pipeline
 
+> Sincronização com o código: 13/11/2026. Consulte a [referência do código atual](current_reference.md) para parâmetros registrados, padrões, compatibilidade e comportamentos não oferecidos. O texto descreve o checkout, não comprova instalação ou aceitação global da release.
+
+
 [Documentação](README.md) · Português · [English](en/pipeline_validation.md)
 
 A revisão cobre o catálogo de operações, contratos de arquivos, relações entre blocos, seleção e materialização de entradas, processamento individual/merge, execução de ramificações, persistência e reaproveitamento. O [manual do usuário](user_manual.md) ensina o percurso operacional; esta página registra como verificá-lo e os limites da evidência.

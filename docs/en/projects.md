@@ -1,5 +1,8 @@
 # Projects, files and versions
 
+> Source synchronization: 2026-11-13. See [current source reference](current_reference.md) for exact registered parameters, defaults, compatibility and unsupported behaviors. This describes the checkout, not an installation or global release acceptance.
+
+
 [Documentation](../README.md) · English · [Português](../projects.md)
 
 ## Choose the project folder
@@ -152,3 +155,9 @@ Both cleanup actions require confirmation and edit permission; active execution 
 `TG[TARGET]-SRC[SOURCE]-OP[OPERATION]-TYPE-ID[hash].ext` identifies target, immediate input, producer and content. A real example is `TG[ACHE]-SRC[MOL]-OP[ADMET]-BBB+-ID[24113d53].csv`. `TG[NA]` avoids inventing targets for independent collections. The deterministic suffix distinguishes occurrences; metadata retains complete IDs, settings, inputs and history.
 
 Displayed/downloaded names are persistent aliases. Native filenames, relative references and legacy files remain compatible. Scientific ZIPs preserve their internal layout and include a naming index; `.bme.zip` backups preserve configuration, results and descriptors. None of these mechanisms establishes chemical validity. See the [detailed convention](../artifact_naming.md).
+
+## Removing AMBER results and requesting a new calculation
+
+File/stage removal is authorized, confirmed and audited, and is blocked while the project has an active execution. Deletion reads authoritative stage metadata on its own existing SQLite transaction rather than entering the result-projection writer through another connection. A failed mutation restores moved files and metadata; the splash closes before reporting the error and confirmation controls can be retried.
+
+For `dynamics_dock6`, removing files or all stage results renews the internal `result_cache_epoch`. The pipeline supplies `md_cache_epoch` to completed-pair reuse so deleted final results are not silently restored from the shared scientific cache. This does not change scientific settings or discard compatible preparation/grid/kernel caches. Other blocks retain their cache identities. The value is not a visible scientific form option. Project-wide cleanup also renews MD generations. Removing a pair through the pair table is a separate exclusion action: it updates `excluded_pairs` and preserves historical files for audit; reselect/configure the pair if it should run again.

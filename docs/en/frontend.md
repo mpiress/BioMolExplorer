@@ -1,5 +1,8 @@
 # Flet workspace
 
+> Source synchronization: 2026-11-13. See [current source reference](current_reference.md) for exact registered parameters, defaults, compatibility and unsupported behaviors. This describes the checkout, not an installation or global release acceptance.
+
+
 [Documentation](../README.md) · English · [Português](../frontend.md)
 
 The interface brings together authentication, private projects, invitations,
@@ -28,7 +31,7 @@ From the downloaded source code root, with the scientific environment prepared:
 
 ```bash
 conda activate BioMolExplorer
-# Source-checkout execution; see the packaging limitation below.
+# Source-checkout alternative; package installation also provides console commands.
 biomolexplorer-ui --web --language en --dock6-path /path/to/dock6-6.11
 ```
 
@@ -464,7 +467,7 @@ Review Vina box, pH and search effort and DOCK6 charges, surface, distance, radi
 
 **Docking consensus** gathers selected results from both engines, including multiple batches and branches. It computes only the intersection by compound ID and receptor, choosing the lowest score for repeated poses. Matching identifiers with different structures are rejected. With no intersection, the block is skipped and explains that the engines did not evaluate common compounds against the same receptor.
 
-The consensus table shows Vina and DOCK6 scores, SMILES, receptor and z-score/min-max normalizations, with **3D Vina**, **3D DOCK6** and **Remove** buttons per row. The DOCK6 consensus score is `min(0, Grid_Score + repulsion_weight × Internal_energy_repulsive)`; missing repulsion is zero. Singleton or constant scores normalize to zero. Removal requires editing permission, is audited and affects subsequent inputs; completed analyses are not recalculated. Each batch summary is authoritative, preventing deleted rows from returning from auxiliary tables.
+The consensus table uses `target-balanced-ecr-v1`: one row per compound, with normalized Vina relevance, DOCK6 relevance and their mean consensus; larger is better. Each engine/target uses mean tie ranks and `exp(-q/0.1)`. Across targets, geometric aggregation and observed coverage penalize missing evaluations. The three relevance columns display three decimal places while CSVs preserve precision. Z-score/min-max and clipping positive energies to zero are not part of the active model; `repulsion_weight` remains a compatibility argument with no effect. A singleton has relevance 1; a constant distribution with more than one compound has `q=0.5`. For multiple targets, 3D Vina, 3D DOCK6 and footprint first open a searchable target selector; a single target opens directly. Removal remains audited and published summaries remain authoritative. See [consensus model](docking_consensus.md).
 
 
 Under **Prepare for docking**, connect **PDB receptor (retrieval or redocking)** and **Selected compounds** separately. For a raw retrieval PDB, enter `[PDB, reference ligand, residue, chain]` records or provide `pdb_codes.csv`; receptor preparation options remain available. For redocking receptors, select the `.dockprep.pdbqt` file under **Receptor to use**: ligand-only files are hidden and receptor preparation options are disabled. Companion receptor files and binding centers follow the selection, and the receptor is reused without preparation.
@@ -481,29 +484,11 @@ In docking configuration and the file popup, each compound table offers **Compou
 
 ## Updates from the master branch
 
-The **Updates** button in the header checks
-[mpiress/BioMolExplorer](https://github.com/mpiress/BioMolExplorer)'s `master`
-branch on startup and hourly. It shows **Update available** when a new revision
-is found. Click to inspect the commit, **Download update**, or **Remind me in 24
-hours**. Reminders persist per workspace account; manual checks remain available.
+**Updates** checks `master` on startup and uses a one-hour network-check interval; the UI poll wakes every 60 seconds. **Install update** downloads the archive pinned to the displayed GitHub commit, validates its paths and package layout, repacks only `src/` and packaging files, then invokes the current interpreter with `pip install --no-deps --upgrade`. It installs on the application host, including for web sessions; it is not a ZIP sent to the browser for manual extraction.
 
-The download is a ZIP pinned to the displayed commit, downloaded on the user's
-computer, including web clients. Installation remains manual: finish running
-analyses, extract the code, follow the [installation guide](installation.md), and
-restart. Downloading does not change the running application, accounts, or
-projects. Connection failures leave the interface usable; retry through the
-button.
+After successful installation, restart BioMolExplorer to load new modules. There is no automatic process restart or Conda/scientific-tool upgrade. The updater does not deliberately rewrite projects, accounts, scientific results or the original DOCK6/Chimera installations. The install log is saved under `updates/install-<sha>.log` in the application data directory. **Remind me in 24 hours** persists per account. Network or installation errors remain visible and allow retry; a failed network check does not prove the installation is current.
 
-Git checkouts use the installed commit; wheels built by this project include it.
-ZIP downloads from the button retain the revision in the folder name
-`BioMolExplorer-<commit>`; keep that name. Unversioned ZIPs such as
-`BioMolExplorer-master` record the first observed commit and notify about later
-changes. Preferences live in `updates.json` in the application data directory.
-
-Output selections retain the batch and logical file path while excluding the
-worker's temporary job ID. Repeating PDB retrieval or docking therefore preserves
-selection of the same result. Older selections are also supported. Missing or
-ambiguous results still require a new selection.
+Git metadata, an archive directory named `BioMolExplorer-<commit>`, or the recorded baseline identify the current revision. A previously unversioned installation records its first observed commit as a baseline. See the [current source reference](current_reference.md) for paths and limits.
 
 ## Molecular viewer and 3D interactions
 
@@ -680,3 +665,9 @@ the result summary, with both static and dynamic texts localized in English/Port
 ## Current execution and result contract
 
 [DAG order, lazy selection, pause/cancellation, cleanup and incremental reuse](projects.md#execution-lazy-selection-and-result-preservation). [Public names and lineage](projects.md#public-names-and-traceability).
+
+## Removing AMBER results and requesting a new calculation
+
+File/stage removal is authorized, confirmed and audited, and is blocked while the project has an active execution. Deletion reads authoritative stage metadata on its own existing SQLite transaction rather than entering the result-projection writer through another connection. A failed mutation restores moved files and metadata; the splash closes before reporting the error and confirmation controls can be retried.
+
+For `dynamics_dock6`, removing files or all stage results renews the internal `result_cache_epoch`. The pipeline supplies `md_cache_epoch` to completed-pair reuse so deleted final results are not silently restored from the shared scientific cache. This does not change scientific settings or discard compatible preparation/grid/kernel caches. Other blocks retain their cache identities. The value is not a visible scientific form option. Project-wide cleanup also renews MD generations. Removing a pair through the pair table is a separate exclusion action: it updates `excluded_pairs` and preserves historical files for audit; reselect/configure the pair if it should run again.

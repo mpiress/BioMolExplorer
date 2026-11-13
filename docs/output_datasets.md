@@ -69,3 +69,5 @@ excluídos**, sem selos de conclusão ou reaproveitamento dos arquivos removidos
 O resumo diferencia os resultados disponíveis do histórico de etapas concluídas.
 Entradas enviadas, configurações, logs e histórico permanecem preservados. Uma
 nova execução não reutiliza os artefatos excluídos.
+
+No AMBER Score, a exclusão de arquivos/etapa renova a geração interna de resultados, impedindo a restauração do resultado final excluído pelo cache compartilhado. Preparos compatíveis podem continuar reaproveitados. A exclusão de um par na tabela de dinâmica altera a seleção (`excluded_pairs`) e não é sinônimo de apagar seus arquivos históricos. Consulte [projetos](projects.md#excluir-resultados-amber-e-solicitar-novo-calculo).

@@ -1,5 +1,8 @@
 # Arquitetura e revisão técnica
 
+> Sincronização com o código: 13/11/2026. Consulte a [referência do código atual](current_reference.md) para parâmetros registrados, padrões, compatibilidade e comportamentos não oferecidos. O texto descreve o checkout, não comprova instalação ou aceitação global da release.
+
+
 [Documentação](README.md) · Português · [English](en/architecture.md)
 
 A aplicação tem uma camada Python própria e um workspace Flet, com operações
@@ -9,7 +12,7 @@ de workflow, os templates, as configurações de ambiente e a documentação.
 A validação científica dos métodos e a execução dos motores externos têm um
 escopo diferente da validação da arquitetura descrita aqui.
 
-> A seção de problemas/tratamentos e as verificações datadas registram revisões anteriores, não aprovação de uma release atual. Esta auditoria documental não executou algoritmos científicos. O empacotamento atual tem uma limitação TOML descrita na instalação; a presença do pyproject não comprova que o pacote seja instalável.
+> A seção de problemas/tratamentos e as verificações datadas registram revisões anteriores, não aprovação de uma release atual. Esta auditoria documental não executou algoritmos científicos. O `pyproject.toml` atual declara os comandos e o extra `ui`; as dependências científicas ficam em `requirements.yml`. Esta auditoria não refez uma instalação limpa nem certifica sua resolução.
 
 ## Estrutura
 
@@ -30,6 +33,14 @@ src/
     workspace.py      contas, permissões, projetos e arquivos
     pipeline.py       dependências, snapshots e execução de pipelines
     stage_cache.py    integridade e reaproveitamento incremental de etapas
+    result_catalog.py projeções compactas derivadas das execuções autoritativas
+    result_index.py   índices SQLite descartáveis para tabelas CSV grandes
+    calculation_cache.py checkpoints científicos verificados
+    consensus_model.py ECR equilibrado entre alvos, por composto
+    structure_sanitation.py saneamento local por papel biológico
+    md_residue_support.py perfis coerentes proteína/PTM e validação topológica
+    md_cofactor_support.py parâmetros CCD de componentes isolados
+    md_torsion_support.py compilação DOCK6 compatível, local e cacheada
     compound_tables.py tabelas paginadas e curadoria autorizada/auditada
     graph_inputs.py   entradas independentes de grafos e proveniência dos compostos
     flow.py           tipos de portas, conexões e disposição visual
@@ -416,7 +427,7 @@ cobertura geométrica e WebGL.
 ## Índice incremental de cálculos de docking
 
 `calculation_cache.py` complementa o cache integral de `stage_cache.py` com
-SQLite por projeto. `experiments(namespace,key,metadata)` identifica o protocolo;
+SQLite no diretório de cache configurado (que pode ser compartilhado entre jobs/projetos). `experiments(namespace,key,metadata)` identifica o protocolo;
 `artifacts(namespace,experiment_key,role,sha256)` relaciona seus arquivos;
 `objects(sha256,size)` deduplica o conteúdo. A publicação é transacional, depois
 da validação. `subjects(namespace,experiment_key,role,identifier,input_sha256)`
@@ -475,3 +486,26 @@ somente quando há uma única compatibilidade válida. Casos incompatíveis ou
 ambíguos permanecem intactos para revisão e são registrados em
 `artifact_migration_issues`. O backfill é idempotente e não move, renomeia nem
 reassocia silenciosamente arquivos científicos.
+
+
+## Fluxo estrutural e de resultados atual
+
+```mermaid
+flowchart LR
+    Inputs[Targets e compostos tipados] --> Preparation[Preparo Chimera ou checkpoints compatíveis]
+    Preparation --> Vina[Docking Vina]
+    Preparation --> Dock[Busca ou avaliação de pose conforme o modo DOCK6]
+    Vina --> Consensus[Uma linha ECR por composto]
+    Dock --> Consensus
+    Consensus --> Poses[Referências estruturais correspondentes ao alvo]
+    Poses --> Sanitation[Saneamento genérico e parâmetros coerentes]
+    Sanitation --> Amber[Amber Score nativo ou compatível em cópia local]
+    Amber --> Results[Estruturas, energias, proveniência e cache verificado]
+```
+
+Consulte o [modelo de consenso](docking_consensus.md), o [suporte AMBER](amber_score_structural_support.md), a [referência exata da API](current_reference.md) e o [contrato de exclusão](projects.md#excluir-resultados-amber-e-solicitar-novo-calculo). Índices atendem à apresentação; não existe operação científica separada de análise relacional registrada.
+
+
+## Compatibilidade de portas semânticas MD legadas
+
+`md_semantic.semantic_context` cria um contexto destacado da execução atual para produtores de targets consumidos pelo Amber Score. Em um manifesto legado misto, pode completar a porta receptor-PDB ausente somente para produtor tipado de target, PDB disponível na execução atual e descritor sem porta declarada. Preserva identidades, caminhos e proveniência; não reescreve artefatos salvos, não substitui outra porta declarada e não toma publicações de outra execução. Referências fixadas e saídas realmente ausentes continuam sujeitas à resolução estrita.

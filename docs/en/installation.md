@@ -1,5 +1,8 @@
 # Installing and configuring BioMolExplorer
 
+> Source synchronization: 2026-11-13. See [current source reference](current_reference.md) for exact registered parameters, defaults, compatibility and unsupported behaviors. This describes the checkout, not an installation or global release acceptance.
+
+
 [Documentation](../README.md) · English · [Português](../installation.md)
 
 Follow this order: download the project → install the external tools → prepare the Conda environment → configure and check the executables → start BioMolExplorer. Terminal examples use Linux and Bash, the current backend execution environment. Install Git and Anaconda or Miniconda beforehand.
@@ -145,3 +148,7 @@ In a new terminal, run `conda activate BioMolExplorer`, repeat the paths from st
 The recommended route uses `requirements.yml` for scientific dependencies and `python -m pip install -e '.[ui]'` to register the application. Chimera, DOCK6 and Conda are external tools, not pip dependencies. The `ui` extra alone does not install the full scientific environment. ADMET-AI remains optional and isolated; do not install `.[admet-ml]` in the docking environment.
 
 This guide uses Linux/Bash and Python 3.12. No Linux lock is distributed in this checkout; do not use a nonexistent lock file. A clean installation requires network access and availability of the declared packages. `pip check` checks Python metadata, not scientific protocols. Validate external tools and a reference case before using results in research.
+
+## Native AMBER structural support
+
+Native Amber Score includes target-independent sanitation, 32 ff03/PTM models, CCD-backed isolated-organic-component parameters and execution-local DOCK6 torsion compatibility when required. It preserves the original DOCK6 installation. The default `residue_parameter_policy` is `auto_curated`; `native_ff94` and `ff03_ffptm` are alternatives. Compiler/make/flex/zlib requirements and the noncommercial **CC BY-NC 4.0** license of bundled PTM data are separate from the MIT code license. Unknown covalent PTMs and unsupported metals require validated parameters. See [structural support](amber_score_structural_support.md) for supported states, caches, limits and reproduction.

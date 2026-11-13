@@ -12,7 +12,7 @@ BioMolExplorer is research software for molecular retrieval, chemical analysis a
 | --- | --- |
 | Data and inputs | ChEMBL retrieval and expansion, PubChem reference searches, PDB queries, ZINC tranche downloads, validated local files and supported prepared results |
 | Molecular analysis | RDKit descriptors, BBB/HIA heuristics, physicochemical rules, chemical review alerts; Morgan/MACCS/pharmacophore fingerprints, similarity, graphs, components and scaffolds |
-| Structure-based screening | Shared Chimera receptor/ligand preparation; redocking with Vina or DOCK6 6.11 and RMSD; candidate docking, matching-pair consensus and available DOCK6 footprints |
+| Structure-based screening | Shared Chimera receptor/ligand preparation; redocking with Vina or DOCK6 6.11 and RMSD; candidate docking, compound-level multi-target ECR consensus and available DOCK6 footprints |
 | Native Amber Score | Selected receptor–pose pairs, implicit-solvent refinement/energy evaluation through DOCK6 6.11; no conventional MD or trajectory-based RMSF |
 | Results and workspace | Tables, plots, molecular 2D/3D, typed connections, lazy input selection, cooperative pause/cancellation, verified incremental reuse, history, sharing and portable backups |
 
@@ -76,13 +76,13 @@ python scripts/build_docs.py
 python scripts/validate_docs.py
 ```
 
-See the source index for the documentation-only portal-summary adjustment needed with the current generator. Documentation checks do not certify scientific correctness, environment solvability or release readiness. Docking scores are not experimental affinities; local ADMET heuristics and alerts require hypothesis-specific interpretation. Native Amber Score is not a conventional molecular dynamics engine.
+The portal uses its existing template and registry. This audit changes documentation only; source scripts and their registry remain untouched. Documentation checks do not certify scientific correctness, environment solvability or release readiness. Docking scores are not experimental affinities; local ADMET heuristics and alerts require hypothesis-specific interpretation. Native Amber Score is not a conventional molecular dynamics engine.
 
 ## License and related research
 
-The repository is distributed under the [MIT license](LICENSE). The following is an associated Alzheimer’s disease dataset, **not a DOI assigned to the software release**. The supplied DOI resolver returned HTTP 404 during this audit; its bibliographic details require confirmation before citation or reuse. The identifier is retained as text rather than a broken navigation link.
+Application code is distributed under the [MIT license](LICENSE); bundled Forcefield_PTM parameter data have separate **CC BY-NC 4.0** terms recorded in LICENSE and their NOTICE/manifest. The following is an associated Alzheimer’s disease dataset, **not a DOI assigned to the software release**. An earlier documentation audit recorded HTTP 404 for the supplied DOI resolver; this source-code audit did not revalidate that external record. Confirm bibliographic details before citation or reuse. The identifier is retained as text rather than a broken navigation link.
 
-**Project-supplied reference (record not confirmed in this audit):**
+**Project-supplied reference (external record not revalidated by this source-code audit):**
 
 Pires da Silva, M., Alves de Oliveira, T., Habib Bechelane Maia, E., Oliveira Mendes, G., Cristina Moreira Damázio, L., Brito Barbosa, D., Andrade Leite, F. H., Falkoski, L., Flores de Souza Marra, I., Siqueira Valle, M., Silva Matos Andrade, L., Čmelo, I., Fayne, D., Batista de Carvalho, P., Marques da Silva, A., & Gutterres Taranto, A. (2025). *Data-driven chemical domain for polypharmacology agents: Focus on Alzheimer’s disease*. Mendeley Data. `10.17632/5njg46dfj4.3`
 
@@ -91,3 +91,9 @@ Pires da Silva, M., Alves de Oliveira, T., Habib Bechelane Maia, E., Oliveira Me
 
 | [<img loading="lazy" src="imgs/michel.jpg" width=150><br><sub> Michel Pires da Silva</sub>](http://lattes.cnpq.br/1449902596670082) |  [<img loading="lazy" src="imgs/alisson.png" width=150><br><sub> Alisson Marques da Silva</sub>](http://lattes.cnpq.br/3856358583630209) |  [<img loading="lazy" src="imgs/alex.png" width=150><br><sub> Alex Gutterres Taranto</sub>](http://lattes.cnpq.br/4759006674013596) |
 | :---: | :---: | :---: |
+
+## Current implementation reference
+
+[Source-derived command/parameter inventory](docs/en/current_reference.md) · [Compound-level consensus](docs/en/docking_consensus.md) · [Native AMBER structural support](docs/en/amber_score_structural_support.md) · [Documentation audit](docs/documentation_audit_2026-11-13.md).
+
+Native Amber Score includes coherent PTM profiles and a cached execution-local compatibility build when needed; this does not alter the licensed DOCK6 installation. Unknown covalent chemistry still requires validated parameters. The update button installs a validated, commit-pinned package into the host Python environment; restart remains required, and scientific dependencies are not upgraded automatically.
