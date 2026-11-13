@@ -21,14 +21,15 @@ class RemovalProgress:
         self.ui.page.update()
 
         async def execute():
-            # Flush the busy state before any deletion or expensive UI rebuild.
-            await asyncio.sleep(0)
-            result=await action()
-            self.completed = result is not False
+            # Close the splash before guard presents an error notification.
+            # Showing a notification above an active modal can strand its route.
+            async with processing(self.ui,self.title,'Aguarde a conclusão da remoção dos dados.',immediate=True):
+                await asyncio.sleep(0)
+                result=await action()
+                self.completed = result is not False
 
         try:
-            async with processing(self.ui,self.title,'Aguarde a conclusão da remoção dos dados.',immediate=True):
-                await self.ui.guard(execute)
+            await self.ui.guard(execute)
         finally:
             self.running = False
             if not self.completed:

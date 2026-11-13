@@ -1,6 +1,7 @@
 """Topology-defined, streaming analysis of an implicit-solvent Amber trajectory."""
 from pathlib import Path
 import re
+import json
 
 import numpy as np
 from scipy.spatial import cKDTree
@@ -8,6 +9,7 @@ from scipy.spatial import cKDTree
 from .storage import write_json
 
 PROTEIN=set('ALA ARG ASN ASP ASH CYS CYM CYX GLN GLU GLH GLY HIS HID HIE HIP ILE LEU LYS LYN MET PHE PRO SER THR TRP TYR VAL'.split())
+PROTEIN.update(json.loads((Path(__file__).with_name('resources')/'amber_support/ffptm_ff03/manifest.json').read_text())['residues'])
 
 
 def topology(path):
@@ -39,7 +41,7 @@ def topology(path):
         if not 1<=start<end<=count+1:raise ValueError('Invalid Amber residue boundaries.')
         residue[start-1:end-1]=index
     return dict(natom=count,nres=nres,names=sections['ATOM_NAME'],masses=masses,charges=charges,
-                residue=residue,labels=sections['RESIDUE_LABEL'],
+                residue=residue,labels=sections['RESIDUE_LABEL'],atom_types=sections.get('AMBER_ATOM_TYPE',[]),
                 bonds=[(int(values[i])//3,int(values[i+1])//3)
                        for values in (sections.get('BONDS_INC_HYDROGEN',[]),sections.get('BONDS_WITHOUT_HYDROGEN',[]))
                        for i in range(0,len(values),3)])

@@ -32,7 +32,8 @@ class StructureCache:
         config = chimera_preparation(self.settings.get(pair_key(record), {}))
         software=self.software
         chemistry={}
-        if self.software is None:self.software=dict(preparation_identity(),structure_adapter=self.structure_adapter)
+        if self.software is None:self.software=dict(preparation_identity(),structure_adapter=self.structure_adapter,
+            sanitation=file_digest(Path(__file__).with_name('structure_sanitation.py')))
         software=self.software
         receptor = dict(source=self.hashes[raw], code=code, chain=chain, ph=self.ph, charge_type=self.charge_type,
                         options=dict(DEFAULTS, **config.get('receptor', {})),
@@ -47,7 +48,7 @@ class StructureCache:
         ligand = dict(receptor=rkey, pair=pair_key(record),
                       options=dict(DEFAULTS, **{'charge_type':self.charge_type, **config.get('ligand', {})}),
                       ligand_protocol={name:file_digest(Path(__file__).with_name(name)) for name in
-                          ('chimera_preparation.py','ligand_mol2.py','dock6_validation.py')},
+                          ('chimera_preparation.py','structure_sanitation.py','ligand_mol2.py','dock6_validation.py')},
                       chemical_templates=chemistry,ligand_chain=config.get('ligand_chain',chain),
                       insertion_code=config.get('ligand_insertion_code',''),template=self.templates['prepare_ligand.template'])
         return rkey, identity(ligand)

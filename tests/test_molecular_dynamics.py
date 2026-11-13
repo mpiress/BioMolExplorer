@@ -104,6 +104,18 @@ class MDPairCacheTests(unittest.TestCase):
             with patch.dict(os.environ,BIOMOL_REUSE_PREPARATIONS='0'):
                 details,_=self.run_batch('shared-off',self.pairs[:2])
                 self.assertEqual(details['md_reused'],0);self.assertEqual(self.runner.call_count,4)
+    def test_deletion_generation_recomputes_only_results_and_preserves_other_users_of_cache(self):
+        with patch.dict(os.environ,BIOMOL_PREPARATION_CACHE=str(self.root/'cache'/'preparations')):
+            self.run_batch('original',self.pairs[:1])
+            cached,_=self.run_batch('unchanged',self.pairs[:1])
+            self.assertEqual(cached['md_reused'],1)
+            changed,_=self.run_batch('deleted',self.pairs[:1],self.seed('original'),md_cache_epoch='new-results')
+            self.assertEqual(changed['md_reused'],0);self.assertEqual(self.runner.call_count,2)
+            cached,_=self.run_batch('repeated',self.pairs[:1],md_cache_epoch='new-results')
+            self.assertEqual(cached['md_reused'],1)
+            shared,_=self.run_batch('other-block',self.pairs[:1])
+            self.assertEqual(shared['md_reused'],1);self.assertEqual(self.runner.call_count,2)
+
     def test_tampered_cache_and_changed_pose_are_not_reused(self):
         self.run_batch('a',self.pairs[:1]);seed=self.seed('a')
         next(Path(seed).rglob('final.pdb')).write_text('tampered')

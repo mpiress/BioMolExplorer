@@ -107,7 +107,10 @@ class ChimeraPreparationTests(unittest.TestCase):
             script.write_text(f'open {pdb}\n{selection}\naddh\nwrite format mol2 #0 {self.root}/receptor.mol2\n')
             receptor_cleanup(script);helper=script.with_suffix('.cleanup.py').read_text()
             candidates=ast.literal_eval(helper.split('isolated_candidates = ')[1].split('\n')[0])
-            self.assertEqual(('GLY',1531,'A') in candidates,expected)
+            self.assertNotIn(('GLY',1531,'A'),candidates)
+            sanitation=json.loads(script.with_suffix('.sanitized.sanitation.json').read_text())
+            gly=next(row for row in sanitation['residue_roles'] if row['name']=='GLY')
+            self.assertEqual(gly['action'],'removed' if expected else 'retained')
             self.assertIn('atom.neighbors',helper)  # Peptide-bound residues survive.
 
 

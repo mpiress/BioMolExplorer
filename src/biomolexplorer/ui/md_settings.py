@@ -17,7 +17,7 @@ LABELS=dict(zip(DEFAULTS,(
  'Minimização antes do refinamento (ciclos)','Refinamento interno (passos)','Minimização após o refinamento (ciclos)',
  'Modelo de solvente implícito GB/SA','Corte de interações (Å)','Temperatura (K)',
  'Raio da região móvel (Å)','Expressão NAB do target','Expressão NAB do complexo',
- 'Interromper o par sem preparação AMBER','Preservar as cargas da pose MOL2',
+ 'Interromper o par sem preparação AMBER','Preservar as cargas da pose MOL2','Perfil de parâmetros do target',
 )))
 
 
@@ -58,6 +58,9 @@ class MDSettings:
             elif key in CHOICES:
                 control=ft.Dropdown(label=LABELS[key],value=str(value),disabled=not form.writable,
                     options=[ft.DropdownOption(key=str(v),text={'dock6':'AMBER Score (DOCK6)',
+                        'auto_curated':'Automático · ff94 / 32 PTMs FF_PTM (CC BY-NC 4.0)',
+                        'native_ff94':'Nativo · ff94 e bibliotecas do usuário',
+                        'ff03_ffptm':'ff03 + FF_PTM · perfil uniforme (CC BY-NC 4.0)',
                         'ligand':'Somente o ligante','everything':'Todo o complexo','nothing':'Somente energia (sem refinamento)',
                         'distance':'Resíduos próximos ao ligante','nab_atom_expression':'Expressões de átomos NAB'}.get(str(v),str(v))) for v in CHOICES[key]])
                 getter=(lambda c=control:int(c.value)) if key=='amber_score_gb_model' else (lambda c=control:c.value)
@@ -80,7 +83,7 @@ class MDSettings:
                 cells.append(self.controls[key])
             return section(title,cells,expanded=expanded)
         self.control=ft.Column([ft.Text('Amber Score: refinamento curto em solvente implícito GB/SA. Sem caixa de solvatação explícita, simulação convencional ou trajetória para RMSF.',size=13),
-            group('Protocolo e preparação',['amber_score_type','use_existing_ligand_charges','amber_score_abort_on_unprepped_ligand'],True),
+            group('Protocolo e preparação',['amber_score_type','residue_parameter_policy','use_existing_ligand_charges','amber_score_abort_on_unprepped_ligand'],True),
             group('Minimização e refinamento',['amber_score_before_md_minimization_cycles','amber_score_md_steps','amber_score_after_md_minimization_cycles','amber_score_minimization_rmsgrad','amber_score_temperature','amber_score_gb_model','amber_score_nonbonded_cutoff'],True),
             group('Região móvel',['amber_score_movable_region','amber_score_movable_distance_cutoff','amber_score_receptor_movable_atom_expr','amber_score_complex_movable_atom_expr'])],spacing=16)
         for editor in form.input_editors.values():editor.on_change=self.refresh

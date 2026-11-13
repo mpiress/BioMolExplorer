@@ -204,6 +204,31 @@ class ResultFiles:
             raise
         return dict(self.pdb_ligands(token,pid,rid,sid,filename),**changes)
 
+    @staticmethod
+    def _transaction_stage(db,pid,rid,sid):
+        """Read authoritative metadata using the deletion's existing transaction.
+
+        Result projections may populate their SQLite cache on a separate
+        connection; invoking them here can wait on our own write lock.
+        Authorization has already been checked by store.change.
+        """
+        row=db.execute('SELECT stages FROM runs WHERE id=? AND project_id=?',(rid,pid)).fetchone()
+        if row is None:raise AccessDenied('Execução não encontrada ou resultado de outro projeto.')
+        stage=next((item for item in json.loads(row[0]) if item['id']==sid),None)
+        if stage is None:raise ValueError('Etapa não encontrada nesta execução.')
+        return stage
+
+    @staticmethod
+    def _renew_md_results(db,pid,sid):
+        """Invalidate only this block's completed-pair reuse, not shared prep."""
+        row=db.execute('SELECT pipeline FROM projects WHERE id=?',(pid,)).fetchone()
+        pipeline=json.loads(row[0]);changed=False
+        for stage in pipeline:
+            if stage['id']==sid and stage['operation']=='dynamics_dock6':
+                stage['result_cache_epoch']=uuid4().hex;changed=True
+        if changed:
+            db.execute('UPDATE projects SET pipeline=?,revision=revision+1 WHERE id=?',(json.dumps(pipeline),pid))
+
     def remove(self, token, pid, rid, sid, filename):
         """Audit deletion, invalidate producer caches and restore bytes on failure."""
         backup = path = None
@@ -212,7 +237,7 @@ class ResultFiles:
             with self.store.change(token, pid, 'editor', 'remove_file', 'Arquivo removido: '+Path(filename).name) as db:
                 if db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running','awaiting_input')", (pid,)).fetchone():
                     raise ValueError('Aguarde a execução terminar antes de remover arquivos.')
-                stage = self.stage(token, pid, rid, sid)
+                stage = self._transaction_stage(db,pid,rid,sid)
                 path = self.store.scoped_path(pid, filename)
                 if str(path) not in stage.get('artifacts', []) or not path.is_file():
                     raise AccessDenied('Arquivo não autorizado para esta etapa.')
@@ -235,6 +260,7 @@ class ResultFiles:
                         from .artifact_registry import register_run
                         register_run(db,pid,row[0],stages)
                         db.execute('UPDATE runs SET stages=? WHERE id=?', (json.dumps(stages), row[0]))
+                self._renew_md_results(db,pid,sid)
         except Exception:
             if backup and backup.exists():
                 backup.replace(path)
@@ -250,7 +276,7 @@ class ResultFiles:
             with self.store.change(token,pid,'editor','remove_stage_results','Resultados da etapa removidos') as db:
                 if db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running','awaiting_input')",(pid,)).fetchone():
                     raise ValueError('Aguarde a execução terminar antes de remover arquivos.')
-                stage=self.stage(token,pid,rid,sid)
+                stage=self._transaction_stage(db,pid,rid,sid)
                 paths={str(self.store.scoped_path(pid,p)) for p in stage.get('artifacts',[])}
                 protected=self._shared_paths(db,pid,sid)
                 backup_dir=self.store.project_dir(pid)/'.history'/'.removed'
@@ -276,6 +302,7 @@ class ResultFiles:
                         from .artifact_registry import register_run
                         register_run(db,pid,row[0],stages)
                         db.execute('UPDATE runs SET stages=? WHERE id=?',(json.dumps(stages),row[0]))
+                self._renew_md_results(db,pid,sid)
         except Exception:
             for path,backup in reversed(backups):
                 if backup.exists():backup.replace(path)

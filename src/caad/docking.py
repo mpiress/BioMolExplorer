@@ -164,7 +164,14 @@ class Docking():
                     '            model.deleteResidue(residue)\n'
                     'DockPrep.prep(chimera.openModels.list(modelTypes=[chimera.Molecule]), '
                     'addHFunc=None, addCharges=False, delSolvent=False, delIons=False, '
-                    'delLigands=False, delAltLocs=True, nogui=True)\n')
+                    'delLigands=False, delAltLocs=True, incompleteSideChains=False, '
+                    'mutateMSE=False, mutate5BU=False, mutateUMS=False, mutateCSL=False, nogui=True)\n')
+            if Path(input_template).name=='prepare_receptor.template':
+                from biomolexplorer.structure_sanitation import receptor_script
+                config_content=receptor_script(config_content,output_script,record)
+                from biomolexplorer.storage import write_json
+                selection_record=[str(record[0]),str(record[1]),int(record[2]),str(record[3])] if record is not None else None
+                write_json(dict(record=selection_record),Path(output_script).with_suffix('.receptor_selection.json'))
             # Classic Chimera's open/write parsers consume the remaining path
             # verbatim, including spaces. Shell quoting becomes part of its filename.
 
@@ -527,7 +534,7 @@ class Docking():
                     self.generate_docking_script(input_template='src/scripts/chimera/prepare_receptor.template',
                                                 output_script=directory(self.outputpath) + f'prepare_receptor_{receptor}_{chain}.com',
                                                 input_complex=directory(self.outputpath) + f'{receptor}_{chain}' + '.complex',
-                                                receptor=directory(self.outputpath) + f'{receptor}_{chain}', _preparation=preparation if preparation_pairs is not None else None)
+                                                receptor=directory(self.outputpath) + f'{receptor}_{chain}', _preparation=preparation if preparation_pairs is not None else None, _record=pdb)
                     receptors.append(f'prepare_receptor_{receptor}_{chain}.com')
 
 

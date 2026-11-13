@@ -15,7 +15,7 @@ OPERATIONS = {
          'amber_score_before_md_minimization_cycles','amber_score_md_steps','amber_score_after_md_minimization_cycles',
          'amber_score_gb_model','amber_score_nonbonded_cutoff','amber_score_temperature',
          'amber_score_movable_distance_cutoff','amber_score_receptor_movable_atom_expr','amber_score_complex_movable_atom_expr',
-         'amber_score_abort_on_unprepped_ligand','use_existing_ligand_charges')),
+         'amber_score_abort_on_unprepped_ligand','use_existing_ligand_charges','residue_parameter_policy','md_cache_epoch')),
     'retrieve_pubchem': OperationSpec('biomolexplorer.pubchem_retrieval','retrieve_pubchem',(),
         ('target','reference_source','reference_type','reference','selection_mode','compound_id','threshold','max_records','base_input_path','input_file')),
     'retrieve_compounds': OperationSpec('wrappers.crawlers', 'retrieve_compounds',

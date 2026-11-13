@@ -1,0 +1,318 @@
+{
+  "date": "2026-11-13",
+  "state": "focused_validation_passed_not_global_certification",
+  "suite": {
+    "tests": 108,
+    "seconds": 103.761,
+    "status": "passed"
+  },
+  "independent_numerical_checks": {
+    "energies": 100,
+    "finite_difference_derivatives": 1200,
+    "derivative_absolute_tolerance": 2e-06
+  },
+  "target_case": {
+    "target": "2WSL",
+    "compound": "CHEMBL92663",
+    "ligand_origin": "target-matched DOCK6 pose from consensus",
+    "receptor_sha256": "c031fac0cf8d1924726ede2782354d4dd803333114b7dabf542b85a532f3765f",
+    "ligand_sha256": "978447837090fbd6d05c847934a9b1bfd9f89a857f709a797f52493624af0357",
+    "profile": "ff03_ffptm",
+    "protein_force_field": "ff03",
+    "execution": {
+      "md_pairs": 1,
+      "md_failures": 0,
+      "md_reused": 0
+    },
+    "seconds": 23.89315318199806,
+    "preparation": "Existing validated preparation checkpoints reused",
+    "cache": {
+      "md_pairs": 1,
+      "md_failures": 0,
+      "md_reused": 1
+    },
+    "cache_seconds": 0.13527741201687604,
+    "cache_proof": "run_pair replaced by raising mock during repeat",
+    "settings": {
+      "amber_score_type": "dock6",
+      "amber_score_movable_region": "ligand",
+      "amber_score_minimization_rmsgrad": 0.01,
+      "amber_score_before_md_minimization_cycles": 100,
+      "amber_score_md_steps": 1000,
+      "amber_score_after_md_minimization_cycles": 10000,
+      "amber_score_gb_model": 5,
+      "amber_score_nonbonded_cutoff": 18.0,
+      "amber_score_temperature": 300.0,
+      "amber_score_movable_distance_cutoff": 10.0,
+      "amber_score_receptor_movable_atom_expr": "::",
+      "amber_score_complex_movable_atom_expr": "::",
+      "amber_score_abort_on_unprepped_ligand": true,
+      "use_existing_ligand_charges": false,
+      "residue_parameter_policy": "auto_curated"
+    },
+    "result": {
+      "status": "succeeded",
+      "amber_score": 2027.359375,
+      "complex_energy": -5959.890882,
+      "receptor_contribution": 7970.934412,
+      "ligand_contribution": 16.315879
+    },
+    "validated_residues": [
+      {
+        "topology": "rec",
+        "residue": "CSS",
+        "residue_index": 64,
+        "charge": 2.3597459541946364e-09,
+        "bonds_validated": true
+      },
+      {
+        "topology": "rec.lig.1",
+        "residue": "CSS",
+        "residue_index": 65,
+        "charge": 2.3597459541946364e-09,
+        "bonds_validated": true
+      }
+    ],
+    "kernel": {
+      "version": "periodic-torsion-forward-ad-v2",
+      "recipe_sha256": "347f3decffec123c3beb3d284ceacf8fb207e6f6e219275973be2a7af6f229ba",
+      "native_sha256": "62ddcc919069b6d7af3872b6b06ad344a75ca1d6be2a34013df265579d92f4f2",
+      "binary_sha256": "57a4b0ea566d4712297301889d6b032eb35938529065ceee51c2e70262bd0322"
+    },
+    "extended_terms": {
+      "rec": 12,
+      "lig.1": 0,
+      "rec.lig.1": 12
+    },
+    "automatic": true,
+    "manual_structure_edits": false,
+    "artifact_directory": "/tmp/biomol-2wsl-installed-validation"
+  },
+  "native_standard_case": {
+    "result": {
+      "amber_score": 6.840647,
+      "complex_energy": -4567.794036,
+      "receptor_contribution": 4584.941716,
+      "ligand_contribution": -10.307033
+    },
+    "profile": "native_ff94",
+    "compatibility_kernel_required": false
+  },
+  "library": {
+    "DA2": {
+      "ok": true,
+      "charge": 0.9999999963780645,
+      "atoms": 30
+    },
+    "DA1": {
+      "ok": true,
+      "charge": 1.0000010011359708,
+      "atoms": 27
+    },
+    "2MR": {
+      "ok": true,
+      "charge": 0.9999980032707176,
+      "atoms": 30
+    },
+    "CSS": {
+      "ok": true,
+      "charge": 2.3597459541946364e-09,
+      "atoms": 12
+    },
+    "CSO": {
+      "ok": true,
+      "charge": -4.280469423356692e-09,
+      "atoms": 12
+    },
+    "CSP": {
+      "ok": true,
+      "charge": 2.7438917804545326e-10,
+      "atoms": 16
+    },
+    "FCY": {
+      "ok": true,
+      "charge": -2.9983042751924316e-06,
+      "atoms": 50
+    },
+    "GCY": {
+      "ok": true,
+      "charge": -5.000631094986829e-06,
+      "atoms": 63
+    },
+    "SPC": {
+      "ok": true,
+      "charge": -2.003139010997579e-06,
+      "atoms": 58
+    },
+    "CGU": {
+      "ok": true,
+      "charge": 1.0059103404680414e-06,
+      "atoms": 19
+    },
+    "PCA": {
+      "ok": true,
+      "charge": 9.987762246144172e-07,
+      "atoms": 13
+    },
+    "LYZ": {
+      "ok": true,
+      "charge": 0.9999989967237942,
+      "atoms": 23
+    },
+    "MLZ": {
+      "ok": true,
+      "charge": 0.9999980015420663,
+      "atoms": 25
+    },
+    "ALY": {
+      "ok": true,
+      "charge": -2.000263413459713e-06,
+      "atoms": 26
+    },
+    "MLY": {
+      "ok": true,
+      "charge": 0.9999989955713605,
+      "atoms": 28
+    },
+    "M3L": {
+      "ok": true,
+      "charge": 0.9999990012237754,
+      "atoms": 31
+    },
+    "DAH": {
+      "ok": true,
+      "charge": 1.003550594957936e-06,
+      "atoms": 22
+    },
+    "DHP": {
+      "ok": true,
+      "charge": 1.0037152280290007e-06,
+      "atoms": 16
+    },
+    "HY3": {
+      "ok": true,
+      "charge": 1.0002249990481715e-06,
+      "atoms": 15
+    },
+    "HYP": {
+      "ok": true,
+      "charge": 1.0043737619369608e-06,
+      "atoms": 15
+    },
+    "SEN": {
+      "ok": true,
+      "charge": 9.974591570482971e-07,
+      "atoms": 16
+    },
+    "SEP": {
+      "ok": true,
+      "charge": -1.9999999974756206,
+      "atoms": 14
+    },
+    "TON": {
+      "ok": true,
+      "charge": -2.9085244213078454e-09,
+      "atoms": 19
+    },
+    "0AF": {
+      "ok": true,
+      "charge": 8.231659798241253e-11,
+      "atoms": 25
+    },
+    "PTN": {
+      "ok": true,
+      "charge": -6.310948430510166e-09,
+      "atoms": 26
+    },
+    "PYH": {
+      "ok": true,
+      "charge": 2.9984689090545302e-06,
+      "atoms": 36
+    },
+    "ORN": {
+      "ok": true,
+      "charge": 0.9999989991932959,
+      "atoms": 19
+    },
+    "HTR": {
+      "ok": true,
+      "charge": 4.335347303374704e-09,
+      "atoms": 25
+    },
+    "PRK": {
+      "ok": true,
+      "charge": -1.9949622165338354e-06,
+      "atoms": 29
+    },
+    "BTK": {
+      "ok": true,
+      "charge": -1.9953024589236534e-06,
+      "atoms": 32
+    },
+    "TPO": {
+      "ok": true,
+      "charge": -1.999998993595759,
+      "atoms": 17
+    },
+    "PTR": {
+      "ok": true,
+      "charge": -2.000000997239646,
+      "atoms": 24
+    }
+  },
+  "dynamic_organic_component": {
+    "validation": {
+      "dynamic_cofactors": [
+        {
+          "residue": "A 999 ",
+          "instances": [
+            "A 999 "
+          ],
+          "chemical_identity": "[H]C([H])([H])C([H])([H])[H]",
+          "component": "XYZ",
+          "charge": 0,
+          "force_field": "GAFF",
+          "charge_method": "AM1-BCC",
+          "definition_sha256": "b59890c3bb981173436c5d00d263f96c4ebe6c045543a5aa70f31eb5158d2627",
+          "definition_source": "wwPDB CCD or explicit local chemical definition",
+          "definition_license": "Local chemical input; license supplied by project owner",
+          "cache_key": "d9b951c85be34129ecb5581900707249a40bad0516ff6f3aef06bb2abfeb06ce",
+          "files": {
+            "XYZ.mol2": "2dfeb7d2f70436bf71856b1dd14c49c9badf16d740d6294d3e694abe2f4b5c23",
+            "XYZ.frcmod": "bf922808a85c35c2c11e49229322f906ba4bfc17fa247ee240d7221744a82dd5"
+          },
+          "tools": {
+            "antechamber": "66bbe9ad46c0268974605473e3a458cc66f524b45979ca0a46810231834ae89c",
+            "parmchk2": "9e77a6ad7ccbf93a6b9dfbc15ef73c532fa6743881a34390660b1af1fe536879"
+          }
+        }
+      ],
+      "elapsed_seconds": 0.2625237249885686
+    },
+    "cache_proof": "run_amber_tool replaced by raising mock during repeat"
+  },
+  "preserved_artifacts": {
+    "checked": 185,
+    "changed": [],
+    "missing": [],
+    "native_dock6_sha256": "62ddcc919069b6d7af3872b6b06ad344a75ca1d6be2a34013df265579d92f4f2",
+    "native_expected_sha256": "62ddcc919069b6d7af3872b6b06ad344a75ca1d6be2a34013df265579d92f4f2"
+  },
+  "installed_package": {
+    "checked": 347,
+    "mismatches": [],
+    "wheel_sha256": "b7842cae10e6463e912768ccfb30badb336fef50d4c3060c7f667ade80542a1a",
+    "installation": "/home/michel/progs/miniconda3/envs/BioMolExplorer/lib/python3.12/site-packages"
+  },
+  "package_dependencies": "pip check: No broken requirements found",
+  "preexisting_test_failures": [
+    "test_redocking_chimera_repair.ChimeraChargeRepairTests.test_chimera_charge_failure_retries_once_with_explicit_types",
+    "test_redocking_chimera_repair.Dock6RedockingTests.test_engine_is_validated_and_exposed_in_operation_schema"
+  ],
+  "limits": [
+    "Unknown covalent PTMs, MSE without validated profile, special crosslinks and unsupported metals require validated parameters",
+    "No universal pKa, tautomer inference or missing-loop reconstruction",
+    "No complete desktop UI acceptance",
+    "Positive Amber Score is not evidence of favorable binding"
+  ]
+}

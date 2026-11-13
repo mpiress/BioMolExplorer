@@ -116,6 +116,8 @@ def clear_project_results(store,token,pid,*,reset_configuration=True):
             journal.flush()
             pipeline=json.loads(db.execute('SELECT pipeline FROM projects WHERE id=?',(pid,)).fetchone()[0])
             links_reset=0
+            for stage in pipeline:
+                if stage['operation']=='dynamics_dock6':stage['result_cache_epoch']=uuid4().hex
             if reset_configuration:
                 pipeline,links_reset=reset_selections(pipeline)
                 pipeline=reset_defaults(pipeline)

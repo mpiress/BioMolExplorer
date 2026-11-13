@@ -414,6 +414,7 @@ class PipelineService:
         params=dict(stage['parameters'])
         if stage['operation']=='dynamics_dock6':
             for internal in ('md_inputs','md_seed_path'):params.pop(internal,None)
+            params['md_cache_epoch']=stage.get('result_cache_epoch','')
         if stage['operation'] in ('docking_dock6','dynamics_dock6') or stage['operation']=='redocking' and params.get('redocking_engine','vina')=='dock6':
             if self.dock6_path is not None:
                 params['dock6_app_path']=str(self.dock6_path)

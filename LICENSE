@@ -19,3 +19,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+Third-party parameter data exception
+------------------------------------
+The Forcefield_PTM parameter data under
+src/biomolexplorer/resources/amber_support/ffptm_ff03/ are distributed under
+CC BY-NC 4.0, not under the MIT license above. See that directory's NOTICE.md
+for attribution, source DOI, modifications and noncommercial-use terms.

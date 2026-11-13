@@ -25,7 +25,7 @@ def perform_dynamics_dock6(base_input_path,base_selected_mols,base_output_path,
         amber_score_complex_movable_atom_expr='::',amber_score_abort_on_unprepped_ligand=True,
         use_existing_ligand_charges=False,md_time_step=.001,trajectory_stride=10,
         md_heating_steps=1000,md_equilibration_steps=1000,
-        random_seed=2026,md_movable_mask=':1',analyze_trajectory=True):
+        random_seed=2026,md_movable_mask=':1',analyze_trajectory=True,residue_parameter_policy='auto_curated',md_cache_epoch=''):
     settings=validate_settings(locals())
     pairs=md_inputs or []
     if not pairs:raise ValueError('Nenhum par ativo de receptor e ligante foi selecionado.')
@@ -53,6 +53,7 @@ def perform_dynamics_dock6(base_input_path,base_selected_mols,base_output_path,
             ligand_identity=molecular_identity(pair['ligand'])
             request=dict(version=2,settings=execution_settings(settings),software=identity,
                 receptor=file_digest(pair['receptor']['path']),ligand=ligand_identity)
+            if md_cache_epoch:request['result_cache_epoch']=md_cache_epoch
             signature=hashlib.sha256(json.dumps(request,sort_keys=True,allow_nan=False).encode()).hexdigest()
             reused=cache.restore(signature,directory)
             if reused:

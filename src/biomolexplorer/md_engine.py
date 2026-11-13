@@ -33,9 +33,32 @@ def tools(dock6_app_path,ambertools_path,settings,ambertools_env=''):
 
 def tool_identity(root,found):
     library=root/'parameters/leap'
-    return dict(tools={name:file_digest(path) for name,path in found.items()},
+    from .md_residue_support import profile_identity
+    from .preparation_tools import resolve_amber_tool
+    charge_utilities={}
+    for name in ('antechamber','parmchk2'):
+        try:utility=resolve_amber_tool(name)
+        except ScientificToolError:continue
+        charge_utilities[name]=file_digest(utility.executable)
+    return dict(dynamic_charge_utilities=charge_utilities,residue_profiles=profile_identity(),tools={name:file_digest(path) for name,path in found.items()},
         parameters={p.relative_to(library).as_posix():file_digest(p) for p in sorted(library.rglob('*')) if p.is_file()},
-        adapter={name:file_digest(Path(__file__).with_name(name)) for name in ('md_engine.py','md_analysis.py','md_config.py','md_cache.py','md_inputs.py','md_consensus.py','processes.py')})
+        adapter={name:file_digest(Path(__file__).with_name(name)) for name in ('md_engine.py','md_analysis.py','md_config.py','md_cache.py','md_inputs.py','md_consensus.py','md_residue_support.py','md_cofactor_support.py','structure_sanitation.py','md_torsion_support.py','processes.py')},
+        support_data={p.relative_to(Path(__file__).with_name('resources')).as_posix():file_digest(p)
+            for p in sorted((Path(__file__).with_name('resources')/'amber_support').rglob('*')) if p.is_file() and p.suffix in ('.json','.prepin','.frcmod','.h')},
+        compatibility_sources={p.relative_to(root).as_posix():file_digest(p) for p in sorted((root/'src/dock').rglob('*'))
+            if p.is_file() and p.suffix in ('.c','.cpp','.h','.o')})
+
+
+def parameter_identity(root,found):
+    """Keep parameter checkpoints independent of scoring/analysis-only changes."""
+    import hashlib
+    import inspect
+    return dict(tools={name:file_digest(path) for name,path in found.items() if name!='dock6'},
+        parameters={p.relative_to(root/'parameters/leap').as_posix():file_digest(p)
+            for p in sorted((root/'parameters/leap').rglob('*')) if p.is_file()},
+        adapter=dict(prepare=hashlib.sha256(inspect.getsource(prepare).encode()).hexdigest(),
+            residue_support=file_digest(Path(__file__).with_name('md_residue_support.py')),
+            cofactor_support=file_digest(Path(__file__).with_name('md_cofactor_support.py'))))
 
 
 def prepare(directory,root,found,existing_charges):
@@ -45,6 +68,10 @@ def prepare(directory,root,found,existing_charges):
     invoked by relative names, avoiding Perl interpolation of workspace paths.
     """
     directory=Path(directory)
+    from .md_residue_support import plan,install,validate_prepared
+    report_path=directory/'residue_support.json'
+    support=json.loads(report_path.read_text()) if report_path.is_file() else plan(directory/'rec.pdb')
+    install(directory,support,root)
     for name in ('prepare_amber.pl','amberize_receptor','amberize_ligand','amberize_complex'):
         text=found[name].read_text()
         if name=='prepare_amber.pl':
@@ -57,6 +84,12 @@ def prepare(directory,root,found,existing_charges):
             text=re.sub(r"export DOCK_HOME='[^']*'",lambda _: 'export DOCK_HOME='+shlex.quote(str(root)),text)
             text=re.sub(r"'[^']*'/bin/([A-Za-z0-9_]+)",lambda m:shlex.quote(str(root/'bin'/m[1])),text)
             text=text.replace(shlex.quote(str(root/'bin/tleap')),'./tleap')
+        if name in ('amberize_receptor','amberize_complex'):
+            if text.count("forcefield='leaprc.ff94'")!=1 or text.count('source leaprc.dock.user')!=1:
+                raise ValueError('Unsupported DOCK6 helper layout for the curated residue profile')
+            if support['profile']=='ff03_ffptm':
+                text=text.replace("forcefield='leaprc.ff94'","forcefield='leaprc.ff03'")
+            text=text.replace('source leaprc.dock.user','source leaprc.dock.user\n source biomol_residue_support.leap')
         target=directory/name;write_text(text,target);target.chmod(0o700)
     # tleap is another relocated shell launcher in several DOCK distributions.
     arguments=[str(found['teLeap'])]+['-I'+str(root/'parameters/leap'/name) for name in ('prep','lib','parm','cmd')]
@@ -74,19 +107,24 @@ def prepare(directory,root,found,existing_charges):
     from .calculation_cache import CalculationCache,identity
     from .md_analysis import topology
     cache=CalculationCache('amber-preparation',directory)
-    software=tool_identity(root,found)
+    software=parameter_identity(root,found)
     components=[]
     for prefix,helper,sources,extra in [('rec','amberize_receptor',['rec.pdb'],[]),
             ('lig.1','amberize_ligand',['lig.mol2'],['.gaff.mol2','.frcmod']),
             ('rec.lig.1','amberize_complex',['rec.pdb','lig.mol2'],[])]:
         key=identity(dict(component=prefix,inputs=[file_digest(directory/source) for source in sources],software=software,
-                          existing_charges=existing_charges if prefix!='rec' else None))
+                          existing_charges=existing_charges if prefix!='rec' else None,
+                          support=None if prefix=='lig.1' else {k:support.get(k) for k in ('profile','bundle_id','bundle_files','dynamic_cofactors')}))
         files={prefix+ext:directory/(prefix+ext) for ext in ['.prmtop','.inpcrd','.amber.pdb']+extra}
+        # Failed attempts must never leave stale topologies that can be
+        # mistaken for successful output under a different profile/input.
+        for path in files.values():path.unlink(missing_ok=True)
         with cache.locked(key):
             if cache.restore(key,files):
                 write_text('#!/bin/sh\nexit 0\n',directory/helper)
                 (directory/helper).chmod(0o700)
         components.append((prefix,key,files))
+    (directory/'lig.amber_score.mol2').unlink(missing_ok=True)
     try:
         run_command(['perl','prepare_amber.pl']+(['-c'] if existing_charges else [])+['lig.mol2','rec.pdb'],cwd=directory,env=env)
     except ScientificToolError as error:
@@ -108,6 +146,14 @@ def prepare(directory,root,found,existing_charges):
         for extension in ('.prmtop','.inpcrd','.amber.pdb'):
             if not (directory/(prefix+extension)).is_file():raise ValueError('Preparação AMBER incompleta: '+prefix+extension)
     if not (directory/'lig.amber_score.mol2').is_file():raise ValueError('MOL2 sem identificador AMBER_SCORE_ID.')
+    support['validated_residues']=validate_prepared(directory,support)
+    from .md_torsion_support import read_torsion_parameters,compatible_binary
+    extended={prefix:read_torsion_parameters(directory/(prefix+'.prmtop')) for prefix in ('rec','lig.1','rec.lig.1')}
+    if any(extended.values()):
+        binary,kernel=compatible_binary(root,directory)
+        env['BIOMOL_MD_DOCK_BINARY']=str(binary)
+        support['torsion_kernel']=dict(kernel,extended_parameters=extended)
+    write_json(support,report_path)
     return env
 
 
@@ -159,7 +205,9 @@ def run_pair(pair,directory,root,found,settings,ambertools_path='',ambertools_en
             compound_identifier=pair['ligand'].get('name'),configuration=pair.get('id'))
     phase('input_validation')
     receptor=validate_structure(pair['receptor']['path'],'receptor')
-    normalized_variants=normalize_receptor_variants(receptor,directory/'rec.pdb')
+    from .structure_sanitation import sanitize
+    sanitation=sanitize(receptor,directory/'rec.sanitized.pdb')
+    normalized_variants=normalize_receptor_variants(directory/'rec.sanitized.pdb',directory/'rec.pdb')
     ligand=pair['ligand'];source=Path(ligand['path'])
     if source.suffix.lower()=='.csv':
         row=ligand.get('compound',{})
@@ -173,6 +221,11 @@ def run_pair(pair,directory,root,found,settings,ambertools_path='',ambertools_en
         convert_structure(source,directory/'lig.mol2',index=index)
     else:shutil.copy2(validate_structure(source,'ligand'),directory/'lig.mol2')
     validate_structure(directory/'lig.mol2','ligand')
+    from .md_residue_support import plan,install,audit_ligand
+    support=plan(directory/'rec.pdb',settings['residue_parameter_policy'])
+    support['structural_sanitation']=sanitation
+    support['ligand_validation']=audit_ligand(directory/'lig.mol2')
+    install(directory,support,root)
     phase('preparation_parameterization_complex')
     existing_charges=settings['use_existing_ligand_charges']
     charge_origin='input charges' if existing_charges else 'AM1-BCC'
@@ -198,11 +251,13 @@ def run_pair(pair,directory,root,found,settings,ambertools_path='',ambertools_en
     write_json(dict(version=2,settings=settings,software=tool_identity(root,found),
         inputs={kind:dict(name=pair[kind].get('name',Path(pair[kind]['path']).name),identity=pair[kind].get('identity'),
             source=pair[kind]['path'],source_sha256=file_digest(pair[kind]['path']),file=filename,sha256=file_digest(directory/filename)) for kind,filename in [('receptor','rec.pdb'),('ligand','lig.mol2')]},
-        preparation=dict(receptor_variant_normalization=normalized_variants,protein_force_field='ff94',ligand_force_field='GAFF',
+        preparation=dict(receptor_variant_normalization=normalized_variants,protein_force_field=support['protein_force_field'],ligand_force_field='GAFF',
+            residue_support=json.loads((directory/'residue_support.json').read_text()),
             charge_method=charge_origin,
             solvent='implicit GB',water_model=None,pressure_control=None,complex_atom_order='ligand first, receptor second',
             atoms=topology['natom'],masks={k:v for k,v in masks.items() if isinstance(v,str)}),
-        refinement=dict(engine='DOCK6 6.11 native Amber Score',
+        refinement=dict(engine='DOCK6 6.11 Amber Score with full-periodic-torsion compatibility'
+            if json.loads((directory/'residue_support.json').read_text()).get('torsion_kernel') else 'DOCK6 6.11 native Amber Score',
             equilibrium_claim=False,production_claim=False,trajectory_available=False,
             thermostat='Langevin',gamma_ln=2.,constraints=None,time_step_ps=.001,
             duration_ps=0 if settings['amber_score_movable_region']=='nothing' else settings['amber_score_md_steps']*.001,
@@ -220,7 +275,7 @@ def run_pair(pair,directory,root,found,settings,ambertools_path='',ambertools_en
         write_text(spheres,directory/'site.sph')
     write_text(dock_input(settings),directory/'amber.in')
     phase('dock6_min_md_min')
-    run_command([str(found['dock6']),'-i','amber.in','-o','amber.out','-v'],cwd=directory,env=env)
+    run_command([env.get('BIOMOL_MD_DOCK_BINARY',str(found['dock6'])),'-i','amber.in','-o','amber.out','-v'],cwd=directory,env=env)
     result=energies(directory/'amber_scored.mol2')
     plot(directory/'energies.png',list(range(4)),list(result.values()),'AMBER Score · contribuições finais (DOCK6)','0: score · 1: complexo · 2: receptor · 3: ligante','kcal/mol')
     from .md_analysis import analyze_final_state

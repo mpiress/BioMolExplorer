@@ -8,7 +8,7 @@ from .storage import write_json
 from .calculation_cache import CalculationCache
 
 NAME='md_cache.json'
-SUFFIXES={'.csv','.png','.json','.pdb','.pdbqt','.mol2','.sdf','.pdf','.prmtop','.inpcrd','.nc','.rst7','.restart','.out','.dat','.in','.log','.frcmod'}
+SUFFIXES={'.csv','.png','.json','.pdb','.pdbqt','.mol2','.sdf','.pdf','.prmtop','.inpcrd','.nc','.rst7','.restart','.out','.dat','.in','.log','.frcmod','.prepin','.leap'}
 
 
 def seed_runs(store,pid,sid,destination):
@@ -79,10 +79,12 @@ class PairCache:
 
     def remember(self,key,directory,record):
         directory=Path(directory)
-        manifest=artifact_manifest([p for p in directory.rglob('*') if p.is_file() and p.suffix in SUFFIXES])
+        def persisted(path):
+            return path.is_file() and path.suffix in SUFFIXES and not (path.suffix in ('.log','.out') and path.stat().st_size==0)
+        manifest=artifact_manifest([p for p in directory.rglob('*') if persisted(p)])
+        files={p.relative_to(directory).as_posix():p for p in directory.rglob('*') if persisted(p)}
+        self.index.remember(key,files,dict(files=list(files),result=record,
+            receptor_identifier=record['receptor'],compound_identifier=record['ligand']))
         self.entries.append(dict(key=key,directory=directory.relative_to(self.output).as_posix(),record=record,
             files={Path(path).relative_to(self.output).as_posix():value for path,value in manifest.items()}))
         write_json(dict(version=1,entries=self.entries),self.output/NAME)
-        files={p.relative_to(directory).as_posix():p for p in directory.rglob('*') if p.is_file() and p.suffix in SUFFIXES}
-        self.index.remember(key,files,dict(files=list(files),result=record,
-            receptor_identifier=record['receptor'],compound_identifier=record['ligand']))

@@ -71,6 +71,12 @@ def validate_ligand_preparation(phase):
 def receptor_cleanup(script):
     """Normalize alternate locations with DockPrep, without completing missing atoms."""
     script=Path(script);text=script.read_text()
+    from .structure_sanitation import receptor_script
+    metadata=script.with_suffix('.receptor_selection.json')
+    record=json.loads(metadata.read_text()).get('record') if metadata.is_file() else None
+    # The complex is produced AFTER scripts are generated; sanitize now, before
+    # Chimera loads it and applies its broad protein/ligand selection.
+    text=receptor_script(text,script,record)
     helper=script.with_suffix('.cleanup.py')
     source=re.search(r'^open (.+\.pdb)$',text,re.M)
     keep=set(re.findall(r':([A-Z0-9]{1,5})',next((line for line in text.splitlines() if line.startswith('select protein')),'')))

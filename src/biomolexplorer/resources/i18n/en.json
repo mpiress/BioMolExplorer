@@ -2808,5 +2808,10 @@
   "Visualizar target": "View target",
   "Refine poses target–ligante com o Amber Score nativo do DOCK6 6.11 em solvente implícito.": "Refine target–ligand poses with native DOCK6 6.11 Amber Score in implicit solvent.",
   "Expressão NAB do target, usada em nab_atom_expression. Exemplo: ::C,CA,N,O. Não é uma máscara cpptraj.": "Target NAB expression for nab_atom_expression, e.g. ::C,CA,N,O. This is not a cpptraj mask.",
-  "Expressão NAB do complexo. No complexo, o ligante vem antes do target na numeração de cadeias NAB.": "Complex NAB expression. Ligand chains precede target chains in the complex NAB numbering."
+  "Expressão NAB do complexo. No complexo, o ligante vem antes do target na numeração de cadeias NAB.": "Complex NAB expression. Ligand chains precede target chains in the complex NAB numbering.",
+  "Perfil de parâmetros do target": "Target parameter profile",
+  "Automático · ff94 / 32 PTMs FF_PTM (CC BY-NC 4.0)": "Automatic · ff94 / 32 FF_PTM modifications (CC BY-NC 4.0)",
+  "Nativo · ff94 e bibliotecas do usuário": "Native · ff94 and user libraries",
+  "ff03 + FF_PTM · perfil uniforme (CC BY-NC 4.0)": "ff03 + FF_PTM · uniform profile (CC BY-NC 4.0)",
+  "Auto: ff94 nativo para targets padrão; PTMs internos publicados usa proteína ff03 + FF_PTM (CC BY-NC 4.0) e uma cópia local compatível do DOCK6 6.11. Não infere pH nem remove a modificação. Native ff94 mantém o preparo original; ff03 + FF_PTM força um perfil uniforme nos targets.": "Auto: native ff94 for standard targets; published internal PTMs use protein ff03 + FF_PTM (CC BY-NC 4.0) and a local compatible DOCK6 6.11 copy. Does not infer pH or remove modifications. Native ff94 retains the original protein profile; ff03 + FF_PTM forces a uniform profile across targets."
 }

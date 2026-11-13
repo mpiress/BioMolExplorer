@@ -59,9 +59,21 @@ class MDResults:
         with self.store.change(token,pid,'editor','exclude_md_pair','Par de dinâmica removido: '+key[:12]) as db:
             if db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running','awaiting_input')",(pid,)).fetchone():
                 raise ValueError('Aguarde a execução terminar antes de remover o par de dinâmica.')
-            if not any(r['id']==key for r in self.pairs(token,pid,rid,sid)):raise AccessDenied('Par de dinâmica indisponível.')
             row=db.execute('SELECT pipeline FROM projects WHERE id=?',(pid,)).fetchone()
-            pipeline=json.loads(row[0]);stage=next(s for s in pipeline if s['id']==sid)
+            pipeline=json.loads(row[0]);stage=next((s for s in pipeline if s['id']==sid),None)
+            result_stage=self.results._transaction_stage(db,pid,rid,sid)
+            if stage is None or result_stage['operation']!='dynamics_dock6' or not re.fullmatch('[a-f0-9]{64}',key):
+                raise AccessDenied('Par de dinâmica indisponível.')
+            params=stage['parameters']
+            if key in (params.get('excluded_pairs') or []) or params.get('selected_pairs') is not None and key not in params['selected_pairs']:
+                raise AccessDenied('Par de dinâmica indisponível.')
+            root=self.store.project_dir(pid,db).resolve();found=False
+            for name in result_stage.get('artifacts',[]):
+                path=Path(name).resolve()
+                if path.name!='dynamics_results.json':continue
+                if not path.is_relative_to(root):raise AccessDenied('O caminho deve pertencer ao projeto.')
+                if any(record.get('id')==key for record in json.loads(path.read_text()).get('pairs',[])):found=True
+            if not found:raise AccessDenied('Par de dinâmica indisponível.')
             excluded=set(stage['parameters'].get('excluded_pairs') or []);excluded.add(key)
             stage['parameters']['excluded_pairs']=sorted(excluded)
             db.execute('UPDATE projects SET pipeline=?,revision=revision+1 WHERE id=?',(json.dumps(pipeline),pid))

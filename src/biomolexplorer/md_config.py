@@ -9,8 +9,9 @@ DEFAULTS=dict(amber_score_type='dock6',amber_score_movable_region='ligand',
     amber_score_gb_model=5,amber_score_nonbonded_cutoff=18.,amber_score_temperature=300.,
     amber_score_movable_distance_cutoff=10.,amber_score_receptor_movable_atom_expr='::',
     amber_score_complex_movable_atom_expr='::',amber_score_abort_on_unprepped_ligand=True,
-    use_existing_ligand_charges=False)
+    use_existing_ligand_charges=False,residue_parameter_policy='auto_curated')
 HELP={
+ 'residue_parameter_policy':'Auto: ff94 nativo para targets padrão; PTMs internos publicados usa proteína ff03 + FF_PTM (CC BY-NC 4.0) e uma cópia local compatível do DOCK6 6.11. Não infere pH nem remove a modificação. Native ff94 mantém o preparo original; ff03 + FF_PTM força um perfil uniforme nos targets.',
  'amber_score_type':'Amber Score nativo do DOCK6 6.11: refinamento curto em GB/SA, sem simulação convencional ou trajetória externa.',
  'amber_score_movable_region':'Região móvel do AMBER Score: ligand (ligante), everything (todos), nothing (energia sem MD), distance (resíduos próximos ao sítio), nab_atom_expression (expressões NAB).',
  'amber_score_minimization_rmsgrad':'Critério de convergência RMS do gradiente na minimização; número finito positivo. Padrão DOCK6: 0.01.',
@@ -28,7 +29,7 @@ HELP={
 }
 INTEGER={'amber_score_before_md_minimization_cycles','amber_score_md_steps','amber_score_after_md_minimization_cycles'}
 BOOLEANS={'amber_score_abort_on_unprepped_ligand','use_existing_ligand_charges'}
-CHOICES={'amber_score_type':['dock6'],
+CHOICES={'residue_parameter_policy':['auto_curated','native_ff94','ff03_ffptm'],'amber_score_type':['dock6'],
  'amber_score_movable_region':['ligand','everything','nothing','distance','nab_atom_expression'],
  'amber_score_gb_model':[1,2,5]}
 

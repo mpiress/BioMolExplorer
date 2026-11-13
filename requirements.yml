@@ -1,6 +1,8 @@
 # Active Chimera preparation: docs/chimera_migration.md.
 # Chimera is required by molecular preparation protocols.
-# Native Amber Score uses the DOCK6 6.11 bundle; no standalone AmberTools environment.
+# Amber Score uses the DOCK6 6.11 bundle; no standalone AmberTools environment.
+# PTM support: bundled CC BY-NC 4.0 FF_PTM data with protein ff03.
+# General periodic torsions require the licensed DOCK6 6.11 sources for a local build.
 # Native DMS surface port: docs/dms_migration.md (NumPy + SciPy; no DMS executable).
 name: BioMolExplorer
 channels:
@@ -9,6 +11,11 @@ channels:
 dependencies:
   - python=3.12.3
   - pip=26.2
+  - c-compiler
+  - cxx-compiler
+  - make
+  - flex
+  - zlib
   - openbabel=3.1.1
   - numpy=1.26.4
   - pandas=2.1.4

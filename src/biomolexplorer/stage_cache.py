@@ -76,7 +76,7 @@ def implementation_digest():
     for name in ('structure_selection.py','amber_preparation.py','native_preparation.py'):
         digest.update((SOURCE_ROOT/'biomolexplorer'/name).read_bytes())
     digest.update((SOURCE_ROOT/'biomolexplorer/preparation_failures.py').read_bytes())
-    for name in ('docking_preparation.py','docking_data.py','dock6_validation.py','ligand_mol2.py','chimera_preparation.py','admet_outputs.py','molecular_surface.py','pdb_ligands.py','redocking_preparation.py','redocking_cache.py','redocking_dock6.py','redocking_config.py'):
+    for name in ('docking_preparation.py','docking_data.py','dock6_validation.py','ligand_mol2.py','chimera_preparation.py','structure_sanitation.py','admet_outputs.py','molecular_surface.py','pdb_ligands.py','redocking_preparation.py','redocking_cache.py','redocking_dock6.py','redocking_config.py'):
         digest.update((SOURCE_ROOT/'biomolexplorer'/name).read_bytes())
     for folder in ('caad', 'crawlers', 'kernel', 'wrappers'):
         for path in sorted((SOURCE_ROOT / folder).rglob('*.py')):

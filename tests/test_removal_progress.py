@@ -98,6 +98,21 @@ class RemovalProgressTests(unittest.IsolatedAsyncioTestCase):
         await progress.run(mutation)
         self.assertEqual(mutation.await_count,2)
 
+    async def test_error_is_reported_only_after_processing_splash_closes(self):
+        ui=self.ui();errors=[]
+        async def guard(action):
+            try:await action()
+            except Exception as error:
+                self.assertFalse(ui._configuration_loading.requests)
+                self.assertFalse(ui._configuration_loading.dialog.open)
+                errors.append(error)
+        ui.guard=guard
+        dialog=ft.AlertDialog(actions=[ft.TextButton('Remover')])
+        progress=RemovalProgress(ui,dialog)
+        import sqlite3
+        await progress.run(AsyncMock(side_effect=sqlite3.OperationalError('database is locked')))
+        self.assertEqual(len(errors),1);self.assertFalse(progress.running);self.assertFalse(dialog.actions[0].disabled)
+
     async def test_failure_preserves_previously_disabled_controls(self):
         ui=self.ui()
         dialog=ft.AlertDialog(content=ft.Column([]),actions=[ft.TextButton('Cancelar'),ft.TextButton('Remover',disabled=True)])
