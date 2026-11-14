@@ -6,6 +6,7 @@ import copy
 import json
 import os
 import secrets
+import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -350,13 +351,38 @@ class WorkspaceUI(ProjectTools):
         return handler
 
     async def logout(self,e):
-        if self.token:
-            await self.call(self.store.logout,self.token)
+        token = self.token
         self.token = None
         self.close_project_views()
         self.current = None
         self.current_run = None
         self.show_login()
+        if not token:
+            return
+        try:
+            # Leave the private workspace immediately even when a scientific
+            # writer temporarily owns SQLite's write lock.
+            await asyncio.to_thread(self.store.logout,token,.25)
+        except sqlite3.OperationalError as exc:
+            if 'locked' not in str(exc).lower():
+                raise
+            get_logger('frontend').warning('Revogação de sessão aguardando liberação do banco.',
+                extra={'event':'workspace.logout_retry'})
+            self.page.run_task(self._retry_logout,token)
+
+    async def _retry_logout(self,token):
+        for attempt in range(12):
+            await asyncio.sleep(min(1+attempt,5))
+            try:
+                await asyncio.to_thread(self.store.logout,token,.25)
+                return
+            except sqlite3.OperationalError as exc:
+                if 'locked' not in str(exc).lower():
+                    get_logger('frontend').exception('Falha ao revogar sessão.',
+                        extra={'event':'workspace.logout_failed'})
+                    return
+        get_logger('frontend').error('Não foi possível revogar a sessão após novas tentativas.',
+            extra={'event':'workspace.logout_failed'})
 
     @with_processing('Carregando projetos…','Preparando a lista de projetos. Aguarde um instante.')
     async def show_workspace(self,query='',archived=False):

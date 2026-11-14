@@ -178,9 +178,16 @@ class WorkspaceStore:
             raise AccessDenied('Sua sessão expirou. Entre novamente.')
         return dict(user)
 
-    def logout(self, token):
-        with self.connect() as db:
-            db.execute('DELETE FROM sessions WHERE token=?', (self._digest(token),))
+    def logout(self, token, timeout=30):
+        """Revoke a session without inheriting a long-lived transaction."""
+        digest = self._digest(token)
+        db = sqlite3.connect(self.database, timeout=timeout)
+        try:
+            db.execute('PRAGMA foreign_keys=ON')
+            with db:
+                db.execute('DELETE FROM sessions WHERE token=?', (digest,))
+        finally:
+            db.close()
 
     def _require_user(self, user_id, project_id, minimum='viewer'):
         with self.connect() as db:

@@ -35,8 +35,9 @@ class LayoutTests(unittest.TestCase):
         page.width=360;page.height=640
         asyncio.run(page.on_resize(None))
         self.assertEqual(bar.content.controls[0].width,160)
-        self.assertEqual(body.padding,16)
-        self.assertLessEqual(body.content.controls[0].height,640-76-32)
+        self.assertFalse(ui._login_experience.left.visible)
+        self.assertEqual(ui._login_experience.right.padding.left,23)
+        self.assertLessEqual(ui._login_experience.card.height,640-76)
 
     def test_workspace_language_change_preserves_unsaved_pipeline(self):
         page=self.page();ui=WorkspaceUI(page,None,None)

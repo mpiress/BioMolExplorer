@@ -2854,5 +2854,15 @@
   "Endereço de e-mail": "Email address",
   "Entre para continuar sua pesquisa.": "Sign in to continue your research.",
   "Novo no BioMolExplorer? Criar uma conta": "New to BioMolExplorer? Create an account",
-  "Já possui uma conta? Entrar": "Already have an account? Sign in"
+  "Já possui uma conta? Entrar": "Already have an account? Sign in",
+  "Entrar": "Sign In",
+  "Acesse seu workspace do BioMolExplorer.": "Access your BioMolExplorer workspace.",
+  "Crie sua conta para acessar o BioMolExplorer.": "Create your account to access BioMolExplorer.",
+  "Usuário ou e-mail": "Username or email",
+  "Manter conectado": "Remember me",
+  "Esqueceu a senha?": "Forgot password?",
+  "A recuperação de senha não está disponível nesta instalação.": "Password recovery is not available in this installation.",
+  "A duração da sessão é definida pela política atual do BioMolExplorer.": "Session duration is defined by the current BioMolExplorer policy.",
+  "Painel científico BioMolExplorer": "BioMolExplorer scientific panel",
+  "Fundo decorativo da autenticação": "Decorative authentication background"
 }

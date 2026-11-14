@@ -1,7 +1,10 @@
 """Real authentication followed by workspace reads before dialog dismissal."""
+import asyncio
 import tempfile
 import unittest
+import sqlite3
 from types import SimpleNamespace
+from unittest.mock import AsyncMock,patch
 import flet as ft
 
 from biomolexplorer.workspace import WorkspaceStore,AccessDenied
@@ -23,6 +26,31 @@ class RetainedDialogPage(Page):
 
 
 class LoginLifecycleTests(unittest.IsolatedAsyncioTestCase):
+    async def test_logout_closes_workspace_before_retrying_a_locked_database(self):
+        page=RetainedDialogPage()
+        ui=WorkspaceUI(page,SimpleNamespace(),SimpleNamespace(),language='en',structure_viewer=SimpleNamespace())
+        ui.token='active-session';ui.current={'id':'private-project'};ui.current_run='private-run'
+        attempts=[]
+        def logout(token,timeout=30):
+            attempts.append((token,timeout))
+            if len(attempts)<2:raise sqlite3.OperationalError('database is locked')
+        ui.store.logout=logout
+        retried=asyncio.Event()
+        def run_task(coroutine,*args):
+            async def immediate():
+                with patch('biomolexplorer.ui.app.asyncio.sleep',new=AsyncMock()):
+                    await coroutine(*args)
+                retried.set()
+            return asyncio.create_task(immediate())
+        page.run_task=run_task
+        await ui.logout(None)
+        self.assertIsNone(ui.token)
+        self.assertIsNone(ui.current)
+        self.assertIsNone(ui.current_run)
+        self.assertIsNotNone(ui._login_experience)
+        await retried.wait()
+        self.assertEqual(attempts,[('active-session',.25),('active-session',.25)])
+
     async def test_registered_credentials_survive_restart_and_consecutive_workspace_reads(self):
         with tempfile.TemporaryDirectory() as directory:
             store=WorkspaceStore(directory)
@@ -71,8 +99,8 @@ class LoginLifecycleTests(unittest.IsolatedAsyncioTestCase):
             ui=WorkspaceUI(page,WorkspaceStore(directory),SimpleNamespace(),language='en',structure_viewer=SimpleNamespace())
             ui.show_login()
             controls=list(walk(page.controls))
-            next(c for c in controls if isinstance(c,ft.TextField) and c.label=='Email address').value='test@example.org'
-            next(c for c in controls if isinstance(c,ft.TextField) and c.label=='Password').value='test-long-password'
+            next(c for c in controls if isinstance(c,ft.TextField) and c.hint_text=='Username or email').value='test@example.org'
+            next(c for c in controls if isinstance(c,ft.TextField) and c.hint_text=='Password').value='test-long-password'
             button=next(c for c in controls if isinstance(c,ft.Button) and c.content=='Sign in to workspace')
             await button.on_click(None)
             self.assertIsNotNone(ui.token)

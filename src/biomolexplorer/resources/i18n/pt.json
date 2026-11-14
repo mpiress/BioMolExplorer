@@ -5251,5 +5251,15 @@
   "Visualizar target": "Visualizar target",
   "Refine poses target–ligante com o Amber Score nativo do DOCK6 6.11 em solvente implícito.": "Refine poses target–ligante com o Amber Score nativo do DOCK6 6.11 em solvente implícito.",
   "Expressão NAB do target, usada em nab_atom_expression. Exemplo: ::C,CA,N,O. Não é uma máscara cpptraj.": "Expressão NAB do target, usada em nab_atom_expression. Exemplo: ::C,CA,N,O. Não é uma máscara cpptraj.",
-  "Expressão NAB do complexo. No complexo, o ligante vem antes do target na numeração de cadeias NAB.": "Expressão NAB do complexo. No complexo, o ligante vem antes do target na numeração de cadeias NAB."
+  "Expressão NAB do complexo. No complexo, o ligante vem antes do target na numeração de cadeias NAB.": "Expressão NAB do complexo. No complexo, o ligante vem antes do target na numeração de cadeias NAB.",
+  "Sign In": "Entrar",
+  "Access your BioMolExplorer workspace.": "Acesse seu workspace do BioMolExplorer.",
+  "Create your account to access BioMolExplorer.": "Crie sua conta para acessar o BioMolExplorer.",
+  "Username or email": "Usuário ou e-mail",
+  "Remember me": "Manter conectado",
+  "Forgot password?": "Esqueceu a senha?",
+  "Password recovery is not available in this installation.": "A recuperação de senha não está disponível nesta instalação.",
+  "Session duration is defined by the current BioMolExplorer policy.": "A duração da sessão é definida pela política atual do BioMolExplorer.",
+  "BioMolExplorer scientific panel": "Painel científico BioMolExplorer",
+  "Decorative authentication background": "Fundo decorativo da autenticação"
 }
