@@ -64,9 +64,8 @@ class LoginExperience:
             padding=10, visible=False,
         )
 
-        self.remember = ft.Checkbox(label='Manter conectado', value=False, active_color=BLUE,
-            disabled=True, tooltip='A duração da sessão é definida pela política atual do BioMolExplorer.')
-        self.forgot = ft.TextButton('Esqueceu a senha?', on_click=self.password_recovery,
+        self.remember = ft.Checkbox(label='Manter conectado', value=False, active_color=BLUE)
+        self.forgot = ft.TextButton('Esqueceu a senha?', on_click=self.begin_recovery,
             style=ft.ButtonStyle(color=BRAND_BLUE, padding=0))
         options = ft.Row([self.remember, self.forgot],
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
@@ -91,6 +90,7 @@ class LoginExperience:
         controls.extend([ft.Container(height=12), self.error_box, submit,
             ft.Container(height=13), ft.Divider(color='#DCE4EF', height=1),
             ft.Container(height=5), ft.Row([switch], alignment=ft.MainAxisAlignment.CENTER)])
+        self.login_controls=controls
         self.form = ft.Column(controls, spacing=0, scroll=ft.ScrollMode.AUTO,
             alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
@@ -110,8 +110,94 @@ class LoginExperience:
         self.control = ft.Stack([self.background, self.center], expand=True)
         self.resize()
 
-    def password_recovery(self, event):
-        self.ui.notify(self.ui.tr('A recuperação de senha não está disponível nesta instalação.'))
+    def style_recovery_field(self,field):
+        field.border_radius=28;field.border_color=BORDER;field.focused_border_color=BLUE
+        field.focused_border_width=1.5;field.height=70;field.text_size=18
+        field.content_padding=ft.Padding.symmetric(horizontal=23,vertical=15)
+        field.filled=True;field.fill_color='#FFFFFF'
+        return field
+
+    def recovery_button(self,label,handler,icon=ft.Icons.ARROW_FORWARD):
+        return ft.Button(label,icon=icon,on_click=handler,height=70,style=self.submit.style)
+
+    def recovery_shell(self,title,caption,controls):
+        self.recovery_error=ft.Text('',size=13,color='#B4233A')
+        self.form.controls=[ft.Text(title,color=BRAND_NAVY,size=self.title.size,weight=ft.FontWeight.W_700),
+            ft.Text(caption,color=MUTED,size=self.caption.size),ft.Container(height=28),*controls,
+            ft.Container(height=8),self.recovery_error]
+        self.ui.page.update()
+
+    def begin_recovery(self,event=None):
+        self.recovery_email=(self.email.value or '').strip()
+        self.recovery_email_field=self.style_recovery_field(ft.TextField(
+            hint_text='Endereço de e-mail',value=self.recovery_email,prefix_icon=ft.Icons.MAIL_OUTLINE,
+            keyboard_type=ft.KeyboardType.EMAIL,autofocus=True))
+        send=self.recovery_button('Enviar código',self.send_recovery_code,ft.Icons.SEND_OUTLINED)
+        back=ft.TextButton('Voltar ao login',icon=ft.Icons.ARROW_BACK,on_click=self.back_to_login)
+        self.recovery_shell('Recuperar senha','Informe o e-mail associado à sua conta.',
+            [self.recovery_email_field,ft.Container(height=20),send,ft.Row([back],alignment=ft.MainAxisAlignment.CENTER)])
+
+    async def send_recovery_code(self,event=None):
+        try:
+            code=await self.ui.call(self.ui.recovery_service.request,self.recovery_email_field.value or '')
+            self.recovery_email=(self.recovery_email_field.value or '').strip().lower()
+        except Exception as exc:
+            self.recovery_error.value=str(exc);self.ui.page.update();return
+        self.ui.notify(self.ui.tr('Código enviado para seu e-mail.') if code is None else
+            self.ui.tr('Código de teste: {0}').format(code))
+        self.show_code_step()
+
+    def show_code_step(self):
+        self.code_field=self.style_recovery_field(ft.TextField(hint_text='Código de 8 dígitos',
+            prefix_icon=ft.Icons.PIN_OUTLINED,keyboard_type=ft.KeyboardType.NUMBER,max_length=8,autofocus=True))
+        self.code_field.on_submit=self.validate_recovery_code
+        validate=self.recovery_button('Validar código',self.validate_recovery_code,ft.Icons.VERIFIED_OUTLINED)
+        resend=ft.TextButton('Reenviar código',on_click=self.resend_recovery_code)
+        back=ft.TextButton('Voltar ao login',icon=ft.Icons.ARROW_BACK,on_click=self.back_to_login)
+        self.recovery_shell('Verifique seu e-mail',
+            self.ui.tr('Informe o código enviado para {0}.').format(self.recovery_email),
+            [self.code_field,ft.Container(height=20),validate,
+             ft.Row([resend,back],alignment=ft.MainAxisAlignment.SPACE_BETWEEN)])
+
+    async def resend_recovery_code(self,event=None):
+        try:code=await self.ui.call(self.ui.recovery_service.request,self.recovery_email)
+        except Exception as exc:
+            self.recovery_error.value=str(exc);self.ui.page.update();return
+        self.ui.notify(self.ui.tr('Novo código enviado para seu e-mail.') if code is None else
+            self.ui.tr('Novo código de teste: {0}').format(code))
+        self.code_field.value='';self.recovery_error.value='';self.ui.page.update()
+
+    async def validate_recovery_code(self,event=None):
+        try:self.reset_grant=await self.ui.call(
+            self.ui.recovery_service.validate,self.recovery_email,self.code_field.value or '')
+        except Exception as exc:
+            self.recovery_error.value=str(exc);self.ui.page.update();return
+        self.show_password_step()
+
+    def show_password_step(self):
+        self.new_password=self.style_recovery_field(ft.TextField(hint_text='Nova senha',
+            prefix_icon=ft.Icons.LOCK_OUTLINE,password=True,can_reveal_password=True,autofocus=True))
+        self.new_confirmation=self.style_recovery_field(ft.TextField(hint_text='Confirme a nova senha',
+            prefix_icon=ft.Icons.LOCK_OUTLINE,password=True,can_reveal_password=True))
+        self.new_confirmation.on_submit=self.save_new_password
+        save=self.recovery_button('Salvar nova senha',self.save_new_password,ft.Icons.SAVE_OUTLINED)
+        back=ft.TextButton('Voltar ao login',icon=ft.Icons.ARROW_BACK,on_click=self.back_to_login)
+        self.recovery_shell('Crie uma nova senha','Use uma senha com pelo menos 10 caracteres.',
+            [self.new_password,ft.Container(height=12),self.new_confirmation,
+             ft.Container(height=20),save,ft.Row([back],alignment=ft.MainAxisAlignment.CENTER)])
+
+    async def save_new_password(self,event=None):
+        if self.new_password.value!=self.new_confirmation.value:
+            self.recovery_error.value=self.ui.tr('As senhas não coincidem.');self.ui.page.update();return
+        try:await self.ui.call(self.ui.recovery_service.reset,self.recovery_email,
+            self.reset_grant,self.new_password.value or '')
+        except Exception as exc:
+            self.recovery_error.value=str(exc);self.ui.page.update();return
+        self.ui.notify(self.ui.tr('Senha atualizada. Entre com sua nova senha.'))
+        self.ui.show_login(False,{'email':self.recovery_email})
+
+    def back_to_login(self,event=None):
+        self.ui.show_login(False,{'email':getattr(self,'recovery_email',self.email.value or '')})
 
     def resize(self):
         width = self.ui.page.width or 1440

@@ -67,12 +67,42 @@ class LoginExperienceTests(unittest.IsolatedAsyncioTestCase):
         self.ui.show_workspace.assert_awaited_once_with()
         self.assertEqual(self.ui.token, 'existing-session')
 
-    async def test_password_recovery_does_not_invent_an_authentication_backend(self):
+    async def test_password_recovery_reuses_card_for_otp_and_password_reset(self):
         experience = self.ui._login_experience
+        experience.email.value='researcher@example.org'
         experience.forgot.on_click(None)
-        self.assertTrue(self.page.dialogs)
-        message=self.page.dialogs[-1].content.value
-        self.assertEqual(message, 'Password recovery is not available in this installation.')
+        self.assertEqual(experience.recovery_email_field.value,'researcher@example.org')
+        self.ui.recovery_service.request=AsyncMock(return_value='12345678')
+        self.ui.recovery_service.validate=AsyncMock(return_value='reset-grant')
+        self.ui.recovery_service.reset=AsyncMock()
+        async def direct(function,*args):return await function(*args)
+        self.ui.call=direct
+        await experience.send_recovery_code()
+        self.assertEqual(experience.code_field.max_length,8)
+        experience.code_field.value='12345678'
+        await experience.validate_recovery_code()
+        self.assertEqual(experience.reset_grant,'reset-grant')
+        experience.new_password.value='new-password'
+        experience.new_confirmation.value='different-password'
+        await experience.save_new_password()
+        self.ui.recovery_service.reset.assert_not_awaited()
+        experience.new_confirmation.value='new-password'
+        await experience.save_new_password()
+        self.ui.recovery_service.reset.assert_awaited_once_with(
+            'researcher@example.org','reset-grant','new-password')
+        self.assertEqual(self.ui._login_experience.email.value,'researcher@example.org')
+
+    async def test_failed_email_delivery_keeps_recovery_email_step_visible(self):
+        experience=self.ui._login_experience
+        experience.email.value='researcher@example.org';experience.begin_recovery()
+        self.ui.recovery_service.request=AsyncMock(side_effect=RuntimeError(
+            'Não foi possível enviar o código por e-mail. Verifique a configuração SMTP e tente novamente.'))
+        async def direct(function,*args):return await function(*args)
+        self.ui.call=direct
+        await experience.send_recovery_code()
+        self.assertTrue(hasattr(experience,'recovery_email_field'))
+        self.assertFalse(hasattr(experience,'code_field'))
+        self.assertIn('SMTP',experience.recovery_error.value)
 
     async def test_replacing_view_cancels_stale_tasks_and_mobile_hides_artwork(self):
         old = self.ui._login_experience
@@ -100,5 +130,5 @@ class LoginExperienceTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(experience.email.hint_text,'Username or email')
         self.assertEqual(experience.password.hint_text,'Password')
         self.assertEqual(experience.submit.content,'Sign in to workspace')
-        self.assertTrue(experience.remember.disabled)
+        self.assertFalse(experience.remember.disabled)
         self.assertTrue(experience.left.visible)

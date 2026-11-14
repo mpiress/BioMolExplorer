@@ -42,6 +42,22 @@ PYTHONPATH=src python -m biomolexplorer.ui.app --web --host 127.0.0.1 --port 855
 
 These paths are placeholders. Configure the actual installations; the Python package does not install Chimera or DOCK6. Optional trained ADMET models have separate environment requirements described in the installation guide.
 
+### Password-recovery email
+
+The **Forgot password?** flow sends its eight-digit code through SMTP. Configure the mail account in the process environment before starting the UI; credentials are never stored in the workspace database or repository:
+
+```bash
+export BIOMOL_SMTP_HOST="smtp.example.org"
+export BIOMOL_SMTP_PORT="587"
+export BIOMOL_SMTP_SECURITY="starttls"  # starttls, ssl, or plain
+export BIOMOL_SMTP_USERNAME="sender@example.org"
+export BIOMOL_SMTP_PASSWORD="use-a-secret-or-app-password"
+export BIOMOL_SMTP_FROM="BioMolExplorer <sender@example.org>"
+biomolexplorer-ui --web --language en
+```
+
+Port 465 normally uses `BIOMOL_SMTP_SECURITY=ssl`; port 587 normally uses `starttls`. For an SMTP relay without authentication, omit both username and password but keep `BIOMOL_SMTP_FROM`. `BIOMOL_PASSWORD_RESET_DELIVERY=log` is an explicit development-only mode that writes the code to the application log instead of sending email. Without valid SMTP configuration the card remains at the email step and reports the delivery failure; it no longer claims that a code was sent.
+
 ## Scientific CLI example
 
 Create `pubchem.json` with the following reference query, then execute it in a separate output directory:

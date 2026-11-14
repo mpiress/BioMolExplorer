@@ -61,6 +61,11 @@ def panel(content, padding=24, **kwargs):
 class WorkspaceUI(ProjectTools):
     def __init__(self,page,store,service,language='pt',structure_viewer=None):
         self.page,self.store,self.service = LocalizedPage(page,language),store,service
+        from .session_persistence import SessionPersistence
+        from biomolexplorer.auth_recovery import PasswordRecoveryService
+        self.session_persistence=SessionPersistence(page)
+        self.recovery_service=PasswordRecoveryService(store)
+        self._remember_device=None
         from biomolexplorer.pdb_view import StructureViewers
         self.structure_viewer=structure_viewer or StructureViewers(store)
         self.language = language
@@ -268,6 +273,15 @@ class WorkspaceUI(ProjectTools):
                 token = await self.call(self.store.register,name.value or '',email.value or '',password.value or '') if register else \
                         await self.call(self.store.login,email.value or '',password.value or '')
                 self.token = token
+                if experience.remember.value:
+                    self._remember_device=await self.call(self.store.remember_session,token)
+                    await self.session_persistence.set(self._remember_device)
+                else:
+                    remembered=await self.session_persistence.get()
+                    if remembered:
+                        await self.call(self.store.forget_remembered,remembered)
+                    await self.session_persistence.remove()
+                    self._remember_device=None
                 authenticated=True
                 password.value = confirmation.value = ''
                 experience.stop()
@@ -351,12 +365,35 @@ class WorkspaceUI(ProjectTools):
         return handler
 
     async def logout(self,e):
+        if self._remember_device:
+            dialog=ft.AlertDialog(modal=True,title=text('Encerrar sessão',22,weight=ft.FontWeight.W_600),
+                content=text('Este dispositivo está configurado para lembrar seu acesso.'),actions=[
+                    ft.TextButton('Cancelar',on_click=lambda event:close_dialog(self.page,dialog)),
+                    ft.TextButton('Apenas sair',on_click=lambda event:self.page.run_task(self._logout_choice,dialog,False)),
+                    ft.Button('Sair e desabilitar Remember me',icon=ft.Icons.LOGOUT,
+                        on_click=lambda event:self.page.run_task(self._logout_choice,dialog,True),
+                        style=ft.ButtonStyle(bgcolor='#B91C1C',color='#FFFFFF'))])
+            self.page.show_dialog(dialog)
+            return
+        await self._perform_logout(False)
+
+    async def _logout_choice(self,dialog,disable_remember):
+        close_dialog(self.page,dialog)
+        await self._perform_logout(disable_remember)
+
+    async def _perform_logout(self,disable_remember=False):
         token = self.token
+        remembered=self._remember_device
         self.token = None
         self.close_project_views()
         self.current = None
         self.current_run = None
         self.show_login()
+        if disable_remember and remembered:
+            try:await asyncio.to_thread(self.store.forget_remembered,remembered)
+            finally:
+                await self.session_persistence.remove()
+                self._remember_device=None
         if not token:
             return
         try:
@@ -383,6 +420,20 @@ class WorkspaceUI(ProjectTools):
                     return
         get_logger('frontend').error('Não foi possível revogar a sessão após novas tentativas.',
             extra={'event':'workspace.logout_failed'})
+
+    async def restore_session(self):
+        remembered=await self.session_persistence.get()
+        if not remembered:return False
+        try:
+            self.token=await asyncio.to_thread(self.store.resume_remembered,remembered)
+            await asyncio.to_thread(self.store.user,self.token)
+        except (AccessDenied,ValueError):
+            await self.session_persistence.remove()
+            self._remember_device=None;self.token=None
+            return False
+        self._remember_device=remembered
+        await self.show_workspace()
+        return True
 
     @with_processing('Carregando projetos…','Preparando a lista de projetos. Aguarde um instante.')
     async def show_workspace(self,query='',archived=False):
@@ -1921,7 +1972,7 @@ def main():
         ui=WorkspaceUI(page,store,service,language=args.language,structure_viewer=viewers)
         from .updates import UpdateNotice
         ui.update_notice=UpdateNotice(ui,updates)
-        ui.show_login()
+        if not await ui.restore_session():ui.show_login()
         ui.update_notice.task=page.run_task(ui.update_notice.poll)
         async def disconnected(event):
             ui.update_notice.task.cancel()

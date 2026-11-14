@@ -34,6 +34,8 @@ class WorkspaceStore:
                 CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL,
                     name TEXT NOT NULL, salt TEXT NOT NULL, password TEXT NOT NULL);
                 CREATE TABLE IF NOT EXISTS sessions(token TEXT PRIMARY KEY, user_id TEXT REFERENCES users(id), expires REAL NOT NULL);
+                CREATE TABLE IF NOT EXISTS remembered_sessions(token TEXT PRIMARY KEY,
+                    user_id TEXT REFERENCES users(id), expires REAL NOT NULL, created REAL NOT NULL);
                 CREATE TABLE IF NOT EXISTS projects(id TEXT PRIMARY KEY, owner TEXT REFERENCES users(id), name TEXT NOT NULL,
                     description TEXT NOT NULL, color TEXT NOT NULL, tags TEXT NOT NULL, pipeline TEXT NOT NULL,
                     revision INTEGER NOT NULL DEFAULT 0, archived INTEGER NOT NULL DEFAULT 0, deleted INTEGER NOT NULL DEFAULT 0,
@@ -163,6 +165,43 @@ class WorkspaceStore:
             db.execute('DELETE FROM sessions WHERE expires<?', (time.time(),))
             db.execute('INSERT INTO sessions VALUES (?,?,?)', (self._digest(token), user['id'], time.time() + 8 * 3600))
         return token
+
+    def account_exists(self,email):
+        with self.connect() as db:
+            return db.execute('SELECT 1 FROM users WHERE email=?',(email.strip().lower(),)).fetchone() is not None
+
+    def reset_password(self,email,password):
+        if not isinstance(password,str) or not 10<=len(password)<=1024:
+            raise ValueError('A senha deve ter entre 10 e 1024 caracteres.')
+        email=email.strip().lower();salt=secrets.token_hex(16)
+        hashed=self._password(password,salt)
+        with self.connect() as db:
+            user=db.execute('SELECT id FROM users WHERE email=?',(email,)).fetchone()
+            if user is None:raise ValueError('Não existe uma conta cadastrada com este e-mail.')
+            db.execute('UPDATE users SET salt=?,password=? WHERE id=?',(salt,hashed,user['id']))
+            db.execute('DELETE FROM sessions WHERE user_id=?',(user['id'],))
+            db.execute('DELETE FROM remembered_sessions WHERE user_id=?',(user['id'],))
+
+    def remember_session(self,token,lifetime=30*24*3600):
+        user=self.user(token);device=secrets.token_urlsafe(48);now=time.time()
+        with self.connect() as db:
+            db.execute('DELETE FROM remembered_sessions WHERE expires<?',(now,))
+            db.execute('INSERT INTO remembered_sessions VALUES (?,?,?,?)',
+                (self._digest(device),user['id'],now+lifetime,now))
+        return device
+
+    def resume_remembered(self,device):
+        digest=self._digest(device);now=time.time();token=secrets.token_urlsafe(32)
+        with self.connect() as db:
+            row=db.execute('SELECT user_id FROM remembered_sessions WHERE token=? AND expires>?',
+                (digest,now)).fetchone()
+            if row is None:raise AccessDenied('A sessão lembrada expirou. Entre novamente.')
+            db.execute('INSERT INTO sessions VALUES (?,?,?)',(self._digest(token),row['user_id'],now+8*3600))
+        return token
+
+    def forget_remembered(self,device):
+        with self.connect() as db:
+            db.execute('DELETE FROM remembered_sessions WHERE token=?',(self._digest(device),))
 
     @staticmethod
     def _digest(token):
