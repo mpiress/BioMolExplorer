@@ -23,11 +23,11 @@ class ReportToolbarTests(unittest.TestCase):
                 editor=FlowCanvas(self.ui,writable)
                 toolbar=editor.build(include_library=library).controls[0]
                 self.assertTrue(toolbar.wrap)
-                icons=[c.content for c in toolbar.controls if isinstance(c,ft.Semantics)]
-                camera=next(i for i,c in enumerate(icons) if c.icon==ft.Icons.PHOTO_CAMERA_OUTLINED)
-                self.assertEqual(icons[camera+1].icon,ft.Icons.SCIENCE_OUTLINED)
-                self.assertFalse(icons[camera+1].disabled)
-                self.assertEqual(icons[camera+1].on_click,editor.export_experimental_report)
+                camera=next(i for i,c in enumerate(toolbar.controls) if isinstance(c,ft.PopupMenuButton))
+                report=toolbar.controls[camera+1].content
+                self.assertEqual(report.icon,ft.Icons.SCIENCE_OUTLINED)
+                self.assertFalse(report.disabled)
+                self.assertEqual(report.on_click,editor.export_experimental_report)
 
     def test_toolbar_opens_persisted_report_and_exports_existing_formats(self):
         async def scenario():

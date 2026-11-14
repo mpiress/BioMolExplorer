@@ -71,7 +71,7 @@ class LoginLifecycleTests(unittest.IsolatedAsyncioTestCase):
             ui=WorkspaceUI(page,WorkspaceStore(directory),SimpleNamespace(),language='en',structure_viewer=SimpleNamespace())
             ui.show_login()
             controls=list(walk(page.controls))
-            next(c for c in controls if isinstance(c,ft.TextField) and c.label=='E-mail').value='test@example.org'
+            next(c for c in controls if isinstance(c,ft.TextField) and c.label=='Email address').value='test@example.org'
             next(c for c in controls if isinstance(c,ft.TextField) and c.label=='Password').value='test-long-password'
             button=next(c for c in controls if isinstance(c,ft.Button) and c.content=='Sign in to workspace')
             await button.on_click(None)

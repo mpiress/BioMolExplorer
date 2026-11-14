@@ -12,7 +12,7 @@ import flet as ft
 from biomolexplorer import flow
 from biomolexplorer.catalog import new_stage
 from biomolexplorer.ui.flow_canvas import FlowCanvas
-from biomolexplorer.ui.pipeline_png import MAX_PIXELS, render_pipeline
+from biomolexplorer.ui.pipeline_png import EDGE_LABEL_SIZE, MAX_PIXELS, render_pipeline
 from test_frontend_navigation import walk
 
 
@@ -27,16 +27,32 @@ class PipelinePngTests(unittest.TestCase):
     def test_entire_flow_including_far_block_is_rendered_without_mutation(self):
         stages=self.stages();before=copy.deepcopy(stages)
         data=render_pipeline(stages);image=Image.open(io.BytesIO(data))
-        self.assertEqual(image.format,'PNG');self.assertEqual(stages,before)
+        self.assertEqual(image.format,'PNG');self.assertEqual(image.mode,'RGBA');self.assertEqual(stages,before)
+        self.assertEqual(image.getpixel((0,0))[3],0)
         self.assertEqual(image.size,((1500-50+flow.NODE_WIDTH+260)*2,(900-60+flow.node_height(stages[-1])+260)*2))
         self.assertGreater(image.info['dpi'][0],299)
         # Both headers appear, including the block outside the default viewport.
         for stage in stages:
             x=round((stage['position']['x']-50+130+flow.NODE_WIDTH-18)*2)
             y=round((stage['position']['y']-60+130+20)*2)
-            self.assertEqual(image.getpixel((x,y)),(13,148,136) if stage['operation']=='retrieve_structures' else (217,119,6))
+            self.assertEqual(image.getpixel((x,y)),(13,148,136,255) if stage['operation']=='retrieve_structures' else (217,119,6,255))
         # The connection is drawn in the large empty region between nodes.
-        self.assertTrue(any(image.getpixel((image.width//2,y))==(13,148,136) for y in range(image.height)))
+        self.assertTrue(any(image.getpixel((image.width//2,y))==(13,148,136,255) for y in range(image.height)))
+
+    def test_scientific_model_preserves_canvas_positions_and_is_three_x(self):
+        stages=self.stages();before=copy.deepcopy(stages)
+        structural=Image.open(io.BytesIO(render_pipeline(stages,mode='structural')))
+        scientific=Image.open(io.BytesIO(render_pipeline(stages,mode='scientific')))
+        self.assertEqual(stages,before)
+        self.assertEqual(scientific.mode,'RGBA');self.assertEqual(scientific.getpixel((0,0))[3],0)
+        # Scientific cards keep the exact saved top-left coordinates instead of
+        # imposing a new topological layout that can introduce edge crossings.
+        self.assertEqual(scientific.size,(1830*3,1070*3))
+        self.assertGreaterEqual(EDGE_LABEL_SIZE,14)
+        # The colored category rail preserves the exact shared category palette.
+        self.assertEqual(scientific.getpixel(((75+4)*3,(75+40)*3)),(13,148,136,255))
+        target_x=(1500-50+75+4)*3;target_y=(900-60+75+40)*3
+        self.assertEqual(scientific.getpixel((target_x,target_y)),(217,119,6,255))
 
     def test_molecular_dynamics_category_exports_with_shared_palette(self):
         from biomolexplorer.catalog import TITLES
@@ -56,17 +72,21 @@ class PipelinePngTests(unittest.TestCase):
     def ui(self):
         async def call(fn,*args):return fn(*args)
         async def guard(action):await action()
-        return SimpleNamespace(current={'pipeline':self.stages()},selected=None,token='session',tr=lambda s:s,
+        return SimpleNamespace(current={'name':'Estudo α','pipeline':self.stages()},selected=None,token='session',tr=lambda s:s,
             page=SimpleNamespace(update=Mock()),call=call,guard=guard,picker=SimpleNamespace(save_file=AsyncMock()))
 
     def test_camera_is_available_to_viewers_and_saves_png(self):
         ui=self.ui();editor=FlowCanvas(ui,False)
-        camera=next(c for c in walk(editor.build(False)) if isinstance(c,ft.IconButton) and c.icon==ft.Icons.PHOTO_CAMERA_OUTLINED)
-        self.assertFalse(camera.disabled)
-        asyncio.run(camera.on_click(None))
+        camera=next(c for c in walk(editor.build(False)) if isinstance(c,ft.PopupMenuButton) and c.tooltip=='Exportar imagem do pipeline')
+        self.assertEqual([(item.content.value,item.data) for item in camera.items],
+            [('Modelo Estrutural','structural'),('Modelo Científico','scientific')])
+        asyncio.run(camera.items[0].on_click(SimpleNamespace(control=camera.items[0])))
         kwargs=ui.picker.save_file.await_args.kwargs
-        self.assertEqual(kwargs['file_name'],'pipeline.png')
+        self.assertEqual(kwargs['file_name'],'Estudo_α_estrutural.png')
         self.assertEqual(Image.open(io.BytesIO(kwargs['src_bytes'])).format,'PNG')
+
+        asyncio.run(camera.items[1].on_click(SimpleNamespace(control=camera.items[1])))
+        self.assertEqual(ui.picker.save_file.await_args.kwargs['file_name'],'Estudo_α_cientifico.png')
 
     def test_switching_project_during_export_does_not_save_old_project(self):
         ui=self.ui();editor=FlowCanvas(ui,False)

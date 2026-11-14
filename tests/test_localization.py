@@ -111,13 +111,13 @@ class LocalizationTests(unittest.TestCase):
         page=Page();ui=WorkspaceUI(page,SimpleNamespace(),SimpleNamespace(),language='pt')
         ui.show_login(True)
         controls=list(walk(page.controls))
-        for label,value in [('Seu nome','Novo projeto'),('E-mail','someone@example.org'),('Senha','secret-password'),('Confirme a senha','secret-password')]:
+        for label,value in [('Seu nome','Novo projeto'),('Endereço de e-mail','someone@example.org'),('Senha','secret-password'),('Confirme a senha','secret-password')]:
             next(c for c in controls if isinstance(c,ft.TextField) and c.label==label).value=value
         language=next(c for c in controls if isinstance(c,ft.PopupMenuButton))
         english=next(item for item in language.items if item.data=='en')
         asyncio.run(english.on_click(SimpleNamespace(control=english)))
         controls=list(walk(page.controls))
-        for label,value in [('Your name','Novo projeto'),('E-mail','someone@example.org'),('Password','secret-password'),('Confirm password','secret-password')]:
+        for label,value in [('Your name','Novo projeto'),('Email address','someone@example.org'),('Password','secret-password'),('Confirm password','secret-password')]:
             self.assertEqual(next(c for c in controls if isinstance(c,ft.TextField) and c.label==label).value,value)
         self.assertTrue(any(isinstance(c,ft.Button) and c.content=='Create account' for c in controls))
         self.assertEqual(ui.language,'en');self.assertIsNone(ui.token)

@@ -238,10 +238,12 @@ class WorkspaceUI(ProjectTools):
         return bar,language_choice,resize
 
     def show_login(self,register=False,values=None):
+        previous=getattr(self,'_login_experience',None)
+        if previous is not None:previous.stop()
         self.language=getattr(self,'language','pt')
         if not isinstance(self.page,LocalizedPage):self.page=LocalizedPage(self.page,self.language)
         name = ft.TextField(label='Seu nome',autofocus=register)
-        email = ft.TextField(label='E-mail',keyboard_type=ft.KeyboardType.EMAIL,autofocus=not register)
+        email = ft.TextField(label='Endereço de e-mail',keyboard_type=ft.KeyboardType.EMAIL,autofocus=not register)
         password = ft.TextField(label='Senha',password=True,can_reveal_password=True)
         confirmation = ft.TextField(label='Confirme a senha',password=True,can_reveal_password=True)
         for key,field in (('name',name),('email',email),('password',password),('confirmation',confirmation)):
@@ -252,10 +254,12 @@ class WorkspaceUI(ProjectTools):
         error = text('',color='#DC2626')
         submit = button('Criar conta' if register else 'Entrar no workspace',None,True,ft.Icons.ARROW_FORWARD)
         async def authenticate(e):
+            if submit.disabled:return
             authenticated=False
             submit.disabled = True
             language_choice.disabled = True
             error.value = ''
+            experience.set_busy(True)
             self.page.update()
             try:
                 if register and password.value != confirmation.value:
@@ -265,55 +269,31 @@ class WorkspaceUI(ProjectTools):
                 self.token = token
                 authenticated=True
                 password.value = confirmation.value = ''
+                experience.stop()
                 await self.show_workspace()
             except Exception as exc:
                 get_logger('frontend').exception('Falha ao abrir workspace' if authenticated else 'Falha na autenticação')
                 error.value = self.tr('Credenciais validadas, mas não foi possível abrir o workspace. Tente novamente; consulte o log da interface.') if authenticated else str(exc)
                 submit.disabled = False
                 language_choice.disabled = False
+                experience.set_busy(False)
                 self.page.update()
         submit.on_click = authenticate
         password.on_submit = authenticate
-        for field in (name,email,password,confirmation):
-            field.width=None
-            field.border=ft.OutlineInputBorder(border_radius=12,side=ft.BorderSide(1,'#DCE5F4'))
-            field.filled=True
-            field.fill_color='#F6F8FC'
-            field.content_padding=ft.Padding.symmetric(horizontal=18,vertical=18)
-        email.prefix_icon=ft.Icons.ALTERNATE_EMAIL
-        password.prefix_icon=confirmation.prefix_icon=ft.Icons.LOCK_OUTLINE
-        form=[text('CRIE SEU ESPAÇO DE PESQUISA' if register else 'BEM-VINDO DE VOLTA',11,TEAL,ft.FontWeight.W_600),
-              text('Comece sua exploração.' if register else 'Sua próxima descoberta\ncomeça aqui.',30,weight=ft.FontWeight.W_700),
-              text('Organize seus estudos e colabore com sua equipe.' if register else 'Entre para continuar seus projetos em um ambiente privado.',14,MUTED),ft.Container(height=8)]
-        if register: form.append(name)
-        form += [email,password]
-        if register: form += [confirmation,text('Use uma senha com pelo menos 10 caracteres.',12,MUTED)]
-        form += [error,submit,ft.TextButton('Já tenho uma conta' if register else 'Ainda não tenho uma conta',on_click=lambda e:self.show_login(not register)),
-                 ft.Row([ft.Icon(ft.Icons.LOCK_OUTLINE,size=14,color=MUTED),
-                    ft.Text('Você decide com quem compartilhar seus projetos.',size=11,color=MUTED,expand=True)],spacing=8)]
-        login_card=ft.Container(width=560,height=730,padding=ft.Padding.symmetric(horizontal=40,vertical=32),
-            bgcolor='#FFFFFF',border_radius=28,border=ft.Border.all(1,'#E1E8F5'),
-            content=ft.Column(form,spacing=18,scroll=ft.ScrollMode.AUTO,horizontal_alignment=ft.CrossAxisAlignment.STRETCH))
-        compact=(self.page.width or 1440)<650
-        login_card.height=max(240,min(680,(self.page.height or 900)-76-(32 if compact else 64)))
-        login_card.padding=24 if compact else ft.Padding.symmetric(horizontal=40,vertical=32)
-        login_card.content.spacing=14 if compact else 18
-        login_view=ft.Container(expand=True,padding=16 if compact else 32,
-            gradient=ft.LinearGradient(colors=['#EDF2FF','#F8FAFD'],begin=ft.Alignment.TOP_LEFT,end=ft.Alignment.BOTTOM_RIGHT),
-            alignment=ft.Alignment.CENTER,
-            content=ft.Column([login_card],
-                expand=True,scroll=ft.ScrollMode.AUTO,horizontal_alignment=ft.CrossAxisAlignment.CENTER,alignment=ft.MainAxisAlignment.CENTER))
+        from .login_experience import LoginExperience
+        switch=ft.TextButton('Já possui uma conta? Entrar' if register else 'Novo no BioMolExplorer? Criar uma conta',
+            on_click=lambda e:self.show_login(not register))
+        experience=LoginExperience(self,register,name,email,password,confirmation,error,submit,switch)
+        self._login_experience=experience
+        experience.prepare_entry()
         async def resize_login(e):
-            if self.token: return
-            compact=(self.page.width or 1440)<650
+            if self.token:return
             resize_bar()
-            login_card.height=max(240,min(680,(self.page.height or 900)-76-(32 if compact else 64)))
-            login_card.padding=24 if compact else ft.Padding.symmetric(horizontal=40,vertical=32)
-            login_card.content.spacing=14 if compact else 18
-            login_view.padding=16 if compact else 32
+            experience.resize()
             self.page.update()
         self.page.on_resize=resize_login
-        self.render(ft.Column([top_bar,login_view],expand=True,spacing=0))
+        self.render(ft.Column([top_bar,experience.control],expand=True,spacing=0))
+        experience.start()
 
     def shell(self,title,subtitle,body,actions=None,groups=None,sidebar_content=None):
         from .action_help import action_row,resize_help

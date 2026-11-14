@@ -369,14 +369,19 @@ class FlowCanvas:
     async def reset(self,e): await self.viewer.reset()
     async def export_png(self,e):
         from .pipeline_png import render_pipeline
+        import re
         project=self.ui.current;token=self.ui.token
+        mode=getattr(getattr(e,'control',None),'data',None) or 'structural'
+        if mode not in ('structural','scientific'):return
         stages=copy.deepcopy(self.stages)
         async def action():
-            data=await self.ui.call(render_pipeline,stages,self.ui.tr)
+            data=await self.ui.call(render_pipeline,stages,self.ui.tr,mode)
             current=self.ui.current
             same_project=current and (current.get('id')==project['id'] if project.get('id') else current is project)
             if self.ui.token==token and same_project:
-                await save_file(self.ui,file_name='pipeline.png',src_bytes=data)
+                name=re.sub(r'[^\w.-]+','_',str(project.get('name') or 'pipeline'),flags=re.UNICODE).strip('._') or 'pipeline'
+                suffix='estrutural' if mode=='structural' else 'cientifico'
+                await save_file(self.ui,file_name=f'{name}_{suffix}.png',src_bytes=data)
         await self.ui.guard(action)
     async def export_experimental_report(self,e):
         from biomolexplorer.experimental_report import build_report,build_report_preview
@@ -509,8 +514,14 @@ class FlowCanvas:
             (ft.Icons.CONTENT_COPY,'Duplicar bloco',self.duplicate,not self.writable),(ft.Icons.DELETE_OUTLINE,'Excluir bloco',self.delete,not self.writable),
             (ft.Icons.AUTO_FIX_HIGH,'Organizar blocos',self.arrange,not self.writable),(ft.Icons.ZOOM_IN,'Ampliar',self.zoom_in,False),
             (ft.Icons.ZOOM_OUT,'Reduzir',self.zoom_out,False),(ft.Icons.CENTER_FOCUS_STRONG,'Redefinir visão',self.reset,False),
-            (ft.Icons.PHOTO_CAMERA_OUTLINED,'Exportar pipeline completo como PNG',self.export_png,False),
             (ft.Icons.SCIENCE_OUTLINED,'Emitir relatório experimental reprodutível',self.export_experimental_report,False)]],spacing=0)
+        report=bar.controls.pop()
+        screenshot=ft.PopupMenuButton(
+            content=ft.Icon(ft.Icons.PHOTO_CAMERA_OUTLINED),
+            tooltip='Exportar imagem do pipeline',
+            items=[ft.PopupMenuItem(content=ft.Text('Modelo Estrutural'),data='structural',on_click=self.export_png),
+                ft.PopupMenuItem(content=ft.Text('Modelo Científico'),data='scientific',on_click=self.export_png)])
+        bar.controls.extend([screenshot,report])
         from .action_help import show_action_help
         bar.controls.append(icon_button(icon=ft.Icons.INFO_OUTLINE,tooltip='Controles do canvas',
             on_click=lambda e:show_action_help(self.ui,'canvas')))
