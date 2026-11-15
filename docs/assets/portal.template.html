@@ -59,6 +59,7 @@
 /* Keep navigation reachable in the tablet breakpoint as well. */
 @media(min-width:821px) and (max-width:1120px){.mobile-toggle{display:inline-flex}.header-nav.open{display:flex;position:absolute;top:80px;left:0;right:0;background:#071927;flex-direction:column;align-items:stretch;gap:0;padding:10px 24px 18px;border-bottom:1px solid #355366}.header-nav.open a{padding:12px 8px}.header-nav.open a::after{display:none}}
 .hero-inner>*,.header-inner>*{min-width:0}
+.hub{margin-top:30px;padding:28px;border:1px solid var(--line);border-radius:22px;background:rgba(255,255,255,.72)}.hub-head{display:flex;align-items:end;justify-content:space-between;gap:18px;margin-bottom:18px}.hub-head h3{font-size:23px;margin:0 0 5px}.hub-head p{font-size:13px;color:var(--muted);margin:0;max-width:720px}.hub-count{font-size:12px;font-weight:800;color:#52717e;white-space:nowrap}.hub[hidden]{display:none}.hub .filters{margin-bottom:22px}@media(max-width:600px){.hub{padding:20px 14px}.hub-head{align-items:flex-start;flex-direction:column}.hub-count{white-space:normal}}
 </style>
 </head>
 <body>
@@ -106,16 +107,12 @@
 </div>
 </div></section>
 <section class="section catalog" id="guias"><div class="shell">
-<div class="section-heading catalog-head"><div><span class="section-label" data-i18n="catalogLabel">BIBLIOTECA DE GUIAS</span><h2 data-i18n="catalogTitle">Tudo organizado por assunto</h2><p data-i18n="catalogDesc">Os 15 guias do índice original estão preservados. Os links individuais conduzem à versão inglesa; o índice em português está disponível na seção Recursos.</p></div><span aria-live="polite" class="result-count" id="results-count" role="status">15 guias</span></div>
-<div aria-label="Filtrar por assunto" data-i18n-aria="filterAria" class="filters" id="topic-filters" role="group">
-<button aria-pressed="true" class="filter-btn" data-filter="all" data-i18n="filterAll" type="button">Todos</button>
-<button aria-pressed="false" class="filter-btn" data-filter="start" data-i18n="filterStart" type="button">Primeiros passos</button>
-<button aria-pressed="false" class="filter-btn" data-filter="workflows" data-i18n="filterWorkflows" type="button">Projetos</button>
-<button aria-pressed="false" class="filter-btn" data-filter="science" data-i18n="filterScience" type="button">Análise científica</button>
-<button aria-pressed="false" class="filter-btn" data-filter="results" data-i18n="filterResults" type="button">Resultados</button>
-<button aria-pressed="false" class="filter-btn" data-filter="developer" data-i18n="filterDeveloper" type="button">Desenvolvimento</button>
-</div>
-<p class="source-note" data-i18n="guideLanguageNote"></p><noscript><p>PT: Busca e filtros exigem JavaScript; todos os guias permanecem acessíveis abaixo. EN: Search and filters require JavaScript; all guides remain accessible below.</p></noscript><div class="doc-grid" id="docs-grid">{{DOCS_CATALOG}}</div>
+<div class="section-heading catalog-head"><div><span class="section-label" data-i18n="catalogLabel">BIBLIOTECA DE GUIAS</span><h2 data-i18n="catalogTitle">Duas trilhas, uma busca unificada</h2><p data-i18n="catalogDesc">Operação da plataforma e fundamentação científica permanecem separadas e rastreáveis.</p></div><span aria-live="polite" class="result-count" id="results-count" role="status"></span></div>
+<p class="source-note" data-i18n="guideLanguageNote"></p><noscript><p>PT: Busca e filtros exigem JavaScript; todos os guias permanecem acessíveis abaixo. EN: Search and filters require JavaScript; all guides remain accessible below.</p></noscript>
+<section class="hub" data-hub-section="technical" aria-labelledby="technical-hub-title"><div class="hub-head"><div><h3 id="technical-hub-title" data-i18n="technicalHubTitle">Hub 1 — Documentação Técnica &amp; Plataforma</h3><p data-i18n="technicalHubDesc">Engenharia, uso, instalação, workspace, autenticação, projetos, CLI, arquitetura, logs e validação.</p></div><span class="hub-count" data-hub-count="technical"></span></div>
+<div class="filters" role="group" aria-label="Filtros técnicos"><button aria-pressed="true" class="filter-btn" data-hub-filter="technical" data-filter="all" type="button" data-i18n="filterAll">Todos</button><button aria-pressed="false" class="filter-btn" data-hub-filter="technical" data-filter="start" type="button" data-i18n="filterStart">Primeiros passos</button><button aria-pressed="false" class="filter-btn" data-hub-filter="technical" data-filter="workflows" type="button" data-i18n="technicalWorkflows">Workspace &amp; Fluxos</button><button aria-pressed="false" class="filter-btn" data-hub-filter="technical" data-filter="developer" type="button" data-i18n="technicalArchitecture">Arquitetura &amp; CLI</button></div><div class="doc-grid">{{TECHNICAL_CATALOG}}</div></section>
+<section class="hub" data-hub-section="scientific" aria-labelledby="scientific-hub-title"><div class="hub-head"><div><h3 id="scientific-hub-title" data-i18n="scientificHubTitle">Hub 2 — Documentação Científica &amp; Metodológica</h3><p data-i18n="scientificHubDesc">Fundamentos, modelos, equações, parâmetros, referências e limites dos métodos implementados.</p></div><span class="hub-count" data-hub-count="scientific"></span></div>
+<div class="filters" role="group" aria-label="Filtros científicos"><button aria-pressed="true" class="filter-btn" data-hub-filter="scientific" data-filter="all" type="button" data-i18n="filterAll">Todos</button><button aria-pressed="false" class="filter-btn" data-hub-filter="scientific" data-filter="properties" type="button" data-i18n="scienceProperties">Propriedades &amp; ADMET</button><button aria-pressed="false" class="filter-btn" data-hub-filter="scientific" data-filter="fingerprints" type="button" data-i18n="scienceFingerprints">Fingerprints &amp; Similaridade</button><button aria-pressed="false" class="filter-btn" data-hub-filter="scientific" data-filter="docking" type="button" data-i18n="scienceDocking">Docking &amp; Consenso</button><button aria-pressed="false" class="filter-btn" data-hub-filter="scientific" data-filter="energy" type="button" data-i18n="scienceEnergy">Energia &amp; Interações 3D</button></div><div class="doc-grid">{{SCIENTIFIC_CATALOG}}</div></section>
 <div class="empty-state" hidden="" id="empty-state"><svg aria-hidden="true" class="icon" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" viewbox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 5 5"></path></svg><h3 data-i18n="emptyTitle">Nenhum guia encontrado</h3><p data-i18n="emptyDesc">Experimente outro termo ou remova os filtros de assunto.</p><button data-i18n="clearFilters" id="reset-filters" type="button">Limpar filtros</button></div>
 <p class="catalog-footnote" data-i18n="englishNote" style="margin:22px 2px 0;color:#7a8997;font-size:11px">Algumas seções do manual de operações estão disponíveis pelos links em inglês (EN).</p>
 </div></section>
@@ -138,19 +135,20 @@
  const cards=[...document.querySelectorAll('.doc-card')];
  const search=document.getElementById('docs-search');
  const clear=document.getElementById('clear-search');
- let lang=document.documentElement.dataset.portalLanguage,filter='all';
+ let lang=document.documentElement.dataset.portalLanguage,filters={technical:'all',scientific:'all'};
  const norm=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
  function apply(){
    const query=norm(search.value);
-   let shown=0;
+   let shown=0,counts={technical:0,scientific:0};
    cards.forEach(card=>{
      const title=card.dataset['title'+(lang==='pt'?'Pt':'En')];
      const desc=card.dataset['desc'+(lang==='pt'?'Pt':'En')];
      const allText=[title,desc,card.dataset.titlePt,card.dataset.titleEn,card.dataset.descPt,card.dataset.descEn,card.dataset.search].join(' ');
-     const visible=(filter==='all'||card.dataset.group===filter) && (!query || norm(allText).includes(query));
-     card.hidden=!visible;if(visible)shown++;
+     const visible=(filters[card.dataset.hub]==='all'||card.dataset.group===filters[card.dataset.hub]) && (!query || norm(allText).includes(query));
+     card.hidden=!visible;if(visible){shown++;counts[card.dataset.hub]++;}
    });
    document.getElementById('results-count').textContent=t[lang].count(shown);
+   Object.entries(counts).forEach(([hub,count])=>{document.querySelector(`[data-hub-count="${hub}"]`).textContent=t[lang].count(count);document.querySelector(`[data-hub-section="${hub}"]`).hidden=Boolean(query)&&count===0;});
    document.getElementById('empty-state').hidden=shown!==0;
    clear.hidden=search.value.length===0;
  }
@@ -171,12 +169,12 @@
    apply();
  }
  document.querySelectorAll('[data-language]').forEach(btn=>btn.addEventListener('click',()=>setLang(btn.dataset.language)));
- document.querySelectorAll('[data-filter]').forEach(btn=>btn.addEventListener('click',()=>{filter=btn.dataset.filter;document.querySelectorAll('[data-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));apply();}));
+ document.querySelectorAll('[data-hub-filter]').forEach(btn=>btn.addEventListener('click',()=>{const hub=btn.dataset.hubFilter;filters[hub]=btn.dataset.filter;document.querySelectorAll(`[data-hub-filter="${hub}"]`).forEach(b=>b.setAttribute('aria-pressed',String(b===btn)));apply();}));
  search.addEventListener('input',()=>{apply();});
  document.getElementById('docs-search-form').addEventListener('submit',ev=>{ev.preventDefault();document.getElementById('guias').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});});
  clear.addEventListener('click',()=>{search.value='';apply();search.focus();});
- document.querySelectorAll('[data-suggestion]').forEach(btn=>btn.addEventListener('click',()=>{search.value=btn.dataset.suggestion;filter='all';document.querySelectorAll('[data-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter==='all')));apply();document.getElementById('guias').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}));
- document.getElementById('reset-filters').addEventListener('click',()=>{search.value='';filter='all';document.querySelectorAll('[data-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter==='all')));apply();search.focus();});
+ document.querySelectorAll('[data-suggestion]').forEach(btn=>btn.addEventListener('click',()=>{search.value=btn.dataset.suggestion;filters={technical:'all',scientific:'all'};document.querySelectorAll('[data-hub-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter==='all')));apply();document.getElementById('guias').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});}));
+ document.getElementById('reset-filters').addEventListener('click',()=>{search.value='';filters={technical:'all',scientific:'all'};document.querySelectorAll('[data-hub-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter==='all')));apply();search.focus();});
  document.addEventListener('keydown',ev=>{if((ev.ctrlKey||ev.metaKey)&&ev.key.toLowerCase()==='k'){ev.preventDefault();search.focus();search.select();}if(ev.key==='Escape'&&document.activeElement===search){search.blur();}});
  const menu=document.getElementById('mobile-nav-toggle'),nav=document.getElementById('doc-nav');
  menu.addEventListener('click',()=>{const isOpen=nav.classList.toggle('open');menu.setAttribute('aria-expanded',String(isOpen));});

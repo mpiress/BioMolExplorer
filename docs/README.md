@@ -1,5 +1,9 @@
 # Documentação / Documentation
 
+Referência científica integrada: [Português](scientific_documentation.md) · [English](en/scientific_documentation.md). Ela registra equações, parâmetros, módulos de origem, referências e ausências explícitas; o portal separa essa trilha dos guias técnicos.
+
+Relatório desta composição: [auditoria integrada de 15/11/2026](documentation_audit_2026-11-15.md).
+
 [Apresentação da plataforma](../index.html) · [Portal no navegador / Browser portal](index.html)
 
 ## Português

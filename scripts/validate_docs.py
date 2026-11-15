@@ -38,7 +38,8 @@ for node in builder.body:
         guides.extend(ast.literal_eval(node.value))
 for filename in ('docs/index.html','docs/pt/index.html'):
     catalog=pages[(root/filename).resolve()].guides
-    if catalog!=guides:errors.append(filename+': catalog must contain each published guide exactly once in registry order')
+    if set(catalog)!=set(guides) or len(catalog)!=len(guides):
+        errors.append(filename+': catalog must contain each published guide exactly once across the two hubs')
 # Check documentation against source without importing scientific dependencies.
 registry=ast.parse((root/'src/biomolexplorer/operations.py').read_text())
 operations=next(n.value for n in registry.body if isinstance(n,ast.Assign) and any(isinstance(t,ast.Name) and t.id=='OPERATIONS' for t in n.targets))

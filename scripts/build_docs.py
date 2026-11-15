@@ -66,6 +66,18 @@ LABELS['pt']['summaries'].append('Preparação ativa com Chimera, opções comun
 LABELS['en']['titles'].append('Molecular preparation and backends')
 LABELS['en']['summaries'].append('Active Chimera preparation, shared receptor/ligand settings, native formats and verified reuse.')
 
+GUIDES += ('scientific_documentation',)
+LABELS['pt']['titles'].append('Documentação científica e metodológica')
+LABELS['pt']['summaries'].append('Equações, parâmetros, referências e limites implementados para ADMET, fingerprints, consenso, footprints, AMBER, redes e interações 3D.')
+LABELS['en']['titles'].append('Scientific and methodological documentation')
+LABELS['en']['summaries'].append('Implemented equations, parameters, references and limitations for ADMET, fingerprints, consensus, footprints, AMBER, networks and 3D interactions.')
+
+GUIDES += ('docking_consensus', 'amber_score_structural_support')
+LABELS['pt']['titles'].extend(['Consenso de docking: modelo matemático', 'AMBER Score: suporte estrutural'])
+LABELS['pt']['summaries'].extend(['ECR por ranks, cobertura multialvo, empates e rastreabilidade estrutural.', 'Saneamento, perfis de resíduos/PTMs, parametrização, cache e limites científicos.'])
+LABELS['en']['titles'].extend(['Docking consensus: mathematical model', 'AMBER Score: structural support'])
+LABELS['en']['summaries'].extend(['Rank-based ECR, multi-target coverage, ties and structural traceability.', 'Sanitation, residue/PTM profiles, parameterization, caching and scientific limitations.'])
+
 CSS = '''
 :root{color-scheme:light;--ink:#172b4d;--muted:#526580;--teal:#087f74;--line:#dce5ef;--bg:#f4f7fb}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,sans-serif}
@@ -220,10 +232,19 @@ def build_portal(language, output):
     template = (assets / 'portal.template.html').read_text(encoding='utf-8')
     translations = json.loads((assets / 'portal-translations.json').read_text(encoding='utf-8'))
     catalog = json.loads((assets / 'portal-catalog.json').read_text(encoding='utf-8'))
-    cards = []
+    cards = {'technical': [], 'scientific': []}
+    scientific_groups = {
+        'admet_research': 'properties', 'scientific_documentation': 'fingerprints',
+        'redocking_configuration': 'docking', 'docking_consensus': 'docking',
+        'molecular_viewer': 'energy', 'amber_score_structural_support': 'energy',
+    }
     for index, guide in enumerate(GUIDES):
         metadata = catalog[guide]
-        attrs = {'data-guide': guide, 'data-group': metadata['group'],
+        hub = 'scientific' if guide in scientific_groups else 'technical'
+        group = scientific_groups.get(guide, metadata['group'])
+        if hub == 'technical' and group in ('science', 'results'):
+            group = 'workflows'
+        attrs = {'data-guide': guide, 'data-hub': hub, 'data-group': group,
                  'data-search': metadata['search']}
         for lang in ('pt', 'en'):
             attrs.update({f'data-title-{lang}': LABELS[lang]['titles'][index],
@@ -232,15 +253,16 @@ def build_portal(language, output):
         attributes = ' '.join(f'{key}="{html.escape(value, quote=True)}"' for key, value in attrs.items())
         title = html.escape(LABELS[language]['titles'][index])
         description = html.escape(LABELS[language]['summaries'][index])
-        category = html.escape(translations[language]['category'][metadata['group']])
-        cards.append(f'<article class="doc-card" {attributes}>'
+        category = html.escape(translations[language]['category'][group])
+        cards[hub].append(f'<article class="doc-card" {attributes}>'
                      f'<div class="card-top">{metadata["icon"]}<span class="topic-number">{index+1:02d}</span></div>'
                      f'<p class="card-category">{category}</p><h3 class="card-title">{title}</h3>'
                      f'<p class="card-desc">{description}</p><div class="card-footer">'
                      f'<a class="card-link" data-i18n="openGuide" href="{language}/{guide}.html" '
                      f'lang="{"pt-BR" if language=="pt" else "en"}">{html.escape(translations[language]["openGuide"])}</a>'
                      f'<span class="language-note">{language.upper()}</span></div></article>')
-    rendered = template.replace('{{DOCS_CATALOG}}', ''.join(cards))
+    rendered = template.replace('{{TECHNICAL_CATALOG}}', ''.join(cards['technical']))
+    rendered = rendered.replace('{{SCIENTIFIC_CATALOG}}', ''.join(cards['scientific']))
     rendered = rendered.replace('{{LANG}}', 'pt-BR' if language == 'pt' else 'en')
     rendered = rendered.replace('{{LANGUAGE}}', language)
     rendered = rendered.replace('{{TRANSLATIONS}}', json.dumps(translations, ensure_ascii=False).replace('</', r'<\/'))
@@ -296,7 +318,11 @@ def build():
             output.write_text(page(labels['titles'][index],language,content,'../../index.html','../index.html' if language=='en' else 'index.html',f'../{"pt" if language=="en" else "en"}/{guide}.html'),encoding='utf-8')
         portal = DOCS/'index.html' if language=='en' else DOCS/'pt/index.html'
         build_portal(language, portal)
-    print(f'Built {len(GUIDES)*len(LABELS)} documentation pages and {len(LABELS)} language portals.')
+    # Root compatibility entry used by the packaged/static site. Keep it generated
+    # from the same source as the language portals so search and hub behavior do
+    # not drift.
+    build_portal('pt', ROOT/'index_doc.html')
+    print(f'Built {len(GUIDES)*len(LABELS)} documentation pages and {len(LABELS)+1} portal entries.')
 
 
 if __name__=='__main__':

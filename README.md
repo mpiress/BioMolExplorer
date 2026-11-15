@@ -94,6 +94,7 @@ Reuse verifies inputs, settings, processing/tool versions and output integrity; 
 - [Browser portal](docs/index.html) · [Portal em português](docs/pt/index.html) · [Source index](docs/README.md)
 - [User manual](docs/en/user_manual.md) · [Installation](docs/en/installation.md) · [Backend and parameters](docs/en/backend_usage.md)
 - [Architecture](docs/en/architecture.md) · [Project history and migration](docs/en/projects.md) · [Preparation](docs/en/molecular_preparation.md)
+- [Scientific and methodological reference](docs/en/scientific_documentation.md) · [Referência científica em português](docs/scientific_documentation.md)
 - [Documentation review and validation limits](docs/validation/documentation_review_2026-10-31/README.md)
 
 Markdown is the source for the static guides. Existing documentation tools use the Python standard library:

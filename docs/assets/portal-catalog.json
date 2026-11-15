@@ -73,5 +73,21 @@
     "group": "science",
     "search": "molecular preparation backend Chimera receptor ligand reuse",
     "icon": "<div class=\"topic-icon mint\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"9\"></circle><circle cx=\"12\" cy=\"12\" r=\"3\"></circle><path d=\"M12 1v5M12 18v5M1 12h5M18 12h5\"></path></svg></div>"
+  },
+  "scientific_documentation": {
+    "hub": "scientific",
+    "group": "science_methods",
+    "search": "scientific methodology ciência método ADMET ADMET-AI Morgan ECFP MACCS pharmacophore Tanimoto Dice consensus ECR Vina DOCK6 footprint AMBER interactions networks equations referências",
+    "icon": "<div class=\"topic-icon mint\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><path d=\"M9 3h6M10 3v6l-6 9a2 2 0 0 0 1.7 3h12.6a2 2 0 0 0 1.7-3l-6-9V3\"></path><path d=\"M7 15h10\"></path></svg></div>"
+  },
+  "docking_consensus": {
+    "group": "docking",
+    "search": "consensus consenso ECR rank quantile coverage Vina DOCK6 multialvo target",
+    "icon": "<div class=\"topic-icon mint\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><path d=\"M4 5h16M4 12h16M4 19h16\"></path></svg></div>"
+  },
+  "amber_score_structural_support": {
+    "group": "energy",
+    "search": "AMBER score DOCK6 energia saneamento structural sanitation PTM ff03 resíduos dynamics",
+    "icon": "<div class=\"topic-icon mint\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><path d=\"M9 3h6M10 3v6l-6 9h12l-6-9V3\"></path></svg></div>"
   }
 }
