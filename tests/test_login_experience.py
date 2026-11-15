@@ -125,7 +125,8 @@ class LoginExperienceTests(unittest.IsolatedAsyncioTestCase):
         experience = self.ui._login_experience
         images=[control for control in walk(experience.control) if isinstance(control,ft.Image)]
         self.assertEqual(len(images),2)
-        self.assertTrue(all(isinstance(image.src,bytes) for image in images))
+        self.assertEqual({image.src for image in images},
+            {'/login_v5_background.png','/login_v5_scientific_panel.png'})
         self.assertEqual(experience.title.value,'Sign In')
         self.assertEqual(experience.email.hint_text,'Username or email')
         self.assertEqual(experience.password.hint_text,'Password')

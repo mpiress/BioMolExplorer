@@ -49,7 +49,7 @@ class InstallationGuideTests(unittest.TestCase):
                 self.assertIn('usage:', result.stdout)
             result = subprocess.run([str(target / 'env/bin/biomolexplorer-ui'), '--help'],
                                     env=env, cwd=target, capture_output=True, text=True)
-            for flag in ('--web', '--language', '--dock6-path', '--no-browser'):
+            for flag in ('--web', '--web-server', '--language', '--dock6-path', '--no-browser'):
                 self.assertIn(flag, result.stdout)
 
 

@@ -1,7 +1,7 @@
 """BioMolExplorer V5 authentication presentation using bundled local assets."""
 import flet as ft
 
-from .branding import BRAND_BLUE, BRAND_NAVY, image_bytes
+from .branding import BRAND_BLUE, BRAND_NAVY, image_src
 
 BLUE = '#075ACB'
 MUTED = '#63748E'
@@ -96,7 +96,7 @@ class LoginExperience:
             horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
         self.right = ft.Container(self.form, bgcolor='#FFFFFF')
 
-        self.panel_image = ft.Image(src=image_bytes('login_v5_scientific_panel.png'),
+        self.panel_image = ft.Image(src=image_src('login_v5_scientific_panel.png'),
             fit=ft.BoxFit.FILL, semantics_label='Painel científico BioMolExplorer')
         self.left = ft.Container(self.panel_image, bgcolor='#083458')
 
@@ -104,7 +104,7 @@ class LoginExperience:
             ft.Row([self.left, self.right], spacing=0), bgcolor='#FFFFFF', border_radius=35,
             clip_behavior=ft.ClipBehavior.HARD_EDGE,
             shadow=ft.BoxShadow(blur_radius=40, color='#250C4270', offset=ft.Offset(0, 17)))
-        self.background = ft.Image(src=image_bytes('login_v5_background.png'), fit=ft.BoxFit.FILL,
+        self.background = ft.Image(src=image_src('login_v5_background.png'), fit=ft.BoxFit.FILL,
             semantics_label='Fundo decorativo da autenticação')
         self.center = ft.Container(self.card, alignment=ft.Alignment.CENTER, expand=True)
         self.control = ft.Stack([self.background, self.center], expand=True)

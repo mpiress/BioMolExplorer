@@ -20,8 +20,9 @@ python -m biomolexplorer.log_report --help
 | --- | --- |
 | `--data-dir` | `~/.local/share/biomolexplorer` |
 | `--web` | False; enable web hosting |
+| `--web-server` | False; enable web hosting on the local network, using `0.0.0.0` by default |
 | `--no-browser` | False; suppress browser launch in web mode |
-| `--host` | `127.0.0.1` |
+| `--host` | `127.0.0.1` with `--web`; `0.0.0.0` with `--web-server`; an explicit value overrides either default |
 | `--port` | `8550` |
 | `--log-dir` | `BIOMOL_LOG_DIR` or context-dependent `logs/` |
 | `--worker-python` | Current Python when omitted |

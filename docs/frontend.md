@@ -45,6 +45,11 @@ Acesse `http://127.0.0.1:8550`. Para servir sem abrir automaticamente o navegado
 biomolexplorer-ui --web --no-browser --data-dir ./workspace-data --port 8550 --dock6-path /caminho/para/dock6-6.11
 ```
 
+Para permitir acesso por navegadores na mesma rede, troque `--web` por
+`--web-server` e acesse `http://IP_DA_MAQUINA:8550`. Esse modo escuta em todas
+as interfaces (`0.0.0.0`); libere a porta no firewall apenas para a rede
+confiável e não exponha o servidor HTTP integrado diretamente à internet.
+
 `--worker-python /caminho/do/python` seleciona o ambiente dos cálculos.
 `--dock6-path /caminho/do/dock6` define a instalação DOCK6 disponível às etapas.
 Chimera, Open Babel, Vina, DOCK6 e suas dependências continuam necessários para os

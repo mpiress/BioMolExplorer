@@ -94,6 +94,8 @@ biomolexplorer-ui --web --language en --dock6-path "$BIOMOL_DOCK6_ROOT"
 
 Open `http://127.0.0.1:8550`. For desktop mode, omit `--web`. To serve without automatically opening a browser, use `--web --no-browser`. If you select another interpreter through `--worker-python`, prepare that scientific environment too and ensure workers can access the external tools.
 
+For access from another device on the same network, use `biomolexplorer-ui --web-server --no-browser --port 8550` and open `http://MACHINE_IP:8550`. You may need to allow TCP port 8550 through the firewall. This server uses unencrypted HTTP; use it on a trusted network and do not publish it directly to the internet.
+
 Continue with the [user manual](user_manual.md) to create an account, select a project folder and configure the pipeline. For CLI execution and technical parameters, see [backend usage](backend_usage.md).
 
 ## Checks before execution

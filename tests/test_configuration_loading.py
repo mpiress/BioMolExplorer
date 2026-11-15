@@ -5,7 +5,7 @@ import unittest
 import flet as ft
 
 from biomolexplorer.catalog import new_stage
-from biomolexplorer.ui.branding import image_bytes
+from biomolexplorer.ui.branding import image_src
 import test_pipeline_editor_regressions as fixtures
 from test_frontend_navigation import walk
 
@@ -58,7 +58,7 @@ class ConfigurationLoadingTests(unittest.TestCase):
             spinner=next(c for c in controls if isinstance(c,ft.ProgressRing))
             self.assertIsNone(spinner.value)
             emblem=next(c for c in controls if isinstance(c,ft.Image))
-            self.assertEqual(emblem.src,image_bytes('logo.png'))
+            self.assertEqual(emblem.src,image_src('logo.png'))
             release.set();await pending
             self.assertEqual(self.page.overlay,[])
             self.assertTrue(self.page.dialogs[-1].open)

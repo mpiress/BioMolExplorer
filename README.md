@@ -33,6 +33,17 @@ biomolexplorer-ui --help
 biomolexplorer-ui --web --language en
 ```
 
+To allow browsers on the same trusted network to connect, start the network
+server and open `http://MACHINE_IP:8550` on the other device:
+
+```bash
+biomolexplorer-ui --web-server --no-browser --port 8550 --language en
+```
+
+`--web` remains local-only. `--web-server` listens on all network interfaces;
+allow TCP port 8550 in the machine firewall if necessary. The built-in server
+uses plain HTTP, so do not expose it directly to the internet.
+
 For a local web session with explicit worker/tool paths:
 
 ```bash

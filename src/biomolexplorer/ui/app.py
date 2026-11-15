@@ -1936,19 +1936,33 @@ class WorkspaceUI(ProjectTools):
         await self.draw_project()
 
 
-def main():
+def build_parser():
     parser=argparse.ArgumentParser(description='BioMolExplorer workspace Flet')
     parser.add_argument('--data-dir',type=Path,default=Path.home()/'.local/share/biomolexplorer')
-    parser.add_argument('--web',action='store_true')
+    parser.add_argument('--web',action='store_true',help='Serve a interface web apenas nesta máquina (127.0.0.1 por padrão).')
+    parser.add_argument('--web-server',action='store_true',
+        help='Serve a interface web para a rede local (0.0.0.0 por padrão).')
     parser.add_argument('--no-browser',action='store_true',help='Serve a interface web sem abrir um navegador.')
-    parser.add_argument('--host',default='127.0.0.1')
+    parser.add_argument('--host',help='Endereço de escuta explícito; substitui o padrão de --web ou --web-server.')
     parser.add_argument('--port',type=int,default=8550)
     parser.add_argument('--log-dir',type=Path,help='Diretório central dos logs da interface e dos workers.')
     parser.add_argument('--worker-python',type=Path)
     parser.add_argument('--dock6-path',type=Path)
     from biomolexplorer.i18n import locales
     parser.add_argument('--language',choices=tuple(locales()),default='en',help='Initial interface language; users can change it on the login screen.')
-    args=parser.parse_args()
+    return parser
+
+
+def resolve_web_startup(args):
+    """Return whether web hosting is active and its effective bind address."""
+    web=bool(args.web or args.web_server or args.no_browser)
+    host=args.host or ('0.0.0.0' if args.web_server else '127.0.0.1')
+    return web,host
+
+
+def main():
+    args=build_parser().parse_args()
+    web,host=resolve_web_startup(args)
     if args.no_browser:
         os.environ['FLET_FORCE_WEB_SERVER']='true'
     if args.log_dir:
@@ -1982,12 +1996,13 @@ def main():
         page.on_disconnect=disconnected
         page.on_connect=connected
     try:
-        if args.web or args.no_browser:
+        if web:
             from .web_host import run_web
-            run_web(session,store,viewers,args.host,args.port,not args.no_browser,os.environ['FLET_SECRET_KEY'])
+            run_web(session,store,viewers,host,args.port,not args.no_browser,os.environ['FLET_SECRET_KEY'])
         else:
-            ft.run(session,view=ft.AppView.FLET_APP,host=args.host,port=args.port,
-                   upload_dir=str(store.staging),assets_dir=None)
+            from .branding import branding_assets_dir
+            ft.run(session,view=ft.AppView.FLET_APP,host=host,port=args.port,
+                   upload_dir=str(store.staging),assets_dir=str(branding_assets_dir()))
     finally:
         viewers.close()
         service.close()

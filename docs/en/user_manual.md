@@ -36,7 +36,7 @@ biomolexplorer-ui --web --language en --dock6-path /path/to/dock6-6.11
 
 In your browser, open `http://127.0.0.1:8550`. For desktop mode, omit `--web`. Without `--language`, the application starts in English. Use `--language pt` to start in Portuguese; this option also works in desktop mode.
 
-On a server, use `--web --no-browser --port 8550`. `--data-dir /path/workspace` selects storage for accounts and project indexes; use the same path on subsequent launches. `--worker-python /path/python` selects another Python interpreter for calculations. `--dock6-path /path/dock6` specifies the DOCK6 installation.
+For access from another computer on the same network, run `biomolexplorer-ui --web-server --no-browser --port 8550` and open `http://MACHINE_IP:8550` in the remote browser. `--web` remains restricted to the local machine. Allow TCP port 8550 through the firewall if necessary. The built-in server uses unencrypted HTTP: keep it on a trusted network and do not expose it directly to the internet. `--data-dir /path/workspace` selects storage for accounts and project indexes; use the same path on subsequent launches. `--worker-python /path/python` selects another Python interpreter for calculations. `--dock6-path /path/dock6` specifies the DOCK6 installation.
 
 Fingerprints, similarity, graphs and ADMET use the local scientific environment. Retrieval queries external providers. Preparation and docking need the corresponding engines: Chimera, Open Babel, Vina and, for DOCK6, that protocol's executables and resources. Installing the interface does not install these engines. The backend guide explains the dependencies; validate a docking protocol against a reference case before using it in your study.
 

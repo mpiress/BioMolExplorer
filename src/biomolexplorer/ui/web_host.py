@@ -3,7 +3,7 @@ from fastapi import Request
 from fastapi.responses import Response
 import flet_web.fastapi as flet_fastapi
 from biomolexplorer.pdb_view import PREFIX
-from .branding import image_bytes
+from .branding import branding_assets_dir, image_bytes
 
 
 def create_web_app(session,store,viewers,secret_key=None):
@@ -30,7 +30,8 @@ def create_web_app(session,store,viewers,secret_key=None):
         status,mime,data,headers=await asyncio.to_thread(viewers.response,PREFIX+'/'+resource,prefix)
         return Response(data,status_code=status,media_type=mime,headers=headers)
 
-    app.mount('/',flet_fastapi.app(session,upload_dir=str(store.staging),assets_dir=None,
+    app.mount('/',flet_fastapi.app(session,upload_dir=str(store.staging),
+        assets_dir=str(branding_assets_dir()),
         max_upload_size=store.max_upload_bytes,secret_key=secret_key))
     return app
 

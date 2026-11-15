@@ -102,6 +102,27 @@ class PDBViewerTests(unittest.TestCase):
             self.store.logout(self.token)
             self.assertEqual(client.get(PREFIX+'/'+key+'/structure').status_code,403)
 
+    def test_branding_assets_are_same_origin_for_local_and_network_hosts(self):
+        import socket
+        try:
+            probe=socket.socket(socket.AF_INET,socket.SOCK_STREAM);probe.close()
+        except PermissionError:self.skipTest('ASGI test transport is restricted in this sandbox.')
+        from fastapi.testclient import TestClient
+        from biomolexplorer.ui.web_host import create_web_app
+        async def session(page):pass
+        app=create_web_app(session,self.store,self.viewers,'test-secret')
+        assets={'/logo.png':'image/png','/wordmark.png':'image/png',
+            '/login_v5_background.png':'image/png',
+            '/login_v5_scientific_panel.png':'image/png',
+            '/br.svg':'image/svg+xml','/us.svg':'image/svg+xml'}
+        with TestClient(app) as client:
+            for host in ('127.0.0.1:8550','192.168.86.58:8550'):
+                for path,mime in assets.items():
+                    response=client.get(path,headers={'host':host})
+                    self.assertEqual(response.status_code,200,(host,path))
+                    self.assertEqual(response.headers['content-type'],mime)
+                    self.assertTrue(response.content,(host,path))
+
     def test_pdb_button_opens_protected_viewer_directly(self):
         from biomolexplorer.ui.app import WorkspaceUI
         from biomolexplorer.ui.pdb_results import PDBActions

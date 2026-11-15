@@ -9,10 +9,20 @@ BRAND_NAVY='#091D48'
 
 @lru_cache(maxsize=4)
 def image_bytes(name):
-    return (Path(__file__).parents[1]/'resources'/'branding'/name).read_bytes()
+    return (branding_assets_dir()/name).read_bytes()
+
+
+def branding_assets_dir():
+    """Return the installed package's absolute, host-independent assets path."""
+    return Path(__file__).parents[1]/'resources'/'branding'
+
+
+def image_src(name):
+    """Return a same-origin URL served by Flet from ``branding_assets_dir``."""
+    return '/'+name
 
 def logo(size=48):
-    return ft.Image(src=image_bytes('logo.png'),width=size,height=size*231/247,fit=ft.BoxFit.CONTAIN,semantics_label='Logo BioMolExplorer')
+    return ft.Image(src=image_src('logo.png'),width=size,height=size*231/247,fit=ft.BoxFit.CONTAIN,semantics_label='Logo BioMolExplorer')
 
 
 def processing_emblem(size=112,label='Processando dados…'):
@@ -22,10 +32,10 @@ def processing_emblem(size=112,label='Processando dados…'):
     return emblem
 
 def wordmark(width=240):
-    return ft.Image(src=image_bytes('wordmark.png'),width=width,height=width*209/662,fit=ft.BoxFit.CONTAIN,semantics_label='BioMolExplorer')
+    return ft.Image(src=image_src('wordmark.png'),width=width,height=width*209/662,fit=ft.BoxFit.CONTAIN,semantics_label='BioMolExplorer')
 
 def flag(language):
     info=language_info(language)
     if not info.get('flag'):return ft.Text(info['language_code'].upper(),semantics_label=info['name'])
-    return ft.Image(src=image_bytes(info['flag']),
+    return ft.Image(src=image_src(info['flag']),
         width=28,height=20,fit=ft.BoxFit.CONTAIN,semantics_label=info['name'])
