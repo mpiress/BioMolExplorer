@@ -11,11 +11,30 @@ from pathlib import Path
 from .bindings import sources,asset_references,dependencies
 from .result_state import request,signature,input_digest,digest
 from .artifacts import validate_reference,locator
+from .paths import within
+
+
+# Resolved parent directories for the verification in progress. Artifacts of
+# one run share few directories; resolving each full path walked (lstat) every
+# component of every file. ``verify`` clears it, so nothing outlives one check.
+_PARENTS={}
+
+
+def _resolve(path):
+    """``Path(path).resolve()``, resolving each parent directory only once."""
+    path=Path(path)
+    if path.name in ('','.','..'):return path.resolve()
+    parent=_PARENTS.get(path.parent)
+    if parent is None:
+        if len(_PARENTS)>=4096:_PARENTS.clear()
+        parent=_PARENTS[path.parent]=path.parent.resolve()
+    target=parent/path.name
+    return target.resolve() if target.is_symlink() else target
 
 
 def _scoped(root,path):
-    resolved=Path(path).resolve()
-    if not resolved.is_relative_to(root):raise ValueError('O caminho deve pertencer ao projeto.')
+    resolved=_resolve(path)
+    if not within(resolved,root):raise ValueError('O caminho deve pertencer ao projeto.')
     return resolved
 
 
@@ -36,7 +55,7 @@ def artifact_integrity(store,pid,entry,*,include_batches=False,root=None):
                 parent=path.parent.resolve();parents[path.parent]=parent
             target=parent/path.name
             if target.is_symlink():target=target.resolve()
-            if not target.is_relative_to(root):return False
+            if not within(target,root):return False
             resolved.append(target)
         if not include_batches and set(manifest)!={str(path) for path in resolved}:return False
         return all(input_digest(path)==manifest.get(str(path)) for path in resolved)
@@ -92,6 +111,7 @@ def equivalent(stage,previous):
 
 def verify(store,pid,stage,entry,snapshot,results):
     """Prove request, exact files, original inputs and current source equivalence."""
+    _PARENTS.clear()
     try:
         if not equivalent(stage,entry.get('configuration',{})):return False
         root=store.project_dir(pid).resolve()
@@ -106,14 +126,14 @@ def verify(store,pid,stage,entry,snapshot,results):
         def original_inputs(unit):
             if unit.get('batches'):
                 if not all(original_inputs(batch) for batch in unit['batches']):return False
-                indexed={str(Path(p).resolve()) for batch in unit['batches'] for paths in batch.get('input_files',{}).values() for p in paths}
-                return all(str(Path(p).resolve()) in indexed for paths in unit.get('input_files',{}).values() for p in paths)
+                indexed={str(_resolve(p)) for batch in unit['batches'] for paths in batch.get('input_files',{}).values() for p in paths}
+                return all(str(_resolve(p)) in indexed for paths in unit.get('input_files',{}).values() for p in paths)
             hashes=_input_hashes(unit)
             for field,paths in unit.get('input_files',{}).items():
                 actual=Counter(input_digest(_scoped(root,p)) for p in paths)
                 if field in hashes:
                     if actual!=hashes[field]:return False
-                elif any(expected.get(str(Path(p).resolve()))!=input_digest(_scoped(root,p)) for p in paths):return False
+                elif any(expected.get(str(_resolve(p)))!=input_digest(_scoped(root,p)) for p in paths):return False
             return True
         if not original_inputs(entry):return False
         asset_ids=asset_references(stage)
@@ -136,7 +156,7 @@ def verify(store,pid,stage,entry,snapshot,results):
             sha=entry.get('source_manifest',{}).get(asset)
             if sha is not None:
                 if sha!=input_digest(asset_path):return False
-            elif asset_path not in {str(Path(p).resolve()) for paths in entry.get('input_files',{}).values() for p in paths}:return False
+            elif asset_path not in {str(_resolve(p)) for paths in entry.get('input_files',{}).values() for p in paths}:return False
         represented=set()
         for group in stage.get('bindings',{}).values():
             for ref in sources(group):
@@ -149,10 +169,10 @@ def verify(store,pid,stage,entry,snapshot,results):
                 if not old_files or not new_files:return False
                 if ref.get('selector','auto')!='auto':
                     previous_file=validate_reference(ref,old_files);current_file=validate_reference(ref,new_files)
-                    sha=old.get('artifact_manifest',{}).get(str(Path(previous_file).resolve()))
+                    sha=old.get('artifact_manifest',{}).get(str(_resolve(previous_file)))
                     if not sha or input_digest(_scoped(root,current_file))!=sha:return False
                 else:
-                    original=Counter((locator(owner,p),old.get('artifact_manifest',{}).get(str(Path(p).resolve()))) for p in old_files)
+                    original=Counter((locator(owner,p),old.get('artifact_manifest',{}).get(str(_resolve(p)))) for p in old_files)
                     current=Counter((locator(owner,p),input_digest(_scoped(root,p))) for p in new_files)
                     if any(sha is None for _,sha in original) or original!=current:return False
         # Direct paths need original per-file evidence, not only a path string.
@@ -167,7 +187,7 @@ def verify(store,pid,stage,entry,snapshot,results):
             if recorded is None or actual!=recorded:return False
         for owner in dependencies(stage)-represented:
             old=prior.get(owner,{})
-            original={str(Path(p).resolve()):sha for p,sha in old.get('artifact_manifest',{}).items()}
+            original={str(_resolve(p)):sha for p,sha in old.get('artifact_manifest',{}).items()}
             if not original or Counter(original.values())!=Counter(input_digest(_scoped(root,p)) for p in results.get(owner,[])):return False
     except (OSError,ValueError,KeyError,TypeError,AttributeError):return False
     return True
@@ -285,6 +305,7 @@ def _hydrate(store,run_id,entry):
 
 def compatible_configuration(stage,entry,snapshot,results):
     """Restore a prior confirmed selector only when its entire source is unchanged."""
+    _PARENTS.clear()
     from .pipeline import PipelineService
     previous=entry.get('configuration',{})
     if previous.get('operation')!=stage.get('operation'):return None
@@ -299,7 +320,7 @@ def compatible_configuration(stage,entry,snapshot,results):
             if not all(ref.get('stage') and ref.get('selector','auto')=='auto' for ref in refs):return None
             for ref in refs:
                 owner=ref['stage'];original=prior.get(owner,{})
-                expected=Counter((locator(owner,p),original.get('artifact_manifest',{}).get(str(Path(p).resolve()))) for p in original.get('artifacts',[]))
+                expected=Counter((locator(owner,p),original.get('artifact_manifest',{}).get(str(_resolve(p)))) for p in original.get('artifacts',[]))
                 actual=Counter((locator(owner,p),input_digest(p)) for p in results.get(owner,[]))
                 if not expected or any(sha is None for _,sha in expected) or expected!=actual:return None
     except (OSError,ValueError,KeyError,TypeError):return None

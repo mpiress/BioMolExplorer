@@ -21,6 +21,17 @@ def resolve_path(value, root=None):
     return (Path(root or os.environ.get('BIOMOL_WORKSPACE', Path.cwd())) / path).resolve()
 
 
+def within(path, root):
+    """Whether resolved ``path`` is ``root`` or inside it.
+
+    Same result as ``Path.is_relative_to`` for resolved absolute paths, which
+    is purely lexical, without building a Path for every parent: result
+    verification calls this for tens of thousands of artifacts.
+    """
+    path, root = os.fspath(path), os.fspath(root)
+    return path == root or path.startswith(root.rstrip(os.sep) + os.sep)
+
+
 def directory(value):
     """Resolved directory string for legacy filename concatenation."""
     return str(resolve_path(value)) + os.sep

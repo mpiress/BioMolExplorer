@@ -577,10 +577,9 @@ class WorkspaceUI(ProjectTools):
     async def delete_project_dialog(self,project_id):
         token = self.token
         project=await self.call(self.store.project,token,project_id,'owner')
-        runs=await self.call(self.store.list_runs,token,project_id)
+        active=await self.call(self.store.has_active_run,token,project_id)
         if self.token != token:
             return
-        active=any(run['status'] in ('queued','running','awaiting_input') for run in runs)
         async def remove(e):
             if self.token != token:
                 return
@@ -1123,8 +1122,8 @@ class WorkspaceUI(ProjectTools):
             if presentation_only else await self.call(self.store.result_removal_plan,token,project['id'],sent))
         prune=bool(proposal['affected'])
         if prune:
-            runs=await self.call(self.store.list_runs,token,project['id'])
-            if proposal['active_conflicts'] or any(r['status'] in ('queued','running') for r in runs):
+            running=await self.call(self.store.has_active_run,token,project['id'],('queued','running'))
+            if proposal['active_conflicts'] or running:
                 raise ValueError('Aguarde ou cancele a execução antes de limpar os resultados.')
         if prune:
             accepted=asyncio.get_running_loop().create_future()
@@ -1300,7 +1299,9 @@ class WorkspaceUI(ProjectTools):
             await self.guard(action)
         from .file_table import FileTable
         from biomolexplorer.result_files import ResultFiles
-        active=any(r['status'] in ('queued','running','awaiting_input') for r in await self.call(self.store.list_runs,token,project_id))
+        # Status-only query: loading every run's stage JSON here took tens of
+        # seconds and gigabytes of memory on projects with large docking runs.
+        active=await self.call(self.store.has_active_run,token,project_id)
         async def download(item):
             path=await self.call(self.store.asset_path,token,project_id,item['id'])
             data=await self.call(self.store.read_file,token,project_id,path)

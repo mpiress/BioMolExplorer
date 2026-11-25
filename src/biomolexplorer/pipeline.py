@@ -1694,6 +1694,7 @@ class PipelineService:
         """Report intact results persisted in this project's execution history."""
         project=self.store.project(token,project_id,'editor')
         found=set()
+        root=self.store.project_dir(project_id).resolve()
         if any(stage.get('operation') in ('consensus','docking_vina','docking_dock6','redocking') for stage in project['pipeline']):
             from .result_catalog import read_proofs
             from .result_visibility import project_run
@@ -1706,7 +1707,7 @@ class PipelineService:
                 if item['id'] in found or item['status']!='succeeded' or not item.get('artifacts') or item.get('outputs_removed'):
                     continue
                 try:
-                    for path in item['artifacts']:self.store.scoped_path(project_id,path)
+                    for path in item['artifacts']:self.store.scoped_path(project_id,path,root=root)
                     if manifest_matches(item.get('artifact_manifest') or artifact_manifest(item['artifacts'])):
                         found.add(item['id'])
                 except (OSError,ValueError):continue

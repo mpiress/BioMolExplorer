@@ -574,9 +574,13 @@ class WorkspaceStore:
             raise AccessDenied('Arquivo não autorizado.')
         return self.scoped_path(project_id, row['path'])
 
-    def scoped_path(self, project_id, path):
+    def scoped_path(self, project_id, path, root=None):
+        """Resolve ``path`` inside the project; pass ``root`` (the resolved
+        project directory) when checking many paths to avoid one database
+        lookup per file."""
+        from .paths import within
         resolved = Path(path).resolve()
-        if not resolved.is_relative_to(self.project_dir(project_id).resolve()):
+        if not within(resolved, self.project_dir(project_id).resolve() if root is None else root):
             raise AccessDenied('O caminho deve pertencer ao projeto.')
         return resolved
 
@@ -594,10 +598,13 @@ class WorkspaceStore:
         with self.connect() as db:
             return [project_run(self._run_row(row),project['pipeline']) for row in db.execute('SELECT * FROM runs WHERE project_id=? ORDER BY created DESC LIMIT 100', (project_id,))]
 
-    def has_active_run(self,token,project_id):
+    def has_active_run(self,token,project_id,statuses=('queued','running','awaiting_input')):
+        """Status-only check; never loads run stage JSON (hundreds of MB per run)."""
         self.project(token,project_id)
+        statuses=tuple(statuses)
         with self.connect() as db:
-            return db.execute("SELECT 1 FROM runs WHERE project_id=? AND status IN ('queued','running','awaiting_input')",(project_id,)).fetchone() is not None
+            return db.execute(f"SELECT 1 FROM runs WHERE project_id=? AND status IN ({','.join('?' for _ in statuses)}) LIMIT 1",
+                              (project_id,*statuses)).fetchone() is not None
 
     def get_result_run(self,token,run_id):
         with self.connect() as db:

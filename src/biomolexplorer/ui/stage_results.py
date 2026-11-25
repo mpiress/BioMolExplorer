@@ -165,7 +165,7 @@ class StageResults:
             extra=None
             if self.stage['operation']=='retrieve_structures':
                 from .pdb_results import PDBActions
-                running=any(r['status'] in ('queued','running') for r in await self.ui.call(self.ui.store.list_runs,self.token,self.project_id))
+                running=await self.ui.call(self.ui.store.has_active_run,self.token,self.project_id,('queued','running'))
                 if not self.valid():return
                 self.pdb_actions=PDBActions(self,self.writable and not running)
                 extra=self.pdb_actions.actions
