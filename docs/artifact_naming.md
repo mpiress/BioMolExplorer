@@ -1,14 +1,14 @@
 # Convenção global de artefatos
 
-A publicação dos 16 tipos de bloco utiliza uma única implementação em
+A publicação dos 17 tipos de bloco utiliza uma única implementação em
 `biomolexplorer.artifact_naming`, sem modificar algoritmos ou formatos científicos.
 
 `TG[ALVO]-SRC[ORIGEM]-OP[OPERAÇÃO]-TIPO-ID[identificador].ext`
 
 - **TG**: alvo biológico identificado na recuperação/linhagem. Docking e Amber Score usam o alvo do receptor, independentemente da coleção dos compostos. Coleções independentes sem alvo usam `NA`. Resultados agregados podem representar vários alvos; listas extensas usam `MULTI-hash`, com a lista completa nos metadados.
 - **SRC**: categoria da entrada imediata: `MOL`, `SIM`, `BBB+`, `Fingerprints-Morgan`, `REC`, `PDB` etc. Misturas extensas usam `MIX-hash`; os tipos e IDs de todas as entradas permanecem registrados. Arquivos auxiliares de um conjunto estrutural não inventam novas categorias biológicas.
-- **OP**: produtor, como `ChEMBL`, `PubChem`, `ADMET`, `Fingerprints`, `Similarity`, `Graphs`, `Redocking`, `Preparation`, `Docking-Vina`, `Docking-DOCK6`, `Consensus`, `AmberScore-DOCK6` e `Import`.
-- **TIPO**: conteúdo: `MOL`, `SIM`, `BBB+`, `BBB-`, `HIA+`, `HIA-`, `Rules-Lipinski`, `Alerts`, `Evaluated`, `Fingerprints-Morgan`, `Similarity-Tanimoto`, `Molecules-C2`, `Edges-LCC`, `Scores`, `RMSD`, `Receptor-4M0E_A`, `Pose-CHEMBL1179697`, `AmberScore`, `Protocol`, `Topology`, `Coordinates`, `Exclusions`, `Methods`, `Figure` etc. Uma trajetória só recebe esse tipo se existir no formato correspondente; a convenção não cria métricas ou arquivos científicos ausentes.
+- **OP**: produtor, como `ChEMBL`, `PubChem`, `ADMET`, `Fingerprints`, `Similarity`, `Graphs`, `Redocking`, `Preparation`, `Docking-Vina`, `Docking-DOCK6`, `Consensus`, `AmberScore-DOCK6`, `PoseValidation` e `Import`.
+- **TIPO**: conteúdo: `MOL`, `SIM`, `BBB+`, `BBB-`, `HIA+`, `HIA-`, `Rules-Lipinski`, `Alerts`, `Evaluated`, `Fingerprints-Morgan`, `Similarity-Tanimoto`, `Molecules-C2`, `Edges-LCC`, `Scores`, `RMSD`, `Receptor-4M0E_A`, `Pose-CHEMBL1179697`, `AmberScore`, `Protocol`, `Topology`, `Coordinates`, `PoseValidation`, `Exclusions`, `Methods`, `Figure` etc. Uma trajetória só recebe esse tipo se existir no formato correspondente; a convenção não cria métricas ou arquivos científicos ausentes.
 - **ID**: prefixo determinístico da ocorrência do artefato (normalmente oito dígitos hexadecimais). Está sempre presente para distinguir também resultados históricos. Colisões de prefixo detectadas no catálogo expandem esse sufixo. Não substitui o identificador interno completo nem a validação de conteúdo.
 - **ext**: formato original, inclusive extensões compostas, como `.csv.gz` e `.biomol-view.json`. Os sinais `+` e `-` são preservados.
 

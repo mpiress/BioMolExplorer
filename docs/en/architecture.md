@@ -189,6 +189,35 @@ operation again and reuses PubChem HTTP responses already in the cache.
 ChEMBL data from an earlier job can feed `expand_similar_compounds` through
 `base_input_path`.
 
+## Execution state persistence
+
+The authoritative `runs.stages` column holds the configuration, the state and a
+descriptor of every produced file. SQLite rewrites a whole row for any column of
+it, so a single progress update would cost rewriting every descriptor of the
+run. Writes are separated by the kind of change:
+
+| Change | Write |
+| --- | --- |
+| Results, block state, `log_path`, `job_id`, timestamps, error or pause | The authoritative run row, plus the read projection |
+| Only the progress of the running block | The read revision and the projection's status overlay; the authoritative row is untouched |
+
+The revision published in `result_read_versions` is still incremented by the
+trigger when the authoritative column changes, and is announced directly by the
+execution when only progress changed, so followers notice both cases. The
+progress of the running block lives in the projection overlay; once it finishes,
+the final state is written to the authoritative column.
+
+Recording the execution in the project history — which walks and verifies every
+project file — happens **after** the final state is committed, in its own
+transaction. A failure there is diagnosed and never turns a finished execution
+into a failed one. The workspace database uses WAL journalling, so readers of a
+project do not wait for its execution to write; when the filesystem cannot
+provide the required shared memory, the previous mode is kept.
+
+The interface reads execution state through the proof projection (`review_run`,
+`list_review_runs`) and loads file descriptors only when presenting results or
+configuring a block, through `get_result_run` and `list_result_runs`.
+
 ## Limitations and evolution
 
 In the workspace, `PipelineService` reuses completed stages by project and block

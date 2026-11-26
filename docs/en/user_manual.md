@@ -142,6 +142,8 @@ The **ⓘ** icon on each block, in the library and canvas, opens a short explana
 | Docking with Vina | Prepared receptors and selected compounds |
 | Docking with DOCK6 | Prepared receptors and selected compounds or poses; optional Vina poses |
 | Docking consensus | Vina poses and DOCK6 results with matching identifiers |
+| Amber Score · DOCK6 | Receptor structures and explicitly selected 3D poses |
+| Validate poses | Prepared receptors and poses from Vina, DOCK6 or consensus |
 
 Compound and structure retrieval can begin independent branches. **Import my files** publishes the types of the selected files. A block's **ready-made results** mode validates existing outputs and skips its calculation; it does not turn any CSV into that block's result. See the [validation matrix and tests](pipeline_validation.md) for additional conditions.
 
@@ -283,6 +285,18 @@ The DOCK6 **Footprint** button opens an integrated popup showing per-residue Van
 **Docking consensus** collects batches and branches and outputs one row per compound with at least one compound/target pair evaluated by both engines. Repeated poses use the lowest raw energy; isomeric identities must match across targets and engines.
 
 Scores are normalized separately for each engine/target using exponential ranks (ECR). A geometric mean across targets penalizes narrow profiles, with an explicit coverage penalty for missing scores. The consensus is the arithmetic mean of the two engine relevance factors. **Vina relevance**, **DOCK6 relevance** and **Consensus** range from 0 to 1; higher is better. Existing buttons, sorting and audited removal remain available. Structural actions share one representative target; the CSV retains all target scores and ranks. Structures are optional. See the [mathematical model and limitations](../docking_consensus.md). Existing results retain their original values; rerun the consensus block to apply the new model.
+
+### Physical pose validation
+
+**Validate poses**, under **Docking**, assesses the physical and geometric plausibility of Vina, DOCK6 or consensus poses before handing them to the next blocks. It measures the pose as received: no docking, no repositioning, no score changes.
+
+1. Connect the prepared receptors to **Input data** and the poses to **Poses to validate**.
+2. Choose targets and compounds, or leave the selection empty to validate everything received. A specific complex can be removed from the selection.
+3. Adjust the tolerances: minimum fraction of the van der Waals radii, maximum internal energy, bond, angle and planarity deviations, and the reference minimization iterations.
+4. Decide whether only approved poses continue (**strict filter**) or all of them continue annotated.
+5. Read the validation table, open each pose verdict and inspect the receptor–pose complex in 3D.
+
+There are seven criteria: chemistry, connectivity, coordinates, internal geometry, planarity, internal energy and steric clash with the receptor. The reference is a copy of the same molecule minimised (MMFF94 or UFF), and the steric test uses Bondi van der Waals radii, excluding solvent and the site's crystallographic ligand. Criteria without a measurement — PDBQT poses read by proximity, or a missing receptor — are recorded as unavailable instead of failing the pose. Approval indicates physical plausibility, not affinity or a correct binding mode. See the [criteria, tolerances and limits](pose_validation.md).
 
 ### Native Amber Score · DOCK6 6.11
 
@@ -586,6 +600,15 @@ Run the automatic consensus without a repulsion-weight adjustment.
 Sort normalized scores and inspect the available poses.
 ```
 
+### Validate poses (`pose_validation`)
+
+```text
+Connect prepared receptors and poses from Vina, DOCK6 or consensus.
+Choose the targets and compounds, or validate everything received.
+Adjust the physical tolerances and decide whether only valid poses continue.
+Read the validation table, open the per-pose verdict and inspect the complex in 3D.
+```
+
 ### Projects, language and collaboration
 
 ```text
@@ -721,4 +744,5 @@ Native Amber Score includes target-independent sanitation, 32 ff03/PTM models, C
 
 - [Exact commands, parameters and defaults](current_reference.md)
 - [Compound-level multi-target consensus](docking_consensus.md)
+- [Physical and geometric criteria of pose validation](pose_validation.md)
 - [Native AMBER profiles, sanitation and compatibility](amber_score_structural_support.md)

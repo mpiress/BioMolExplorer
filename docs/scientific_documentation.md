@@ -145,6 +145,26 @@ O fluxo `dynamics_dock6` usa o Amber Score do DOCK 6 e AmberTools via executor c
 
 Amber Score e dinâmica curta são refinamentos do protocolo configurado, não estimativas rigorosas de energia livre. Metais, crosslinks, estados de protonação/tautomeria, loops ausentes e parâmetros não cobertos exigem revisão especializada.
 
+## Validação física das poses
+
+`src/biomolexplorer/pose_geometry.py` implementa a bateria de critérios identificada como `posebusters_inspired_v1`, inspirada em Buttenschoen, Morris e Deane (2024). A implementação é própria e não executa o pacote PoseBusters.
+
+| Critério | Medida implementada |
+| --- | --- |
+| Química | sanitização RDKit da molécula lida, sem sanitização automática na leitura |
+| Conectividade | `len(GetMolFrags(molécula)) == 1` |
+| Coordenadas | posições finitas e distintas |
+| Geometria interna | maior desvio relativo de comprimento de ligação e maior desvio absoluto de ângulo contra o confôrmero relaxado; padrões `0,25` e `25°` |
+| Planaridade | maior distância ao plano ajustado de anéis aromáticos e ligações duplas fora de anel; padrão `0,25 Å` |
+| Energia interna | `ΔE = E(pose) − E(relaxado)` no mesmo campo de força; padrão `100 kcal/mol` |
+| Choque estérico | menor razão `d / (r_vdW(ligante) + r_vdW(receptor))` entre átomos pesados; padrão `0,75` |
+
+A referência interna é uma cópia da mesma conectividade minimizada com MMFF94 e, sem parametrização completa, com UFF; o método efetivo é registrado por pose. Raios de van der Waals seguem Bondi (1964), com `1,70 Å` para elementos não listados. Solvente e o ligante cristalográfico do próprio sítio são excluídos do teste estérico.
+
+Poses lidas por proximidade, como PDBQT, não recebem os critérios que dependem de ordens de ligação: sem elas, o campo de força e o teste de planaridade mediriam outra molécula. Sem receptor associado, o critério estérico fica sem medida. Em ambos os casos o relatório registra a condição, em vez de reprovar a pose.
+
+ΔE é tensão interna conformacional no campo de força usado. Não é energia de ligação, energia livre nem probabilidade de acerto do modo de ligação. Aprovação indica plausibilidade física da geometria entregue. Consulte [validação de poses](pose_validation.md).
+
 ## Interações ligante-receptor e visualização 3D
 
 `src/biomolexplorer/docking_interactions.py` é um classificador geométrico conservador inspirado nos thresholds do PLIP; não é o motor PLIP. Ele exige topologia química coerente, coordenadas finitas e hidrogênios explícitos para H-bonds. Se essas condições falham, a capacidade é marcada indisponível em vez de inferir química.
@@ -156,6 +176,8 @@ Amber Score e dinâmica curta são refinamentos do protocolo configurado, não e
 | pi paralelo | centros aromáticos `0.5 < d <= 5.5 Å`, offset `<= 2 Å`, ângulo entre normais `<= 30 graus` |
 | pi-T | mesmos limites de centro/offset e ângulo entre normais `>= 60 graus` |
 | van der Waals | gap `d - r_vdW(proteina) - r_vdW(ligante)` entre `-0.4` e `0.5 Å` |
+
+A superfície do sítio de ligação do visualizador usa a escala de hidrofobicidade de Kyte e Doolittle (1982) por resíduo, interpolada entre −4,5 e +4,5, sobre a superfície de exclusão de solvente da estrutura recebida; estados de protonação equivalentes (HID/HIE/HIP, CYX, ASH, GLH, LYN, MSE) são mapeados para o resíduo padrão, e componentes fora da escala ficam neutros. É uma representação, não um cálculo de energia, área enterrada ou druggability.
 
 Anéis proteicos reconhecidos: Phe, Tyr, Trp e estados His/HID/HIE/HIP. A vizinhança de resíduos é pré-limitada a 7.5 Å. O detector não classifica ponte salina, cátion-pi, halogênio ou coordenação metálica. O contato van der Waals é geométrico, não energia. A interface renderiza linhas, cores, resíduos, distâncias e ângulos junto à pose/receptor efetivamente selecionados.
 
@@ -174,9 +196,13 @@ Anéis proteicos reconhecidos: Phe, Tyr, Trp e estados His/HID/HIE/HIP. A vizinh
 - Allen WJ et al. DOCK 6: Impact of new features and current docking performance. Journal of Computational Chemistry. 2015;36:1132-1156.
 - Balius TE et al. Testing inhomogeneous solvation theory in structure-based ligand discovery. Proceedings of the National Academy of Sciences. 2017;114:E6839-E6846.
 - Salentin S et al. PLIP: fully automated protein-ligand interaction profiler. Nucleic Acids Research. 2015;43:W443-W447.
+- Buttenschoen M, Morris GM, Deane CM. PoseBusters: AI-based docking methods fail to generate physically valid poses or generalise to novel sequences. Chemical Science. 2024;15:3130-3139.
+- Bondi A. van der Waals Volumes and Radii. The Journal of Physical Chemistry. 1964;68:441-451.
+- Halgren TA. Merck molecular force field. I. Basis, form, scope, parameterization, and performance of MMFF94. Journal of Computational Chemistry. 1996;17:490-519.
+- Kyte J, Doolittle RF. A simple method for displaying the hydropathic character of a protein. Journal of Molecular Biology. 1982;157:105-132.
 - Freeman LC. A set of measures of centrality based on betweenness. Sociometry. 1977;40:35-41.
 - Blondel VD et al. Fast unfolding of communities in large networks. Journal of Statistical Mechanics. 2008;P10008.
 
 ## Rastreabilidade de implementação
 
-Os principais pontos auditáveis são `src/caad/admet.py`, `src/biomolexplorer/admet_config.py`, `src/biomolexplorer/admet_predictors.py`, `src/kernel/descriptors.py`, `src/biomolexplorer/consensus_model.py`, `src/biomolexplorer/footprints.py`, `src/biomolexplorer/docking_interactions.py`, `src/biomolexplorer/network_analysis.py`, `src/biomolexplorer/network_centrality.py`, `src/biomolexplorer/operations.py` e os templates em `src/biomolexplorer/resources/dock6/`.
+Os principais pontos auditáveis são `src/caad/admet.py`, `src/biomolexplorer/admet_config.py`, `src/biomolexplorer/admet_predictors.py`, `src/kernel/descriptors.py`, `src/biomolexplorer/consensus_model.py`, `src/biomolexplorer/footprints.py`, `src/biomolexplorer/docking_interactions.py`, `src/biomolexplorer/network_analysis.py`, `src/biomolexplorer/network_centrality.py`, `src/biomolexplorer/pose_geometry.py`, `src/biomolexplorer/molecular_surface.py`, `src/biomolexplorer/operations.py` e os templates em `src/biomolexplorer/resources/dock6/`.

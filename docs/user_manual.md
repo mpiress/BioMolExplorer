@@ -142,6 +142,8 @@ Entradas incompatíveis, ciclos e dependências de blocos desativados são recus
 | Docking com Vina | Receptores preparados e compostos selecionados |
 | Docking com DOCK6 | Receptores preparados e compostos ou poses selecionados; poses Vina opcionais |
 | Consenso de docking | Poses Vina e resultados DOCK6 com os mesmos identificadores |
+| Amber Score · DOCK6 | Receptores estruturais e poses 3D selecionadas explicitamente |
+| Validar poses | Receptores preparados e poses de Vina, DOCK6 ou consenso |
 
 Recuperar compostos e recuperar estruturas podem iniciar ramificações independentes. **Importar meus arquivos** publica os tipos dos arquivos selecionados. O modo **resultados prontos** de um bloco valida saídas já existentes e dispensa seu cálculo; isso não transforma qualquer CSV no resultado daquele bloco. Consulte a [matriz e os testes de validação](pipeline_validation.md) para as condições adicionais.
 
@@ -289,6 +291,18 @@ O botão **Footprint** do DOCK6 abre um popup integrado com o gráfico das energ
 **Consenso de docking** reúne lotes e ramificações dos dois motores e produz uma única linha por composto com pelo menos um par alvo/composto comum. Deduplica poses pelo menor score bruto e valida a identidade estereoquímica entre motores e alvos.
 
 O modelo normaliza ranks por motor e alvo com transformação exponencial (ECR), agrega alvos por média geométrica com penalização de cobertura e calcula o consenso como a média das relevâncias Vina e DOCK6. As colunas **Relevância Vina**, **Relevância DOCK6** e **Consenso** variam de 0 a 1; maior é melhor. Os botões, a ordenação paginada e a remoção auditada permanecem disponíveis. As ações estruturais usam um único alvo representativo, enquanto o CSV preserva os scores e ranks de todos os alvos. Arquivos estruturais são opcionais. Consulte a [formulação matemática e os limites do modelo](docking_consensus.md). Resultados antigos mantêm seus valores; reexecute apenas o consenso para aplicar o novo modelo.
+
+### Validação física das poses
+
+O bloco **Validar poses**, na categoria **Docking**, avalia a plausibilidade física e geométrica das poses de Vina, DOCK6 ou do consenso antes de entregá-las aos blocos seguintes. Ele mede a pose como ela chegou: não realiza docking, não reposiciona o ligante e não altera scores.
+
+1. Conecte os receptores preparados em **Dados de entrada** e as poses em **Poses para validar**.
+2. Escolha alvos e compostos, ou deixe a seleção vazia para validar tudo o que foi recebido. Um complexo específico pode ser removido da seleção.
+3. Ajuste as tolerâncias: fração mínima dos raios de van der Waals, energia interna máxima, desvios de ligação, ângulo e planaridade e iterações da minimização de referência.
+4. Decida se apenas as poses aprovadas seguem adiante (**filtro estrito**) ou se todas seguem anotadas.
+5. Leia a tabela de validação, abra o laudo de cada pose e inspecione o complexo receptor–pose em 3D.
+
+São sete critérios: química, conectividade, coordenadas, geometria interna, planaridade, energia interna e choque estérico com o receptor. A referência é uma cópia da mesma molécula minimizada (MMFF94 ou UFF), e o teste estérico usa raios de van der Waals de Bondi, excluindo solvente e o ligante cristalográfico do sítio. Critérios sem medida — poses PDBQT lidas por proximidade, ou ausência de receptor — são registrados como indisponíveis, sem reprovar a pose. Aprovação indica plausibilidade física, não afinidade nem acerto do modo de ligação. Consulte os [critérios, tolerâncias e limites](pose_validation.md).
 
 ### Amber Score nativo · DOCK6 6.11
 
@@ -594,6 +608,15 @@ Execute o consenso automático, sem ajuste de peso de repulsão.
 Ordene os scores normalizados e inspecione as poses disponíveis.
 ```
 
+### Validar poses (`pose_validation`)
+
+```text
+Conecte receptores preparados e poses de Vina, DOCK6 ou consenso.
+Escolha os alvos e compostos ou valide tudo o que foi recebido.
+Ajuste as tolerâncias físicas e decida se apenas poses válidas seguem adiante.
+Leia a tabela de validação, abra o laudo por pose e inspecione o complexo em 3D.
+```
+
 ### Projetos, idioma e colaboração
 
 ```text
@@ -731,4 +754,5 @@ O Amber Score inclui saneamento independente do alvo, 32 modelos ff03/PTM, parâ
 
 - [Comandos, parâmetros e padrões exatos](current_reference.md)
 - [Consenso multialvo por composto](docking_consensus.md)
+- [Critérios físicos e geométricos da validação de poses](pose_validation.md)
 - [Perfis AMBER, saneamento e compatibilidade](amber_score_structural_support.md)

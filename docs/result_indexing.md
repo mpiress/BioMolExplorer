@@ -9,7 +9,9 @@ docking, alteração de poses ou conversão química.
 O banco do workspace mantém três tabelas derivadas:
 
 - `result_read_versions`: revisão por execução, atualizada por triggers quando
-  `runs.stages` muda, inclusive em exclusões que preservam o horário da execução.
+  `runs.stages` muda, inclusive em exclusões que preservam o horário da execução,
+  e anunciada diretamente pela execução quando apenas o progresso do bloco em
+  andamento mudou, caso em que a coluna autoritativa não é regravada.
 - `result_read_catalog`: representação compacta e comprimida para apresentação.
 - `result_read_stages`: consulta por execução e bloco, com descritores de exibição
   separados das provas de integridade e compatibilidade.
@@ -21,7 +23,9 @@ apenas para os resultados efetivamente encontrados. O JSON legado é convertido
 em fluxo, por descritor, sem materializar todo o histórico em memória.
 
 A API `get_run` mantém seu contrato completo. A interface de consulta usa
-`get_result_run`, `list_result_runs` e `result_revision`. Operações de escrita,
+`get_result_run`, `list_result_runs` e `result_revision`; o acompanhamento de
+uma execução e a localização de um resultado usam a projeção de provas, por
+`review_run` e `list_review_runs`, sem carregar os descritores dos arquivos. Operações de escrita,
 histórico, exportação e restauração mantêm os dados originais. O cache de leitura
 nunca espera por uma transação de exclusão para preencher seus próprios dados.
 

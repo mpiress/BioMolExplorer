@@ -16,7 +16,7 @@ BioMolExplorer is research software for molecular retrieval, chemical analysis a
 | Native Amber Score | Selected receptor–pose pairs, implicit-solvent refinement/energy evaluation through DOCK6 6.11; no conventional MD or trajectory-based RMSF |
 | Results and workspace | Tables, plots, molecular 2D/3D, typed connections, lazy input selection, cooperative pause/cancellation, verified incremental reuse, history, sharing and portable backups |
 
-The workspace provides **16 block types**: 15 scientific operations plus import. The CLI exposes the 15 scientific operations. A typical branch is `PubChem → fingerprints → similarity → graphs → ADMET`; a structural branch is `PDB → redocking → prepared receptors + candidates → Vina/DOCK6 → consensus`. Native Amber Score can consume selected receptors and three-dimensional ligand poses. These are configurable examples, not validated universal protocols.
+The workspace provides **17 block types**: 16 scientific operations plus import. The CLI exposes the 16 scientific operations. A typical branch is `PubChem → fingerprints → similarity → graphs → ADMET`; a structural branch is `PDB → redocking → prepared receptors + candidates → Vina/DOCK6 → consensus → pose validation`. Native Amber Score can consume selected receptors and three-dimensional ligand poses. These are configurable examples, not validated universal protocols.
 
 ## Environment and first run
 

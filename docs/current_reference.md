@@ -1,6 +1,6 @@
 # Referência do código atual
 
-2026-11-13 · BioMolExplorer 2.2.0
+2026-11-13, revisado em 2026-11-26 · BioMolExplorer 2.2.0
 
 Fonte da verdade: os arquivos presentes neste checkout, incluindo implementações ainda não commitadas. Esta é uma auditoria documental, não uma certificação de release nem uma afirmação de instalação das alterações. Relatórios históricos descrevem o estado na data indicada.
 
@@ -33,7 +33,7 @@ A CLI científica não é um servidor REST. As rotas web oferecem recursos autor
 
 ## Operações ativas e valores padrão
  
-Há 15 operações científicas registradas e o bloco `import_results`, exclusivo do workspace. Chaves JSON desconhecidas são recusadas. Uma função pode conservar argumentos legados que o registro público não aceita. Campos obrigatórios abaixo são exigências da API; vínculos tipados podem fornecê-los na execução. `md_inputs`, `md_seed_path` e `md_cache_epoch` são metadados de execução/cache, não controles científicos comuns.
+Há 16 operações científicas registradas e o bloco `import_results`, exclusivo do workspace. Chaves JSON desconhecidas são recusadas. Uma função pode conservar argumentos legados que o registro público não aceita. Campos obrigatórios abaixo são exigências da API; vínculos tipados podem fornecê-los na execução. `md_inputs`, `md_seed_path` e `md_cache_epoch` são metadados de execução/cache, não controles científicos comuns.
 
 ### dynamics_dock6
 
@@ -304,6 +304,29 @@ Há 15 operações científicas registradas e o bloco `import_results`, exclusiv
 | `base_vina_path` | não | `null` |
 | `base_dock6_path` | não | `null` |
 
+### pose_validation
+
+`wrappers.pose_validation.validate_poses`
+
+| Parâmetro | Obrigatório | Padrão da função |
+| --- | --- | --- |
+| `base_input_path` | sim | `—` |
+| `target` | sim | `—` |
+| `base_selected_mols` | não | `null` |
+| `pose_inputs` | não | `null` |
+| `selected_receptors` | não | `null` |
+| `selected_ligands` | não | `null` |
+| `excluded_pairs` | não | `null` |
+| `strict_filter` | não | `true` |
+| `vdw_clash_scale` | não | `0.75` |
+| `delta_energy_limit` | não | `100.0` |
+| `bond_tolerance` | não | `0.25` |
+| `angle_tolerance` | não | `25.0` |
+| `planarity_tolerance` | não | `0.25` |
+| `minimization_steps` | não | `400` |
+
+`pose_inputs` é a lista de poses resolvida pelo pipeline, com arquivo de pose, receptor associado e identificadores; uma execução isolada a resolve a partir das pastas informadas. `excluded_pairs` usa a forma `composto:receptor`. Os critérios, as medidas e os limites de interpretação estão em [validação de poses](pose_validation.md).
+
 ## Configuração e ferramentas
  
 `AppConfig` controla `workspace`, `max_jobs=1`, `cpu_workers=2`, `max_queued_jobs=100`, `job_timeout=None`, `worker_python=None`, `resource_dir=None`, `cache_dir=None`, `reuse_results=True`, `preparation_cache=None`, `reuse_preparations=True`. São opções da API Python, não flags adicionais da CLI do workspace.
@@ -368,6 +391,7 @@ As flags abaixo foram extraídas dos parsers. Scripts sem parser são utilitári
 | `scripts/benchmark_result_index.py` | `--rows`, `--database`, `--run-id`, `--output` |
 | `scripts/build_docs.py` | Sem flags argparse |
 | `scripts/check_chembl.py` | `--target`, `--limit`, `--output` |
+| `scripts/check_ui_installation.py` | Sem flags argparse |
 | `scripts/compare_antechamber_migration.py` | `--dock6`, `--output`, `--charge-only` |
 | `scripts/prepare_result_indexes.py` | `--database`, `--project-id`, `--run-id`, `--limit`, `--report` |
 | `scripts/setup_admet_ai.py` | `--directory` |

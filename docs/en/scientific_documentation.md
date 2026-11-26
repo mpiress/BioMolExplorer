@@ -18,6 +18,8 @@ This reference documents the scientific behavior of BioMolExplorer 2.2.0 as impl
 | DOCK 6 footprint | Engine-produced residue van der Waals/electrostatic footprint and reference FPS; BioMolExplorer validates and displays rather than recomputes energies |
 | 3D contacts | Conservative geometry for H-bond, hydrophobic, pi-parallel, pi-T and van der Waals contacts; no salt-bridge classifier |
 | Networks | Unweighted undirected degree, centralities, PageRank 0.85, k-core, clustering, triangles and seeded Louvain |
+| Pose validation | PoseBusters-inspired battery `posebusters_inspired_v1`: chemistry, connectivity, coordinates, internal geometry and planarity against an MMFF94/UFF relaxed conformer, internal strain and Bondi van der Waals clash at 0.75 of the radii sum |
+| Binding-site surface | Solvent-excluded surface colored by the Kyte-Doolittle residue hydrophobicity scale interpolated between -4.5 and +4.5; a representation, not an energy, buried-area or druggability calculation |
 
 ## Core equations
 
@@ -47,8 +49,10 @@ logKp = -6.3 + 0.71 WLOGP - 0.0061 MW
 
 Hydrogen bonds require `D-A <= 4.1 A`, explicit `D-H` between 0.6 and 1.25 A, and `D-H-A > 100 degrees`. Hydrophobic contacts use 4.0 A. Aromatic centers use 5.5 A, offset at most 2 A, and normal angles at most 30 degrees (parallel) or at least 60 degrees (T-shaped). van der Waals gaps must lie between -0.4 and 0.5 A relative to RDKit radii.
 
+Pose validation measures the delivered geometry: relative bond deviation 0.25, absolute angle deviation 25 degrees, planarity 0.25 A, internal strain 100 kcal/mol and a steric ratio of 0.75 of the van der Waals radii sum, each configurable and recorded with the report. Criteria that depend on bond orders are skipped for proximity-bonded poses, and the steric test is skipped without an associated receptor; both conditions are recorded instead of failing the pose. Internal strain is not a binding or free energy. See [pose validation](pose_validation.md).
+
 The current repository does not implement PCA, t-SNE, UMAP, AUC-ROC, enrichment factor, salt bridges, cation-pi, halogen bonds or metal coordination. These capabilities must not be inferred from generic scientific terminology.
 
 ## References and full traceability
 
-The complete bibliography and method-by-method interpretation are maintained in the [Portuguese scientific reference](../scientific_documentation.md#referencias-fundamentais). Source anchors include `src/caad/admet.py`, `src/biomolexplorer/admet_predictors.py`, `src/kernel/descriptors.py`, `src/biomolexplorer/consensus_model.py`, `src/biomolexplorer/footprints.py`, `src/biomolexplorer/docking_interactions.py` and `src/biomolexplorer/network_analysis.py`.
+The complete bibliography and method-by-method interpretation are maintained in the [Portuguese scientific reference](../scientific_documentation.md#referencias-fundamentais). Source anchors include `src/caad/admet.py`, `src/biomolexplorer/admet_predictors.py`, `src/kernel/descriptors.py`, `src/biomolexplorer/consensus_model.py`, `src/biomolexplorer/footprints.py`, `src/biomolexplorer/docking_interactions.py`, `src/biomolexplorer/pose_geometry.py`, `src/biomolexplorer/molecular_surface.py` and `src/biomolexplorer/network_analysis.py`.

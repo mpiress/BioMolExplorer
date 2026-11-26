@@ -39,7 +39,7 @@ Arraste para girar, use a roda do mouse para zoom e o botão direito para desloc
 **Recentrar** recupera a visão do conjunto; **Tela inteira** amplia a área e
 **Salvar imagem** exporta a cena como PNG.
 
-1. Em **Estilo do receptor**, escolha fitas, bastões, esferas ou linhas. Para receptores MOL2, a cena de docking inicia em bastões.
+1. Em **Estilo do receptor**, escolha fitas, bastões, esferas, linhas ou **Sítio de ligação (superfície)**. Para receptores MOL2, a cena de docking inicia em bastões.
 2. Em **Estilo do ligante**, escolha bastões, esferas ou linhas, independentemente do receptor. A opção também controla os ligantes de referência visíveis.
 3. Use **Colorir por** e **Cadeia** para explorar o receptor. A pose aparece em ciano e a referência em dourado.
 4. Marque **Hidrogênios do ligante** para mostrar os H presentes no arquivo; desmarque para ocultá-los. O controle não gera átomos nem muda a preparação ou os scores.
@@ -48,6 +48,34 @@ Arraste para girar, use a roda do mouse para zoom e o botão direito para desloc
 Vina e DOCK6 podem preservar conjuntos diferentes de hidrogênios. H ausentes na
 saída Vina não aparecem ao marcar o campo. Ocultar H é uma escolha de apresentação:
 a classificação continua usando os átomos disponíveis no arquivo original.
+
+## Evidenciar o sítio de ligação
+
+O estilo **Sítio de ligação (superfície)** apresenta o receptor como superfície de
+exclusão de solvente colorida pela hidrofobicidade dos resíduos, na escala de
+Kyte e Doolittle (1982): azul para os resíduos mais hidrofílicos (−4,5),
+branco no centro da escala e laranja-vermelho para os mais hidrofóbicos (+4,5).
+Cofatores, íons e componentes fora da escala ficam em cinza neutro.
+
+A cena usa duas malhas contínuas: os resíduos que revestem o sítio ficam sólidos
+e o restante do receptor permanece translúcido, para manter a dobra visível sem
+esconder a cavidade. **Opacidade da superfície** ajusta a translucidez entre 40%
+e 100% sem recalcular a malha.
+
+| Contexto | Sítio identificado por |
+| --- | --- |
+| Estrutura isolada | Maior resíduo heteroatômico da estrutura e os resíduos do polímero a até 5 Å dele |
+| Cena de docking | Resíduos em contato com a pose, no limite de distância escolhido na própria cena |
+
+Quando a estrutura não tem ligante que defina o sítio, a opção aparece
+desabilitada com essa explicação. Nesse estilo, fitas e bastões do receptor são
+omitidos: a superfície é o receptor, e apenas a pose e os resíduos destacados por
+uma interação ou por um clique continuam desenhados. Estruturas muito grandes
+usam a superfície de van der Waals, mais rápida, em vez da superfície exata.
+
+A superfície é uma representação da estrutura recebida. Não altera coordenadas,
+cargas, protonação ou scores, e não é um cálculo de energia de ligação, de área
+enterrada ou de druggability da cavidade.
 
 ## Comparar pose, receptor e referência
 

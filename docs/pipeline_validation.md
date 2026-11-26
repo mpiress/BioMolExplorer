@@ -26,6 +26,8 @@ A revisão cobre o catálogo de operações, contratos de arquivos, relações e
 | Vina | Preparados e compostos | Poses identificadas pela referência completa e composto |
 | DOCK6 | Preparados e candidatos de qualquer origem molecular; poses Vina opcionais | Scores MOL2 e demais resultados do protocolo |
 | Consenso | Poses Vina e DOCK6 com identificadores correspondentes | Tabela de scores e comparação |
+| Amber Score · DOCK6 | Receptores estruturais e poses 3D selecionadas explicitamente; DOCK6 6.11 completo | Amber Score, termos energéticos, protocolo e estruturas |
+| Validar poses | Receptores preparados e poses de Vina, DOCK6 ou consenso | Poses aprovadas, relatório de validação e receptores usados |
 
 `tests/test_connection_matrix.py` percorre todos os produtores nativos, saídas prontas e tipos de importação contra todas as portas, inclusive as duas configurações de redocking. Ligações permitidas são aplicadas e submetidas à ordenação do pipeline. Ligações recusadas não alteram a configuração. Também são verificadas fontes desativadas, autorrelações e o alias interno usado pelo consenso. Os testes de fluxo existentes verificam ciclos, exclusão, duplicação e normalização de projetos antigos.
 

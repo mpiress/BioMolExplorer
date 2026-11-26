@@ -1099,3 +1099,29 @@ class ResultsViewTests(PublishedResultsFixture):
         # Reprovadas first, and the filter keeps only what was asked for.
         results.child.choice.value='valid';asyncio.run(results.child.change_filter(None))
         self.assertEqual(len(results.child.table.rows),1)
+
+    def test_every_column_explains_what_it_measures(self):
+        from biomolexplorer.ui.pose_results import COLUMNS, CRITERIA_HELP, DETAILS, PoseValidationTable
+        from biomolexplorer.ui.stage_results import StageResults
+        run_id,stage,root = self.validated()
+        async def guard(action):await action()
+        self.ui.guard = guard
+        results = StageResults(self.ui,self.pid,run_id,stage,True)
+        self.addCleanup(results.close)
+        asyncio.run(results.load())
+        table = results.child.table
+        # The reader must learn what a column means without leaving the table.
+        self.assertEqual(len(table.columns),len(COLUMNS))
+        self.assertTrue(all(column.tooltip for column in table.columns))
+        helps = {label:text for label,_,text in COLUMNS}
+        self.assertIn('0,75',helps['Contato mín. · fração vdW'])
+        self.assertIn('não energia de ligação',helps['ΔE interna (kcal/mol)'].lower())
+        self.assertIn('não participa da validade',helps['Score'].lower())
+        # Each criterion and each measurement of the verdict is explained too.
+        self.assertEqual({key for key,_ in results.child.report['criteria']},set(CRITERIA_HELP))
+        self.assertTrue(all(note for _,_,_,note in DETAILS))
+        asyncio.run(results.child.detail(results.child.report['rows'][0]))
+        dialog = self.ui.page.dialogs[-1]
+        explained = [c for c in walk(dialog) if isinstance(c,ft.Text) and c.tooltip]
+        self.assertTrue(explained)
+        self.assertTrue(any('van der Waals' in c.tooltip for c in explained))

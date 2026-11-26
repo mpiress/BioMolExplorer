@@ -189,6 +189,36 @@ executa a operação novamente e aproveita respostas HTTP da PubChem já present
 no cache. Dados ChEMBL de uma tarefa anterior podem servir de entrada para
 `expand_similar_compounds` através de `base_input_path`.
 
+## Persistência do estado da execução
+
+A coluna autoritativa `runs.stages` guarda a configuração, o estado e os
+descritores de cada arquivo produzido. O SQLite reescreve a linha inteira para
+qualquer coluna dela, de modo que uma única atualização de progresso custaria a
+regravação de todos os descritores da execução. A gravação é separada por tipo
+de mudança:
+
+| Mudança | Gravação |
+| --- | --- |
+| Resultados, estado do bloco, `log_path`, `job_id`, horários, erro ou pausa | Linha autoritativa da execução, mais a projeção de leitura |
+| Apenas o progresso do bloco em andamento | Revisão de leitura e sobreposição de estado da projeção; a linha autoritativa não é tocada |
+
+A revisão publicada em `result_read_versions` continua sendo incrementada pelo
+trigger quando a coluna autoritativa muda e é anunciada diretamente pela
+execução quando só o progresso mudou, de modo que o acompanhamento percebe a
+mudança nos dois casos. O progresso do bloco em execução vive na sobreposição da
+projeção; depois do término, o estado final é gravado na coluna autoritativa.
+
+O registro da execução no histórico do projeto — que percorre e verifica todos os
+arquivos do projeto — ocorre **depois** do commit do estado final, em transação
+própria. Uma falha nesse registro é diagnosticada e não transforma uma execução
+concluída em falha. O banco do workspace usa journal WAL, então leituras de um
+projeto não esperam pela escrita de sua execução; quando o sistema de arquivos
+não oferece a memória compartilhada necessária, o modo anterior é mantido.
+
+A interface lê o estado da execução pela projeção de provas (`review_run`,
+`list_review_runs`) e carrega descritores de arquivos apenas quando apresenta
+resultados ou configura um bloco, por `get_result_run` e `list_result_runs`.
+
 ## Limites e evolução
 
 No workspace, `PipelineService` reaproveita etapas concluídas por projeto e ID

@@ -78,6 +78,12 @@ LABELS['pt']['summaries'].extend(['ECR por ranks, cobertura multialvo, empates e
 LABELS['en']['titles'].extend(['Docking consensus: mathematical model', 'AMBER Score: structural support'])
 LABELS['en']['summaries'].extend(['Rank-based ECR, multi-target coverage, ties and structural traceability.', 'Sanitation, residue/PTM profiles, parameterization, caching and scientific limitations.'])
 
+GUIDES += ('pose_validation',)
+LABELS['pt']['titles'].append('Validação de poses: critérios físicos')
+LABELS['pt']['summaries'].append('Critérios inspirados em PoseBusters, tolerâncias, referência relaxada, choque estérico, relatório e limites de interpretação.')
+LABELS['en']['titles'].append('Pose validation: physical criteria')
+LABELS['en']['summaries'].append('PoseBusters-inspired criteria, tolerances, relaxed reference, steric clash, report and interpretation limits.')
+
 CSS = '''
 :root{color-scheme:light;--ink:#172b4d;--muted:#526580;--teal:#087f74;--line:#dce5ef;--bg:#f4f7fb}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,sans-serif}

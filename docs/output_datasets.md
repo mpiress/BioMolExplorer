@@ -25,6 +25,7 @@ Consulte a [convenção compartilhada](artifact_naming.md).
 | Vina/DOCK6 | SCORE: resultados; POSE: pose com identificador molecular |
 | Consenso | RANK: consenso dos resultados Vina e DOCK6 |
 | Amber Score · DOCK6 | Score, contribuições energéticas, topologias/coordenadas, protocolo e comparação inicial/final disponível; não há dinâmica convencional nem RMSF |
+| Validação de poses | PoseValidation: relatório CSV/JSON da validação; POSE: poses aprovadas entregues; REC: receptores usados no teste estérico |
 
 BBB e HIA são as classificações previstas pelo método ADMET configurado. Os
 relatórios preservam os métodos e parâmetros usados.

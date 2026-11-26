@@ -26,6 +26,8 @@ The review covers the operation catalog, file contracts, block relationships, in
 | Vina | Prepared structures and compounds | Poses identified by full reference and compound |
 | DOCK6 | Prepared structures and candidates from any molecular source; optional Vina poses | MOL2 scores and other protocol results |
 | Consensus | Vina poses and DOCK6 results with matching identifiers | Score table and comparison |
+| Amber Score · DOCK6 | Receptor structures and explicitly selected 3D poses; complete DOCK6 6.11 | Amber Score, energy terms, protocol and structures |
+| Validate poses | Prepared receptors and poses from Vina, DOCK6 or consensus | Approved poses, validation report and the receptors used |
 
 `tests/test_connection_matrix.py` iterates over every native producer, ready-made output and import type against every port, including both redocking configurations. Permitted connections are applied and submitted to pipeline ordering. Rejected connections leave configuration unchanged. Disabled sources, self-links and the internal consensus alias are also checked. Existing flow tests verify cycles, deletion, duplication and normalization of older projects.
 

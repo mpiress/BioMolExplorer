@@ -7,12 +7,50 @@ APPROVED = '#166534'
 REJECTED = '#B91C1C'
 MUTED = '#64748B'
 PAGE = 25
-DETAILS = (('score','Score do motor',''),('min_vdw_ratio','Contato mais próximo · fração da soma dos raios vdW',''),
-           ('min_vdw_overlap','Sobreposição de van der Waals','Å'),('min_heavy_distance','Distância mínima entre átomos pesados','Å'),
-           ('clashing_contacts','Contatos avaliados no sítio',''),('delta_energy','Energia interna acima do confôrmero relaxado','kcal/mol'),
-           ('max_bond_deviation','Desvio máximo relativo nas ligações',''),('max_angle_deviation','Desvio máximo nos ângulos','°'),
-           ('max_planarity_deviation','Desvio máximo de planaridade','Å'),('planar_groups','Grupos planares avaliados',''),
-           ('atoms','Átomos pesados da pose',''))
+DETAILS = (
+    ('score','Score do motor','','Valor bruto do motor que produziu a pose. Não é medida de validade física.'),
+    ('min_vdw_ratio','Contato mais próximo · fração da soma dos raios vdW','',
+     'Decide o choque estérico: menor razão entre a distância e a soma dos raios de van der Waals, entre átomos pesados.'),
+    ('min_vdw_overlap','Sobreposição de van der Waals','Å',
+     'Sobreposição absoluta do pior par. Negativo indica átomos mais próximos que a soma dos seus raios.'),
+    ('min_heavy_distance','Distância mínima entre átomos pesados','Å',
+     'Menor distância observada entre a pose e o receptor, sem normalizar pelos raios.'),
+    ('clashing_contacts','Contatos avaliados no sítio','',
+     'Quantos pares de átomos pesados ficaram abaixo da soma dos seus raios.'),
+    ('delta_energy','Energia interna acima do confôrmero relaxado','kcal/mol',
+     'Tensão interna da conformação entregue, no mesmo campo de força. Não é energia de ligação nem energia livre.'),
+    ('max_bond_deviation','Desvio máximo relativo nas ligações','',
+     'Maior diferença relativa de comprimento de ligação em relação ao confôrmero relaxado.'),
+    ('max_angle_deviation','Desvio máximo nos ângulos','°',
+     'Maior diferença absoluta de ângulo de ligação em relação ao confôrmero relaxado.'),
+    ('max_planarity_deviation','Desvio máximo de planaridade','Å',
+     'Maior distância de um átomo ao plano ajustado do seu anel aromático ou da sua ligação dupla.'),
+    ('planar_groups','Grupos planares avaliados','',
+     'Anéis aromáticos e ligações duplas fora de anel considerados no teste de planaridade.'),
+    ('atoms','Átomos pesados da pose','','Átomos lidos no arquivo da pose, base de todas as medidas geométricas.'),
+)
+# Each column carries what the criteria work measures with it, so the table can
+# be read without leaving it (PoseBusters, Chem. Sci. 15, 3130, 2024).
+COLUMNS = (
+    ('Pose',False,'Identificador da pose, do motor que a produziu ou do nome do arquivo.'),
+    ('Alvo',False,'Receptor preparado contra o qual a pose foi avaliada.'),
+    ('Composto',False,'Composto da pose; o identificador do ligante é usado quando não há código do composto.'),
+    ('Motor',False,'Motor de origem da pose: Vina, DOCK6 ou consenso.'),
+    ('Score',True,'Score bruto do motor de origem, preservado sem transformação. Não participa da validade física.'),
+    ('Situação',False,'Aprovada quando todos os critérios avaliados passaram. Validade física não é afinidade nem acerto do modo de ligação.'),
+    ('Critérios reprovados',False,'Critérios com verdicto negativo: química, conectividade, geometria interna, planaridade, energia interna ou choque estérico.'),
+    ('Contato mín. · fração vdW',True,'Menor razão entre a distância observada e a soma dos raios de van der Waals, entre átomos pesados da pose e do receptor. É a métrica de decisão do choque estérico; o critério de referência reprova abaixo de 0,75.'),
+    ('ΔE interna (kcal/mol)',True,'Energia da pose menos a energia do mesmo ligante relaxado, no mesmo campo de força. Mede tensão interna da conformação, não energia de ligação.'),
+    ('Ações',False,'Laudo completo da pose e abertura do complexo receptor–pose em 3D.'),
+)
+CRITERIA_HELP = {
+    'valid_chemistry':'Sanitização do RDKit: valência, aromaticidade, radicais e hibridização coerentes.',
+    'valid_connectivity':'A pose precisa formar um único fragmento conectado.',
+    'valid_geometry':'Comprimentos de ligação e ângulos comparados com o confôrmero relaxado da mesma molécula.',
+    'valid_planarity':'Anéis aromáticos e ligações duplas fora de anel devem permanecer planos.',
+    'valid_energy':'Tensão interna da conformação entregue, medida contra o mesmo ligante relaxado.',
+    'valid_clash':'Contato entre átomos pesados da pose e do receptor, em fração da soma dos raios de van der Waals.',
+}
 TOLERANCES = {'vdw_clash_scale':'Fração mínima da soma dos raios de van der Waals',
               'delta_energy_limit':'Energia interna máxima (kcal/mol)',
               'bond_tolerance':'Desvio relativo máximo nas ligações',
@@ -89,10 +127,8 @@ class PoseValidationTable:
 
     def redraw(self):
         rows = self.rows()
-        self.table.columns = [ft.DataColumn(ft.Text(label),numeric=numeric) for label,numeric in
-            (('Pose',False),('Alvo',False),('Composto',False),('Motor',False),('Score',True),
-             ('Situação',False),('Critérios reprovados',False),('Contato mín. · fração vdW',True),
-             ('ΔE interna (kcal/mol)',True),('Ações',False))]
+        self.table.columns = [ft.DataColumn(ft.Text(label),numeric=numeric,tooltip=help_text)
+                              for label,numeric,help_text in COLUMNS]
         self.table.rows = []
         for row in rows[self.offset:self.offset+PAGE]:
             approved = bool(row['pose_valid'])
@@ -155,10 +191,10 @@ class PoseValidationTable:
         approved = bool(row['pose_valid'])
         criteria = [ft.Row([ft.Icon(ft.Icons.CHECK if row.get(key) else ft.Icons.CLOSE if row.get(key) is False else ft.Icons.REMOVE,
                 color=APPROVED if row.get(key) else REJECTED if row.get(key) is False else MUTED,size=18),
-            ft.Text(label)],spacing=8) for key,label in self.report['criteria']]
-        measurements = [ft.Row([ft.Text(label,expand=True,size=13),
+            ft.Text(label,tooltip=CRITERIA_HELP.get(key))],spacing=8) for key,label in self.report['criteria']]
+        measurements = [ft.Row([ft.Text(label,expand=True,size=13,tooltip=note),
             verbatim(ft.Text(quantity(row.get(key))+(' '+unit if unit and row.get(key) is not None else ''),size=13))],spacing=12)
-            for key,label,unit in DETAILS if row.get(key) is not None]
+            for key,label,unit,note in DETAILS if row.get(key) is not None]
         tolerances = self.report['summary'].get('tolerances') or {}
         contents = [ft.Row([ft.Icon(ft.Icons.CHECK_CIRCLE if approved else ft.Icons.ERROR_OUTLINE,
                 color=APPROVED if approved else REJECTED),

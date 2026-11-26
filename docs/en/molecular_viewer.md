@@ -39,7 +39,7 @@ Drag to rotate, use the mouse wheel to zoom and right-drag to pan. **Recenter**
 restores the overall view, **Fullscreen** expands the scene and **Save image**
 exports it as PNG.
 
-1. Under **Receptor style**, choose ribbons, sticks, spheres or lines. Docking scenes start MOL2 receptors in sticks.
+1. Under **Receptor style**, choose ribbons, sticks, spheres, lines or **Binding site (surface)**. Docking scenes start MOL2 receptors in sticks.
 2. Under **Ligand style**, choose sticks, spheres or lines independently of the receptor. This also controls visible reference ligands.
 3. Use **Color by** and **Chain** to explore the receptor. The pose appears in cyan and the reference in gold.
 4. Enable **Ligand hydrogens** to show H atoms present in the file; disable it to hide them. This does not generate atoms or change preparation or scores.
@@ -48,6 +48,34 @@ exports it as PNG.
 Vina and DOCK6 may retain different hydrogen sets. H atoms absent from Vina output
 cannot appear when the field is enabled. H visibility is a presentation choice:
 classification continues to use atoms available in the original file.
+
+## Highlight the binding site
+
+The **Binding site (surface)** style renders the receptor as a solvent-excluded
+surface colored by residue hydrophobicity on the Kyte and Doolittle (1982)
+scale: blue for the most hydrophilic residues (−4.5), white at the middle of the
+scale and orange-red for the most hydrophobic ones (+4.5). Cofactors, ions and
+components outside the scale stay neutral grey.
+
+The scene uses two continuous meshes: the residues lining the site stay solid
+and the rest of the receptor remains translucent, keeping the fold visible
+without hiding the cavity. **Surface opacity** adjusts translucency between 40%
+and 100% without rebuilding the mesh.
+
+| Context | Site identified by |
+| --- | --- |
+| Standalone structure | The largest hetero residue of the structure and the polymer residues within 5 Å of it |
+| Docking scene | Residues in contact with the pose, at the distance cutoff chosen in that scene |
+
+When the structure has no ligand defining a site, the option is disabled with
+that explanation. In this style the receptor's ribbons and sticks are omitted:
+the surface is the receptor, and only the pose plus the residues singled out by
+an interaction or a click remain drawn. Very large structures use the faster van
+der Waals surface instead of the exact one.
+
+The surface represents the structure as received. It does not change
+coordinates, charges, protonation or scores, and it is not a binding energy,
+buried area or cavity druggability calculation.
 
 ## Compare pose, receptor and reference
 

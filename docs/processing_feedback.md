@@ -34,9 +34,27 @@ disponíveis. A animação para quando a execução termina ou aguarda uma decis
 O cálculo interativo de MCS também mantém a opção de interrupção no splash.
 
 Consultas automáticas de acompanhamento e salvamentos automáticos do rascunho
-não abrem janelas sobre o trabalho do usuário. Durante seletores nativos de
+não abrem janelas sobre o trabalho do usuário: um rascunho automático que
+exigiria confirmar a invalidação de resultados não pergunta, mantém a alteração
+pendente e deixa a decisão para o salvamento ou a execução explícitos. Durante seletores nativos de
 arquivo, o splash é suspenso enquanto o usuário escolhe o destino ou a entrada;
 ele volta se houver outro processamento depois da escolha.
+
+## Decisões do usuário durante o processamento
+
+Um splash modal mantém sua barreira acima de qualquer janela aberta depois dele.
+Por isso uma pergunta nunca é apresentada sob o splash: `WorkspaceUI.decide()`
+fecha os splashes registrados enquanto a decisão está na tela e os restaura com
+a própria mensagem depois da resposta. Descartar a janela é uma resposta
+negativa, e não uma espera indefinida.
+
+Enquanto uma decisão aguarda resposta, as demais ações continuam respondendo: um
+salvamento pedido por outra ação retorna sem efeito em vez de enfileirar atrás
+da pergunta, uma segunda execução recusa a duplicata e a troca de aba continua
+disponível. Uma submissão interrompida antes de concluir libera o controle de
+execução na próxima tentativa.
+
+`tests/test_pipeline_editor_regressions.py` cobre esses quatro comportamentos.
 
 ## Padrão para novas ações
 

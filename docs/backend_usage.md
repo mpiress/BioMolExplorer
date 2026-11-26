@@ -124,6 +124,7 @@ Consulte `biomolexplorer.operations.OPERATIONS` para os parâmetros completos.
 | `docking_dock6` | Complexos preparados, compostos, `base_vina_path`, `pdb_code`, instalação DOCK6 | Conformações, scores e footprints |
 | `dynamics_dock6` | `base_input_path`, `base_selected_mols`, seleção de pares e DOCK6 6.11 | Amber Score, termos energéticos, protocolo, estruturas e análise inicial/final disponível |
 | `consensus` | Diretório contendo `Vina` e `Dock6`, ou entradas separadas `base_vina_path` e `base_dock6_path`, `target` | CSV e figura de consenso |
+| `pose_validation` | Receptores preparados, poses de Vina/DOCK6/consenso e tolerâncias físicas | `pose_validation.csv`, `pose_validation.json`, poses aprovadas e receptores usados |
 
 Enums aceitam nomes ou valores, como `TanimotoSimilarity`/`Tanimoto` e
 `Morgan`/`morgan`. Listas de filtros PDB também usam strings serializáveis.
@@ -398,7 +399,7 @@ arquivos e registram o problema, sem sobrescrever dados existentes.
 
 ## Referência exata dos parâmetros ativos
 
-Inventário extraído do registro atual, sem executar cálculos. Obrigatório significa exigido pela API; a interface pode preencher esse campo. Opcional não significa válido para toda combinação: os validadores verificam tipos, domínios e dependências. O CLI expõe 15 operações científicas; `import_results` é o 16º tipo de bloco, gerenciado pelo workspace e não pelo CLI. Nomes abaixo são chaves da API, não rótulos traduzidos da interface.
+Inventário extraído do registro atual, sem executar cálculos. Obrigatório significa exigido pela API; a interface pode preencher esse campo. Opcional não significa válido para toda combinação: os validadores verificam tipos, domínios e dependências. O CLI expõe 16 operações científicas; `import_results` é o 17º tipo de bloco, gerenciado pelo workspace e não pelo CLI. Nomes abaixo são chaves da API, não rótulos traduzidos da interface.
 
 ### API dynamics_dock6
 
@@ -519,6 +520,16 @@ Inventário extraído do registro atual, sem executar cálculos. Obrigatório si
 | Obrigatórios | Opcionais |
 | --- | --- |
 | `base_input_path`, `target` | `repulsion_weight`, `base_vina_path`, `base_dock6_path` |
+
+### API pose_validation
+
+`wrappers.pose_validation.validate_poses`
+
+| Obrigatórios | Opcionais |
+| --- | --- |
+| `base_input_path`, `target` | `base_selected_mols`, `pose_inputs`, `selected_receptors`, `selected_ligands`, `excluded_pairs`, `strict_filter`, `vdw_clash_scale`, `delta_energy_limit`, `bond_tolerance`, `angle_tolerance`, `planarity_tolerance`, `minimization_steps` |
+
+Critérios, medidas por pose, formato do relatório e limites de interpretação estão em [validação de poses](pose_validation.md).
 
 ## Amber Score nativo: requisitos, configuração e resultados
 

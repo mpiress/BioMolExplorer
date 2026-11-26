@@ -481,6 +481,10 @@ Add one or more **ChEMBL**, **PubChem**, **ZINC** or uploaded compound sources u
 
 Use a separate block for each receptor mode: do not combine raw PDBs and prepared receptors in the same block. pH remains available for candidate preparation when reusing a receptor. Before preparing compounds, the block checks binding centers (three finite coordinates) and receptor files required by the selected output. Vina requires `.dockprep.pdbqt`; DOCK6 additionally requires `.dockprep.mol2` and `.noH.pdb`. PDBQT remains the receptor selection file for either engine. Missing files stop the process with the required filename, without repeating receptor preparation.
 
+**Validate poses** receives the prepared receptors and the poses from Vina, DOCK6 or the consensus block. Choose targets and compounds by `receptor_id` and compound identifier, remove specific complexes when needed, and adjust the physical tolerances. With the strict filter enabled, only approved poses continue to the next blocks; disabled, every pose continues annotated with its validation result.
+
+Its result is the validation table itself: cards with evaluated, approved, rejected and delivered poses, a filter across all/approved/rejected, one row per pose with engine, score, failed criteria, minimum contact and internal ΔE, the complete per-pose verdict and the receptor–pose complex in 3D. The block's files — report, poses and receptors — stay collapsed below the table for download, preview or removal. See the [criteria and limits](pose_validation.md).
+
 ## Block help and compound selection
 
 The **ⓘ** icon appears in the library and on every canvas block, including for viewers. The popup explains the block, its inputs and its outputs. Similarity accepts fingerprints; connecting ChEMBL or PubChem directly shows a standard incompatibility notice without a traceback. Rejection preserves connections and undo history.
