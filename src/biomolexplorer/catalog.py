@@ -22,10 +22,20 @@ TITLES = {
  'docking_vina': ('Docking com Vina', 'Execute a seleção de compostos contra receptores preparados.', 'Docking'),
  'docking_dock6': ('Docking com DOCK6', 'Refine conformações e obtenha scores e footprints.', 'Docking'),
  'consensus': ('Consenso de docking', 'Combine resultados Vina e DOCK6.', 'Docking'),
+ 'pose_validation': ('Validar poses', 'Verifique a plausibilidade física e geométrica das poses de Vina, DOCK6 ou Consenso.', 'Docking'),
  'dynamics_dock6': ('Amber Score · DOCK6','Refine poses target–ligante com o Amber Score nativo do DOCK6 6.11 em solvente implícito.','Dinâmica Molecular'),
 }
 LABELS = {
  'dock6_mode':'Modo de operação DOCK6',
+ 'strict_filter':'Entregar apenas poses válidas aos próximos blocos',
+ 'vdw_clash_scale':'Fração mínima da soma dos raios de van der Waals',
+ 'delta_energy_limit':'Energia interna máxima acima do confôrmero relaxado (kcal/mol)',
+ 'bond_tolerance':'Desvio relativo máximo nos comprimentos de ligação',
+ 'angle_tolerance':'Desvio máximo nos ângulos de ligação (°)',
+ 'planarity_tolerance':'Desvio máximo de planaridade (Å)',
+ 'minimization_steps':'Iterações máximas da minimização (MMFF94 ou UFF)',
+ 'selected_receptors':'Alvos selecionados','selected_ligands':'Ligantes selecionados',
+ 'excluded_pairs':'Complexos removidos da seleção',
  'redocking_engine':'Motor de redocking',
  'preparation_options': 'Preparação do receptor e ligante',
  'redocking_engine':'Método de redocking','max_orientations':'Máximo de orientações DOCK6',
@@ -107,7 +117,7 @@ def operation_fields(operation):
     fields = []
     for key in spec.required + spec.optional:
         if operation=='admet' and key=='dataset_origin':continue
-        if key in ('verbose','md_cache_epoch'):continue
+        if key in ('verbose','md_cache_epoch','pose_inputs'):continue
         if operation=='docking_dock6' and key=='base_vina_path':continue
         if operation=='retrieve_compounds' and key in ('include_pubchem','pubchem_threshold','pubchem_max_records'):continue
         default = ENUM_DEFAULTS.get(key)
@@ -127,6 +137,10 @@ def operation_fields(operation):
 
 
 def field_label(operation, key):
+    if operation=='pose_validation':
+        if key=='base_input_path':return 'Targets'
+        if key=='base_selected_mols':return 'Compounds'
+        if key=='target':return 'Nome da coleção de saída'
     if operation=='dynamics_dock6':
         if key=='base_input_path':return 'Targets PDB para Amber Score'
         if key=='base_selected_mols':return 'Compostos para dinâmica'

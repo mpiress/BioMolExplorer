@@ -249,6 +249,13 @@ def stage_key(stage, parameters, inputs, software):
             file={'name':Path(entry['file']).name,'sha256':file_digest(entry['file'])},
             compound_files=[{'name':Path(p).name,'sha256':file_digest(p)} for p in entry['compound_files']])
             for entry in parameters['graph_inputs']]
+    if stage['operation']=='pose_validation':
+        config['parameters']['pose_inputs']=[{
+            'ids':[entry.get(key) for key in ('receptor_id','ligand_id','compound_id','pose_id')],
+            'engine':entry.get('engine'),'model':entry.get('model'),
+            'pose':{'name':Path(entry['pose']).name,'sha256':file_digest(entry['pose'])} if entry.get('pose') else None,
+            'receptor':{'name':Path(entry['receptor']).name,'sha256':file_digest(entry['receptor'])} if entry.get('receptor') else None}
+            for entry in parameters.get('pose_inputs') or []]
     if stage['operation']=='dynamics_dock6':
         from .md_inputs import molecular_identity
         config['parameters']['md_inputs']=[dict(id=p['id'],**{role:dict(identity=p[role]['identity'],sha256=molecular_identity(p[role]))

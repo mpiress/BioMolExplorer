@@ -202,7 +202,10 @@ def prepare_inputs(operation, parameters, output, report):
         entry['compound_files'] = [clean(resolve_path(p)) for p in entry['compound_files']]
     # Structural folders and ZINC address lists use their existing validators.
     # Their compound tables still pass through this same boundary at docking.
-    if operation=='graphs':return parameters
+    # Pose validation reads structural results in place: its molecular
+    # boundary is the validation itself, and a sanitized copy of the score
+    # tables would detach them from the pose files they reference.
+    if operation in ('graphs','pose_validation'):return parameters
     for field in ('base_input_path','base_selected_mols'):
         if not parameters.get(field):continue
         folder = resolve_path(parameters[field])

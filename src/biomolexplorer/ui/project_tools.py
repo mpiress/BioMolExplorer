@@ -161,7 +161,9 @@ class ProjectTools:
             # cannot stop its database write and would lose the returned revision.
             self._save_task=None
             if self.token==token and self.current is project and self.dirty and not getattr(self,'editing_stage',False):
-                await self.guard(lambda:self.save_draft(silent=True))
+                # An automatic draft never asks to invalidate results: a
+                # question nobody requested would block the interface.
+                await self.guard(lambda:self.save_draft(silent=True,confirm=False))
         self._save_task=self.page.run_task(deferred)
 
     @background

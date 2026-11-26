@@ -26,7 +26,10 @@ class RedockingApplyTests(unittest.TestCase):
         item=dict(source,configuration=copy.deepcopy(source),status='succeeded',artifacts=paths+[str(metadata)])
         pending=dict(stage,configuration=copy.deepcopy(stage),status='awaiting_input',artifacts=[])
         self.run=dict(id='pending-run',project_id=self.pid,status='awaiting_input',stages=[item,pending])
+        # The editor reads the review listing; both answer this fabricated run.
         self.store.list_runs=Mock(return_value=[self.run]);self.store.get_run=Mock(return_value=self.run)
+        self.store.list_result_runs=Mock(return_value=[self.run])
+        self.store.get_result_run=Mock(return_value=self.run);self.store.review_run=Mock(return_value=self.run)
         form=FileSelection(self.run,pending,page=self.ui.page)
         form.pickers['base_input_path'].add_all_sources()
         selected=form.read();selected['parameters']['exhaustiveness']=17

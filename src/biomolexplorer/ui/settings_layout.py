@@ -85,7 +85,8 @@ def fit_dialog(dialog,page):
     """
     if not isinstance(dialog,ft.AlertDialog):return
     dialog.inset_padding=ft.Padding.symmetric(horizontal=24,vertical=20)
-    dialog.scrollable=True
+    dialog.scrollable=not (isinstance(dialog.content,ft.Container)
+                           and getattr(dialog.content,'_settings_fixed_scroll',False))
     dialog.actions_padding=ft.Padding.symmetric(horizontal=20,vertical=16)
     dialog.actions_alignment=ft.MainAxisAlignment.END
     dialog.actions_overflow_button_spacing=12

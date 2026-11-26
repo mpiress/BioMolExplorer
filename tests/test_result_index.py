@@ -1,4 +1,5 @@
 """Persistent paging matches CSV semantics and never bypasses live authorization."""
+import copy
 import csv
 import io
 import json
@@ -175,3 +176,101 @@ class AuthorizedIndexTests(unittest.TestCase):
                   read_stage(self.store,self.rid,self.sid),read_proofs(self.store,self.rid)[0]]
         for stage in versions:
             self.assertNotIn('progress',stage);self.assertEqual(stage['error'],'updated status')
+
+
+class ExecutionWriteTests(unittest.TestCase):
+    """What a progress tick costs, and when the state becomes visible."""
+    setUp=fixtures.CompoundTablesTests.setUp
+    tearDown=fixtures.CompoundTablesTests.tearDown
+
+    def service(self):
+        from biomolexplorer.pipeline import PipelineService
+        service=PipelineService(self.store);self.addCleanup(service.close);return service
+
+    def column(self):
+        with self.store.connect() as db:
+            return db.execute('SELECT stages FROM runs WHERE id=?',(self.rid,)).fetchone()[0]
+
+    def revision(self):
+        with self.store.connect() as db:
+            return db.execute('SELECT revision FROM result_read_versions WHERE run_id=?',(self.rid,)).fetchone()[0]
+
+    def running(self,service):
+        """Put the run in the state a tick arrives in, and index it once."""
+        stages=copy.deepcopy(self.store.get_result_run(self.owner,self.rid)['stages'])
+        for stage in stages:stage['status']='running'
+        service._update(self.rid,'running',stages)
+        return stages
+
+    def test_a_progress_tick_never_rewrites_the_execution_column(self):
+        service=self.service()
+        stages=self.running(service)
+        before,revision=self.column(),self.revision()
+        stages[0]['progress']={'completed':7,'total':9,'message':'Consultando o ChEMBL'}
+        service._run_update_times={}                     # the two-second throttle is not under test
+        service._update(self.rid,'running',stages)
+        # The row holds a descriptor of every produced file: SQLite would
+        # rewrite all of it to advance a counter.
+        self.assertEqual(self.column(),before)
+        self.assertEqual(self.revision(),revision+1)
+        published=self.store.get_result_run(self.owner,self.rid)
+        self.assertEqual(published['stages'][0]['progress'],{'completed':7,'total':9,'message':'Consultando o ChEMBL'})
+        self.assertEqual(self.store.review_run(self.owner,self.rid)['stages'][0]['progress'],
+                         published['stages'][0]['progress'])
+
+    def test_a_state_change_is_always_persisted_in_the_execution_column(self):
+        service=self.service()
+        stages=self.running(service)
+        for change in ({'log_path':'/tmp/run.log'},{'job_id':'job-1'},{'started_at':1.5}):
+            with self.subTest(change=change):
+                before=self.column()
+                stages[0].update(change)
+                service._run_update_times={}
+                service._update(self.rid,'running',stages)
+                self.assertNotEqual(self.column(),before)
+                stored=json.loads(self.column())[0]
+                for key,value in change.items():self.assertEqual(stored[key],value)
+        stages[0].update(status='succeeded',finished_at=2.0)
+        service._run_update_times={}
+        service._update(self.rid,'succeeded',stages)
+        with self.store.connect() as db:
+            row=db.execute('SELECT status,stages FROM runs WHERE id=?',(self.rid,)).fetchone()
+        self.assertEqual(row['status'],'succeeded')
+        self.assertEqual(json.loads(row['stages'])[0]['status'],'succeeded')
+
+    def test_the_final_state_is_committed_before_the_history_is_recorded(self):
+        service=self.service()
+        stages=self.running(service)
+        seen=[]
+        def audit(store,db,project_id,user_id,action,summary,before=None,reuse_snapshot=False,**options):
+            with self.store.connect() as other:
+                seen.append(other.execute('SELECT status FROM runs WHERE id=?',(self.rid,)).fetchone()[0])
+        with patch('biomolexplorer.project_state.record',audit):
+            service._update(self.rid,'succeeded',stages)
+        # A snapshot walks and hashes the whole project; the run must not be
+        # reported as running while that happens.
+        self.assertEqual(seen,['succeeded'])
+
+    def test_a_failed_audit_never_fails_a_finished_execution(self):
+        service=self.service()
+        stages=self.running(service)
+        with patch('biomolexplorer.project_state.record',side_effect=OSError('disco cheio')):
+            service._update(self.rid,'succeeded',stages)
+        self.assertEqual(self.store.get_result_run(self.owner,self.rid)['status'],'succeeded')
+
+    def test_following_a_run_reads_its_state_without_the_file_descriptors(self):
+        from biomolexplorer.workspace import AccessDenied
+        service=self.service()
+        # Index the run, so its files really have descriptors to leave out.
+        service._update(self.rid,'succeeded',copy.deepcopy(self.store.get_result_run(self.owner,self.rid)['stages']))
+        full=self.store.get_result_run(self.owner,self.rid)
+        review=self.store.review_run(self.owner,self.rid)
+        self.assertEqual((review['id'],review['status'],review['project_id']),
+                         (full['id'],full['status'],full['project_id']))
+        self.assertEqual([(s['id'],s['status'],s['artifacts']) for s in review['stages']],
+                         [(s['id'],s['status'],s['artifacts']) for s in full['stages']])
+        self.assertTrue(all(not stage.get('artifact_records') for stage in review['stages']))
+        self.assertTrue(any(stage.get('artifact_records') for stage in full['stages']))
+        self.assertEqual([run['id'] for run in self.store.list_review_runs(self.owner,self.pid)],[self.rid])
+        with self.assertRaises(AccessDenied):self.store.review_run(self.guest,self.rid)
+        with self.assertRaises(AccessDenied):self.store.list_review_runs(self.guest,self.pid)

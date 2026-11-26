@@ -126,5 +126,7 @@
   "consensus.aggregating": "Aggregating targets by compound…",
   "consensus.exporting": "Publishing scores and representative structures…",
   "consensus.done": "Consensus completed.",
-  "consensus.checking": "Checking available results for consensus…"
+  "consensus.checking": "Checking available results for consensus…",
+  "pose.validating": "Validating poses…",
+  "pose.done": "Pose validation completed."
 }

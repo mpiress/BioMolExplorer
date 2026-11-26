@@ -2,8 +2,9 @@
 
 #conformer{font-size:12px;line-height:1.5;color:#94a9c5;margin:16px 0 0}select:disabled,input:disabled{opacity:.6;cursor:default}
 .brand .mark{object-fit:contain;background:none;border-radius:0;flex-shrink:0}
-#docking-controls {margin-top:14px} #layers {display:grid;gap:10px;margin-bottom:14px}
-.scene-layer {display:flex;gap:8px;align-items:center}.scene-layer.pose {color:#22d3ee}.scene-layer.reference {color:#fbbf24}
+#docking-controls {margin-top:14px;font-size:12px} #layers {display:grid;gap:10px;margin-bottom:14px;font-size:12px}
+#cutoff-label {display:block;font-size:11px;letter-spacing:.04em;color:#9bb0cb;margin-bottom:7px}
+.scene-layer {display:flex;gap:8px;align-items:center;font-size:12px;line-height:1.4}.scene-layer.pose {color:#22d3ee}.scene-layer.reference {color:#fbbf24}
 #cutoff {width:100%;box-sizing:border-box;padding:8px;background:#111b2b;color:#e5edf9;border:1px solid #334155;border-radius:6px}
 #contact-note {font-size:12px;line-height:1.5;color:#94a3b8}#contacts {display:grid;gap:6px;margin-top:12px}
 #contacts p {font-size:12px;margin:4px 0}.contact-residue {text-align:left;font-size:12px}
@@ -20,3 +21,8 @@ body[data-scene="true"] .panel {width:280px;max-height:calc(100% - 48px);overflo
 .interaction-row{border-left:4px solid}
 #interaction-tooltip{position:fixed;z-index:20;max-width:min(440px,calc(100vw - 16px));padding:10px 12px;background:#111b2bf5;color:#e5edf9;border:2px solid;border-radius:9px;font-size:12px;line-height:1.4;pointer-events:none;box-shadow:0 5px 18px #0006}
 #interaction-tooltip[hidden]{display:none}
+
+#pocket-controls{margin:0 0 17px;font-size:12px}#pocket-controls label{display:block;font-size:11px;letter-spacing:.04em;color:#9bb0cb;margin:12px 0 7px}
+.pocket-bar{height:9px;border-radius:5px;border:1px solid #33455e;background:linear-gradient(90deg,rgb(30,144,255),rgb(255,255,255),rgb(255,69,0))}
+.pocket-ends{display:flex;justify-content:space-between;margin-top:5px;font-size:11px;color:#9bb0cb}
+#pocket-opacity{width:100%;margin:0}#pocket-note{margin:10px 0 0;font-size:11px;line-height:1.5;color:#94a9c5}

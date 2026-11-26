@@ -76,6 +76,9 @@ class WorkspaceUI(ProjectTools):
         self.dirty = False
         self.base_pipeline=[]
         self._save_lock=asyncio.Lock()
+        self._pending_decision=None
+        self._splashes=[]
+        self._submission=None
         self.current_run = None
         self.polling = None
         self.run_progress = None
@@ -157,6 +160,26 @@ class WorkspaceUI(ProjectTools):
                         await self.show_workspace()
             if self.token is None or self.token == token:
                 self.notify(str(exc))
+                await self.reveal_stage(getattr(exc,'stage_id',None))
+
+    async def reveal_stage(self,stage_id):
+        """Open the block an execution refused, so its message is never a dead end.
+
+        Blocks of the same operation carry the same default name: without the
+        identifier the message cannot say which of them needs attention.
+        """
+        if not stage_id or not self.current:return
+        if not any(stage['id']==stage_id for stage in self.current['pipeline']):return
+        token,project=self.token,self.current
+        try:
+            canvas=getattr(self,'flow_editor',None)
+            if canvas is not None and self.tab=='Pipeline' and stage_id in getattr(canvas,'nodes',{}):
+                canvas.select_stage(stage_id)
+            await self.open_stage_dialog(stage_id)
+        except Exception as exc:
+            if self.token!=token or self.current is not project:return
+            get_logger('frontend').exception('Could not open the block of a refused execution: %s',exc,
+                extra={'event':'ui.reveal_stage_failed','project_id':project['id'],**diagnose_exception(exc)})
 
     def close_project_views(self):
         """Discard private dialogs/drafts when leaving a project or losing access."""
@@ -753,7 +776,16 @@ class WorkspaceUI(ProjectTools):
         assets=await self.call(self.store.assets,token,project['id'])
         if self.token != token or self.current is not project or self._dialog_request!=request:
             return
-        if draft['operation']=='dynamics_dock6' and hasattr(self.store,'list_result_runs'):
+        if draft['operation']=='pose_validation':
+            # Targets, compounds and poses come from the artifact registry and
+            # from the published score tables: loading every run's stage JSON
+            # would cost seconds and gigabytes on large projects.
+            runs=[]
+        elif hasattr(self.store,'list_result_runs'):
+            # The review model keeps the identities, the selectors and the
+            # lineage the editor needs, and leaves out the execution JSON of
+            # every produced file: a project with two dozen docking runs opens
+            # its blocks in seconds instead of parsing gigabytes of history.
             runs=await self.call(self.store.list_result_runs,token,project['id'],limit=100)
         else:
             runs=await self.call(self.store.list_runs,token,project['id'])
@@ -881,7 +913,11 @@ class WorkspaceUI(ProjectTools):
         reader=None
         from .settings_layout import dialog_size
         body=ft.Container(width=dialog_size(self.page)['width'],padding=16,bgcolor=BG,border_radius=16)
-        body._settings_auto_size=True
+        if draft['operation']=='pose_validation':
+            body.height=dialog_size(self.page)['height']
+            body._settings_fixed_scroll=True
+        else:
+            body._settings_auto_size=True
         self.settings_body=body
         async def render_mode(new_mode):
             nonlocal draft,mode,reader
@@ -889,12 +925,16 @@ class WorkspaceUI(ProjectTools):
                 draft=reader()
             mode=new_mode
             if mode=='visual':
-                if draft['operation']=='dynamics_dock6':
+                if draft['operation'] in ('dynamics_dock6','pose_validation'):
+                    # Listing pairs or poses reads score tables: keep it off
+                    # the UI thread so the dialog stays responsive.
                     form=await self.call(GuidedForm,self,draft,assets,writable)
                     if self._dialog_request!=request or self.token!=token or self.current is not project:return
                 else:form=GuidedForm(self,draft,assets,writable)
                 reader=form.read
                 body.content=form.layout()
+                if draft['operation']=='pose_validation':
+                    body.content.expand=True
             else:
                 title=ft.TextField(label='Nome do bloco',value=draft['name'],disabled=not writable)
                 parameters=ft.TextField(label='Parâmetros completos (JSON)',value=json.dumps(draft['parameters'],indent=2,ensure_ascii=False),multiline=True,min_lines=8,disabled=not writable)
@@ -1004,6 +1044,7 @@ class WorkspaceUI(ProjectTools):
                     from .processing import splash_for
                     loading=splash_for(self)
                     loading.show(request,processing_title or 'Salvando configurações…','Validando e salvando as configurações do bloco. Aguarde a conclusão.',modal=True)
+                    self.hold_splash(loading,request)
                 self.page.update()
                 async def execute():
                     nonlocal completed
@@ -1018,7 +1059,7 @@ class WorkspaceUI(ProjectTools):
                 else:await self.guard(execute)
             finally:
                 running=False
-                if loading:loading.hide(request)
+                if loading:self.release_splash(loading,request);loading.hide(request)
                 if not completed:
                     for c,previous in zip(controls,disabled):c.disabled=previous
                 self.page.update()
@@ -1104,11 +1145,47 @@ class WorkspaceUI(ProjectTools):
                 if result is not False and self.token==token and self.current is project:self.notify('Pipeline salvo.')
         finally:self._manual_save_running=False
 
-    async def save_draft(self,silent=False,verify_results=False):
-        async with self._save_lock:
-            return await self._save_draft(silent,verify_results)
+    def hold_splash(self,splash,request):
+        """Remember a visible splash, so a decision can be asked above it."""
+        self._splashes=[item for item in getattr(self,'_splashes',[])
+                        if not (item[0] is splash and item[1] is request)]
+        self._splashes.append((splash,request))
 
-    async def _save_draft(self,silent=False,verify_results=False):
+    def release_splash(self,splash,request):
+        self._splashes=[item for item in getattr(self,'_splashes',[])
+                        if not (item[0] is splash and item[1] is request)]
+
+    async def decide(self,dialog,answer):
+        """Wait for a user decision with nothing covering the dialog.
+
+        A modal splash keeps its barrier above any dialog opened after it, so a
+        question asked while one is visible could never be answered: the action
+        waited forever, the save lock stayed taken and every other button of
+        the project stopped responding.  The splashes are closed while the
+        question is on screen and restored with their own message afterwards.
+        """
+        from .processing import pause_processing
+        frozen=[(splash,request,splash.messages.get(request))
+                for splash,request in list(getattr(self,'_splashes',[]))]
+        for splash,request,_ in frozen:splash.hide(request)
+        try:
+            async with pause_processing(self):
+                self.page.show_dialog(dialog)
+                return await answer
+        finally:
+            for splash,request,message in frozen:
+                if message and not answer.cancelled():
+                    splash.show(request,message[0],message[1],on_cancel=message[2])
+
+    async def save_draft(self,silent=False,verify_results=False,confirm=True):
+        if getattr(self,'_pending_decision',None) is not None:
+            # A decision is already on screen.  Queueing behind it would hold
+            # the save lock and freeze every other action of the project.
+            return False
+        async with self._save_lock:
+            return await self._save_draft(silent,verify_results,confirm)
+
+    async def _save_draft(self,silent=False,verify_results=False,confirm=True):
         token, project = self.token, self.current
         if project is None or project['role']=='viewer':
             return
@@ -1126,19 +1203,32 @@ class WorkspaceUI(ProjectTools):
             if proposal['active_conflicts'] or running:
                 raise ValueError('Aguarde ou cancele a execução antes de limpar os resultados.')
         if prune:
+            if not confirm:
+                # An automatic draft never asks: the change stays pending for
+                # the explicit save or execution, which can show the decision.
+                return False
             accepted=asyncio.get_running_loop().create_future()
+            def resolve(value):
+                if not accepted.done():accepted.set_result(value)
             def answer(value):
                 close_dialog(self.page,dialog)
-                if not accepted.done():accepted.set_result(value)
+                resolve(value)
             dialog=ft.AlertDialog(modal=True,scrollable=True,title=text('Confirmar alteração e invalidar resultados?',24),
                 content=ft.Container(width=560,content=ft.Column([
                     text('Esta alteração modifica parâmetros ou remove entradas ou ações. Os resultados obsoletos serão excluídos, incluindo os resultados dependentes indicados abaixo. Resultados equivalentes de outras entradas, arquivos compartilhados e originais serão preservados. Cancelar restaura a configuração anterior.'),
                     text('Blocos com resultados afetados:',weight=ft.FontWeight.W_600),
                     *[user_text('• '+(self.tr(block['name']) if block['name'] in default_stage_names() else block['name'])) for block in proposal['blocks']]],tight=True,spacing=16)),
                 actions=[ft.TextButton('Cancelar',on_click=lambda e:answer(False)),
-                         button('Confirmar remoção',lambda e:answer(True),icon=ft.Icons.DELETE_OUTLINE,danger=True)])
-            self.page.show_dialog(dialog)
-            if not await accepted:
+                         button('Confirmar remoção',lambda e:answer(True),icon=ft.Icons.DELETE_OUTLINE,danger=True)],
+                # Dismissing the dialog is an answer: an unanswered question
+                # would keep this save, and every action after it, waiting.
+                on_dismiss=lambda e:resolve(False))
+            self._pending_decision=accepted
+            try:
+                decision=await self.decide(dialog,accepted)
+            finally:
+                self._pending_decision=None
+            if not decision:
                 original=await self.call(self.store.project,token,project['id'])
                 project.update(original);self.base_pipeline=copy.deepcopy(original['pipeline']);self.dirty=False
                 if hasattr(self,'flow_editor'):self.flow_editor.refresh()
@@ -1168,13 +1258,19 @@ class WorkspaceUI(ProjectTools):
 
     @with_processing('Preparando execução…','Validando o pipeline e organizando os dados de entrada. Aguarde um instante.')
     async def run_pipeline(self,selected=False):
-        if getattr(self,'submitting',False):
+        # A submission that was cancelled or interrupted never reached its own
+        # cleanup; the button must not stay dead because of it.
+        previous=getattr(self,'_submission',None)
+        if self.submitting and (previous is None or previous.done()):self.submitting=False
+        if self.submitting:
             return
         self.submitting = True
+        self._submission = asyncio.current_task()
         try:
             await self._submit_pipeline(selected)
         finally:
             self.submitting = False
+            self._submission = None
 
     def dismiss_reuse_prompt(self):
         dialog=getattr(self,'reuse_dialog',None)
@@ -1216,7 +1312,7 @@ class WorkspaceUI(ProjectTools):
         from .configuration_loading import ConfigurationLoading
         loading=ConfigurationLoading(self.page,saving=True,title='Preparando a execução…',
             description='Salvando configurações e validando o estado da execução. Aguarde.')
-        request=object();loading.show(request)
+        request=object();loading.show(request);self.hold_splash(loading,request)
         try:
             # Publish feedback before persistence, hashing and cache validation.
             await asyncio.sleep(0)
@@ -1234,6 +1330,7 @@ class WorkspaceUI(ProjectTools):
                     reuse_results=reuse_results if reuse_results is not None else not getattr(self,'force_execution',False))
         finally:
             # The choice and run-progress dialogs must never sit under a splash.
+            self.release_splash(loading,request)
             loading.hide(request)
         if has_results:
             if self.token!=token or not self.current or self.current['id']!=project_id:return
@@ -1619,6 +1716,18 @@ class WorkspaceUI(ProjectTools):
         await ft.UrlLauncher().launch_url(url,mode=ft.LaunchMode.EXTERNAL_APPLICATION,web_only_window_name='_blank')
 
     @with_processing('Preparando visualização…','Lendo os dados e preparando sua visualização. Aguarde um instante.')
+    async def preview_complex(self,project_id,layers,name,ligand_smiles=None,reference_kind=None):
+        """Open the receptor-ligand complex of a published pose, with its contacts."""
+        from biomolexplorer.pdb_view import StructureViewers
+        token=self.token
+        if not getattr(self,'structure_viewer',None):self.structure_viewer=StructureViewers(self.store)
+        key=await self.call(self.structure_viewer.issue_scene,token,project_id,layers,name,
+                            getattr(self,'language','pt'),ligand_smiles,reference_kind)
+        if self.token!=token or not self.current or self.current['id']!=project_id:return
+        url=self.structure_viewer.url(key,web=self.page.web,page_url=self.page.url if self.page.web else None)
+        await ft.UrlLauncher().launch_url(url,mode=ft.LaunchMode.EXTERNAL_APPLICATION,web_only_window_name='_blank')
+
+    @with_processing('Preparando visualização…','Lendo os dados e preparando sua visualização. Aguarde um instante.')
     async def preview_artifact(self,project_id,path):
         token = self.token
         if Path(path).suffix.lower() in ('.pdb','.pdbqt','.mol2','.sdf'):
@@ -1677,7 +1786,9 @@ class WorkspaceUI(ProjectTools):
     async def open_stage_results(self,stage_id):
         token = self.token
         project_id=self.current['id']
-        runs=await self.call(self.store.list_runs,token,project_id)
+        # Only the state of each block is needed to find its results.
+        reader=getattr(self.store,'list_review_runs',None) or self.store.list_runs
+        runs=await self.call(reader,token,project_id)
         if self.token != token or not self.current or self.current['id'] != project_id:
             return
         for run in runs:
@@ -1872,7 +1983,11 @@ class WorkspaceUI(ProjectTools):
                     progress=getattr(self,'run_progress',None)
                     if progress and progress.valid():progress.tick();self.page.update()
                     continue
-                run=await self.call(getattr(self.store,'get_result_run',self.store.get_run),token,run_id)
+                # Following a run reads its state, never the descriptors of the
+                # files it has produced: those are read when results are shown.
+                complete=getattr(self.store,'get_result_run',self.store.get_run)
+                reader=getattr(self.store,'review_run',None) or complete
+                run=await self.call(reader,token,run_id)
                 last_revision=revision
                 if self.token != token or self.current_run != run_id:
                     continue
@@ -1888,8 +2003,11 @@ class WorkspaceUI(ProjectTools):
                 if snapshot != previous and self.current and self.current['id']==run['project_id'] and self.tab=='Execuções':
                     await self.draw_project()
                 if run['status']=='awaiting_input' and self.current and self.current['id']==run['project_id'] and self.current['role']!='viewer':
-                    pending=next(s for s in run['stages'] if s['status']=='awaiting_input')
-                    if pending.get('pause_reason')!='user':self.prepare_pending_inputs(run,pending)
+                    # The selectors of a waiting block need the produced files.
+                    waiting=run if reader is complete else await self.call(complete,token,run_id)
+                    if self.token!=token or self.current_run!=run_id:continue
+                    pending=next((s for s in waiting['stages'] if s['status']=='awaiting_input'),None)
+                    if pending and pending.get('pause_reason')!='user':self.prepare_pending_inputs(waiting,pending)
                 previous = snapshot
                 if self.token == token and self.current_run == run_id and run['status'] not in ('queued','running','awaiting_input'):
                     failures=sum(s.get('redocking_failures',0) for s in run['stages'])

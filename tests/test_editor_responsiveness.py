@@ -88,7 +88,10 @@ class EditorResponsivenessTests(unittest.TestCase):
             path.write_text('molecule_chembl_id,canonical_smiles\nCHEMBL1,CCO\n')
             item=dict(source,status='succeeded',artifacts=[str(path)])
             from biomolexplorer.docking_inputs import compound_identifiers
-            with patch.object(self.store,'list_runs',return_value=[dict(id='r',stages=[item])]), patch('biomolexplorer.docking_inputs.compound_identifiers',wraps=compound_identifiers) as reader:
+            history=[dict(id='r',stages=[item])]
+            with patch.object(self.store,'list_runs',return_value=history), \
+                 patch.object(self.store,'list_result_runs',return_value=history), \
+                 patch('biomolexplorer.docking_inputs.compound_identifiers',wraps=compound_identifiers) as reader:
                 await self.ui.open_stage_dialog(vina['id'])
                 reader.assert_not_called()
                 dialog=self.page.dialogs[-1]

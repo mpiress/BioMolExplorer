@@ -17,7 +17,8 @@ LISTS={'organism':['Homo sapiens','Mus musculus','Rattus norvegicus'],
  'PolymerEntityTypeID':['Protein','DNA','RNA','NA-hybrid','Other'],
  'ExperimentalMethodID':['X-RAY DIFFRACTION','SOLUTION NMR','ELECTRON MICROSCOPY','ELECTRON CRYSTALLOGRAPHY','EPR','FIBER DIFFRACTION','FLUORESCENCE TRANSFER','INFRARED SPECTROSCOPY','NEUTRON DIFFRACTION','POWDER DIFFRACTION','SOLID-STATE NMR','SOLUTION SCATTERING','THEORETICAL MODEL']}
 FILTER_LABELS={'organism':'Organismo','type__in':'Tipos de alvo','relationship_type':'Relação com o alvo','standard_type__in':'Medidas de atividade (Ki, IC50…)','molecule_type':'Tipo de molécula','max_value_ref':'Atividade máxima','standard_units':'Unidade de atividade','assay_type':'Tipo de ensaio','pchembl_value__isnull':'Ausência de pChEMBL (0 = exigir valor)','natural_product':'Produto natural (1 = sim, 0 = não)','similarity':'Similaridade mínima (%)','molecule_weight':'Massa molecular máxima'}
-NUMERIC={'max_resolution','pH','threshold','pubchem_threshold','pubchem_max_records','max_records','radius','morgan_n_bits','exhaustiveness','num_modes','chunk_size','repulsion_weight','density','distance','plot_max_residues','max_targets','similarity_threshold','max_orientations','num_scored_conformers','dock6_seed'}
+NUMERIC={'vdw_clash_scale','delta_energy_limit','bond_tolerance','angle_tolerance','planarity_tolerance',
+ 'max_resolution','pH','threshold','pubchem_threshold','pubchem_max_records','max_records','radius','morgan_n_bits','exhaustiveness','num_modes','chunk_size','repulsion_weight','density','distance','plot_max_residues','max_targets','similarity_threshold','max_orientations','num_scored_conformers','dock6_seed','minimization_steps'}
 
 class GuidedForm:
     def __init__(self,ui,stage,assets,writable):
@@ -41,6 +42,10 @@ class GuidedForm:
         self.title=ft.TextField(label='Nome do bloco',value=TITLES['prepare_structures'][0] if stage['operation']=='prepare_structures' and stage['name'] in ('Preparar meus complexos','Prepare my complexes') else stage['name'],disabled=not writable,data='wide')
         self.enabled=ft.Switch(label='Incluir este bloco na execução',value=stage.get('enabled',True),disabled=not writable)
         self.controls=[self.title,self.enabled]
+        if stage['operation']=='pose_validation':
+            self.controls.append(ft.Text('Este bloco avalia a plausibilidade física das poses recebidas: validade química, '
+                'geometria interna, planaridade, energia relativa e choque estérico com o receptor. '
+                'A execução resolve as poses automaticamente, sem pausar para seleção.',size=12,color='#64748B'))
         if stage['operation'] in ('consensus','dynamics_dock6'):
             self.controls.append(ft.Text('Este bloco reúne as entradas selecionadas e reaproveita os cálculos válidos de cada complexo.',size=12,color='#64748B'))
         if stage['operation'] in ('similarity','graphs'):
@@ -48,7 +53,7 @@ class GuidedForm:
                 value=stage.get('follow_inputs',True),disabled=not writable)
             self.controls.extend([self.follow_inputs,ft.Text(
                 'Inclui as novas saídas compatíveis dos blocos conectados. Desative para executar somente os arquivos selecionados.',size=12)])
-        if stage['operation'] not in ('import_results','consensus','dynamics_dock6'):
+        if stage['operation'] not in ('import_results','consensus','dynamics_dock6','pose_validation'):
             self.processing=ft.Dropdown(label='Como processar os arquivos selecionados?',
                 value=stage.get('input_processing','individual'),disabled=not writable,options=[
                     ft.DropdownOption(key='individual',text='Processar individualmente'),
@@ -101,6 +106,7 @@ class GuidedForm:
             if stage['operation']=='consensus' and key in ('target','repulsion_weight'):continue
             if stage['operation']=='retrieve_zinc' and key=='filename':continue
             if key=='graph_inputs':continue
+            if key in ('pose_inputs','selected_receptors','selected_ligands','excluded_pairs'):continue
             if stage['operation'] in ('prepare_structures','docking_vina','docking_dock6') and key in ('charge_type','preparation_options','receptor_prepared'):continue
             if stage['operation']=='prepare_structures' and key=='mol_filename':continue
             if stage['operation']=='redocking' and key in ('pdb_codes','preparation_pairs','charge_type','preparation_options'):continue
@@ -132,6 +138,14 @@ class GuidedForm:
                 self.list_field(key,field['label'],value,LISTS.get(key,[]))
             elif stage['operation']=='prepare_structures' and key=='pH':self.add(key,'pH de protonação do receptor e ligante',value)
             else: self.add(key,'Nome da coleção PubChem' if stage['operation']=='retrieve_pubchem' and key=='target' else 'Nome da coleção PDB (opcional)' if stage['operation']=='retrieve_structures' and key=='target' else field['label'],value,field['choices'])
+        if stage['operation']=='pose_validation':
+            from .pose_settings import PoseSettings
+            self.pose_settings=PoseSettings(self)
+            # Each connection editor belongs to the section it feeds, so the
+            # block reads like the docking blocks: Targets, then Compounds.
+            self.input_editors['base_input_path'].control.data='targets'
+            self.input_editors['base_selected_mols'].control.data='compounds'
+            self.controls.extend([self.pose_settings.targets_control,self.pose_settings.compounds_control])
         if stage['operation']=='dynamics_dock6':
             from .md_settings import MDSettings
             self.md_settings=MDSettings(self)
@@ -244,12 +258,22 @@ class GuidedForm:
             # section shell and field rules with specialized settings panels.
             return settings_section(title,[fields(controls)],description)
         sections=[card('Identificação','Nomeie a etapa e escolha se ela participa da execução.',self.controls[:2])]
+        if self.stage['operation']=='pose_validation':
+            for title,description,tag in (
+                ('Targets','Receptores preparados do redocking, listados pelo código PDB.','targets'),
+                ('Compounds','Moléculas que produziram os resultados de docking conectados.','compounds')):
+                grouped=[c for c in self.controls[2:] if c.data==tag]
+                if grouped:sections.append(card(title,description,grouped))
         inputs=[c for c in self.controls[2:] if c.data=='input']
         if self.stage['operation']=='graphs':
             editors=[self.input_editors[k].control for k in ('similarity_path','base_input_path')]
             inputs=[c for c in inputs if c not in editors]+editors
-        parameters=[c for c in self.controls[2:] if c.data!='input' and not isinstance(c,ft.ExpansionTile)]
-        if inputs: sections.append(card('Entradas','Escolha a origem e o resultado que esta etapa deve receber.',inputs))
+        parameters=[c for c in self.controls[2:] if c.data not in ('input','targets','compounds')
+                    and not isinstance(c,ft.ExpansionTile)]
+        if inputs:
+            sections.append(card('Resultados prontos','Use resultados de validação já calculados por você.',inputs)
+                if self.stage['operation']=='pose_validation' else
+                card('Entradas','Escolha a origem e o resultado que esta etapa deve receber.',inputs))
         if parameters: sections.append(card('Parâmetros','Ajuste as opções da etapa. Os filtros específicos estão abaixo.',parameters))
         for control in self.controls[2:]:
             if not isinstance(control,ft.ExpansionTile): continue
@@ -277,7 +301,7 @@ class GuidedForm:
             control=ft.TextField(label=label,value='' if value is None else str(value),disabled=not self.writable)
             if key=='download_workers':control.helper='De 1 a 16; padrão: 4. Use 1 para baixar sequencialmente.'
             if key=='dock6_app_path': control.value=str(self.ui.service.dock6_path or ''); control.read_only=True; control.helper='Configuração da instalação feita pelo administrador.'
-            integers={'threshold','pubchem_threshold','pubchem_max_records','max_records','morgan_n_bits','num_modes','exhaustiveness','chunk_size','plot_max_residues','max_targets','similarity_threshold','max_orientations','num_scored_conformers','dock6_seed'}
+            integers={'threshold','pubchem_threshold','pubchem_max_records','max_records','morgan_n_bits','num_modes','exhaustiveness','chunk_size','plot_max_residues','max_targets','similarity_threshold','max_orientations','num_scored_conformers','dock6_seed','minimization_steps'}
             if key=='radius' and self.stage['operation']=='fingerprints': integers.add('radius')
             kind=int if key in integers else float if key in NUMERIC else int if type(value)is int else float if type(value)is float else str
             getter=lambda:None if not control.value else kind(control.value)

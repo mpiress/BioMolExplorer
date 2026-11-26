@@ -3,7 +3,7 @@ window.BioMolDockingScene = async function (config) {
   'use strict';
   const el = id => document.getElementById(id);
   const t = key => config.scene_labels[key] ?? key;
-  let viewer;
+  let viewer,surfaces;
   const state = {layers: [], cutoff: 4, selected: null, interactions: [], enabledTypes: new Set(), shapes: [], hoveredInteraction: null};
   const protein = new Set('ALA ARG ASN ASP CYS GLN GLU GLY HIS ILE LEU LYS MET PHE PRO SER THR TRP TYR VAL HID HIE HIP CYX SEC PYL'.split(' '));
   const water = atom => ['HOH', 'WAT', 'DOD'].includes(atom.resn);
@@ -76,7 +76,7 @@ window.BioMolDockingScene = async function (config) {
       shape.finalize();shape.interaction=row;state.shapes.push(shape);
       const key=residueKey(row);
       if (!labels.has(key)) labels.set(key,{position:end,rows:[]});labels.get(key).rows.push(row);
-      if (el('representation').value==='cartoon') receptor.model.setStyle(residueSelection(row),{stick:{colorscheme:'Jmol',radius:.14}},true);
+      if (['cartoon','pocket'].includes(el('representation').value)) receptor.model.setStyle(residueSelection(row),{stick:{colorscheme:'Jmol',radius:.14}},true);
       const button=document.createElement('button');button.className='interaction-row';button.textContent=interactionText(row);button.style.borderLeftColor=row.color;
       button.addEventListener('click',() => {state.selected=row;draw();viewer.zoomTo({model:receptor.model.getID(),...residueSelection(row)});viewer.render();});container.append(button);
     });
@@ -104,6 +104,32 @@ window.BioMolDockingScene = async function (config) {
       check.addEventListener('change',() => {if(check.checked)state.enabledTypes.add(kind);else state.enabledTypes.delete(kind);draw();});el('interaction-types').append(label);
     });
   }
+  /* The site is the shell of residues the pose actually touches, so it follows
+     the contact distance the user chose rather than a fixed radius. */
+  function drawPocket() {
+    const receptor=state.layers.find(layer => layer.role==='receptor');
+    el('pocket-controls').hidden=el('representation').value!=='pocket';
+    el('color').disabled=el('representation').value==='pocket';
+    if (el('representation').value!=='pocket' || !receptor || !receptor.visible) {state.pocket=[];surfaces.clear();return;}
+    const identifier=receptor.model.getID(),chainValue=el('chain').value;
+    const chain=chainValue ? (chainValue==='__blank__' ? '' : chainValue) : null;
+    const body=atom => !water(atom) && !['H','D'].includes(String(atom.elem || '').toUpperCase()) &&
+      (chain===null || (atom.chain || '')===chain);
+    const context={model:identifier,predicate:body};
+    const keys=new Set(state.contacts.filter(row => row.distance <= state.cutoff).map(residueKey));
+    // Both meshes are carved from the whole receptor, so the solid site and the
+    // ghost around it share one continuous surface.
+    const specs=keys.size ?
+      [{atoms:{model:identifier,predicate:atom => body(atom) && !keys.has(residueKey(atom))},context,weight:window.BioMolPocket.CONTEXT},
+       {atoms:{model:identifier,predicate:atom => body(atom) && keys.has(residueKey(atom))},context,weight:1}] :
+      [{atoms:context,context,weight:1}];
+    state.pocket=[...keys].sort();
+    const task=surfaces.build([identifier,chain,state.cutoff,state.pocket.join(',')].join('|'),specs,
+                              receptor.model.selectedAtoms({predicate:body}).length);
+    if (!task) return;
+    el('status').textContent=config.labels.pocket_building;el('status').hidden=false;
+    task.then(current => {if (current) el('status').hidden=true;}).catch(() => {el('status').hidden=true;});
+  }
   function draw() {
     viewer.removeAllLabels();
     const receptor = state.layers.find(layer => layer.role === 'receptor');
@@ -118,12 +144,20 @@ window.BioMolDockingScene = async function (config) {
       } else {
         const coloring = el('color').value === 'element' ? {colorscheme:'Jmol'} :
           el('color').value === 'spectrum' ? {color:'spectrum'} : {color:'#94a3b8'};
-        const representation = el('representation').value;
-        const style = representation === 'cartoon' && layer.format !== 'mol2' ? {cartoon:{...coloring,arrows:true}} :
+        // Only the docking receptor carries the site surface; a crystallographic
+        // complex shown beside it keeps the ribbons, or it would vanish.
+        const representation = el('representation').value==='pocket' && layer.role!=='receptor' ? 'cartoon' : el('representation').value;
+        const keys = new Set((layer.role==='complex' ? state.referenceContacts : state.contacts).filter(row => row.distance <= state.cutoff).map(residueKey));
+        const style = representation === 'pocket' ? null :
+          representation === 'cartoon' && layer.format !== 'mol2' ? {cartoon:{...coloring,arrows:true}} :
           representation === 'spheres' ? {sphere:{...coloring,scale:.6}} :
           representation === 'lines' ? {line:{...coloring}} : {stick:{...coloring,radius:.14}};
-        layer.model.setStyle({...selected,predicate:atom => protein.has(atom.resn)},style);
-        if (el('color').value==='chain') {
+        // The surface is the receptor here: ribbons or the whole lining as sticks
+        // would only crowd the cavity the style exists to show, so the residues
+        // that appear are the ones an interaction or a click singles out.
+        if (representation === 'pocket') layer.model.setStyle({...selected,predicate:atom => protein.has(atom.resn)},{});
+        else layer.model.setStyle({...selected,predicate:atom => protein.has(atom.resn)},style);
+        if (el('color').value==='chain' && style) {
           const palette=['#94a3b8','#a5b4fc','#60a5fa','#c084fc'];
           [...new Set(layer.model.selectedAtoms({}).map(a => a.chain || ''))].sort().forEach((value,index) => {
             if (chain && value !== (chain==='__blank__' ? '' : chain)) return;
@@ -133,7 +167,6 @@ window.BioMolDockingScene = async function (config) {
         }
         if (el('ligands').checked) layer.model.setStyle({...selected,predicate:atom => !protein.has(atom.resn) && !water(atom) && hydrogenVisible(atom)}, ligandStyle({colorscheme:'Jmol'}));
         if (el('water').checked) layer.model.setStyle({...selected,predicate:water},{sphere:{color:'#60a5fa',scale:.18}});
-        const keys = new Set((layer.role==='complex' ? state.referenceContacts : state.contacts).filter(row => row.distance <= state.cutoff).map(residueKey));
         if (representation==='cartoon') layer.model.setStyle({...selected,predicate:atom => keys.has(residueKey(atom))},{stick:{color:'#86efac',radius:.15}},true);
       }
       layer.model.setClickable({},true,atom => {
@@ -151,6 +184,7 @@ window.BioMolDockingScene = async function (config) {
       const atom = receptor.model.selectedAtoms(selection).find(a => a.atom === 'CA') || receptor.model.selectedAtoms(selection)[0];
       if (atom && el('show-residue-labels').checked) viewer.addLabel(`${row.resn} ${row.resi}${row.icode || ''} · ${row.chain || '—'}`,{position:atom,backgroundColor:'#111b2b',fontColor:'#ffffff',fontSize:12});
     }
+    drawPocket();
     drawInteractions();
     viewer.render();
   }
@@ -176,6 +210,7 @@ window.BioMolDockingScene = async function (config) {
   }
   try {
     viewer=$3Dmol.createViewer(el('scene'),{backgroundColor:'#0b1220',antialias:true});viewer.setProjection('perspective');viewer.setHoverDuration(120);
+    surfaces=window.BioMolPocket.controller(viewer);surfaces.setLevel(Number(el('pocket-opacity').value)/100);
     const response=await fetch(location.pathname.replace(/\/$/,'')+'/scene',{cache:'no-store',credentials:'same-origin'});
     if (!response.ok) throw new Error('Scene unavailable');
     const data=await response.json();state.contacts=data.contacts;state.referenceContacts=data.reference_contacts;
@@ -202,6 +237,7 @@ window.BioMolDockingScene = async function (config) {
     el('representation').value=receptor.format==='mol2' ? 'sticks' : 'cartoon';
     setupInteractions(data.interactions);contactTable();draw();viewer.zoomTo({model:state.layers.find(layer => layer.role==='pose').model.getID()});viewer.render();
     for (const id of ['representation','ligand-representation','hydrogens','show-interactions','show-residue-labels','color','ligands','water','chain']) el(id).addEventListener('change',draw);
+    el('pocket-opacity').addEventListener('input',() => surfaces.setLevel(Number(el('pocket-opacity').value)/100));
     el('cutoff').addEventListener('change',() => {const value=Number(el('cutoff').value);if (!Number.isFinite(value) || value<2 || value>8) {el('cutoff').value=state.cutoff;return;}state.cutoff=value;contactTable();draw();});
     el('center').addEventListener('click',() => {viewer.zoomTo();viewer.render();});
     el('snapshot').addEventListener('click',() => {const link=document.createElement('a');link.href=viewer.pngURI();link.download='docking.png';link.click();});

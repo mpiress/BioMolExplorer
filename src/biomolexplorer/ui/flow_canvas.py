@@ -321,7 +321,13 @@ class FlowCanvas:
             self.pending=None
             self.status.value=str(exc)
             self.ui.notify(str(exc)); return
-        self.history.append(before); self.history=self.history[-50:]; self.future.clear(); self.pending=None
+        self.pending=None
+        if self.stages==before:
+            # Repeating an existing connection changes nothing: no duplicated
+            # edge, no empty undo step and no autosave.
+            self.status.value='Esta conexão já existe.'
+            self.ui.page.update(self.status); return
+        self.history.append(before); self.history=self.history[-50:]; self.future.clear()
         self.status.value='Conexão criada. A execução respeitará as dependências.'; self.changed()
     def show_information(self,stage):
         from .block_help import block_information

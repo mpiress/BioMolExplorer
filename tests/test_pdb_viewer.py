@@ -63,6 +63,68 @@ class PDBViewerTests(unittest.TestCase):
         with self.path.open('r+b') as stream:stream.truncate(MAX_VIEW_BYTES+1)
         with self.assertRaisesRegex(ValueError,'32 MB'):self.key()
 
+    def test_a_published_complex_scene_is_scoped_authorized_and_expires(self):
+        pose=self.store.project_dir(self.pid)/'poses/4M0E_CHEMBL1.lig.pdbqt'
+        pose.parent.mkdir(parents=True,exist_ok=True)
+        pose.write_text('ATOM      1  C   LIG A   1      10.000  10.000  10.000  0.00  0.00     0.000 C\nEND\n')
+        layers=[{'role':'receptor','path':str(self.path)},{'role':'pose','path':str(pose)}]
+        key=self.viewers.issue_scene(self.token,self.pid,layers,'CHEMBL1 · 4M0E_A · VINA','en')
+        document=self.viewers.response(PREFIX+'/'+key)
+        self.assertEqual(document[0],200)
+        self.assertIn('CHEMBL1',document[2].decode())
+        self.assertNotIn(str(self.path),document[2].decode())
+        # Only the viewer's scene route exists, and only for this project.
+        self.assertEqual(self.viewers.response(PREFIX+'/'+key+'/structure')[0],403)
+        guest=self.store.register('Guest','guest@example.org','guest-password')
+        with self.assertRaises(AccessDenied):self.viewers.issue_scene(guest,self.pid,layers,'Outro','en')
+        outside=[{'role':'receptor','path':str(Path(self.temp.name)/'outside.pdb')},
+                 {'role':'pose','path':str(pose)}]
+        with self.assertRaises(AccessDenied):self.viewers.issue_scene(self.token,self.pid,outside,'Fora','en')
+        report=self.store.project_dir(self.pid)/'pose_validation.csv'
+        report.write_text('pose_id\n')
+        for invalid in ([{'role':'receptor','path':str(self.path)},{'role':'pose','path':str(report)}],
+                        [{'role':'pose','path':str(pose)}],
+                        [{'role':'receptor','path':str(self.path)}]):
+            with self.assertRaises(ValueError):self.viewers.issue_scene(self.token,self.pid,invalid,'Inválido','en')
+        self.now+=self.viewers.TTL+1
+        self.assertEqual(self.viewers.response(PREFIX+'/'+key+'/scene')[0],403)
+
+    def test_the_binding_site_style_is_offered_with_its_scale_in_both_languages(self):
+        for language,option,hydrophobic in (('pt','Sítio de ligação (superfície)','hidrofóbico'),
+                                            ('en','Binding site (surface)','hydrophobic')):
+            document=viewer_document('4M0E.pdb',language)
+            self.assertIn('/assets/pocket-surface.js',document)
+            self.assertIn('<option value="pocket">'+option,document)
+            # The figure is only readable with the scale it is colored by.
+            self.assertIn(hydrophobic,document)
+            self.assertIn('Kyte',document)
+            self.assertIn('id="pocket-opacity"',document)
+        self.assertEqual(self.viewers.response(PREFIX+'/assets/pocket-surface.js')[0],200)
+
+    def test_the_site_surface_keeps_the_published_hydrophobicity_scale(self):
+        source=(RESOURCE/'pocket-surface.js').read_text()
+        # Kyte & Doolittle (1982) values and the blue-to-orange palette of the
+        # figures this style reproduces; a silent edit would change every image.
+        for residue,value in (('ILE','4.5'),('ARG','-4.5'),('ALA','1.8'),('ASP','-3.5')):
+            self.assertIn(residue+':'+value,source.replace(' ',''))
+        self.assertIn('[30,144,255]',source.replace(' ',''))
+        self.assertIn('[255,69,0]',source.replace(' ',''))
+        self.assertIn("ALIAS = {HID:'HIS'",source)
+
+    def test_scene_panel_text_keeps_one_type_scale(self):
+        style=(RESOURCE/'pdb-viewer.css').read_text()
+        # Every text of the docking panel is sized; none falls back to the
+        # browser default, which rendered the layer names larger than the rest.
+        import re
+        for selector in ('.scene-layer','#layers','#cutoff-label','#contact-note',
+                         '#interaction-controls','.toggles','.panel>label',
+                         '#pocket-controls','#pocket-controls label','.pocket-ends','#pocket-note'):
+            rule=re.search(re.escape(selector)+r'\s*\{([^}]*)\}',style)
+            self.assertIsNotNone(rule,selector+' is not styled')
+            size=re.search(r'font-size:(\d+)px',rule[1])
+            self.assertIsNotNone(size,selector+' has no font size')
+            self.assertLessEqual(int(size[1]),13,selector)
+
     def test_bundled_assets_are_pinned_and_never_expose_arbitrary_files(self):
         provenance=json.loads((RESOURCE/'third_party.json').read_text())
         for name,digest in provenance['sha256'].items():self.assertEqual(hashlib.sha256((RESOURCE/name).read_bytes()).hexdigest(),digest)

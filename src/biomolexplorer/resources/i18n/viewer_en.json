@@ -30,5 +30,12 @@
   "hydrogen_hint": "Shows only hydrogen atoms present in the file.",
   "interaction_view": "2D interactions",
   "close": "Back to 3D",
-  "unavailable": "Visualization expired or unavailable. Return to the project and reopen it."
+  "unavailable": "Visualization expired or unavailable. Return to the project and reopen it.",
+  "pocket": "Binding site (surface)",
+  "pocket_opacity": "Surface opacity",
+  "pocket_hydrophilic": "hydrophilic",
+  "pocket_hydrophobic": "hydrophobic",
+  "pocket_note": "Solvent-excluded surface colored by residue hydrophobicity (Kyte–Doolittle scale). The residues lining the site stay solid; the rest of the receptor is translucent.",
+  "pocket_building": "Computing the site surface…",
+  "pocket_unavailable": "Available when the structure has a ligand that defines the site."
 }

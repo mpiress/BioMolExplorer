@@ -126,5 +126,7 @@
   "consensus.aggregating": "Agregando os alvos por composto…",
   "consensus.exporting": "Publicando a tabela e as estruturas representativas…",
   "consensus.done": "Consenso concluído.",
-  "consensus.checking": "Verificando os resultados disponíveis para o consenso…"
+  "consensus.checking": "Verificando os resultados disponíveis para o consenso…",
+  "pose.validating": "Validando poses…",
+  "pose.done": "Validação de poses concluída."
 }

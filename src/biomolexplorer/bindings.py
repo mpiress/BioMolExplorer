@@ -18,11 +18,35 @@ def asset_references(stage):
         for binding in stage.get('bindings',{}).values() for source in sources(binding) if 'asset' in source}
 
 
-def pack(references):
+def _automatic(reference):
+    return ('stage' in reference and reference.get('selector','auto')=='auto'
+            and not reference.get('artifact_id') and not reference.get('selection') and not reference.get('compound_id'))
+
+
+def _redundant(reference,references):
+    """An automatic reference already covered by another one from that stage.
+
+    A curated choice (selector, artifact, entity selection or compound) of the
+    same producer port supersedes ``auto``; a port-qualified ``auto``
+    supersedes a legacy unqualified one.
+    """
+    if not _automatic(reference):return False
+    port=reference.get('output_port')
+    for other in references:
+        if other is reference or other.get('stage')!=reference['stage'] or other.get('mode','current')!=reference.get('mode','current'):continue
+        if not _automatic(other) and (port is None or other.get('output_port') in (None,port)):return True
+        if _automatic(other) and port is None and other.get('output_port'):return True
+    return False
+
+
+def pack(references,collapse=False):
+    """Deduplicate references; ``collapse`` also drops semantically redundant ones."""
     unique=[]
     for reference in references:
         if reference not in unique:
             unique.append(reference)
+    if collapse:
+        unique=[reference for reference in unique if not _redundant(reference,unique)]
     return unique[0] if len(unique)==1 else {'sources':unique} if unique else None
 
 

@@ -48,6 +48,10 @@ OPERATIONS = {
         ('pdb_code', 'base_vina_path','density', 'radius', 'distance', 'conformer_search_type', 'plot_max_residues', 'pH', 'preparation_options', 'receptor_prepared','dock6_mode')),
     'consensus': OperationSpec('wrappers.docking', 'generate_consensus', ('base_input_path', 'target'),
         ('repulsion_weight', 'base_vina_path', 'base_dock6_path')),
+    'pose_validation': OperationSpec('wrappers.pose_validation', 'validate_poses', ('base_input_path', 'target'),
+        ('base_selected_mols', 'pose_inputs', 'selected_receptors', 'selected_ligands', 'excluded_pairs', 'strict_filter',
+         'vdw_clash_scale', 'delta_energy_limit', 'bond_tolerance', 'angle_tolerance',
+         'planarity_tolerance', 'minimization_steps')),
 }
 
 
@@ -72,6 +76,9 @@ def validate_operation(operation, parameters, *, defer_redocking_selection=False
             origin=parameters['dataset_origin']
             if not isinstance(origin,dict) or origin.keys()-{'tag','label'} or origin.get('tag') not in TAGS or not isinstance(origin.get('label',''),str):
                 raise ValueError('Tag de conjunto ADMET inválida.')
+    if operation=='pose_validation':
+        from .pose_validation_config import validate_parameters as validate_pose_parameters
+        validate_pose_parameters(parameters)
     if operation=='retrieve_zinc':
         from .zinc_retrieval import validate_download_workers
         validate_download_workers(parameters.get('download_workers',4))

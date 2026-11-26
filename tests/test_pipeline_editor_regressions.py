@@ -173,4 +173,124 @@ class PipelineEditorRegressionTests(unittest.TestCase):
         self.assertEqual(editor.selection.value,self.stage['id'])
 
 
+class InvalidationDecisionTests(unittest.TestCase):
+    """An invalidation question must never freeze the buttons that ask it."""
+    setUp = PipelineEditorRegressionTests.setUp
+
+    def project_with_results(self):
+        """A saved pipeline whose recorded results an edit would invalidate."""
+        import json, time
+        from uuid import uuid4
+        from biomolexplorer.stage_cache import artifact_manifest
+        retrieval = new_stage('retrieve_compounds'); admet = new_stage('admet')
+        admet['bindings'] = {'base_input_path': {'stage': retrieval['id'], 'selector': 'auto'}}
+        self.store.save_pipeline(self.token, self.pid, [retrieval, admet], 0)
+        run_id = uuid4().hex
+        folder = self.store.project_dir(self.pid)/'runs'/run_id/'artifacts'/'compounds'/'CHEMBL220'
+        folder.mkdir(parents=True)
+        table = folder/'compounds.csv'
+        table.write_text('molecule_chembl_id,canonical_smiles\nCHEMBL1,CCO\n')
+        stages = [dict(id=retrieval['id'], name=retrieval['name'], operation='retrieve_compounds',
+                       configuration=retrieval, status='succeeded', artifacts=[str(table)],
+                       artifact_manifest=artifact_manifest([str(table)]), finished_at=time.time())]
+        with self.store.connect() as db:
+            db.execute('INSERT INTO runs VALUES (?,?,?,?,?,?,?,?)',
+                       (run_id, self.pid, self.store.user(self.token)['id'], 'succeeded',
+                        json.dumps(stages), time.time(), time.time(), None))
+        return retrieval
+
+    async def edited(self):
+        retrieval = self.project_with_results()
+        await self.ui.open_project(self.pid)
+        stage = next(s for s in self.ui.current['pipeline'] if s['id'] == retrieval['id'])
+        stage['parameters']['target'] = 'OutroAlvo'
+        self.ui.dirty = True
+        self.assertTrue(self.store.result_removal_plan(self.token, self.pid, self.ui.current['pipeline'])['affected'])
+
+    def toolbar(self, label):
+        return next(control for control in walk(self.page.controls) if isinstance(control, ft.Button)
+                    and (control.content.value if isinstance(control.content, ft.Text) else control.content) == label)
+
+    def question(self):
+        return next((dialog for dialog in self.page.dialogs if dialog.open and
+                     getattr(getattr(dialog, 'title', None), 'value', '') == 'Confirmar alteração e invalidar resultados?'), None)
+
+    def covering(self, dialog):
+        return [other for other in self.page.dialogs if other is not dialog and getattr(other, 'open', False)
+                and str(getattr(other, 'key', '') or '').startswith('processing')]
+
+    async def answer(self, label=None):
+        """Reach the decision the way a person does, or dismiss it."""
+        for _ in range(500):
+            dialog = self.question()
+            if dialog is not None:
+                covering = self.covering(dialog)
+                if label is None:
+                    dialog.on_dismiss(None); dialog.open = False
+                else:
+                    next(action for action in dialog.actions if
+                         (action.content.value if isinstance(action.content, ft.Text) else action.content) == label).on_click(None)
+                return covering
+            await asyncio.sleep(0)
+        raise AssertionError('A decisão nunca foi apresentada.')
+
+    def test_the_decision_is_reachable_and_the_execution_continues(self):
+        async def scenario():
+            await self.edited()
+            pressed = asyncio.ensure_future(self.answer('Confirmar remoção'))
+            await asyncio.wait_for(self.toolbar('Executar pipeline').on_click(None), timeout=30)
+            # A modal splash keeps its barrier above later dialogs: a question
+            # under one could never be answered and the action waited forever.
+            self.assertEqual(await pressed, [])
+            self.assertFalse(self.ui.submitting)
+            self.assertFalse(self.ui.dirty)
+        asyncio.run(scenario())
+
+    def test_dismissing_the_decision_keeps_every_other_button_alive(self):
+        async def scenario():
+            await self.edited()
+            pressed = asyncio.ensure_future(self.answer())
+            await asyncio.wait_for(self.toolbar('Executar pipeline').on_click(None), timeout=30)
+            await pressed
+            self.assertFalse(self.ui.submitting)
+            # The change was restored, and the other actions still answer.
+            await asyncio.wait_for(self.toolbar('Arquivos').on_click(None), timeout=30)
+            self.assertEqual(self.ui.tab, 'Arquivos')
+            self.ui.tab = 'Pipeline'
+            await self.ui.draw_project()
+            await asyncio.wait_for(self.toolbar('Executar pipeline').on_click(None), timeout=30)
+            self.assertFalse(self.ui.submitting)
+        asyncio.run(scenario())
+
+    def test_a_pending_decision_never_blocks_another_action(self):
+        async def scenario():
+            await self.edited()
+            click = asyncio.ensure_future(self.toolbar('Executar pipeline').on_click(None))
+            for _ in range(500):
+                if self.question() is not None: break
+                await asyncio.sleep(0)
+            self.assertIsNotNone(self.question())
+            # While the question waits, every other action must still answer.
+            self.assertIs(await asyncio.wait_for(self.ui.save_draft(silent=True), timeout=10), False)
+            # A second execution declines the duplicate instead of waiting.
+            await asyncio.wait_for(self.toolbar('Executar pipeline').on_click(None), timeout=30)
+            await asyncio.wait_for(self.toolbar('Arquivos').on_click(None), timeout=30)
+            self.assertEqual(self.ui.tab, 'Arquivos')
+            self.assertIsNotNone(self.question())
+            await self.answer('Cancelar')
+            await asyncio.wait_for(click, timeout=30)
+            self.assertFalse(self.ui.submitting)
+        asyncio.run(scenario())
+
+    def test_an_automatic_draft_never_asks_and_keeps_the_change_pending(self):
+        async def scenario():
+            await self.edited()
+            opened = [dialog for dialog in self.page.dialogs if dialog.open]
+            self.assertIs(await asyncio.wait_for(self.ui.save_draft(silent=True, confirm=False), timeout=10), False)
+            self.assertTrue(self.ui.dirty)
+            self.assertIsNone(self.question())
+            self.assertEqual([dialog for dialog in self.page.dialogs if dialog.open], opened)
+        asyncio.run(scenario())
+
+
 if __name__=='__main__':unittest.main()

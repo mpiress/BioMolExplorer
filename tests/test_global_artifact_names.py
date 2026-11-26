@@ -92,7 +92,8 @@ class GlobalNamesTests(unittest.TestCase):
             'docking_vina':('docking_results.csv','molecule_chembl_id,engine,score\nM1,vina,-1\n','Scores'),
             'docking_dock6':('docking_results.csv','molecule_chembl_id,engine,score\nM1,dock6,-1\n','Scores'),
             'consensus':('scores.csv','molecule_chembl_id,vina,dock6\nM1,-1,-2\n','Scores'),
-            'dynamics_dock6':('energies.json','{"score":-1}','AmberScore')}
+            'dynamics_dock6':('energies.json','{"score":-1}','AmberScore'),
+            'pose_validation':('pose_validation.csv','pose_id,receptor_id,pose_valid\nP1,4M0E_A,True\n','PoseValidation')}
         self.assertEqual(set(examples),set(TITLES))
         for op,(name,text,kind) in examples.items():
             with self.subTest(op=op):

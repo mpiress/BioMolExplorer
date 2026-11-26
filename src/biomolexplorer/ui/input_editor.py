@@ -264,6 +264,9 @@ class InputEditor:
             value=selection_text(ref.get('selection')),disabled=not self.writable)
         entity.on_change=lambda e:self.changed()
         self.entity_fields[id(source)]=entity
+        # Pose validation selects targets and compounds in its own sections;
+        # a second, free-text entity filter would compete with them.
+        entity.visible=self.stage['operation']!='pose_validation'
         input_controls.append(entity)
         row=ft.Column(input_controls,spacing=20,horizontal_alignment=ft.CrossAxisAlignment.STRETCH)
         if self.stage['operation'] in ('docking_vina','docking_dock6') and self.is_ligand:

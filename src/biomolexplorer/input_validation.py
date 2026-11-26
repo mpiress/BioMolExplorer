@@ -32,7 +32,7 @@ def output_kind(operation):
     if operation=='dynamics_dock6':return 'dynamics'
     return {'retrieve_structures':'structures','prepare_structures':'prepared_structures','redocking':'prepared_structures',
             'fingerprints':'fingerprints','similarity':'similarity','docking_vina':'vina','docking_dock6':'dock6',
-            'consensus':'scores'}.get(operation,'compounds')
+            'consensus':'scores','pose_validation':'molecular_poses'}.get(operation,'compounds')
 
 
 def contract(kind,operation=None):

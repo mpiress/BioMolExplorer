@@ -29,6 +29,7 @@ class WorkspaceStore:
         self.staging.mkdir(exist_ok=True, mode=0o700)
         self.database = self.root / 'workspace.sqlite3'
         self.max_upload_bytes = max_upload_bytes
+        self._enable_concurrent_reads()
         with self.connect() as db:
             db.executescript('''
                 CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY, email TEXT UNIQUE NOT NULL,
@@ -120,6 +121,27 @@ class WorkspaceStore:
                                  parent=None, confirmation=None):
         from .project_folders import create
         return create(self, token, name, parent, description, color, tags, confirmation)
+
+    def _enable_concurrent_reads(self):
+        """Write-ahead logging, so reading a project never waits for its run.
+
+        A rollback journal needs an exclusive lock to commit, so every write of
+        an execution stopped the interface that was following it, and the final
+        state of a run only became readable when its audit had finished.  The
+        mode is a property of the file and survives for every later session.
+        Shared memory is not available on every filesystem: a refusal keeps the
+        previous mode instead of preventing the workspace from opening.
+        """
+        try:
+            db = sqlite3.connect(self.database, timeout=30)
+        except sqlite3.Error:
+            return
+        try:
+            db.execute('PRAGMA journal_mode=WAL')
+        except sqlite3.Error:
+            pass
+        finally:
+            db.close()
 
     @contextmanager
     def connect(self):
@@ -350,16 +372,17 @@ class WorkspaceStore:
             existing=db.execute('SELECT pipeline,revision FROM projects WHERE id=?',(project_id,)).fetchone()
         if expected_revision>0 and existing and existing['revision']==expected_revision and json.loads(existing['pipeline'])==stages:
             return self.project(token,project_id)
-        # MD configuration never needs to inflate immutable docking execution
-        # JSON into the audit snapshot. Keep exact native blobs and rollback
-        # semantics while limiting this optimization to an MD-only revision.
+        # MD and pose validation configuration never need to inflate immutable
+        # docking execution JSON into the audit snapshot. Keep exact native
+        # blobs and rollback semantics while limiting this optimization to a
+        # revision that only changes those downstream evaluation blocks.
         compact_md=False
         if existing and existing['revision']==expected_revision:
             before={stage['id']:stage for stage in json.loads(existing['pipeline'])}
             after={stage['id']:stage for stage in stages}
             changed={key for key in before.keys()|after.keys() if before.get(key)!=after.get(key)}
             compact_md=bool(changed) and all(
-                all(item is None or item.get('operation')=='dynamics_dock6' for item in (before.get(key),after.get(key)))
+                all(item is None or item.get('operation') in ('dynamics_dock6','pose_validation') for item in (before.get(key),after.get(key)))
                 for key in changed)
         def md_run_versions(connection):
             return [tuple(row) for row in connection.execute('''SELECT r.id,r.updated,r.status,coalesce(v.revision,0)
@@ -625,6 +648,38 @@ class WorkspaceStore:
             ids=[row[0] for row in db.execute('''SELECT id FROM runs WHERE project_id=?
                 ORDER BY CASE WHEN status IN ('queued','running','awaiting_input') THEN 0 ELSE 1 END,created DESC LIMIT ?''',(project_id,limit))]
         return [self.get_result_run(token,rid) for rid in ids]
+
+    def review_run(self,token,run_id):
+        """State and progress of one execution, without its file descriptors.
+
+        What the progress panel shows is the state of each block.  Reading it
+        from the proof projection keeps following a run cheap, however many
+        files it has already produced.
+        """
+        with self.connect() as db:
+            row=db.execute('SELECT project_id,user_id,status,created,updated,error FROM runs WHERE id=?',(run_id,)).fetchone()
+        if row is None:raise AccessDenied('Execução não encontrada.')
+        project=self.project(token,row['project_id'])
+        from .result_catalog import read_proofs
+        from .result_visibility import project_run
+        return project_run(dict(row,id=run_id,stages=read_proofs(self,run_id) or []),project['pipeline'])
+
+    def list_review_runs(self,token,project_id,*,limit=100):
+        """Block states of the recent executions, without their file descriptors.
+
+        Finding where a result lives only needs the state of each block.  The
+        proof projection answers that from the read model, so a project with
+        gigabytes of execution history stays navigable.
+        """
+        if type(limit) is not int or not 1<=limit<=100:raise ValueError('Limite de execuções inválido.')
+        project=self.project(token,project_id)
+        from .result_catalog import read_proofs
+        from .result_visibility import project_run
+        with self.connect() as db:
+            rows=[dict(row) for row in db.execute('''SELECT id,user_id,status,created,updated,error FROM runs
+                WHERE project_id=? ORDER BY created DESC LIMIT ?''',(project_id,limit))]
+        return [project_run(dict(row,project_id=project_id,stages=read_proofs(self,row['id']) or []),project['pipeline'])
+                for row in rows]
 
     def result_revision(self,token,run_id):
         with self.connect() as db:

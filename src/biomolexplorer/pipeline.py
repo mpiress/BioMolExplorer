@@ -31,6 +31,19 @@ class RunPaused(Exception):
     pass
 
 
+class StageAdjustment(ValueError):
+    """A block an execution refuses, carrying which one it is.
+
+    Two blocks of the same operation share a default name, so the message
+    alone cannot tell them apart on the canvas.  The identifier travels with
+    the error and lets the interface open exactly the block to adjust.
+    """
+    def __init__(self, message, stage):
+        super().__init__(message)
+        self.stage_id = stage['id']
+        self.stage_name = stage['name']
+
+
 def execution_context(stages):
     return [dict(s['configuration'],_execution_batches=s.get('batches',[]),
                  _execution_artifact_records=s.get('artifact_records',[])) for s in stages]
@@ -107,7 +120,7 @@ def failed_redocking_receptor(reference, results):
 
 def requires_curation(stage):
     stage=configured_inputs(stage)
-    if stage['operation']=='consensus' or stage.get('provided_results'):return False
+    if stage['operation'] in ('consensus','pose_validation') or stage.get('provided_results'):return False
     if stage['operation']=='dynamics_dock6' and not stage['parameters'].get('selected_pairs'):return True
     if not stage_dependencies(stage):return False
     if stage['operation']=='redocking' and stage['parameters'].get('pdb_codes'):return False
@@ -353,7 +366,7 @@ class PipelineService:
             try:
                 self._validate_parameters(project_id, stage, partial=True)
             except (ValueError,FileNotFoundError) as exc:
-                raise ValueError(f'O bloco “{stage["name"]}” precisa de ajustes: {exc}') from None
+                raise StageAdjustment(f'O bloco “{stage["name"]}” precisa de ajustes: {exc}',stage) from None
             if stage['operation'] == 'import_results' or stage.get('provided_results'):
                 names = set()
                 params=stage.get('provided_results') or stage['parameters']
@@ -363,9 +376,9 @@ class PipelineService:
                     paths.append(path)
                     typed_paths.append((asset,path))
                     if not path.is_file():
-                        raise ValueError(f'O bloco “{stage["name"]}” contém um arquivo indisponível. Envie-o novamente.')
+                        raise StageAdjustment(f'O bloco “{stage["name"]}” contém um arquivo indisponível. Envie-o novamente.',stage)
                     if path.name in names:
-                        raise ValueError(f'O bloco “{stage["name"]}” contém arquivos com o mesmo nome. Renomeie um deles antes de importar.')
+                        raise StageAdjustment(f'O bloco “{stage["name"]}” contém arquivos com o mesmo nome. Renomeie um deles antes de importar.',stage)
                     names.add(path.name)
                 from .input_validation import validate_bundle
                 if stage['operation']=='import_results':
@@ -376,7 +389,7 @@ class PipelineService:
               for binding in input_sources(group):
                 if 'asset' in binding:
                     if not self.store.asset_path(token,project_id,binding['asset']).is_file():
-                        raise ValueError(f'A entrada do bloco “{stage["name"]}” está indisponível. Envie o arquivo novamente.')
+                        raise StageAdjustment(f'A entrada do bloco “{stage["name"]}” está indisponível. Envie o arquivo novamente.',stage)
         run_id = uuid4().hex
         snapshot = [{'id':stage['id'],'name':stage['name'],'operation':stage['operation'],'project_stage':True,
                      'status':'queued' if stage.get('enabled',True) else 'skipped','configuration':stage,'artifacts':[],
@@ -507,8 +520,14 @@ class PipelineService:
             tuple((batch.get('cache_key'),batch.get('reused_from_run')) for batch in item.get('batches',[])),
             json.dumps(item.get('input_files',{}),sort_keys=True),
             json.dumps(item.get('input_manifest',{}),sort_keys=True)) for item in stages)
+        # Everything a reader needs from the authoritative column except the
+        # progress of the block that is running right now.
+        state=(status,error,tuple((item['id'],item['status'],item.get('log_path'),item.get('job_id'),
+            item.get('started_at'),item.get('finished_at'),item.get('error'),item.get('skip_reason'),
+            item.get('pause_reason'),item.get('pause_requested')) for item in stages))
         indexed=getattr(self,'_indexed_run_signatures',{})
         changed=indexed.get(run_id)!=signature
+        states=getattr(self,'_run_state_signatures',{})
         updates=getattr(self,'_run_update_times',{})
         previous=updates.get(run_id)
         if not changed and status=='running' and previous and previous[1]=='running' and time.monotonic()-previous[0]<2:
@@ -524,12 +543,48 @@ class PipelineService:
             if prior and changed:
                 from .artifact_registry import register_run
                 register_run(db,prior['project_id'],run_id,stages)
-            db.execute('UPDATE runs SET status=?,stages=?,updated=?,error=? WHERE id=?',
-                       (status,json.dumps(stages),time.time(),error,run_id))
+            # A progress tick carries a message and a counter.  SQLite rewrites
+            # a whole row for any column of it, and this row holds a descriptor
+            # of every file the run produced: a docking block used to rewrite
+            # hundreds of megabytes every two seconds just to advance a
+            # counter.  The read model's status overlay publishes the tick; the
+            # row itself is rewritten whenever the results or the state of the
+            # run really change.
+            durable=changed or prior is None or state!=states.get(run_id) or status!=prior['status']
+            if durable:
+                db.execute('UPDATE runs SET status=?,stages=?,updated=?,error=? WHERE id=?',
+                           (status,json.dumps(stages),time.time(),error,run_id))
+            else:
+                # The trigger that publishes a new read revision watches the
+                # stages column; the tick announces itself instead.
+                db.execute('''INSERT INTO result_read_versions VALUES (?,1)
+                    ON CONFLICT(run_id) DO UPDATE SET revision=revision+1''',(run_id,))
             from .result_catalog import store_snapshot
             store_snapshot(db,run_id,stages,unchanged=not changed)
-            if prior and prior['status'] in ACTIVE_RUNS and status not in ACTIVE_RUNS:
-                from .project_state import read_snapshot,record
+            audit=prior if prior and prior['status'] in ACTIVE_RUNS and status not in ACTIVE_RUNS else None
+        if audit is not None:
+            self._audit_execution(audit,run_id,status,stages)
+        indexed[run_id]=signature
+        self._indexed_run_signatures=indexed
+        states[run_id]=state
+        self._run_state_signatures=states
+        updates[run_id]=(time.monotonic(),status)
+        self._run_update_times=updates
+
+    def _audit_execution(self, prior, run_id, status, stages):
+        """Record the finished execution in the history, after it is visible.
+
+        The snapshot walks every file of the project, hashes the new ones and
+        serializes the whole execution history.  Holding the write transaction
+        of the final state open for that work kept the run reported as running
+        for a minute after its last block had already finished, and blocked
+        every reader of the project in the meantime.  The state is committed
+        first; the audit follows in its own transaction.
+        """
+        from .project_state import read_snapshot,record
+        try:
+            with self.store.connect() as db:
+                db.execute('BEGIN IMMEDIATE')
                 last=db.execute('SELECT id FROM project_history WHERE project_id=? ORDER BY created DESC LIMIT 1',(prior['project_id'],)).fetchone()
                 compact_audit=any(item.get('operation') in ('consensus','docking_vina','docking_dock6','redocking') for item in stages)
                 if compact_audit:
@@ -539,10 +594,11 @@ class PipelineService:
                 else:
                     before=read_snapshot(self.store,prior['project_id'],last['id'],'after',db=db) if last else None
                     record(self.store,db,prior['project_id'],prior['user_id'],'execution',f'Execução {run_id[:8]}: {status}',before)
-        indexed[run_id]=signature
-        self._indexed_run_signatures=indexed
-        updates[run_id]=(time.monotonic(),status)
-        self._run_update_times=updates
+        except Exception as exc:
+            # The results and their state are already persisted: a failed audit
+            # must not turn a finished execution into a failed one.
+            get_logger('backend').exception('Could not record the finished execution in the history: %s',exc,
+                extra={'event':'run.audit_failed','run_id':run_id,'project_id':prior['project_id'],**diagnose_exception(exc)})
 
     def _docking_sources(self, project_id, refs, results, engine=None):
         from .input_validation import columns
@@ -874,6 +930,15 @@ class PipelineService:
             if producer.get('operation')=='admet' and producer['id'] in results:
                 results[producer['id']]=[str(p) for p in produced_files(dict(producer,artifacts=results[producer['id']]))]
         stage=copy.deepcopy(stage)
+        if stage['operation']=='pose_validation':
+            # Targets, compounds and poses come from the artifact registry and
+            # from the published score tables, never from this run's JSON.
+            from .pose_inputs import PoseInputs
+            params=self._runtime_parameters(stage)
+            resolved=PoseInputs(self.store,project_id,pipeline=pipeline).resolve(
+                dict(stage,parameters=params),item)
+            self._validate_parameters(project_id,dict(stage,parameters=resolved),cache_only=cache_only)
+            return resolved
         from .artifact_registry import SemanticArtifactResolver
         if stage['operation']=='dynamics_dock6':
             from .md_semantic import semantic_context

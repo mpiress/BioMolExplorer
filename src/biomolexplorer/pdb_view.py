@@ -16,7 +16,7 @@ from .workspace import AccessDenied
 
 RESOURCE=Path(__file__).parent/'resources/viewer'
 PREFIX='/molecular-viewer'
-ASSETS={'3Dmol-min.js','pdb-viewer.js','pdb-viewer.css','docking-viewer.js','logo.png'}
+ASSETS={'3Dmol-min.js','pdb-viewer.js','pdb-viewer.css','docking-viewer.js','pocket-surface.js','logo.png'}
 PRIVATE_HEADERS={'Cache-Control':'no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff',
     'Content-Security-Policy':"default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data: blob:; worker-src 'self' blob:; base-uri 'none'; frame-ancestors 'none'"}
 from .i18n import locales,localized_dictionary
@@ -77,6 +77,29 @@ class StructureViewers:
         return self._issue({'token':token,'pid':pid,'name':str(name)+'.sdf',
                             'data':data,'language':language,'generated':True})
 
+    def issue_scene(self,token,pid,layers,name,language='pt',ligand_smiles=None,reference_kind=None):
+        """Authorize a receptor-ligand scene built from already published files.
+
+        Every layer is scoped to the project and must be a readable structure,
+        exactly as a single-file preview is; the scene itself is recomputed
+        from those files on each browser request.
+        """
+        self.store.project(token,pid)
+        validated=[];total=0
+        for entry in layers:
+            path=self.store.scoped_path(pid,entry['path'])
+            if path.suffix.lower() not in ('.pdb','.pdbqt','.mol2','.sdf') or not path.is_file():
+                raise ValueError('Estrutura molecular indisponível.')
+            total+=path.stat().st_size
+            if total>MAX_VIEW_BYTES:
+                raise ValueError('Visualização maior que o limite de 32 MB. Baixe o arquivo para consultá-lo localmente.')
+            validated.append(dict(role=entry['role'],path=str(path),format=path.suffix[1:].lower()))
+        roles={entry['role'] for entry in validated}
+        if not {'receptor','pose'} <= roles:
+            raise ValueError('O complexo receptor-ligante desta pose está indisponível.')
+        spec=dict(name=str(name),layers=validated,reference_kind=reference_kind,ligand_smiles=ligand_smiles)
+        return self._issue(dict(token=token,pid=pid,kind='scene',spec=spec,language=language,name=str(name)))
+
     def issue_result(self,token,pid,rid,sid,kind,selection,language='pt'):
         record=dict(token=token,pid=pid,rid=rid,sid=sid,kind=kind,selection=selection,language=language)
         self._result_spec(record)
@@ -94,6 +117,9 @@ class StructureViewers:
             selection=selection,language=language,deferred=True,name=name or '3D'))
 
     def _result_spec(self,record):
+        if record['kind']=='scene':
+            # The paths were scoped and checked when the ticket was issued.
+            return record['spec']
         if record['kind']=='redocking':
             from .redocking_results import RedockingResults
             return RedockingResults(self.store).scene(record['token'],record['pid'],record['rid'],record['sid'],record['selection'])

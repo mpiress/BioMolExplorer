@@ -30,5 +30,12 @@
   "hydrogen_hint": "Exibe apenas os hidrogênios presentes no arquivo.",
   "interaction_view": "Interações 2D",
   "close": "Voltar ao 3D",
-  "unavailable": "Visualização expirada ou indisponível. Retorne ao projeto e abra novamente."
+  "unavailable": "Visualização expirada ou indisponível. Retorne ao projeto e abra novamente.",
+  "pocket": "Sítio de ligação (superfície)",
+  "pocket_opacity": "Opacidade da superfície",
+  "pocket_hydrophilic": "hidrofílico",
+  "pocket_hydrophobic": "hidrofóbico",
+  "pocket_note": "Superfície de exclusão de solvente colorida pela hidrofobicidade dos resíduos (escala Kyte–Doolittle). Os resíduos que revestem o sítio ficam sólidos; o restante do receptor fica translúcido.",
+  "pocket_building": "Calculando a superfície do sítio…",
+  "pocket_unavailable": "Disponível quando a estrutura tem um ligante que define o sítio."
 }

@@ -161,32 +161,47 @@ def index_run(stages, run_id, assets=()):
         for record in item['artifact_records']:by_path.setdefault(record['path'], []).append(record)
     for item in stages:
         batches={path:batch for batch in item.get('batches',[]) for path in batch.get('artifacts',[])}
+        # Every file a batch produces shares that batch's lineage.  A docking
+        # block publishing fifteen thousand poses used to build - and store -
+        # fifteen thousand copies of the same forty kilobytes.  The lineage is
+        # computed once per batch and shared, so the run keeps one copy of it.
+        shared={};derived={}
         for record in item['artifact_records']:
             batch=batches.get(record['path'])
             if not item.get('reused') and (batch or item).get('artifact_context'):
                 record['context']=dict((batch or item)['artifact_context'])
-            config=(batch or {}).get('configuration', item.get('configuration', {}))
-            inputs=(batch or item).get('input_files', {})
-            lineage={}
-            for field, paths in inputs.items():
-                refs=sources(config.get('bindings', {}).get(field, {}))
-                origins={r['stage'] for r in refs if 'stage' in r}
-                lineage[field]=[]
-                for path in paths:
-                    matches=[r for r in by_path.get(str(path), []) if r['stage_id'] in origins]
-                    if matches:
-                        lineage[field].extend({k:r[k] for k in ('artifact_id','occurrence_id','stage_id','stage_name','run_id','name','selector','path')} for r in matches)
-                    else:
-                        asset=assets_by_path.get(str(path),{})
-                        lineage[field].append({'path':str(path), 'name':asset.get('name',Path(path).name),
-                            'asset_id':asset.get('id'), 'asset_ids':[asset['id']] if asset else []})
+            if id(batch or item) not in shared:
+                config=(batch or {}).get('configuration', item.get('configuration', {}))
+                inputs=(batch or item).get('input_files', {})
+                lineage={}
+                for field, paths in inputs.items():
+                    refs=sources(config.get('bindings', {}).get(field, {}))
+                    origins={r['stage'] for r in refs if 'stage' in r}
+                    lineage[field]=[]
+                    for path in paths:
+                        matches=[r for r in by_path.get(str(path), []) if r['stage_id'] in origins]
+                        if matches:
+                            lineage[field].extend({k:r[k] for k in ('artifact_id','occurrence_id','stage_id','stage_name','run_id','name','selector','path')} for r in matches)
+                        else:
+                            asset=assets_by_path.get(str(path),{})
+                            lineage[field].append({'path':str(path), 'name':asset.get('name',Path(path).name),
+                                'asset_id':asset.get('id'), 'asset_ids':[asset['id']] if asset else []})
+                shared[id(batch or item)]=lineage
+            lineage=shared[id(batch or item)]
             # Cached records retain the execution that originally produced them.
             if lineage and not item.get('reused'):record['inputs']=lineage
-            parents=[r for rows in record.get('inputs',{}).values() for r in rows]
-            record['parent_artifact_ids']=list(dict.fromkeys(r['artifact_id'] for r in parents if r.get('artifact_id')))
+            inputs=record.get('inputs') or {}
+            # The memo keeps the lineage it was keyed on, so the identity it
+            # answers for cannot be reused by another object.
+            cached=derived.get(id(inputs))
+            if cached is None or cached[0] is not inputs:
+                parents=[r for rows in inputs.values() for r in rows]
+                cached=derived[id(inputs)]=(inputs,
+                    list(dict.fromkeys(r['artifact_id'] for r in parents if r.get('artifact_id'))),
+                    {field:[dict(r) for r in rows] for field,rows in inputs.items()})
+            record['parent_artifact_ids']=cached[1]
             record['lineage']=record['parent_artifact_ids']
-            record['source']=({field:[dict(r) for r in rows] for field,rows in record.get('inputs',{}).items()}
-                or {key:value for key,value in record['context'].items() if value is not None})
+            record['source']=cached[2] or {name:value for name,value in record['context'].items() if value is not None}
 
     from .artifact_naming import name_records
     name_records([(r,s) for s in stages for r in s['artifact_records']])

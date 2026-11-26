@@ -5,6 +5,7 @@
 <link rel="icon" type="image/png" href="{{prefix}}/assets/logo.png">
 <link rel="stylesheet" href="{{prefix}}/assets/pdb-viewer.css">
 <script src="{{prefix}}/assets/3Dmol-min.js" defer></script>
+<script src="{{prefix}}/assets/pocket-surface.js" defer></script>
 <script src="{{prefix}}/assets/docking-viewer.js" defer></script>
 <script src="{{prefix}}/assets/pdb-viewer.js" defer></script></head>
 <body>
@@ -13,7 +14,8 @@
 <div class="header-actions"><button id="snapshot">{{snapshot}}</button><button id="fullscreen">{{fullscreen}}</button></div></header>
 <main><div id="scene" aria-label="{{viewer}}"></div>
 <aside class="panel"><label for="representation">{{receptor_style}}</label>
-<select id="representation"><option value="cartoon">{{cartoon}}</option><option value="sticks">{{sticks}}</option><option value="spheres">{{spheres}}</option><option value="lines">{{lines}}</option></select>
+<select id="representation"><option value="cartoon">{{cartoon}}</option><option value="sticks">{{sticks}}</option><option value="spheres">{{spheres}}</option><option value="lines">{{lines}}</option><option value="pocket">{{pocket}}</option></select>
+<div id="pocket-controls" hidden><div class="pocket-bar" aria-hidden="true"></div><div class="pocket-ends"><span>{{pocket_hydrophilic}}</span><span>{{pocket_hydrophobic}}</span></div><label for="pocket-opacity">{{pocket_opacity}}</label><input id="pocket-opacity" type="range" min="40" max="100" step="5" value="80"><p id="pocket-note">{{pocket_note}}</p></div>
 <label for="ligand-representation">{{ligand_style}}</label>
 <select id="ligand-representation"><option value="sticks">{{sticks}}</option><option value="spheres">{{spheres}}</option><option value="lines">{{lines}}</option></select>
 <label for="color">{{color}}</label><select id="color"><option value="chain">{{chain}}</option><option value="element">{{element}}</option><option value="spectrum">{{spectrum}}</option></select>

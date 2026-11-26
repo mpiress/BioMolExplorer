@@ -10,6 +10,11 @@
   const waterNames = ["HOH", "WAT", "DOD"];
   const proteinNames = new Set(["ALA", "ARG", "ASN", "ASP", "CYS", "GLN", "GLU", "GLY", "HIS", "ILE", "LEU", "LYS", "MET", "PHE", "PRO", "SER", "THR", "TRP", "TYR", "VAL", "HID", "HIE", "HIP", "CYX", "SEC", "PYL"]);
   const palette = ["#2dd4bf", "#60a5fa", "#c084fc", "#fbbf24", "#fb7185", "#34d399", "#f97316", "#a5b4fc"];
+  // A binding site is the shell of residues lining the ligand; 5 Å is the usual
+  // reporting distance, and a site needs a real molecule, not an ion.
+  const SITE_RADIUS = 5, SITE_ATOMS = 6;
+  const sites = {};
+  let surfaces = null;
   const currentModel = () => models[modelIndex];
   const selection = () => control("chain").value ? {chain: control("chain").value === "__blank__" ? "" : control("chain").value} : {};
   const isWater = atom => waterNames.includes(atom.resn);
@@ -17,6 +22,51 @@
   // the ribbons+ligands representation and honor the ligand visibility switch.
   const isLigand = atom => (config.ligand || atom.hetflag || (config.format === "mol2" && !proteinNames.has(atom.resn))) && !isWater(atom);
   const isPolymer = atom => !isLigand(atom) && !isWater(atom);
+  const isHeavy = atom => !["H", "D"].includes(String(atom.elem || "").toUpperCase());
+  const residueKey = atom => `${(atom.chain || "").trim()}|${atom.resi}|${(atom.icode || "").trim()}|${atom.resn}`;
+  /* The largest hetero residue defines the site: ions and buffer molecules are
+     present in many structures and would scatter the selection. */
+  function bindingSite() {
+    if (sites[modelIndex] !== undefined) return sites[modelIndex];
+    const atoms = currentModel().selectedAtoms({}), groups = new Map();
+    atoms.forEach(atom => {
+      if (!isLigand(atom) || !isHeavy(atom)) return;
+      const key = residueKey(atom);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(atom);
+    });
+    const ligand = [...groups.values()].sort((first, second) => second.length - first.length)[0];
+    if (!ligand || ligand.length < SITE_ATOMS) return (sites[modelIndex] = null);
+    const keys = new Set();
+    atoms.forEach(atom => {
+      if (!isPolymer(atom) || !isHeavy(atom) || keys.has(residueKey(atom))) return;
+      if (ligand.some(other => (other.x - atom.x) ** 2 + (other.y - atom.y) ** 2 +
+          (other.z - atom.z) ** 2 <= SITE_RADIUS ** 2)) keys.add(residueKey(atom));
+    });
+    return (sites[modelIndex] = keys.size ? {keys, ligand} : null);
+  }
+  function drawSurface(site) {
+    const model = currentModel(), identifier = model.getID();
+    const chainValue = control("chain").value;
+    const chain = chainValue ? (chainValue === "__blank__" ? "" : chainValue) : null;
+    const body = atom => isPolymer(atom) && isHeavy(atom) && (chain === null || (atom.chain || "") === chain);
+    const context = {model: identifier, predicate: body};
+    const keys = site ? site.keys : new Set();
+    // Both meshes are carved from the whole receptor, so the solid site and the
+    // ghost around it share one continuous surface.
+    const specs = keys.size ?
+      [{atoms: {model: identifier, predicate: atom => body(atom) && !keys.has(residueKey(atom))},
+        context, weight: window.BioMolPocket.CONTEXT},
+       {atoms: {model: identifier, predicate: atom => body(atom) && keys.has(residueKey(atom))},
+        context, weight: 1}] :
+      [{atoms: context, context, weight: 1}];
+    window.biomolSite = [...keys].sort();
+    const task = surfaces.build([identifier, chain, window.biomolSite.join(",")].join("|"), specs,
+                                model.selectedAtoms({predicate: body}).length);
+    if (!task) return;
+    status.textContent = labels.pocket_building; status.hidden = false;
+    task.then(current => {if (current) status.hidden = true;}).catch(() => {status.hidden = true;});
+  }
   const download = (url, name) => {
     const link = document.createElement("a"); link.href = url; link.download = name; link.click();
   };
@@ -36,6 +86,10 @@
     const colorBy = control("color").value;
     const coloring = colorBy === "element" ? {colorscheme: "Jmol"} : colorBy === "spectrum" ? {color: "spectrum"} : {};
     const representation = control("representation").value;
+    const site = representation === "pocket" ? bindingSite() : null;
+    control("pocket-controls").hidden = representation !== "pocket";
+    // Hydrophobicity drives the surface: a second color rule would contradict it.
+    control("color").disabled = representation === "pocket";
     let style;
     if (representation === "sticks") style = {stick: {...coloring, radius: .16}};
     else if (representation === "spheres") style = {sphere: {...coloring, scale: .65}};
@@ -43,8 +97,13 @@
     else style = {cartoon: {...coloring, thickness: .35, arrows: true}};
     // Style the polymer separately, so ligand/water switches work in every representation.
     const polymer = {...selected, predicate: isPolymer};
-    model.setStyle(polymer, style);
-    if (colorBy === "chain") {
+    if (representation === "pocket") {
+      // The surface is the receptor here: ribbons or sticks under it would only
+      // crowd the cavity the style exists to show.
+      model.setStyle(polymer, {});
+      drawSurface(site);
+    } else {model.setStyle(polymer, style); surfaces.clear();}
+    if (colorBy === "chain" && representation !== "pocket") {
       const values = [...new Set(model.selectedAtoms({}).map(atom => atom.chain || ""))].sort();
       values.forEach((chain, index) => {
         if (chainValue && chain !== (chainValue === "__blank__" ? "" : chainValue)) return;
@@ -55,8 +114,10 @@
     }
     const ligandStyle = control("ligand-representation").value;
     const ligandVisible = atom => isLigand(atom) && (control("hydrogens").checked || !["H", "D"].includes(atom.elem.toUpperCase()));
-    if (control("ligands").checked) model.setStyle({...selected, predicate: ligandVisible}, ligandStyle === "spheres" ? {sphere: {colorscheme: "Jmol", scale: .65}} :
-      ligandStyle === "lines" ? {line: {colorscheme: "Jmol"}} : {stick: {colorscheme: "Jmol", radius: .2}, sphere: {colorscheme: "Jmol", scale: .22}});
+    // Yellow carbons are the contrast convention against a hydrophobicity surface.
+    const scheme = representation === "pocket" ? "yellowCarbon" : "Jmol";
+    if (control("ligands").checked) model.setStyle({...selected, predicate: ligandVisible}, ligandStyle === "spheres" ? {sphere: {colorscheme: scheme, scale: .65}} :
+      ligandStyle === "lines" ? {line: {colorscheme: scheme}} : {stick: {colorscheme: scheme, radius: .2}, sphere: {colorscheme: scheme, scale: .22}});
     if (control("water").checked) model.setStyle({...selected, predicate: isWater}, {
       sphere: {color: "#60a5fa", scale: .18, opacity: .7}});
     model.setClickable(selected, true, atom => {
@@ -74,6 +135,8 @@
       viewer = $3Dmol.createViewer(control("scene"), {backgroundColor: "#0b1220", antialias: true});
     } catch (error) {status.textContent = labels.webgl; return;}
     viewer.setProjection("perspective");
+    surfaces = window.BioMolPocket.controller(viewer);
+    surfaces.setLevel(Number(control("pocket-opacity").value) / 100);
     const response = await fetch(location.pathname.replace(/\/$/, "") + "/structure", {cache: "no-store", credentials: "same-origin"});
     if (!response.ok) throw new Error("Structure unavailable");
     let structure = await response.text();
@@ -101,11 +164,20 @@
     models.forEach((model, index) => control("model").add(new Option(String(index + 1), String(index))));
     control("model").disabled = models.length === 1;
     control("representation").value = config.representation || "cartoon";
+    // Without a ligand there is no site to outline; say so instead of failing silently.
+    const siteOption = control("representation").querySelector('option[value="pocket"]');
+    const offerSite = () => {
+      siteOption.disabled = !bindingSite();
+      siteOption.title = siteOption.disabled ? labels.pocket_unavailable : "";
+      if (siteOption.disabled && control("representation").value === "pocket") control("representation").value = "cartoon";
+    };
+    offerSite();
     if (config.ligand) {
       control("color").value = "element";
       control("color").querySelector('option[value="spectrum"]').disabled = true;
       control("representation").disabled = true;
       control("representation").querySelector('option[value="cartoon"]').disabled = true;
+      siteOption.disabled = true;
       control("chain").disabled = true;
       control("water").disabled = true;
     }
@@ -116,7 +188,8 @@
     chains(); draw(); viewer.zoomTo({model: modelIndex}); viewer.render();
     for (const id of ["representation", "ligand-representation", "hydrogens", "color", "ligands", "water"]) control(id).addEventListener("change", draw);
     control("chain").addEventListener("change", () => {draw(); viewer.zoomTo({model: modelIndex, ...selection()}); viewer.render();});
-    control("model").addEventListener("change", () => {modelIndex = Number(control("model").value); chains(); draw(); viewer.zoomTo({model: modelIndex}); viewer.render();});
+    control("pocket-opacity").addEventListener("input", () => surfaces.setLevel(Number(control("pocket-opacity").value) / 100));
+    control("model").addEventListener("change", () => {modelIndex = Number(control("model").value); chains(); offerSite(); draw(); viewer.zoomTo({model: modelIndex}); viewer.render();});
     control("center").addEventListener("click", () => {viewer.zoomTo({model: modelIndex, ...selection()}); viewer.render();});
     control("snapshot").addEventListener("click", () => download(viewer.pngURI(), config.name.replace(/\.(pdb|pdbqt|mol2|sdf)$/i, "") + ".png"));
     control("fullscreen").addEventListener("click", async () => {

@@ -33,6 +33,20 @@ biomolexplorer-ui --help
 biomolexplorer-ui --web --language en
 ```
 
+After changing UI code, check the exact Python environment used by the launcher
+before restarting the application:
+
+```bash
+/home/michel/progs/miniconda3/envs/BioMolExplorer/bin/python scripts/check_ui_installation.py
+/home/michel/progs/miniconda3/envs/BioMolExplorer/bin/biomolexplorer-ui --web
+```
+
+The check imports the installed package from outside the repository and compares
+the loaded files with `src/`. A nonzero exit status means the launcher will not
+load the current files; install the checkout into that environment with its
+Python (`python -m pip install --no-deps --no-build-isolation -e .`) and rerun
+the check. Fully stop the existing UI process before opening it again.
+
 To allow browsers on the same trusted network to connect, start the network
 server and open `http://MACHINE_IP:8550` on the other device:
 

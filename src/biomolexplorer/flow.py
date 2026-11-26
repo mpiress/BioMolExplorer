@@ -82,8 +82,8 @@ def input_ports(stage):
         return []
     if operation=='retrieve_pubchem' and stage['parameters'].get('reference_source')=='manual':return []
     fields={f['name']:f for f in operation_fields(operation)}
-    return [{'field':field,'label':'Targets' if operation=='dynamics_dock6' and field=='base_input_path' else field_label(operation,field) if field=='base_input_path' else PORT_LABELS[field], 'types':input_types(stage,field),
-             'required': fields[field]['required'] or operation in ('retrieve_pubchem','expand_similar_compounds','consensus') or operation=='prepare_structures' and field=='base_selected_mols'}
+    return [{'field':field,'label':'Targets' if operation=='dynamics_dock6' and field=='base_input_path' else field_label(operation,field) if field=='base_input_path' or operation=='pose_validation' else PORT_LABELS[field], 'types':input_types(stage,field),
+             'required': fields[field]['required'] or operation in ('retrieve_pubchem','expand_similar_compounds','consensus') or operation in ('prepare_structures','pose_validation') and field=='base_selected_mols'}
             for field,types in INPUTS.get(operation,{}).items()]
 
 
@@ -114,7 +114,9 @@ def connect(stages, source_id, target_id, field):
     reference={'stage':source_id,'selector':'auto'}
     port=output_port(source['operation'],input_types(target,field))
     if port:reference['output_port']=port
-    proposed['bindings'][field]=pack((sources(old) if old else [])+[reference])
+    # Reconnecting a producer whose files were already curated keeps that
+    # choice instead of adding a parallel ``auto`` edge for the same pair.
+    proposed['bindings'][field]=pack((sources(old) if old else [])+[reference],collapse=True)
     if target['operation'] in ('prepare_structures','docking_vina','docking_dock6') and field=='base_input_path':
         proposed['parameters']['receptor_prepared']='prepared_structures' in output_types(source)
     if target['operation']=='consensus' and field=='base_vina_path':

@@ -59,6 +59,8 @@ OUTPUT_PORTS = {
     'docking_dock6': {'docking_results': ('dock6','molecular_poses'), 'compounds': ('compounds',), 'receptors': ('receptor_pdb',)},
     'consensus': {'consensus_scores': ('scores','compounds')},
     'dynamics_dock6': {'dynamics': ('dynamics',), 'poses': ('molecular_poses',), 'receptors': ('receptor_pdb',)},
+    'pose_validation': {'validated_poses': ('molecular_poses','vina','dock6'), 'validation_report': ('scores',),
+                        'receptors': ('receptor_pdb',)},
 }
 
 
@@ -76,6 +78,8 @@ INPUT_PORTS = {
     'docking_vina': {'base_input_path': ('structures','prepared_structures'), 'base_selected_mols': ('compounds','vina','dock6')},
     'docking_dock6': {'base_input_path': ('structures','prepared_structures'), 'base_selected_mols': ('compounds','vina','dock6')},
     'consensus': {'base_vina_path': ('vina',), 'base_dock6_path': ('dock6',)},
+    'pose_validation': {'base_input_path': ('receptor_pdb','prepared_structures','structures'),
+                        'base_selected_mols': ('vina','dock6','molecular_poses','scores')},
 }
 
 INPUT_RULES = {
@@ -92,6 +96,7 @@ INPUT_RULES = {
     'docking_vina': {'base_input_path':('one_or_many',True),'base_selected_mols':('one_or_many',True)},
     'docking_dock6': {'base_input_path':('one_or_many',True),'base_selected_mols':('one_or_many',True)},
     'consensus': {'base_vina_path':('one_or_many',True),'base_dock6_path':('one_or_many',True)},
+    'pose_validation': {'base_input_path':('one_or_many',True),'base_selected_mols':('one_or_many',True)},
 }
 
 OUTPUT_CARDINALITY = {
@@ -121,6 +126,9 @@ ROLE_PORTS = {
     'docking_vina': {'scores':'docking_results','pose':'docking_results','compounds':'compounds','receptor':'receptors'},
     'docking_dock6': {'scores':'docking_results','pose':'docking_results','compounds':'compounds','receptor':'receptors'},
     'consensus': {'ranking':'consensus_scores','scores':'consensus_scores'},
+    'pose_validation': {'pose':'validated_poses','ligand':'validated_poses','poses':'validated_poses',
+                        'report':'validation_report','validation':'validation_report','scores':'validation_report',
+                        'receptor':'receptors'},
     'dynamics_dock6': {'trajectory':'dynamics','topology':'dynamics','coordinates':'dynamics','rmsd':'dynamics',
                        'rmsf':'dynamics','gyration':'dynamics','energies':'dynamics','protocol':'dynamics',
                        'pose':'poses','ligand':'poses','receptor':'receptors'},

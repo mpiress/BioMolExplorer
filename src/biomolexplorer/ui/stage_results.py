@@ -104,6 +104,18 @@ class StageResults:
                 self.child=RedockingResultsTable(self,simulations)
                 self.root.controls=[self.child.build()] if simulations else [ft.Text('Nenhum valor de RMSD disponível para esta etapa.')]
                 self.loaded=True;self.ui.page.update();return
+            if operation=='pose_validation' and self.stage['status']=='succeeded':
+                from biomolexplorer.pose_results import PoseValidationResults
+                from .pose_results import PoseValidationTable
+                report=await self.ui.call(PoseValidationResults(self.ui.store).report,
+                    self.token,self.project_id,self.run_id,self.stage['id'])
+                if not self.valid():return
+                if report['rows']:
+                    # The validation table is the result of this block; its
+                    # report, poses and receptors stay reachable beneath it.
+                    self.child=PoseValidationTable(self,report,await self.file_table())
+                    if not self.valid():return
+                    self.root.controls=[self.child.build()];self.loaded=True;self.ui.page.update();return
             if operation in ('retrieve_compounds','retrieve_pubchem','expand_similar_compounds') and self.stage['status']=='succeeded':
                 tables=await self.ui.call(CompoundTables(self.ui.store).tables,self.token,self.project_id,self.run_id,self.stage['id'])
                 if not self.valid():return
@@ -152,16 +164,6 @@ class StageResults:
                     self.ui.page.update()
                     if self.dataset.value:await self.change_graph(None)
                     self.loaded=True;return
-            files=await self.ui.call(self.service.files,self.token,self.project_id,self.run_id,self.stage['id'])
-            if not self.valid():return
-            active=await self.ui.call(self.ui.store.has_active_run,self.token,self.project_id)
-            if not self.valid():return
-            if self.stage.get('_checkpoint_subset'):
-                allowed=set(self.stage.get('artifacts',[]));files=[item for item in files if item['path'] in allowed]
-            async def remove(item):
-                await self.ui.call(self.service.remove,self.token,self.project_id,self.run_id,self.stage['id'],item['path'])
-                self.stage['artifacts']=[p for p in self.stage.get('artifacts',[]) if p!=item['path']]
-            async def preview(item):await self.ui.preview_artifact(self.project_id,item['path'])
             extra=None
             if self.stage['operation']=='retrieve_structures':
                 from .pdb_results import PDBActions
@@ -169,9 +171,9 @@ class StageResults:
                 if not self.valid():return
                 self.pdb_actions=PDBActions(self,self.writable and not running)
                 extra=self.pdb_actions.actions
-            self.child=FileTable(self.ui,self.project_id,files,self.writable and not active,remove=remove,preview=preview,extra_actions=extra,run_id=self.run_id,stage_id=self.stage['id'])
-            self.child.after_remove=getattr(self.ui,'draw_project',None)
-            self.root.controls=[self.child.build()] if files else [ft.Text('Nenhum arquivo de resultado disponível.',size=13,color='#64748B')]
+            self.child=await self.file_table(extra)
+            if not self.valid() or self.child is None:return
+            self.root.controls=[self.child.build()] if self.child.files else [ft.Text('Nenhum arquivo de resultado disponível.',size=13,color='#64748B')]
             self.loaded=True;self.ui.page.update()
         except Exception:
             if self.valid():
@@ -180,6 +182,23 @@ class StageResults:
             raise
         finally:
             self.loading_results=False
+
+    async def file_table(self,extra_actions=None):
+        """Files of this block as the shared result table, with its own guards."""
+        files=await self.ui.call(self.service.files,self.token,self.project_id,self.run_id,self.stage['id'])
+        if not self.valid():return None
+        active=await self.ui.call(self.ui.store.has_active_run,self.token,self.project_id)
+        if not self.valid():return None
+        if self.stage.get('_checkpoint_subset'):
+            allowed=set(self.stage.get('artifacts',[]));files=[item for item in files if item['path'] in allowed]
+        async def remove(item):
+            await self.ui.call(self.service.remove,self.token,self.project_id,self.run_id,self.stage['id'],item['path'])
+            self.stage['artifacts']=[p for p in self.stage.get('artifacts',[]) if p!=item['path']]
+        async def preview(item):await self.ui.preview_artifact(self.project_id,item['path'])
+        table=FileTable(self.ui,self.project_id,files,self.writable and not active,remove=remove,preview=preview,
+                        extra_actions=extra_actions,run_id=self.run_id,stage_id=self.stage['id'])
+        table.after_remove=getattr(self.ui,'draw_project',None)
+        return table
 
     async def change_admet(self,e):
         async def action():

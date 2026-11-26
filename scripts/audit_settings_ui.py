@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import flet as ft
 from biomolexplorer.catalog import TITLES,new_stage
 from biomolexplorer.ui.guided import GuidedForm
-from biomolexplorer.ui.settings_layout import dialog_size
+from biomolexplorer.ui.settings_layout import dialog_size, fit_dialog
 
 
 def main(page):
@@ -30,9 +30,13 @@ def main(page):
         form=GuidedForm(ui,stage,[],len(path)<2 or path[1]!='disabled')
         if dialog:page.pop_dialog()
         body=ft.Container(**dialog_size(page),padding=16,content=form.layout())
+        if operation=='pose_validation':
+            body._settings_fixed_scroll=True
+            body.content.expand=True
         dialog=ft.AlertDialog(title=ft.Text(TITLES[operation][0],size=22),content=body,
             actions=[ft.TextButton('Validar configurações',on_click=lambda e:page.show_dialog(
                 ft.AlertDialog(title=ft.Text('Configuração lida'),content=ft.Text(str(form.read()['parameters'])))))])
+        fit_dialog(dialog,page)
         page.show_dialog(dialog)
     def resize(e):
         if body:

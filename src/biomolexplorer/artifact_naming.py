@@ -10,7 +10,7 @@ OPERATIONS={'retrieve_compounds':'chembl','retrieve_pubchem':'pubchem',
     'expand_similar_compounds':'chembl-similar','retrieve_zinc':'zinc','admet':'admet',
     'fingerprints':'fingerprint','similarity':'similarity','graphs':'graph',
     'import_results':'import','prepare_structures':'preparation','redocking':'redocking',
-    'docking_vina':'vina','docking_dock6':'dock6','consensus':'consensus','dynamics_dock6':'md'}
+    'docking_vina':'vina','docking_dock6':'dock6','consensus':'consensus','dynamics_dock6':'md','pose_validation':'pose-validation'}
 PATTERN=re.compile(r'^(B\d+)__([a-z0-9-]+)__(.+)$')
 
 
@@ -62,6 +62,10 @@ def output_role(operation,path,parameters):
         if match:return ('lcc-' if name.endswith('_mcc') else 'component-')+match[1]
         if path.parent.name=='Molecules':return 'lcc'
         return 'edges'
+    if operation=='pose_validation':
+        if path.name in ('pose_validation.csv','pose_validation.json'):return 'report'
+        if path.parent.name=='receptors' or path.suffix.lower()=='.pdb':return 'receptor'
+        if path.suffix.lower() in ('.mol2','.sdf','.pdbqt'):return 'pose'
     if operation in ('prepare_structures','redocking','docking_vina','docking_dock6','dynamics_dock6'):
         filename=path.name.lower()
         if '.dockprep.' in filename or '.noh.' in filename:return 'receptor'
@@ -230,7 +234,8 @@ PUBLIC_OPERATIONS={**OPERATIONS,'retrieve_structures':'PDB',
     'fingerprints':'Fingerprints','similarity':'Similarity','graphs':'Graphs',
     'prepare_structures':'Preparation','redocking':'Redocking',
     'docking_vina':'Docking-Vina','docking_dock6':'Docking-DOCK6',
-    'consensus':'Consensus','dynamics_dock6':'AmberScore-DOCK6','import_results':'Import'}
+    'consensus':'Consensus','dynamics_dock6':'AmberScore-DOCK6','pose_validation':'PoseValidation',
+    'import_results':'Import'}
 PUBLIC_PATTERN=re.compile(r'^TG\[([^\[\]/\\]+)\]-SRC\[([^\[\]/\\]+)\]-OP\[([^\[\]/\\]+)\]-(.+?)(?:-ID\[([a-f0-9]{8,64})\])?\.([A-Za-z0-9][A-Za-z0-9-]*(?:\.[A-Za-z0-9-]+)*)$')
 GENERIC_TARGETS={'','meualvo','estruturas','structures','pubchem','zinc','chembl',
     'molecules','moleculas','compounds','fingerprints','similarity','admet','target','dados','results','na','none','unknown','undefined','input'}
@@ -334,6 +339,7 @@ def result_type(record,config=None):
     if name.endswith('_admet_report.json'):return 'Methods'
     if name=='dynamics_results.json':return 'Pairs'
     if name=='analysis.json':return 'Analysis'
+    if name in ('pose_validation.csv','pose_validation.json'):return 'PoseValidation'
     if suffix in ('.log','.out','.err'):return 'Log'
     if suffix in ('.prmtop','.top'):return 'Topology'
     if suffix in ('.nc','.dcd','.xtc','.trr'):return 'Trajectory'
@@ -350,7 +356,7 @@ def result_type(record,config=None):
             prefix='ReferenceLigand-' if operation=='redocking' and parent=='Prepared' else 'Ligand-' if parent in ('Prepared','Molecules') else 'Pose-' if operation.startswith('docking_') or operation=='redocking' else 'Ligand-'
             return prefix+component(path.name.split('.',1)[0],28)
         if operation=='retrieve_structures':return 'Complex-'+component(path.stem,20)
-        if operation in ('docking_vina','docking_dock6','redocking'):return 'Pose-'+component(path.stem.removesuffix('_scored'),28)
+        if operation in ('docking_vina','docking_dock6','redocking','pose_validation'):return 'Pose-'+component(path.stem.removesuffix('_scored'),28)
         return 'Ligand' if suffix in ('.sdf','.mol','.mol2') else 'Structure'
     if role.startswith('rules-'):return 'Rules-'+role[6:].replace('lipinski','Lipinski').replace('veber','Veber').replace('fragment','Fragment')
     if operation=='graphs':

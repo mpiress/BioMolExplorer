@@ -62,7 +62,7 @@ def index_entities(db,project_id,artifact_id,path,artifact_type='other',occurren
                 if row.get('source') not in (None,'') and row.get('target') not in (None,''):
                     found.append(('molecular_pair',str(row['source'])+'→'+str(row['target']),{}))
                 entities.extend(found)
-    elif path.suffix.lower() in ('.pdb','.cif','.mmcif','.pdbqt'):
+    elif path.suffix.lower() in ('.pdb','.cif','.mmcif','.pdbqt','.mol2','.sdf'):
         stem=path.name.split('.',1)[0];parts=stem.split('_')
         identifier=parts[0].upper() if len(parts[0])==4 else stem
         chains=set()
@@ -88,7 +88,7 @@ def index_entities(db,project_id,artifact_id,path,artifact_type='other',occurren
 def ensure_entities(db,project_id,record):
     """Index each immutable content revision once without blocking publication."""
     path=Path(record['path']);sha=record.get('content_sha256')
-    if path.suffix.lower() not in ('.csv','.pdb','.cif','.mmcif','.pdbqt'):return 0
+    if path.suffix.lower() not in ('.csv','.pdb','.cif','.mmcif','.pdbqt','.mol2','.sdf'):return 0
     occurrence=record['occurrence_id']
     prior=db.execute('SELECT content_sha256,state FROM artifact_entity_indexes WHERE project_id=? AND occurrence_id=?',
         (project_id,occurrence)).fetchone()
