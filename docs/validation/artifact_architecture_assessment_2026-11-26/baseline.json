@@ -1,0 +1,1290 @@
+{
+ "generated_unix": 1795740508.642986,
+ "repeats": 5,
+ "seed": 6,
+ "read_only": true,
+ "cold_method": "posix_fadvise(DONTNEED) on the involved files before each repetition; directory metadata is not evicted",
+ "projects": {
+  "small": {
+   "project_id": "5187a2bd1e2943e0ad59715ffc0407ee",
+   "discovery_os_walk_runs": {
+    "warm": {
+     "n": 5,
+     "mean": 0.0022233290001167916,
+     "stdev": 0.00011553347370620766,
+     "min": 0.00211858399961784,
+     "median": 0.002218149000327685,
+     "max": 0.002411795000625716
+    },
+    "consistent_output": true,
+    "output": "1915"
+   },
+   "discovery_rglob_csv": {
+    "warm": {
+     "n": 5,
+     "mean": 0.004947231199912494,
+     "stdev": 0.0003919549571134419,
+     "min": 0.004498504999901343,
+     "median": 0.004794127999957709,
+     "max": 0.005482917999870551
+    },
+    "consistent_output": true,
+    "output": "276"
+   },
+   "_context": {
+    "run_id": "1f25838a5d82405f92c5596c96cafed8",
+    "run_json_bytes": 505773,
+    "largest_stage": {
+     "stage_id": "b1f7d8d2cdfe4c75868038d8c88edfe3",
+     "n": 120
+    },
+    "sampled_entities": 0,
+    "sampled_contents": 50,
+    "projection_cached": false,
+    "query_plans": {
+     "stage_artifacts": [
+      "SEARCH artifact_instances USING INDEX artifacts_project_stage (project_id=? AND stage_id=? AND indexed_run_id=?)"
+     ],
+     "entity_lookup": [
+      "SEARCH artifact_entities USING INDEX artifact_entities_lookup (project_id=? AND entity_type=? AND entity_id=?)"
+     ],
+     "content_lookup": [
+      "SEARCH artifact_instances USING INDEX artifacts_content (project_id=? AND content_sha256=?)"
+     ]
+    }
+   },
+   "indexed_stage_artifacts": {
+    "cold": {
+     "n": 5,
+     "mean": 0.002989221200004977,
+     "stdev": 6.68161850294573e-05,
+     "min": 0.002942516000075557,
+     "median": 0.0029701550001846044,
+     "max": 0.00310500400064484
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.0002988941998410155,
+     "stdev": 1.3628791530122771e-05,
+     "min": 0.0002795469999909983,
+     "median": 0.00029612800062750466,
+     "max": 0.0003152999997837469
+    },
+    "consistent_output": true,
+    "output": "120"
+   },
+   "indexed_content_lookup_x50": {
+    "cold": {
+     "n": 5,
+     "mean": 0.0037955613999656633,
+     "stdev": 0.00013114269411516807,
+     "min": 0.0037113580001459923,
+     "median": 0.0037462609998328844,
+     "max": 0.004028542000014568
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.0004953746001774562,
+     "stdev": 0.0003002785716953217,
+     "min": 0.00033314899974357104,
+     "median": 0.0003531990005285479,
+     "max": 0.001028260000566661
+    },
+    "consistent_output": true,
+    "output": "54"
+   },
+   "run_full_json_load": {
+    "cold": {
+     "n": 5,
+     "mean": 0.011182710399771168,
+     "stdev": 0.0003015132439306429,
+     "min": 0.01083743199978926,
+     "median": 0.011271970000052534,
+     "max": 0.011543490999429196
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.0015540713999143917,
+     "stdev": 1.0479609940861172e-05,
+     "min": 0.0015395330001410912,
+     "median": 0.0015515129998675548,
+     "max": 0.0015656030000172905
+    },
+    "consistent_output": true,
+    "output": "4"
+   },
+   "run_streamed_projection": {
+    "cold": {
+     "n": 5,
+     "mean": 0.011914076799985195,
+     "stdev": 0.00024190345233703016,
+     "min": 0.011711762000231829,
+     "median": 0.011825788999885845,
+     "max": 0.0123041259994352
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.002289291400120419,
+     "stdev": 5.022966769044436e-05,
+     "min": 0.0022389260002455558,
+     "median": 0.0022754970004825736,
+     "max": 0.0023483049999413197
+    },
+    "consistent_output": true,
+    "output": "4"
+   },
+   "_tables": [
+    {
+     "path": "runs/1f25838a5d82405f92c5596c96cafed8/b1f7d8d2cdfe4c75868038d8c88edfe3/individual/001_Recuperar_compostos/.biomolexplorer/jobs/7b282cba748943468308fea1af854fe0/artifacts/PubChem/similars/CHEMBL220/matches.csv",
+     "bytes": 23303153
+    },
+    {
+     "path": "runs/1f25838a5d82405f92c5596c96cafed8/b1f7d8d2cdfe4c75868038d8c88edfe3/individual/001_Recuperar_compostos/.biomolexplorer/jobs/7b282cba748943468308fea1af854fe0/artifacts/compounds/CHEMBL220/compounds.csv",
+     "bytes": 10292872
+    },
+    {
+     "path": "runs/1f25838a5d82405f92c5596c96cafed8/b1f7d8d2cdfe4c75868038d8c88edfe3/individual/001_Recuperar_compostos/.biomolexplorer/jobs/7b282cba748943468308fea1af854fe0/artifacts/PubChem/similars/CHEMBL220/compounds.csv",
+     "bytes": 9921134
+    }
+   ],
+   "csv1_full_read": {
+    "cold": {
+     "n": 5,
+     "mean": 0.31070075040024675,
+     "stdev": 0.007382528904415103,
+     "min": 0.3017350299996906,
+     "median": 0.3127358070005357,
+     "max": 0.3201280310004222
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.3052626951997809,
+     "stdev": 0.0022299354071388133,
+     "min": 0.3033226220004508,
+     "median": 0.30436585699953866,
+     "max": 0.30904891099999077
+    },
+    "consistent_output": true,
+    "output": "306090"
+   },
+   "csv1_indexed": {
+    "cold_build_and_first_page_seconds": 1.7107775989998117,
+    "rows": 306090,
+    "index_bytes": 82407424,
+    "page_offset": 153045,
+    "page_25_rows": {
+     "cold": {
+      "n": 5,
+      "mean": 0.021820562600260017,
+      "stdev": 0.000547029779519884,
+      "min": 0.02130937600031757,
+      "median": 0.021630020999509725,
+      "max": 0.022706725000716688
+     },
+     "warm": {
+      "n": 5,
+      "mean": 0.0077271246000236715,
+      "stdev": 0.00019727638105864192,
+      "min": 0.007506673000534647,
+      "median": 0.007691849999901024,
+      "max": 0.008031680999920354
+     },
+     "consistent_output": true,
+     "output": "[153045, 153046, 153047, 153048, 153049, 153050, 153051, 153052, 153053, 153054, 153055, 153056, 153057, 153058, 153059, 153060, 153061, 153062, 153063, 153064, 153065, 153066, 153067, 153068, 153069]"
+    }
+   },
+   "csv2_full_read": {
+    "cold": {
+     "n": 5,
+     "mean": 0.11042796519996045,
+     "stdev": 0.0006234757003512335,
+     "min": 0.10948369200013985,
+     "median": 0.11074641699997301,
+     "max": 0.11093266599982599
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.10931425119979395,
+     "stdev": 0.0005935879933067959,
+     "min": 0.10867901300025551,
+     "median": 0.10938416999943001,
+     "max": 0.11010630399960064
+    },
+    "consistent_output": true,
+    "output": "65315"
+   },
+   "csv2_indexed": {
+    "cold_build_and_first_page_seconds": 0.6537237820002701,
+    "rows": 65315,
+    "index_bytes": 41897984,
+    "page_offset": 32657,
+    "page_25_rows": {
+     "cold": {
+      "n": 5,
+      "mean": 0.0112494611999864,
+      "stdev": 0.00015288392880349438,
+      "min": 0.01103487100044731,
+      "median": 0.011285619999398477,
+      "max": 0.011406372000237752
+     },
+     "warm": {
+      "n": 5,
+      "mean": 0.003057476000140014,
+      "stdev": 0.0001246828798986311,
+      "min": 0.002953316000457562,
+      "median": 0.003017163000549772,
+      "max": 0.00325394699939352
+     },
+     "consistent_output": true,
+     "output": "[32657, 32658, 32659, 32660, 32661, 32662, 32663, 32664, 32665, 32666, 32667, 32668, 32669, 32670, 32671, 32672, 32673, 32674, 32675, 32676, 32677, 32678, 32679, 32680, 32681]"
+    }
+   },
+   "csv3_full_read": {
+    "cold": {
+     "n": 5,
+     "mean": 0.11182598020004661,
+     "stdev": 0.005045652068281996,
+     "min": 0.10921097899972665,
+     "median": 0.1096681750004791,
+     "max": 0.12084197500007576
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.10847654120007064,
+     "stdev": 0.00019467489358173875,
+     "min": 0.1082643529998677,
+     "median": 0.10845391499969992,
+     "max": 0.1087222850001126
+    },
+    "consistent_output": true,
+    "output": "65003"
+   },
+   "csv3_indexed": {
+    "cold_build_and_first_page_seconds": 0.643050599000162,
+    "rows": 65003,
+    "index_bytes": 40984576,
+    "page_offset": 32501,
+    "page_25_rows": {
+     "cold": {
+      "n": 5,
+      "mean": 0.010241575399777502,
+      "stdev": 0.00015234144849854541,
+      "min": 0.010065470999506942,
+      "median": 0.010337474999687402,
+      "max": 0.010376490999988164
+     },
+     "warm": {
+      "n": 5,
+      "mean": 0.0029974196002513056,
+      "stdev": 0.00017765742695828962,
+      "min": 0.0028397989999575657,
+      "median": 0.002967096000247693,
+      "max": 0.003273873000580352
+     },
+     "consistent_output": true,
+     "output": "[32501, 32502, 32503, 32504, 32505, 32506, 32507, 32508, 32509, 32510, 32511, 32512, 32513, 32514, 32515, 32516, 32517, 32518, 32519, 32520, 32521, 32522, 32523, 32524, 32525]"
+    }
+   },
+   "_snapshot": {
+    "file": "5ee98f99be1b4257b53b7c9fd7ac0f64-before.json",
+    "bytes": 2179
+   },
+   "history_snapshot_parse_median": {
+    "cold": {
+     "n": 2,
+     "mean": 0.00013066050041743438,
+     "stdev": 4.0582979587210134e-05,
+     "min": 0.00010196400035056286,
+     "median": 0.00013066050041743438,
+     "max": 0.0001593570004843059
+    },
+    "warm": {
+     "n": 2,
+     "mean": 1.9342999166838126e-05,
+     "stdev": 1.2204662596052356e-06,
+     "min": 1.8479999198461883e-05,
+     "median": 1.9342999166838126e-05,
+     "max": 2.020599913521437e-05
+    },
+    "consistent_output": true,
+    "output": "7"
+   }
+  },
+  "medium-history": {
+   "project_id": "ba933e6af6dc48ecabc566977d4a9e90",
+   "discovery_os_walk_runs": {
+    "warm": {
+     "n": 5,
+     "mean": 0.0035042272002101527,
+     "stdev": 7.674921907878695e-05,
+     "min": 0.0033920949999810546,
+     "median": 0.003503181999803928,
+     "max": 0.003598161000809341
+    },
+    "consistent_output": true,
+    "output": "3181"
+   },
+   "discovery_rglob_csv": {
+    "warm": {
+     "n": 5,
+     "mean": 0.0068439154001680436,
+     "stdev": 4.468801929083838e-05,
+     "min": 0.006774940000468632,
+     "median": 0.006848633000117843,
+     "max": 0.006899836999764375
+    },
+    "consistent_output": true,
+    "output": "410"
+   },
+   "_context": {
+    "run_id": "5bf047099d18432babef7044c562959b",
+    "run_json_bytes": 650502,
+    "largest_stage": {
+     "stage_id": "91eaf00aed3f4992abf793b58d2c7e84",
+     "n": 227
+    },
+    "sampled_entities": 0,
+    "sampled_contents": 50,
+    "projection_cached": false,
+    "query_plans": {
+     "stage_artifacts": [
+      "SEARCH artifact_instances USING INDEX artifacts_project_stage (project_id=? AND stage_id=? AND indexed_run_id=?)"
+     ],
+     "entity_lookup": [
+      "SEARCH artifact_entities USING INDEX artifact_entities_lookup (project_id=? AND entity_type=? AND entity_id=?)"
+     ],
+     "content_lookup": [
+      "SEARCH artifact_instances USING INDEX artifacts_content (project_id=? AND content_sha256=?)"
+     ]
+    }
+   },
+   "indexed_stage_artifacts": {
+    "cold": {
+     "n": 5,
+     "mean": 0.0033209254001121736,
+     "stdev": 2.4894404688247827e-05,
+     "min": 0.003288466999947559,
+     "median": 0.003318174000014551,
+     "max": 0.0033584100001462502
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.0003620191999289091,
+     "stdev": 6.210086470681874e-05,
+     "min": 0.000307479000184685,
+     "median": 0.0003466989992375602,
+     "max": 0.00045302299986360595
+    },
+    "consistent_output": true,
+    "output": "227"
+   },
+   "indexed_content_lookup_x50": {
+    "cold": {
+     "n": 5,
+     "mean": 0.02847991720009304,
+     "stdev": 0.0005408693826525533,
+     "min": 0.02784887300003902,
+     "median": 0.028493402000094648,
+     "max": 0.02930471600029705
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.0011527530001330887,
+     "stdev": 0.0005863400374455231,
+     "min": 0.0007709879992034985,
+     "median": 0.0008181810007954482,
+     "max": 0.00214942799993878
+    },
+    "consistent_output": true,
+    "output": "466"
+   },
+   "run_full_json_load": {
+    "cold": {
+     "n": 5,
+     "mean": 0.014365601000281458,
+     "stdev": 0.000559240806549146,
+     "min": 0.013932603000284871,
+     "median": 0.014032860999577679,
+     "max": 0.015162001000135206
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.0018757145999188651,
+     "stdev": 3.253644299976798e-05,
+     "min": 0.001843209999606188,
+     "median": 0.001879499999631662,
+     "max": 0.0019250160003139172
+    },
+    "consistent_output": true,
+    "output": "6"
+   },
+   "run_streamed_projection": {
+    "cold": {
+     "n": 5,
+     "mean": 0.015260260599825414,
+     "stdev": 0.0004932532902673665,
+     "min": 0.014816203999544086,
+     "median": 0.014991713000199525,
+     "max": 0.015942531999826315
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.002903592399889021,
+     "stdev": 0.00011261512648364321,
+     "min": 0.002793278999888571,
+     "median": 0.0029145660000722273,
+     "max": 0.0030776139992667595
+    },
+    "consistent_output": true,
+    "output": "6"
+   },
+   "_tables": [
+    {
+     "path": "runs/a794cd39b0fd4fdc86cd828addb2812c/91eaf00aed3f4992abf793b58d2c7e84/.biomolexplorer/jobs/f01bce9415ac4247b98c0000d6eaac75/artifacts/PubChem/similars/CHEMBL220/matches.csv",
+     "bytes": 39075559
+    },
+    {
+     "path": "runs/a794cd39b0fd4fdc86cd828addb2812c/91eaf00aed3f4992abf793b58d2c7e84/.biomolexplorer/jobs/f01bce9415ac4247b98c0000d6eaac75/artifacts/compounds/CHEMBL220/compounds.csv",
+     "bytes": 16037525
+    },
+    {
+     "path": "runs/a794cd39b0fd4fdc86cd828addb2812c/91eaf00aed3f4992abf793b58d2c7e84/.biomolexplorer/jobs/f01bce9415ac4247b98c0000d6eaac75/artifacts/PubChem/similars/CHEMBL220/compounds.csv",
+     "bytes": 15436002
+    }
+   ],
+   "csv1_full_read": {
+    "cold": {
+     "n": 5,
+     "mean": 0.5393114974001947,
+     "stdev": 0.004847327949092446,
+     "min": 0.5351783229998546,
+     "median": 0.5377154150000933,
+     "max": 0.546613919000265
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.5361803516001601,
+     "stdev": 0.002713704645194741,
+     "min": 0.5318345389996466,
+     "median": 0.5372504650003975,
+     "max": 0.5384798390005017
+    },
+    "consistent_output": true,
+    "output": "519562"
+   },
+   "csv1_indexed": {
+    "cold_build_and_first_page_seconds": 2.8103681819993653,
+    "rows": 519562,
+    "index_bytes": 138973184,
+    "page_offset": 259781,
+    "page_25_rows": {
+     "cold": {
+      "n": 5,
+      "mean": 0.036213473200041334,
+      "stdev": 0.00036051374377354955,
+      "min": 0.03575593799996568,
+      "median": 0.036371001000588876,
+      "max": 0.03660815599960188
+     },
+     "warm": {
+      "n": 5,
+      "mean": 0.01312561539998569,
+      "stdev": 0.00016055573344999025,
+      "min": 0.012886614999843005,
+      "median": 0.01319267500002752,
+      "max": 0.01327826200031268
+     },
+     "consistent_output": true,
+     "output": "[259781, 259782, 259783, 259784, 259785, 259786, 259787, 259788, 259789, 259790, 259791, 259792, 259793, 259794, 259795, 259796, 259797, 259798, 259799, 259800, 259801, 259802, 259803, 259804, 259805]"
+    }
+   },
+   "csv2_full_read": {
+    "cold": {
+     "n": 5,
+     "mean": 0.16908293699980276,
+     "stdev": 0.0030512025897078826,
+     "min": 0.16637668000021222,
+     "median": 0.16771794599935674,
+     "max": 0.17373735699948156
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.16637560259987366,
+     "stdev": 0.0007041157965435267,
+     "min": 0.16548325499934435,
+     "median": 0.16646855699946173,
+     "max": 0.16707327000040095
+    },
+    "consistent_output": true,
+    "output": "103544"
+   },
+   "csv2_indexed": {
+    "cold_build_and_first_page_seconds": 0.9297098999995796,
+    "rows": 103544,
+    "index_bytes": 65716224,
+    "page_offset": 51772,
+    "page_25_rows": {
+     "cold": {
+      "n": 5,
+      "mean": 0.016691583399733645,
+      "stdev": 0.0004945734131734252,
+      "min": 0.016427192999799445,
+      "median": 0.01645772699976078,
+      "max": 0.01757110099970305
+     },
+     "warm": {
+      "n": 5,
+      "mean": 0.005307485599951178,
+      "stdev": 0.00015413228463339782,
+      "min": 0.005185656999856292,
+      "median": 0.005202242999985174,
+      "max": 0.005493982000189135
+     },
+     "consistent_output": true,
+     "output": "[51772, 51773, 51774, 51775, 51776, 51777, 51778, 51779, 51780, 51781, 51782, 51783, 51784, 51785, 51786, 51787, 51788, 51789, 51790, 51791, 51792, 51793, 51794, 51795, 51796]"
+    }
+   },
+   "csv3_full_read": {
+    "cold": {
+     "n": 5,
+     "mean": 0.1705587510001351,
+     "stdev": 0.0011672894852449121,
+     "min": 0.1696331220000502,
+     "median": 0.17008119499951135,
+     "max": 0.17252132000066922
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.1697568310000861,
+     "stdev": 0.0006859524795817289,
+     "min": 0.1691081890003261,
+     "median": 0.16944087200045033,
+     "max": 0.17051767199973256
+    },
+    "consistent_output": true,
+    "output": "103011"
+   },
+   "csv3_indexed": {
+    "cold_build_and_first_page_seconds": 0.9451281829997242,
+    "rows": 103011,
+    "index_bytes": 64253952,
+    "page_offset": 51505,
+    "page_25_rows": {
+     "cold": {
+      "n": 5,
+      "mean": 0.01669458599972131,
+      "stdev": 0.0005012062085051336,
+      "min": 0.016056458999628376,
+      "median": 0.016572154999266786,
+      "max": 0.01743211099983455
+     },
+     "warm": {
+      "n": 5,
+      "mean": 0.005252348199974222,
+      "stdev": 8.719694644029371e-05,
+      "min": 0.005178229999728501,
+      "median": 0.005235740999523841,
+      "max": 0.00540226100019936
+     },
+     "consistent_output": true,
+     "output": "[51505, 51506, 51507, 51508, 51509, 51510, 51511, 51512, 51513, 51514, 51515, 51516, 51517, 51518, 51519, 51520, 51521, 51522, 51523, 51524, 51525, 51526, 51527, 51528, 51529]"
+    }
+   },
+   "_snapshot": {
+    "file": "3ec5cb5f3c504bf9822158f95cf9349a-after.json",
+    "bytes": 1219581
+   },
+   "history_snapshot_parse_median": {
+    "cold": {
+     "n": 2,
+     "mean": 0.004596985000262066,
+     "stdev": 0.0006889482789333177,
+     "min": 0.004109825000341516,
+     "median": 0.004596985000262066,
+     "max": 0.005084145000182616
+    },
+    "warm": {
+     "n": 2,
+     "mean": 0.002932872499968653,
+     "stdev": 0.00018392908035042477,
+     "min": 0.002802814999995462,
+     "median": 0.002932872499968653,
+     "max": 0.0030629299999418436
+    },
+    "consistent_output": true,
+    "output": "7"
+   }
+  },
+  "medium": {
+   "project_id": "44701cb596e04a4ea017b806e7f44994",
+   "discovery_os_walk_runs": {
+    "warm": {
+     "n": 5,
+     "mean": 0.003643369800192886,
+     "stdev": 0.00021275547804313803,
+     "min": 0.00342081600047095,
+     "median": 0.0035854449997714255,
+     "max": 0.0038860189997649286
+    },
+    "consistent_output": true,
+    "output": "4393"
+   },
+   "discovery_rglob_csv": {
+    "warm": {
+     "n": 5,
+     "mean": 0.007894809999743301,
+     "stdev": 0.0002790899039266539,
+     "min": 0.007522960999267525,
+     "median": 0.00787608199971146,
+     "max": 0.008197901000130514
+    },
+    "consistent_output": true,
+    "output": "664"
+   },
+   "_context": {
+    "run_id": "ec8ef590e153465fa8e9647d3af81ec7",
+    "run_json_bytes": 335237,
+    "largest_stage": {
+     "stage_id": "5bf1d053145c4cd689a31f46ccbb3816",
+     "n": 113
+    },
+    "sampled_entities": 0,
+    "sampled_contents": 50,
+    "projection_cached": false,
+    "query_plans": {
+     "stage_artifacts": [
+      "SEARCH artifact_instances USING INDEX artifacts_project_stage (project_id=? AND stage_id=? AND indexed_run_id=?)"
+     ],
+     "entity_lookup": [
+      "SEARCH artifact_entities USING INDEX artifact_entities_lookup (project_id=? AND entity_type=? AND entity_id=?)"
+     ],
+     "content_lookup": [
+      "SEARCH artifact_instances USING INDEX artifacts_content (project_id=? AND content_sha256=?)"
+     ]
+    }
+   },
+   "indexed_stage_artifacts": {
+    "cold": {
+     "n": 5,
+     "mean": 0.0028656865999437285,
+     "stdev": 0.0001999243469078967,
+     "min": 0.002742417000263231,
+     "median": 0.002746967000348377,
+     "max": 0.0032049339997684
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.00023318919993471355,
+     "stdev": 2.099760852435609e-05,
+     "min": 0.0002174399996874854,
+     "median": 0.00022437200004787883,
+     "max": 0.00026790999982040375
+    },
+    "consistent_output": true,
+    "output": "113"
+   },
+   "indexed_content_lookup_x50": {
+    "cold": {
+     "n": 5,
+     "mean": 0.008623787200122024,
+     "stdev": 3.68305815527963e-05,
+     "min": 0.008583060000091791,
+     "median": 0.008623132000138867,
+     "max": 0.00866089600003761
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.0006134836001365329,
+     "stdev": 0.0003752100261427804,
+     "min": 0.00043135599935339997,
+     "median": 0.0004461570006242255,
+     "max": 0.0012841760008086567
+    },
+    "consistent_output": true,
+    "output": "168"
+   },
+   "run_full_json_load": {
+    "cold": {
+     "n": 5,
+     "mean": 0.008040961799997604,
+     "stdev": 6.256096235376507e-05,
+     "min": 0.007981820999702904,
+     "median": 0.00802248200034228,
+     "max": 0.008119976999296341
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.0011148233999847435,
+     "stdev": 0.00011100424786068336,
+     "min": 0.0010451739999552956,
+     "median": 0.0010748099994088989,
+     "max": 0.0013107830000080867
+    },
+    "consistent_output": true,
+    "output": "4"
+   },
+   "run_streamed_projection": {
+    "cold": {
+     "n": 5,
+     "mean": 0.008508819199778372,
+     "stdev": 0.0002036538866799342,
+     "min": 0.008372679999411048,
+     "median": 0.008447956000054546,
+     "max": 0.008867879999343131
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.0016028055999413482,
+     "stdev": 5.044854325050303e-05,
+     "min": 0.0015538389998255298,
+     "median": 0.0015815610004210612,
+     "max": 0.0016844039992065518
+    },
+    "consistent_output": true,
+    "output": "4"
+   },
+   "_tables": [
+    {
+     "path": "runs/ec8ef590e153465fa8e9647d3af81ec7/d320fcfc558c4fc1b70c85275b18d253/.biomolexplorer/jobs/ea79828817d448698862785903e44dc6/artifacts/morgan_selected_compounds.csv",
+     "bytes": 40749726
+    },
+    {
+     "path": "runs/ec8ef590e153465fa8e9647d3af81ec7/5755052dc41543ce8fa9e935b8789576/.biomolexplorer/jobs/6892ebc4fd9c408295cc150adc8d3707/artifacts/Similarity/Tanimoto_selected_fingerprints.csv",
+     "bytes": 1834957
+    },
+    {
+     "path": "runs/ec8ef590e153465fa8e9647d3af81ec7/5bf1d053145c4cd689a31f46ccbb3816/.biomolexplorer/jobs/99e9d253dcaf45678faed8e0e73b8b1a/artifacts/PubChem/similars/CHEMBL220/matches.csv",
+     "bytes": 1414940
+    }
+   ],
+   "csv1_full_read": {
+    "cold": {
+     "n": 5,
+     "mean": 0.16567337099986618,
+     "stdev": 0.004746288340885072,
+     "min": 0.1595719300003111,
+     "median": 0.16717811199941934,
+     "max": 0.17160754099950282
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.15942730579990894,
+     "stdev": 0.002408156200011231,
+     "min": 0.1556044529997962,
+     "median": 0.159975841999767,
+     "max": 0.1620453189998443
+    },
+    "consistent_output": true,
+    "output": "6446"
+   },
+   "csv1_indexed": {
+    "cold_build_and_first_page_seconds": 0.5976652179997473,
+    "rows": 6446,
+    "index_bytes": 86110208,
+    "page_offset": 3223,
+    "page_25_rows": {
+     "cold": {
+      "n": 5,
+      "mean": 0.04462366980005754,
+      "stdev": 0.0011303929072762943,
+      "min": 0.04262660199947277,
+      "median": 0.04495518200019433,
+      "max": 0.045349765000537445
+     },
+     "warm": {
+      "n": 5,
+      "mean": 0.0009370340001623844,
+      "stdev": 5.237223648411858e-05,
+      "min": 0.0008944530000007944,
+      "median": 0.0009169750001092325,
+      "max": 0.0010279200005243183
+     },
+     "consistent_output": true,
+     "output": "[3223, 3224, 3225, 3226, 3227, 3228, 3229, 3230, 3231, 3232, 3233, 3234, 3235, 3236, 3237, 3238, 3239, 3240, 3241, 3242, 3243, 3244, 3245, 3246, 3247]"
+    }
+   },
+   "csv2_full_read": {
+    "cold": {
+     "n": 5,
+     "mean": 0.04072359059973678,
+     "stdev": 0.0008230253819099666,
+     "min": 0.03939298599925678,
+     "median": 0.04080955900008121,
+     "max": 0.04153536800004076
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.041082598399952985,
+     "stdev": 0.00020243003263422285,
+     "min": 0.04088998299994273,
+     "median": 0.04100232400014647,
+     "max": 0.04140753399951791
+    },
+    "consistent_output": true,
+    "output": "48990"
+   },
+   "csv2_indexed": {
+    "cold_build_and_first_page_seconds": 0.37734179600010975,
+    "rows": 48990,
+    "index_bytes": 6930432,
+    "page_offset": 24495,
+    "page_25_rows": {
+     "cold": {
+      "n": 5,
+      "mean": 0.002032478000000992,
+      "stdev": 9.500593881333572e-05,
+      "min": 0.001970262999748229,
+      "median": 0.001994122000724019,
+      "max": 0.002197795999563823
+     },
+     "warm": {
+      "n": 5,
+      "mean": 0.0007445883999025682,
+      "stdev": 9.542540441896616e-06,
+      "min": 0.0007357599997703801,
+      "median": 0.0007404859998132451,
+      "max": 0.0007595630004288978
+     },
+     "consistent_output": true,
+     "output": "[24495, 24496, 24497, 24498, 24499, 24500, 24501, 24502, 24503, 24504, 24505, 24506, 24507, 24508, 24509, 24510, 24511, 24512, 24513, 24514, 24515, 24516, 24517, 24518, 24519]"
+    }
+   },
+   "csv3_full_read": {
+    "cold": {
+     "n": 5,
+     "mean": 0.018680717999995978,
+     "stdev": 0.000304773457779463,
+     "min": 0.018141065999770944,
+     "median": 0.018823489000169502,
+     "max": 0.018857586000194715
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.018710496399762633,
+     "stdev": 6.347076168922756e-05,
+     "min": 0.01865585399991687,
+     "median": 0.018671725999411137,
+     "max": 0.018800607999764907
+    },
+    "consistent_output": true,
+    "output": "18322"
+   },
+   "csv3_indexed": {
+    "cold_build_and_first_page_seconds": 0.2553521139998338,
+    "rows": 18322,
+    "index_bytes": 4997120,
+    "page_offset": 9161,
+    "page_25_rows": {
+     "cold": {
+      "n": 5,
+      "mean": 0.0017612123998333117,
+      "stdev": 1.6191026439272563e-05,
+      "min": 0.001737238999339752,
+      "median": 0.0017613709997021942,
+      "max": 0.0017802490001486149
+     },
+     "warm": {
+      "n": 5,
+      "mean": 0.0006308051999440068,
+      "stdev": 3.152302110199302e-05,
+      "min": 0.0005896779994145618,
+      "median": 0.0006318530004136846,
+      "max": 0.0006687009999950533
+     },
+     "consistent_output": true,
+     "output": "[9161, 9162, 9163, 9164, 9165, 9166, 9167, 9168, 9169, 9170, 9171, 9172, 9173, 9174, 9175, 9176, 9177, 9178, 9179, 9180, 9181, 9182, 9183, 9184, 9185]"
+    }
+   },
+   "_snapshot": {
+    "file": "985863d534ee4f3a96e2dcf34939ff63-after.json",
+    "bytes": 2240
+   },
+   "history_snapshot_parse_median": {
+    "cold": {
+     "n": 2,
+     "mean": 0.00011830599987661117,
+     "stdev": 2.504572292545716e-05,
+     "min": 0.00010059599935630104,
+     "median": 0.00011830599987661117,
+     "max": 0.0001360160003969213
+    },
+    "warm": {
+     "n": 2,
+     "mean": 2.0338000012998236e-05,
+     "stdev": 1.5400790033330206e-06,
+     "min": 1.9248999706178438e-05,
+     "median": 2.0338000012998236e-05,
+     "max": 2.1427000319818035e-05
+    },
+    "consistent_output": true,
+    "output": "7"
+   }
+  },
+  "large": {
+   "project_id": "947c3e18ceb34ceabcae4961e70914e4",
+   "discovery_os_walk_runs": {
+    "warm": {
+     "n": 5,
+     "mean": 0.14251185379980597,
+     "stdev": 0.00048413394304233653,
+     "min": 0.14173656399998436,
+     "median": 0.1426376999997956,
+     "max": 0.14306317799946555
+    },
+    "consistent_output": true,
+    "output": "310809"
+   },
+   "discovery_rglob_csv": {
+    "warm": {
+     "n": 5,
+     "mean": 0.30000931240010686,
+     "stdev": 0.000839854472678732,
+     "min": 0.29873061800026335,
+     "median": 0.2999132550003196,
+     "max": 0.3008575439998822
+    },
+    "consistent_output": true,
+    "output": "4789"
+   },
+   "_context": {
+    "run_id": "dad6b1f34c0545149cb8cbf45d839c19",
+    "run_json_bytes": 675724612,
+    "largest_stage": {
+     "stage_id": "c085679a68fe4853a2988293991a34fc",
+     "n": 15258
+    },
+    "sampled_entities": 50,
+    "sampled_contents": 50,
+    "projection_cached": true,
+    "query_plans": {
+     "stage_artifacts": [
+      "SEARCH artifact_instances USING INDEX artifacts_project_stage (project_id=? AND stage_id=? AND indexed_run_id=?)"
+     ],
+     "entity_lookup": [
+      "SEARCH artifact_entities USING INDEX artifact_entities_lookup (project_id=? AND entity_type=? AND entity_id=?)"
+     ],
+     "content_lookup": [
+      "SEARCH artifact_instances USING INDEX artifacts_content (project_id=? AND content_sha256=?)"
+     ]
+    }
+   },
+   "indexed_stage_artifacts": {
+    "cold": {
+     "n": 5,
+     "mean": 0.3888443429999825,
+     "stdev": 0.0021121684873402617,
+     "min": 0.38526423100029206,
+     "median": 0.3895438479994482,
+     "max": 0.39063307200012787
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.016078266200020154,
+     "stdev": 0.0002493608029791863,
+     "min": 0.015842317000533512,
+     "median": 0.016007758999876387,
+     "max": 0.016399594999711553
+    },
+    "consistent_output": true,
+    "output": "15258"
+   },
+   "indexed_entity_lookup_x50": {
+    "cold": {
+     "n": 5,
+     "mean": 0.12081085460013127,
+     "stdev": 0.0014978849221275639,
+     "min": 0.11913936000019021,
+     "median": 0.1201948040006755,
+     "max": 0.12279951799973787
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.0034779673997036298,
+     "stdev": 0.0004855630646229409,
+     "min": 0.003156857999783824,
+     "median": 0.0032451939996462897,
+     "max": 0.0043172609994144295
+    },
+    "consistent_output": true,
+    "output": "1869"
+   },
+   "indexed_content_lookup_x50": {
+    "cold": {
+     "n": 5,
+     "mean": 0.06983668360007869,
+     "stdev": 0.0010080748094250234,
+     "min": 0.06875489999947604,
+     "median": 0.06962924000072235,
+     "max": 0.07118450800044229
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.0017900829998325207,
+     "stdev": 0.0002310136436874597,
+     "min": 0.0016355669995391509,
+     "median": 0.0016643649996694876,
+     "max": 0.0021797749996039784
+    },
+    "consistent_output": true,
+    "output": "773"
+   },
+   "run_full_json_load": {
+    "cold": {
+     "n": 5,
+     "mean": 6.943117212800098,
+     "stdev": 0.27337622615007295,
+     "min": 6.790294919000189,
+     "median": 6.831117640999764,
+     "max": 7.4302664249999
+    },
+    "warm": {
+     "n": 5,
+     "mean": 2.6431282260000444,
+     "stdev": 0.022290135599486435,
+     "min": 2.6068439219998254,
+     "median": 2.651622232000591,
+     "max": 2.665780296999401
+    },
+    "consistent_output": true,
+    "output": "19"
+   },
+   "run_streamed_projection": {
+    "cold": {
+     "n": 5,
+     "mean": 13.000886604800144,
+     "stdev": 0.8254647745425225,
+     "min": 12.063908578999872,
+     "median": 13.344191765000687,
+     "max": 13.777391714999794
+    },
+    "warm": {
+     "n": 5,
+     "mean": 9.7407809696002,
+     "stdev": 0.5605556628606025,
+     "min": 9.088854085000094,
+     "median": 9.822940069000651,
+     "max": 10.540808418000779
+    },
+    "consistent_output": true,
+    "output": "19"
+   },
+   "run_cached_projection_read_run": {
+    "cold": {
+     "n": 5,
+     "mean": 5.119073330599894,
+     "stdev": 0.13722712393350686,
+     "min": 4.98243890699996,
+     "median": 5.08904333800001,
+     "max": 5.334596025999417
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.6134031193998453,
+     "stdev": 0.09201839100498511,
+     "min": 0.474856885999543,
+     "median": 0.6240554879996125,
+     "max": 0.7026389769998787
+    },
+    "consistent_output": true,
+    "output": "19"
+   },
+   "run_cached_proofs": {
+    "cold": {
+     "n": 5,
+     "mean": 0.24390323200004788,
+     "stdev": 0.010160059020731476,
+     "min": 0.2343580730002941,
+     "median": 0.2413713869991625,
+     "max": 0.258084424000117
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.12803416800015838,
+     "stdev": 0.00667496298182417,
+     "min": 0.11760582900024019,
+     "median": 0.1312705990003451,
+     "max": 0.1337172419998751
+    },
+    "consistent_output": true,
+    "output": "19"
+   },
+   "_tables": [
+    {
+     "path": "runs/9686f7def5f44d4b9760c06f96d1bd47/b3708b232bfd4403a431d314ef5d348e/individual/002_CHEMBL220_SIMS/.biomolexplorer/jobs/8f672125a1004c5f9b134e59056e518e/artifacts/AChE_CHEMBL220_SIMS_MIX_evaluated.csv",
+     "bytes": 9268954
+    },
+    {
+     "path": "runs/9686f7def5f44d4b9760c06f96d1bd47/b3708b232bfd4403a431d314ef5d348e/individual/002_CHEMBL220_SIMS/.biomolexplorer/jobs/8f672125a1004c5f9b134e59056e518e/artifacts/AChE_CHEMBL220_SIMS_MIX_alerts.csv",
+     "bytes": 9268954
+    },
+    {
+     "path": "runs/19aaf0c26a9a49efa3bf83226486f55c/88506f7c69e4443883db94b8d4ea33df/individual/002_AChE_CHEMBL220_SIMS_MIX_BBB+___morgan/.biomolexplorer/jobs/7fb7159e88484ebdacee0d8543e58da0/artifacts/morgan_AChE_CHEMBL220_SIMS_MIX_BBB+.csv",
+     "bytes": 8168404
+    }
+   ],
+   "csv1_full_read": {
+    "cold": {
+     "n": 5,
+     "mean": 0.05230225960003736,
+     "stdev": 0.002614891370370282,
+     "min": 0.05018985900005646,
+     "median": 0.05103641500045342,
+     "max": 0.05600536200017814
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.04989410039997892,
+     "stdev": 0.0009506594600442118,
+     "min": 0.04842684599952918,
+     "median": 0.05018770599963318,
+     "max": 0.05093716000010318
+    },
+    "consistent_output": true,
+    "output": "1705"
+   },
+   "csv1_indexed": {
+    "cold_build_and_first_page_seconds": 0.35910542700003134,
+    "rows": 1705,
+    "index_bytes": 23973888,
+    "page_offset": 852,
+    "page_25_rows": {
+     "cold": {
+      "n": 5,
+      "mean": 0.032734066200100644,
+      "stdev": 0.000889179501188284,
+      "min": 0.031500072999733675,
+      "median": 0.032616575000247394,
+      "max": 0.03362374000062118
+     },
+     "warm": {
+      "n": 5,
+      "mean": 0.001793780000116385,
+      "stdev": 0.0006890014613441863,
+      "min": 0.0011493609999888577,
+      "median": 0.0015572780002912623,
+      "max": 0.002580192000095849
+     },
+     "consistent_output": true,
+     "output": "[852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876]"
+    }
+   },
+   "csv2_full_read": {
+    "cold": {
+     "n": 5,
+     "mean": 0.05292778659986652,
+     "stdev": 0.001748443211586032,
+     "min": 0.05101441700026044,
+     "median": 0.05298265799956425,
+     "max": 0.05544068299968785
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.0515017464000266,
+     "stdev": 0.001256447143045005,
+     "min": 0.05026016800002253,
+     "median": 0.050835715000175696,
+     "max": 0.05330485000013141
+    },
+    "consistent_output": true,
+    "output": "1705"
+   },
+   "csv2_indexed": {
+    "cold_build_and_first_page_seconds": 0.3251270260007004,
+    "rows": 1705,
+    "index_bytes": 23973888,
+    "page_offset": 852,
+    "page_25_rows": {
+     "cold": {
+      "n": 5,
+      "mean": 0.03106300599993119,
+      "stdev": 0.001049377993493804,
+      "min": 0.029965035000714124,
+      "median": 0.030550423999557097,
+      "max": 0.032558328000050096
+     },
+     "warm": {
+      "n": 5,
+      "mean": 0.0011942060004002998,
+      "stdev": 9.568813880424403e-05,
+      "min": 0.001071935000254598,
+      "median": 0.0011752110003726557,
+      "max": 0.0013308980005604099
+     },
+     "consistent_output": true,
+     "output": "[852, 853, 854, 855, 856, 857, 858, 859, 860, 861, 862, 863, 864, 865, 866, 867, 868, 869, 870, 871, 872, 873, 874, 875, 876]"
+    }
+   },
+   "csv3_full_read": {
+    "cold": {
+     "n": 5,
+     "mean": 0.03719646719982848,
+     "stdev": 0.0015259974961570712,
+     "min": 0.03570231999947282,
+     "median": 0.03676631799953611,
+     "max": 0.03943424099998083
+    },
+    "warm": {
+     "n": 5,
+     "mean": 0.03626829760014516,
+     "stdev": 0.0009989554526450232,
+     "min": 0.034883627000454,
+     "median": 0.03631507699992653,
+     "max": 0.03767629499998293
+    },
+    "consistent_output": true,
+    "output": "732"
+   },
+   "csv3_indexed": {
+    "cold_build_and_first_page_seconds": 0.2724995550006497,
+    "rows": 732,
+    "index_bytes": 18616320,
+    "page_offset": 366,
+    "page_25_rows": {
+     "cold": {
+      "n": 5,
+      "mean": 0.01389994299988757,
+      "stdev": 0.0005961415737563121,
+      "min": 0.013197851999393606,
+      "median": 0.013935160999608343,
+      "max": 0.014636417000474466
+     },
+     "warm": {
+      "n": 5,
+      "mean": 0.001304360600079235,
+      "stdev": 0.00023920746780728847,
+      "min": 0.0010768490001282771,
+      "median": 0.0012689200002569123,
+      "max": 0.0016007109998099622
+     },
+     "consistent_output": true,
+     "output": "[366, 367, 368, 369, 370, 371, 372, 373, 374, 375, 376, 377, 378, 379, 380, 381, 382, 383, 384, 385, 386, 387, 388, 389, 390]"
+    }
+   },
+   "_snapshot": {
+    "file": "4195924b0ce740438585535c857efd63-before.json",
+    "bytes": 27378732
+   },
+   "history_snapshot_parse_median": {
+    "cold": {
+     "n": 2,
+     "mean": 0.17316555699972014,
+     "stdev": 0.037872166852433074,
+     "min": 0.14638589100013633,
+     "median": 0.17316555699972014,
+     "max": 0.19994522299930395
+    },
+    "warm": {
+     "n": 2,
+     "mean": 0.20475257550015158,
+     "stdev": 0.014507321627855126,
+     "min": 0.19449435000024096,
+     "median": 0.20475257550015158,
+     "max": 0.2150108010000622
+    },
+    "consistent_output": true,
+    "output": "9"
+   }
+  }
+ },
+ "elapsed_seconds": 252.052185216
+}

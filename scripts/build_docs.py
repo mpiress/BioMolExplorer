@@ -84,6 +84,12 @@ LABELS['pt']['summaries'].append('Critérios inspirados em PoseBusters, tolerân
 LABELS['en']['titles'].append('Pose validation: physical criteria')
 LABELS['en']['summaries'].append('PoseBusters-inspired criteria, tolerances, relaxed reference, steric clash, report and interpretation limits.')
 
+GUIDES += ('architecture_decisions',)
+LABELS['pt']['titles'].append('Decisões de arquitetura (ADRs)')
+LABELS['pt']['summaries'].append('Processo, modelo e índice das decisões da arquitetura de artefatos, catálogo, cache e procedência.')
+LABELS['en']['titles'].append('Architecture decisions (ADRs)')
+LABELS['en']['summaries'].append('Process, template and index of the decisions on artifacts, catalog, caching and provenance.')
+
 CSS = '''
 :root{color-scheme:light;--ink:#172b4d;--muted:#526580;--teal:#087f74;--line:#dce5ef;--bg:#f4f7fb}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,sans-serif}

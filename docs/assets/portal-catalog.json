@@ -94,5 +94,10 @@
     "group": "docking",
     "search": "pose validation validar poses PoseBusters clash choque estérico planaridade geometria energia interna tolerâncias RDKit",
     "icon": "<div class=\"topic-icon mint\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><path d=\"M4 12.5 9 17.5 20 6.5\"></path><circle cx=\"12\" cy=\"12\" r=\"9.2\" opacity=\".35\"></circle></svg></div>"
+  },
+  "architecture_decisions": {
+    "group": "developer",
+    "search": "adr decisões arquitetura architecture decision records catálogo cache procedência provenance artefatos artifacts",
+    "icon": "<div class=\"topic-icon blue\"><svg aria-hidden=\"true\" class=\"icon\" fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"1.75\" viewbox=\"0 0 24 24\"><path d=\"M9 3h6M10 3v6l-6 9a2 2 0 0 0 1.7 3h12.6a2 2 0 0 0 1.7-3l-6-9V3\"></path><path d=\"M7 15h10M10 18h.01M14 17h.01\"></path></svg></div>"
   }
 }

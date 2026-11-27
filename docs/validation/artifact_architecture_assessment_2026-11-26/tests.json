@@ -1,0 +1,2143 @@
+{
+ "modules": 169,
+ "parallel": {
+  "test_admet_output_selection": {
+   "exit": 0,
+   "seconds": 2,
+   "ran": 3,
+   "failed": []
+  },
+  "test_admet_research": {
+   "exit": 1,
+   "seconds": 6,
+   "ran": 14,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_operation_outputs_are_registered_and_primary_csv_respects_hypothesis (test_admet_research.ResearchAdmetTests.test_operation_outputs_are_registered_and_primary_csv_respects_hypothesis)",
+     "error": "AssertionError: False is not true"
+    }
+   ]
+  },
+  "test_admet_standard_outputs": {
+   "exit": 1,
+   "seconds": 6,
+   "ran": 6,
+   "failures": 7,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_disabled_rules_and_alert_catalogs_do_not_generate_extra_csvs (test_admet_standard_outputs.StandardADMETOutputsTests.test_disabled_rules_and_alert_catalogs_do_not_generate_extra_csvs)",
+     "error": "AssertionError: 6 != 4"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_each_input_has_only_four_barrier_partitions_one_named_rule_and_one_alert_table (test_admet_standard_outputs.StandardADMETOutputsTests.test_each_input_has_only_four_barrier_partitions_one_named_rule_and_one_alert_table)",
+     "error": "AssertionError: 32 != 24"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_rule_names_and_publication_survive_short_names_and_reopening (test_admet_standard_outputs.StandardADMETOutputsTests.test_rule_names_and_publication_survive_short_names_and_reopening)",
+     "error": "AssertionError: 8 != 6"
+    }
+   ]
+  },
+  "test_ambertools_execution": {
+   "exit": 0,
+   "seconds": 0,
+   "ran": 4,
+   "failed": []
+  },
+  "test_analysis_handoff": {
+   "exit": 1,
+   "seconds": 4,
+   "ran": 5,
+   "errors": 6,
+   "failed": []
+  },
+  "test_analysis_origins": {
+   "exit": 1,
+   "seconds": 4,
+   "ran": 4,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_three_old_pubchem_selections_expand_to_six_real_graphs_with_exact_origins (test_analysis_origins.AnalysisOriginsIntegrationTests.test_three_old_pubchem_selections_expand_to_six_real_graphs_with_exact_origins)",
+     "error": "ValueError: O arquivo escolhido não está nos resultados da etapa (ausente ou ambíguo). Revise a seleção da origem."
+    }
+   ]
+  },
+  "test_application": {
+   "exit": 1,
+   "seconds": 7,
+   "ran": 17,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_admet_excludes_flagged_compounds_and_handles_empty (test_application.ApplicationTests.test_admet_excludes_flagged_compounds_and_handles_empty)",
+     "error": "+ ['safe']"
+    }
+   ]
+  },
+  "test_artifact_publication": {
+   "exit": 0,
+   "seconds": 2,
+   "ran": 7,
+   "failed": []
+  },
+  "test_artifact_registry": {
+   "exit": 0,
+   "seconds": 9,
+   "ran": 10,
+   "failed": []
+  },
+  "test_auth_recovery": {
+   "exit": 0,
+   "seconds": 3,
+   "ran": 8,
+   "failed": []
+  },
+  "test_automatic_result_sync": {
+   "exit": 1,
+   "seconds": 15,
+   "ran": 11,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_cancel_restores_configuration_in_memory_and_database (test_automatic_result_sync.AutomaticConfirmationTests.test_cancel_restores_configuration_in_memory_and_database)",
+     "error": "Diff is 1993 characters long. Set self.maxDiff to None to see it."
+    }
+   ]
+  },
+  "test_canvas_drag_regression": {
+   "exit": 1,
+   "seconds": 3,
+   "ran": 6,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_unexecuted_source_connects_without_requiring_result_metadata (test_canvas_drag_regression.CanvasDragRegressionTests.test_unexecuted_source_connects_without_requiring_result_metadata)",
+     "error": "? ++++++++++++++++++++"
+    }
+   ]
+  },
+  "test_canvas_scaling": {
+   "exit": 0,
+   "seconds": 2,
+   "ran": 7,
+   "failed": []
+  },
+  "test_chembl_rest": {
+   "exit": 1,
+   "seconds": 1,
+   "ran": 11,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_chembl220_ic50_full_retrieval (test_chembl_rest.ChEMBLRestTests.test_chembl220_ic50_full_retrieval)",
+     "error": "AssertionError: False is not true"
+    }
+   ]
+  },
+  "test_chimera_charge_replacement": {
+   "exit": 1,
+   "seconds": 6,
+   "ran": 7,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_legacy_conversion_routes_am1_to_direct_antechamber (test_chimera_charge_replacement.ChargeOnlyTests.test_legacy_conversion_routes_am1_to_direct_antechamber)",
+     "error": "AssertionError: 0 != 1"
+    }
+   ]
+  },
+  "test_chimera_only_preparation": {
+   "exit": 0,
+   "seconds": 2,
+   "ran": 8,
+   "failed": []
+  },
+  "test_chimera_preparation": {
+   "exit": 0,
+   "seconds": 1,
+   "ran": 7,
+   "failed": []
+  },
+  "test_clear_all_results": {
+   "exit": 0,
+   "seconds": 6,
+   "ran": 6,
+   "failed": []
+  },
+  "test_complex_classification": {
+   "exit": 0,
+   "seconds": 1,
+   "ran": 4,
+   "skipped": 1,
+   "failed": []
+  },
+  "test_compound_inspection": {
+   "exit": 0,
+   "seconds": 3,
+   "ran": 10,
+   "failed": []
+  },
+  "test_compound_retrieval": {
+   "exit": 0,
+   "seconds": 1,
+   "ran": 4,
+   "failed": []
+  },
+  "test_compound_tables": {
+   "exit": 0,
+   "seconds": 14,
+   "ran": 14,
+   "failed": []
+  },
+  "test_configuration_loading": {
+   "exit": 1,
+   "seconds": 12,
+   "ran": 14,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_restart_shows_splash_through_save_and_result_validation_then_reuse_menu (test_configuration_loading.ExecutionPreparationTests.test_restart_shows_splash_through_save_and_result_validation_then_reuse_menu)",
+     "error": "TimeoutError"
+    }
+   ]
+  },
+  "test_configured_handoff": {
+   "exit": 0,
+   "seconds": 0,
+   "ran": 3,
+   "failed": []
+  },
+  "test_connection_matrix": {
+   "exit": 1,
+   "seconds": 0,
+   "ran": 5,
+   "failures": 1,
+   "failed": []
+  },
+  "test_consensus_automation": {
+   "exit": 0,
+   "seconds": 8,
+   "ran": 6,
+   "failed": []
+  },
+  "test_consensus_completion": {
+   "exit": 0,
+   "seconds": 1,
+   "ran": 8,
+   "failed": []
+  },
+  "test_consensus_history": {
+   "exit": 0,
+   "seconds": 41,
+   "ran": 24,
+   "failed": []
+  },
+  "test_consensus_model": {
+   "exit": 0,
+   "seconds": 2,
+   "ran": 14,
+   "failed": []
+  },
+  "test_consensus_optional_structures": {
+   "exit": 0,
+   "seconds": 5,
+   "ran": 6,
+   "failed": []
+  },
+  "test_consensus_target_actions": {
+   "exit": 0,
+   "seconds": 17,
+   "ran": 23,
+   "failed": []
+  },
+  "test_consolidated_docking_sources": {
+   "exit": 0,
+   "seconds": 0,
+   "ran": 3,
+   "failed": []
+  },
+  "test_curated_redocking": {
+   "exit": 1,
+   "seconds": 15,
+   "ran": 11,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_1p0i_bua_saved_after_first_run_is_docked_and_accumulated (test_curated_redocking.CuratedRedockingExecutionTests.test_1p0i_bua_saved_after_first_run_is_docked_and_accumulated)",
+     "error": "ValueError: Confirme a invalidação dos resultados antes de salvar esta alteração."
+    }
+   ]
+  },
+  "test_dataset_identity": {
+   "exit": 0,
+   "seconds": 21,
+   "ran": 11,
+   "failed": []
+  },
+  "test_diagnostics": {
+   "exit": 0,
+   "seconds": 0,
+   "ran": 2,
+   "failed": []
+  },
+  "test_dock6_failures": {
+   "exit": 0,
+   "seconds": 4,
+   "ran": 8,
+   "failed": []
+  },
+  "test_dock6_incremental": {
+   "exit": 0,
+   "seconds": 6,
+   "ran": 3,
+   "failed": []
+  },
+  "test_dock6_installation": {
+   "exit": 0,
+   "seconds": 2,
+   "ran": 4,
+   "failed": []
+  },
+  "test_dock6_operation_modes": {
+   "exit": 0,
+   "seconds": 2,
+   "ran": 5,
+   "failed": []
+  },
+  "test_docking_accounting": {
+   "exit": 0,
+   "seconds": 4,
+   "ran": 8,
+   "failed": []
+  },
+  "test_docking_completed_reuse": {
+   "exit": 0,
+   "seconds": 3,
+   "ran": 7,
+   "failed": []
+  },
+  "test_docking_configuration": {
+   "exit": 0,
+   "seconds": 4,
+   "ran": 6,
+   "failed": []
+  },
+  "test_docking_handoffs": {
+   "exit": 1,
+   "seconds": 12,
+   "ran": 13,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_consensus_singleton_and_equal_scores_are_finite_and_importable (test_docking_handoffs.DockingHandoffTests.test_consensus_singleton_and_equal_scores_are_finite_and_importable)",
+     "error": "+ [-7.0]"
+    }
+   ]
+  },
+  "test_docking_incremental": {
+   "exit": 0,
+   "seconds": 11,
+   "ran": 21,
+   "failed": []
+  },
+  "test_docking_interactions": {
+   "exit": 0,
+   "seconds": 0,
+   "ran": 5,
+   "failed": []
+  },
+  "test_docking_interoperability": {
+   "exit": 1,
+   "seconds": 10,
+   "ran": 9,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_both_engines_accept_actual_poses_and_keep_compound_identity (test_docking_interoperability.DockingInteroperabilityTests.test_both_engines_accept_actual_poses_and_keep_compound_identity)",
+     "error": "AssertionError: 0 != 2"
+    }
+   ]
+  },
+  "test_docking_performance": {
+   "exit": 0,
+   "seconds": 2,
+   "ran": 6,
+   "failed": []
+  },
+  "test_docking_preparation": {
+   "exit": 1,
+   "seconds": 7,
+   "ran": 8,
+   "failures": 1,
+   "failed": []
+  },
+  "test_docking_reference_regressions": {
+   "exit": 0,
+   "seconds": 4,
+   "ran": 6,
+   "failed": []
+  },
+  "test_docking_scene": {
+   "exit": 0,
+   "seconds": 6,
+   "ran": 9,
+   "failed": []
+  },
+  "test_editor_responsiveness": {
+   "exit": 0,
+   "seconds": 16,
+   "ran": 13,
+   "failed": []
+  },
+  "test_execution_cancellation": {
+   "exit": 1,
+   "seconds": 5,
+   "ran": 3,
+   "failures": 1,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_file_selection_cancel_updates_without_polling_and_discards_draft (test_execution_cancellation.CancellationUITests.test_file_selection_cancel_updates_without_polling_and_discards_draft)",
+     "error": "RuntimeError: coroutine raised StopIteration"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_settings_cancel_button_cancels_pending_execution (test_execution_cancellation.CancellationUITests.test_settings_cancel_button_cancels_pending_execution)",
+     "error": "+ Cancelar execução"
+    }
+   ]
+  },
+  "test_execution_order_pause": {
+   "exit": 0,
+   "seconds": 10,
+   "ran": 10,
+   "failed": []
+  },
+  "test_file_selection": {
+   "exit": 1,
+   "seconds": 9,
+   "ran": 10,
+   "failures": 2,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_deferring_then_configuring_keeps_files_and_processing_mode (test_file_selection.FileSelectionTests.test_deferring_then_configuring_keeps_files_and_processing_mode)",
+     "error": " : Configure o bloco “Avaliar ADMET” e escolha os arquivos de entrada para continuar o pipeline."
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_popup_resumes_same_run_and_only_passes_checked_files (test_file_selection.FileSelectionTests.test_popup_resumes_same_run_and_only_passes_checked_files)",
+     "error": " : Configure o bloco “Avaliar ADMET” e escolha os arquivos de entrada para continuar o pipeline."
+    }
+   ]
+  },
+  "test_flexible_retrieval": {
+   "exit": 0,
+   "seconds": 0,
+   "ran": 11,
+   "failed": []
+  },
+  "test_footprint_popup": {
+   "exit": 0,
+   "seconds": 9,
+   "ran": 11,
+   "failed": []
+  },
+  "test_footprints": {
+   "exit": 0,
+   "seconds": 0,
+   "ran": 2,
+   "failed": []
+  },
+  "test_frontend_navigation": {
+   "exit": 1,
+   "seconds": 6,
+   "ran": 7,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_complete_summary_counts_unique_files_and_reuse (test_frontend_navigation.FrontendNavigationTests.test_complete_summary_counts_unique_files_and_reuse)",
+     "error": "AssertionError: '3' not found in ['Concluído', 'Explore os resultados de cada etapa abaixo.', '2 / 2', 'Etapas concluídas', '0', 'Arquivos registrados', '1', 'Etapas reaproveitadas', '00:02:05', 'Dura"
+    }
+   ]
+  },
+  "test_global_artifact_names": {
+   "exit": 1,
+   "seconds": 4,
+   "ran": 12,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_immediate_source_not_ancestral_hierarchy_and_real_targets (test_global_artifact_names.GlobalNamesTests.test_immediate_source_not_ancestral_hierarchy_and_real_targets)",
+     "error": "+ ['ChEMBL', 'MOL', 'BBB+', 'Fingerprints-Morgan']"
+    }
+   ]
+  },
+  "test_graph_explorer": {
+   "exit": 0,
+   "seconds": 23,
+   "ran": 18,
+   "failed": []
+  },
+  "test_graph_input_contract": {
+   "exit": 0,
+   "seconds": 7,
+   "ran": 8,
+   "failed": []
+  },
+  "test_graph_layout_fragments": {
+   "exit": 0,
+   "seconds": 2,
+   "ran": 11,
+   "failed": []
+  },
+  "test_graph_navigation_gephi": {
+   "exit": 0,
+   "seconds": 5,
+   "ran": 21,
+   "failed": []
+  },
+  "test_graph_scaffold_scope": {
+   "exit": 0,
+   "seconds": 1,
+   "ran": 18,
+   "failed": []
+  },
+  "test_graph_subset_exports": {
+   "exit": 0,
+   "seconds": 3,
+   "ran": 3,
+   "failed": []
+  },
+  "test_guided_dependencies": {
+   "exit": 0,
+   "seconds": 0,
+   "ran": 8,
+   "failed": []
+  },
+  "test_guided_input_preservation": {
+   "exit": 1,
+   "seconds": 1,
+   "ran": 7,
+   "failures": 3,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_new_connection_replaces_configured_folder (test_guided_input_preservation.GuidedInputPreservationTests.test_new_connection_replaces_configured_folder)",
+     "error": "? ++++++++++++++++++++"
+    }
+   ]
+  },
+  "test_guided_ui": {
+   "exit": 1,
+   "seconds": 0,
+   "ran": 9,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_undo_restores_removed_block_and_connection (test_guided_ui.GuidedUITests.test_undo_restores_removed_block_and_connection)",
+     "error": "TypeError: GuidedUITests.setUp.<locals>.<lambda>() takes 0 positional arguments but 3 were given"
+    }
+   ]
+  },
+  "test_import_files": {
+   "exit": 1,
+   "seconds": 7,
+   "ran": 9,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_add_disk_files_validate_table_remove_and_reopen (test_import_files.ImportFilesTests.test_add_disk_files_validate_table_remove_and_reopen)",
+     "error": "'receptor_pdb'"
+    }
+   ]
+  },
+  "test_input_processing": {
+   "exit": 1,
+   "seconds": 51,
+   "ran": 12,
+   "failures": 1,
+   "errors": 2,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_both_reuses_individual_jobs_and_merges_vectors_without_a_worker (test_input_processing.InputProcessingTests.test_both_reuses_individual_jobs_and_merges_vectors_without_a_worker)",
+     "error": "ValueError: Confirme a invalidação dos resultados antes de salvar esta alteração."
+    },
+    {
+     "kind": "ERROR",
+     "test": "test_redocking_curated_pair_repairs_stale_retrieval_metadata (test_input_processing.InputProcessingTests.test_redocking_curated_pair_repairs_stale_retrieval_metadata)",
+     "error": "ValueError: Os arquivos selecionados não possuem registros PDB compatíveis nos metadados."
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_real_fingerprints_similarity_and_graphs_keep_each_dataset_separate (test_input_processing.InputProcessingTests.test_real_fingerprints_similarity_and_graphs_keep_each_dataset_separate)",
+     "error": "'B02__fingerprint__morgan.csv'"
+    }
+   ]
+  },
+  "test_installation_guide": {
+   "exit": 0,
+   "seconds": 4,
+   "ran": 3,
+   "failed": []
+  },
+  "test_lazy_run_configuration": {
+   "exit": 1,
+   "seconds": 1,
+   "ran": 5,
+   "errors": 2,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_prefetch_failure_does_not_change_run_or_open_ui (test_lazy_run_configuration.LazyPreparationTests.test_prefetch_failure_does_not_change_run_or_open_ui)",
+     "error": "AttributeError: 'WorkspaceUI' object has no attribute 'page'"
+    },
+    {
+     "kind": "ERROR",
+     "test": "test_prefetch_is_single_flight_off_loop_and_configuration_scoped (test_lazy_run_configuration.LazyPreparationTests.test_prefetch_is_single_flight_off_loop_and_configuration_scoped)",
+     "error": "AttributeError: 'WorkspaceUI' object has no attribute 'page'"
+    }
+   ]
+  },
+  "test_ligand_preparation_performance": {
+   "exit": 1,
+   "seconds": 2,
+   "ran": 12,
+   "failures": 1,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_corrupt_and_missing_cached_outputs_are_recomputed (test_ligand_preparation_performance.PreparationPerformanceTests.test_corrupt_and_missing_cached_outputs_are_recomputed)",
+     "error": "KeyError: 'cwd'"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_scientific_settings_and_smiles_invalidate_cache (test_ligand_preparation_performance.PreparationPerformanceTests.test_scientific_settings_and_smiles_invalidate_cache)",
+     "error": "AssertionError: 5 != 6"
+    }
+   ]
+  },
+  "test_localization": {
+   "exit": 1,
+   "seconds": 1,
+   "ran": 11,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_literal_validation_messages_have_translations_in_both_directions (test_localization.LocalizationCoverageTests.test_literal_validation_messages_have_translations_in_both_directions)",
+     "error": "AssertionError: 'Resolva o modo DOCK6 antes de gerar o arquivo de execução.' == 'Resolva o modo DOCK6 antes de gerar o arquivo de execução.' : dock6_protocol.py:23: Resolva o modo DOCK6 antes de gerar"
+    }
+   ]
+  },
+  "test_localization_catalogs": {
+   "exit": 1,
+   "seconds": 2,
+   "ran": 4,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_source_and_all_dictionary_namespaces_pass_audit (test_localization_catalogs.LocalizationCatalogTests.test_source_and_all_dictionary_namespaces_pass_audit)",
+     "error": "Diff is 12469 characters long. Set self.maxDiff to None to see it."
+    }
+   ]
+  },
+  "test_login_experience": {
+   "exit": 0,
+   "seconds": 1,
+   "ran": 7,
+   "failed": []
+  },
+  "test_login_processing_lifecycle": {
+   "exit": 0,
+   "seconds": 2,
+   "ran": 5,
+   "failed": []
+  },
+  "test_mcs_ranking_refinements": {
+   "exit": 1,
+   "seconds": 2,
+   "ran": 17,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_parameter_changes_remove_stale_highlights_and_have_distinct_cache_entries (test_mcs_ranking_refinements.MCSConfigurationTests.test_parameter_changes_remove_stale_highlights_and_have_distinct_cache_entries)",
+     "error": "AssertionError: True is not false"
+    }
+   ]
+  },
+  "test_md_analysis": {
+   "exit": 0,
+   "seconds": 0,
+   "ran": 5,
+   "failed": []
+  },
+  "test_md_configuration_performance": {
+   "exit": 0,
+   "seconds": 11,
+   "ran": 16,
+   "failed": []
+  },
+  "test_md_dashboard": {
+   "exit": 0,
+   "seconds": 1,
+   "ran": 4,
+   "failed": []
+  },
+  "test_md_downstream_persistence": {
+   "exit": 0,
+   "seconds": 3,
+   "ran": 3,
+   "failed": []
+  },
+  "test_md_pair_selection": {
+   "exit": 0,
+   "seconds": 2,
+   "ran": 9,
+   "failed": []
+  },
+  "test_md_residue_support": {
+   "exit": 0,
+   "seconds": 2,
+   "ran": 14,
+   "failed": []
+  },
+  "test_md_result_deletion": {
+   "exit": 0,
+   "seconds": 4,
+   "ran": 5,
+   "failed": []
+  },
+  "test_md_semantic_inputs": {
+   "exit": 0,
+   "seconds": 5,
+   "ran": 7,
+   "failed": []
+  },
+  "test_molecular_core": {
+   "exit": 0,
+   "seconds": 15,
+   "ran": 11,
+   "failed": []
+  },
+  "test_molecular_dynamics": {
+   "exit": 0,
+   "seconds": 22,
+   "ran": 16,
+   "failed": []
+  },
+  "test_molecular_inspector_presentation": {
+   "exit": 0,
+   "seconds": 0,
+   "ran": 8,
+   "failed": []
+  },
+  "test_molecular_network_dashboard": {
+   "exit": 0,
+   "seconds": 30,
+   "ran": 36,
+   "failed": []
+  },
+  "test_molecular_parsing": {
+   "exit": 0,
+   "seconds": 0,
+   "ran": 4,
+   "failed": []
+  },
+  "test_molecular_surface": {
+   "exit": 0,
+   "seconds": 11,
+   "ran": 4,
+   "failed": []
+  },
+  "test_molecule_quality": {
+   "exit": 1,
+   "seconds": 3,
+   "ran": 9,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_invalid_admet_input_is_removed_before_property_calculation (test_molecule_quality.MoleculeQualityTests.test_invalid_admet_input_is_removed_before_property_calculation)",
+     "error": "StopIteration"
+    }
+   ]
+  },
+  "test_native_structures": {
+   "exit": 1,
+   "seconds": 1,
+   "ran": 1,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_native_structures (unittest.loader._FailedTest.test_native_structures)",
+     "error": "ImportError: cannot import name 'MINIMIZATION' from 'biomolexplorer.amber_preparation' (<repo>/…"
+    }
+   ]
+  },
+  "test_network_analysis": {
+   "exit": 0,
+   "seconds": 2,
+   "ran": 14,
+   "failed": []
+  },
+  "test_network_refinement": {
+   "exit": 0,
+   "seconds": 4,
+   "ran": 32,
+   "failed": []
+  },
+  "test_pdb_ligand_triage": {
+   "exit": 0,
+   "seconds": 3,
+   "ran": 17,
+   "failed": []
+  },
+  "test_pdb_viewer": {
+   "exit": 0,
+   "seconds": 12,
+   "ran": 15,
+   "failed": []
+  },
+  "test_pipeline_editor_regressions": {
+   "exit": 0,
+   "seconds": 11,
+   "ran": 11,
+   "failed": []
+  },
+  "test_pipeline_execution": {
+   "exit": 0,
+   "seconds": 29,
+   "ran": 22,
+   "failed": []
+  },
+  "test_pipeline_failure_recovery": {
+   "exit": 1,
+   "seconds": 8,
+   "ran": 11,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_vina_does_not_rerun_scripts_from_previously_processed_pairs (test_pipeline_failure_recovery.PairFailureIsolationTests.test_vina_does_not_rerun_scripts_from_previously_processed_pairs)",
+     "error": "AssertionError: 0 != 1"
+    }
+   ]
+  },
+  "test_pipeline_guidance": {
+   "exit": 1,
+   "seconds": 7,
+   "ran": 9,
+   "failures": 1,
+   "errors": 3,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_every_block_has_information_and_popup_is_available_to_viewers (test_pipeline_guidance.ConnectionGuidanceTests.test_every_block_has_information_and_popup_is_available_to_viewers)",
+     "error": "AssertionError: 'Poses de ligantes MOL2 com coordenadas, tipos e cargas.' == 'Poses de ligantes MOL2 com coordenadas, tipos e cargas.'"
+    }
+   ]
+  },
+  "test_pipeline_png": {
+   "exit": 0,
+   "seconds": 2,
+   "ran": 6,
+   "failed": []
+  },
+  "test_pose_validation": {
+   "exit": 0,
+   "seconds": 0,
+   "ran": 18,
+   "failed": []
+  },
+  "test_pose_validation_flow": {
+   "exit": 0,
+   "seconds": 36,
+   "ran": 47,
+   "failed": []
+  },
+  "test_preparation_failures": {
+   "exit": 0,
+   "seconds": 6,
+   "ran": 8,
+   "failed": []
+  },
+  "test_preparation_resources": {
+   "exit": 0,
+   "seconds": 0,
+   "ran": 5,
+   "failed": []
+  },
+  "test_preparation_settings": {
+   "exit": 0,
+   "seconds": 3,
+   "ran": 15,
+   "failed": []
+  },
+  "test_processing_feedback": {
+   "exit": 0,
+   "seconds": 1,
+   "ran": 7,
+   "failed": []
+  },
+  "test_project_folders": {
+   "exit": 0,
+   "seconds": 11,
+   "ran": 12,
+   "failed": []
+  },
+  "test_project_portability": {
+   "exit": 0,
+   "seconds": 33,
+   "ran": 18,
+   "failed": []
+  },
+  "test_project_tools_ui": {
+   "exit": 0,
+   "seconds": 12,
+   "ran": 16,
+   "failed": []
+  },
+  "test_pubchem": {
+   "exit": 0,
+   "seconds": 1,
+   "ran": 4,
+   "failed": []
+  },
+  "test_pubchem_workflow": {
+   "exit": 1,
+   "seconds": 4,
+   "ran": 9,
+   "failures": 3,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_real_worker_accepts_an_uploaded_csv_without_a_retrieval_block (test_pubchem_workflow.PubChemPipelineTests.test_real_worker_accepts_an_uploaded_csv_without_a_retrieval_block)",
+     "error": " : Recuperar PubChem: Command '['<conda>/envs/BioMolExplorer/bin/python3.12', '<repo>/…"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_real_worker_manual_reference_produces_shared_compound_contract (test_pubchem_workflow.PubChemPipelineTests.test_real_worker_manual_reference_produces_shared_compound_contract)",
+     "error": " : Recuperar PubChem: Command '['<conda>/envs/BioMolExplorer/bin/python3.12', '<repo>/…"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_real_workers_curate_one_reference_and_analyze_sources_separately_or_merged (test_pubchem_workflow.PubChemPipelineTests.test_real_workers_curate_one_reference_and_analyze_sources_separately_or_merged)",
+     "error": " : Importar meus arquivos: Command '['<conda>/envs/BioMolExplorer/bin/python3.12', '<repo>/…"
+    }
+   ]
+  },
+  "test_published_results": {
+   "exit": 0,
+   "seconds": 17,
+   "ran": 8,
+   "failed": []
+  },
+  "test_ranking_scopes": {
+   "exit": 1,
+   "seconds": 4,
+   "ran": 20,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_betweenness_sampling_is_repeatable_and_covers_nontrivial_components (test_ranking_scopes.CentralityFeasibilityTests.test_betweenness_sampling_is_repeatable_and_covers_nontrivial_components)",
+     "error": "AssertionError: 0.00215835860422072 != 0.002145421906760754 within 7 places (1.2936697459965934e-05 difference)"
+    }
+   ]
+  },
+  "test_redocking_apply": {
+   "exit": 0,
+   "seconds": 5,
+   "ran": 6,
+   "failed": []
+  },
+  "test_redocking_chimera_repair": {
+   "exit": 1,
+   "seconds": 1,
+   "ran": 17,
+   "failures": 1,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_chimera_charge_failure_retries_once_with_explicit_types (test_redocking_chimera_repair.ChimeraChargeRepairTests.test_chimera_charge_failure_retries_once_with_explicit_types)",
+     "error": "biomolexplorer.processes.ScientificToolError: Failure running ANTECHAMBER"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_engine_is_validated_and_exposed_in_operation_schema (test_redocking_chimera_repair.Dock6RedockingTests.test_engine_is_validated_and_exposed_in_operation_schema)",
+     "error": "AssertionError: \"Motor\" does not match \"Método de redocking inválido.\""
+    }
+   ]
+  },
+  "test_redocking_completed_reuse": {
+   "exit": 0,
+   "seconds": 4,
+   "ran": 4,
+   "failed": []
+  },
+  "test_redocking_configuration": {
+   "exit": 0,
+   "seconds": 1,
+   "ran": 12,
+   "failed": []
+  },
+  "test_redocking_curated_handoff": {
+   "exit": 0,
+   "seconds": 1,
+   "ran": 5,
+   "failed": []
+  },
+  "test_redocking_execution_review": {
+   "exit": 0,
+   "seconds": 6,
+   "ran": 5,
+   "failed": []
+  },
+  "test_redocking_file_table": {
+   "exit": 0,
+   "seconds": 4,
+   "ran": 9,
+   "failed": []
+  },
+  "test_redocking_incremental": {
+   "exit": 0,
+   "seconds": 67,
+   "ran": 19,
+   "failed": []
+  },
+  "test_redocking_methods": {
+   "exit": 0,
+   "seconds": 1,
+   "ran": 13,
+   "failed": []
+  },
+  "test_redocking_partial_failures": {
+   "exit": 0,
+   "seconds": 16,
+   "ran": 11,
+   "failed": []
+  },
+  "test_redocking_receptor_outputs": {
+   "exit": 1,
+   "seconds": 0,
+   "ran": 2,
+   "failures": 1,
+   "failed": []
+  },
+  "test_redocking_results": {
+   "exit": 0,
+   "seconds": 9,
+   "ran": 8,
+   "failed": []
+  },
+  "test_redocking_viewer_navigation": {
+   "exit": 0,
+   "seconds": 8,
+   "ran": 8,
+   "failed": []
+  },
+  "test_removal_progress": {
+   "exit": 0,
+   "seconds": 0,
+   "ran": 7,
+   "failed": []
+  },
+  "test_report_performance": {
+   "exit": 0,
+   "seconds": 2,
+   "ran": 2,
+   "failed": []
+  },
+  "test_report_toolbar": {
+   "exit": 0,
+   "seconds": 3,
+   "ran": 3,
+   "failed": []
+  },
+  "test_restart_reuse": {
+   "exit": 1,
+   "seconds": 16,
+   "ran": 8,
+   "failures": 4,
+   "errors": 2,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_changed_processing_mode_after_restart_requires_new_selection (test_restart_reuse.RestartReuseTests.test_changed_processing_mode_after_restart_requires_new_selection)",
+     "error": "ValueError: Confirme a invalidação dos resultados antes de salvar esta alteração."
+    },
+    {
+     "kind": "ERROR",
+     "test": "test_changed_uploaded_input_invalidates_consumer_after_upgrade (test_restart_reuse.RestartReuseTests.test_changed_uploaded_input_invalidates_consumer_after_upgrade)",
+     "error": "ValueError: Confirme a invalidação dos resultados antes de salvar esta alteração."
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_declining_reuse_runs_collection_and_waits_for_new_file_selection (test_restart_reuse.RestartReuseTests.test_declining_reuse_runs_collection_and_waits_for_new_file_selection)",
+     "error": "+ awaiting_input"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_modified_consumer_output_cannot_be_reused_after_upgrade (test_restart_reuse.RestartReuseTests.test_modified_consumer_output_cannot_be_reused_after_upgrade)",
+     "error": "+ awaiting_input"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_restart_restores_only_the_previously_selected_file (test_restart_reuse.RestartReuseTests.test_restart_restores_only_the_previously_selected_file)",
+     "error": "AssertionError: 3 != 2"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_tampered_original_cache_key_is_not_adopted_after_upgrade (test_restart_reuse.RestartReuseTests.test_tampered_original_cache_key_is_not_adopted_after_upgrade)",
+     "error": "AssertionError: True is not false"
+    }
+   ]
+  },
+  "test_restarted_cancellation": {
+   "exit": 0,
+   "seconds": 2,
+   "ran": 1,
+   "failed": []
+  },
+  "test_result_index": {
+   "exit": 0,
+   "seconds": 15,
+   "ran": 19,
+   "failed": []
+  },
+  "test_result_io_performance": {
+   "exit": 0,
+   "seconds": 5,
+   "ran": 5,
+   "failed": []
+  },
+  "test_result_persistence": {
+   "exit": 1,
+   "seconds": 55,
+   "ran": 26,
+   "failures": 4,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_real_changed_dataset_reuses_other_fingerprints_similarity_and_graphs (test_result_persistence.PersistentBatchTests.test_real_changed_dataset_reuses_other_fingerprints_similarity_and_graphs)",
+     "error": "ValueError: Confirme a invalidação dos resultados antes de salvar esta alteração."
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_death_after_commit_finishes_file_cleanup (test_result_persistence.CrashRecoveryTests.test_death_after_commit_finishes_file_cleanup)",
+     "error": "Diff is 9019 characters long. Set self.maxDiff to None to see it."
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_death_before_commit_restores_files_and_metadata (test_result_persistence.CrashRecoveryTests.test_death_before_commit_restores_files_and_metadata)",
+     "error": "Diff is 14658 characters long. Set self.maxDiff to None to see it."
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_v1_batches_are_adopted_when_new_sources_are_added_immediately (test_result_persistence.PersistentBatchTests.test_v1_batches_are_adopted_when_new_sources_are_added_immediately)",
+     "error": "AssertionError: 3 != 2"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_verified_v1_cache_survives_migration_and_growth_without_recomputation (test_result_persistence.PersistentBatchTests.test_verified_v1_cache_survives_migration_and_growth_without_recomputation)",
+     "error": "AssertionError: 3 != 2"
+    }
+   ]
+  },
+  "test_result_sorting": {
+   "exit": 0,
+   "seconds": 4,
+   "ran": 5,
+   "failed": []
+  },
+  "test_result_visualizations": {
+   "exit": 1,
+   "seconds": 3,
+   "ran": 11,
+   "errors": 2,
+   "failed": []
+  },
+  "test_results_display": {
+   "exit": 0,
+   "seconds": 28,
+   "ran": 29,
+   "failed": []
+  },
+  "test_retrieval_usability": {
+   "exit": 0,
+   "seconds": 10,
+   "ran": 11,
+   "failed": []
+  },
+  "test_run_progress": {
+   "exit": 1,
+   "seconds": 6,
+   "ran": 18,
+   "failures": 1,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_single_chembl220_block_uses_all_catalog_defaults_in_real_worker (test_run_progress.WorkerRetrievalTests.test_single_chembl220_block_uses_all_catalog_defaults_in_real_worker)",
+     "error": "+ 0"
+    }
+   ]
+  },
+  "test_run_reuse_ui": {
+   "exit": 124,
+   "seconds": 600,
+   "ran": 8,
+   "errors": 7,
+   "hang": 1,
+   "failed": [
+    {
+     "test": "test_run_reuse_ui.ReusePromptTests.test_cancel_and_dismiss_release_prompt_and_ignore_old_responses",
+     "exit": 1,
+     "seconds": 0,
+     "result": "error",
+     "error": "AttributeError: 'WorkspaceUI' object has no attribute 'store'"
+    },
+    {
+     "test": "test_run_reuse_ui.ReusePromptTests.test_cancel_or_session_switch_never_starts_execution",
+     "exit": 1,
+     "seconds": 0,
+     "result": "error",
+     "error": "AttributeError: 'WorkspaceUI' object has no attribute 'store'"
+    },
+    {
+     "test": "test_run_reuse_ui.ReusePromptTests.test_leaving_project_invalidates_prompt",
+     "exit": 1,
+     "seconds": 0,
+     "result": "error",
+     "error": "AttributeError: 'WorkspaceUI' object has no attribute 'store'"
+    },
+    {
+     "test": "test_run_reuse_ui.ReusePromptTests.test_opening_other_project_closes_prompt",
+     "exit": 1,
+     "seconds": 0,
+     "result": "error",
+     "error": "AttributeError: 'WorkspaceUI' object has no attribute 'store'"
+    },
+    {
+     "test": "test_run_reuse_ui.ReusePromptTests.test_repeated_execute_clicks_keep_only_one_prompt",
+     "exit": 1,
+     "seconds": 0,
+     "result": "error",
+     "error": "AttributeError: 'WorkspaceUI' object has no attribute 'store'"
+    },
+    {
+     "test": "test_run_reuse_ui.ReusePromptTests.test_response_after_session_or_project_switch_is_ignored",
+     "exit": 1,
+     "seconds": 0,
+     "result": "error",
+     "error": "AttributeError: 'WorkspaceUI' object has no attribute 'store'"
+    },
+    {
+     "test": "test_run_reuse_ui.ReusePromptTests.test_submission_waits_for_choice_and_both_answers_reach_the_backend",
+     "exit": 1,
+     "seconds": 0,
+     "result": "error",
+     "error": "KeyError: 'pipeline'"
+    },
+    {
+     "test": "test_run_reuse_ui.ReusePromptTests.test_late_result_lookup_cannot_open_prompt_after_leaving",
+     "exit": 124,
+     "seconds": 90,
+     "result": "timeout (hang)",
+     "error": null
+    }
+   ]
+  },
+  "test_runs_pipeline_controls": {
+   "exit": 0,
+   "seconds": 10,
+   "ran": 9,
+   "failed": []
+  },
+  "test_runtime_messages": {
+   "exit": 0,
+   "seconds": 0,
+   "ran": 15,
+   "failed": []
+  },
+  "test_scientific_preparation_failures": {
+   "exit": 0,
+   "seconds": 1,
+   "ran": 5,
+   "failed": []
+  },
+  "test_scientific_report": {
+   "exit": 0,
+   "seconds": 1,
+   "ran": 9,
+   "failed": []
+  },
+  "test_semantic_alzheimer_pipeline": {
+   "exit": 0,
+   "seconds": 2,
+   "ran": 2,
+   "failed": []
+  },
+  "test_semantic_artifacts": {
+   "exit": 0,
+   "seconds": 8,
+   "ran": 11,
+   "failed": []
+  },
+  "test_settings_layout": {
+   "exit": 0,
+   "seconds": 0,
+   "ran": 5,
+   "failed": []
+  },
+  "test_stable_artifact_selectors": {
+   "exit": 0,
+   "seconds": 1,
+   "ran": 4,
+   "failed": []
+  },
+  "test_stage_cache": {
+   "exit": 1,
+   "seconds": 23,
+   "ran": 12,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_curation_reuses_collection_but_recalculates_consumers (test_stage_cache.StageCacheTests.test_curation_reuses_collection_but_recalculates_consumers)",
+     "error": "ValueError: Confirme a invalidação dos resultados antes de salvar esta alteração."
+    }
+   ]
+  },
+  "test_stage_default_isolation": {
+   "exit": 0,
+   "seconds": 0,
+   "ran": 2,
+   "failed": []
+  },
+  "test_strict_pipeline_ports": {
+   "exit": 0,
+   "seconds": 4,
+   "ran": 26,
+   "failed": []
+  },
+  "test_structured_diagnostics": {
+   "exit": 0,
+   "seconds": 1,
+   "ran": 7,
+   "failed": []
+  },
+  "test_ui_layout": {
+   "exit": 0,
+   "seconds": 1,
+   "ran": 3,
+   "failed": []
+  },
+  "test_ui_permissions": {
+   "exit": 0,
+   "seconds": 8,
+   "ran": 9,
+   "failed": []
+  },
+  "test_ui_startup": {
+   "exit": 0,
+   "seconds": 0,
+   "ran": 4,
+   "failed": []
+  },
+  "test_unbounded_execution": {
+   "exit": 0,
+   "seconds": 2,
+   "ran": 6,
+   "failed": []
+  },
+  "test_unified_results_review": {
+   "exit": 0,
+   "seconds": 8,
+   "ran": 11,
+   "failed": []
+  },
+  "test_update_notifications": {
+   "exit": 0,
+   "seconds": 1,
+   "ran": 11,
+   "failed": []
+  },
+  "test_vina_dock6_pose_handoff": {
+   "exit": 0,
+   "seconds": 1,
+   "ran": 3,
+   "failed": []
+  },
+  "test_vina_multiple_inputs": {
+   "exit": 0,
+   "seconds": 4,
+   "ran": 7,
+   "failed": []
+  },
+  "test_vina_reuse": {
+   "exit": 0,
+   "seconds": 5,
+   "ran": 12,
+   "failed": []
+  },
+  "test_visual_flow": {
+   "exit": 0,
+   "seconds": 0,
+   "ran": 8,
+   "failed": []
+  },
+  "test_workspace": {
+   "exit": 1,
+   "seconds": 18,
+   "ran": 21,
+   "failures": 2,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_catalog_matches_all_operations (test_workspace.WorkspaceTests.test_catalog_matches_all_operations)",
+     "error": "'md_cache_epoch'"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_consensus_accepts_independent_vina_and_dock6_directories (test_workspace.WorkspaceTests.test_consensus_accepts_independent_vina_and_dock6_directories)",
+     "error": "-5.0"
+    }
+   ]
+  },
+  "test_workspace_actions": {
+   "exit": 1,
+   "seconds": 5,
+   "ran": 6,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_old_errors_are_inside_collapsed_history_while_current_run_is_running (test_workspace_actions.WorkspaceActionsTests.test_old_errors_are_inside_collapsed_history_while_current_run_is_running)",
+     "error": "StopIteration"
+    }
+   ]
+  },
+  "test_zinc_tranches": {
+   "exit": 1,
+   "seconds": 4,
+   "ran": 14,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_library_conformations_are_centered_for_dock6_without_changing_source (test_zinc_tranches.ZincTrancheTests.test_library_conformations_are_centered_for_dock6_without_changing_source)",
+     "error": "IndexError: list index out of range"
+    }
+   ]
+  },
+  "test_zoom_visualizations": {
+   "exit": 0,
+   "seconds": 1,
+   "ran": 5,
+   "failed": []
+  }
+ },
+ "serial": {
+  "test_admet_research": {
+   "exit": 1,
+   "seconds": 5,
+   "ran": 14,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_operation_outputs_are_registered_and_primary_csv_respects_hypothesis (test_admet_research.ResearchAdmetTests.test_operation_outputs_are_registered_and_primary_csv_respects_hypothesis)",
+     "error": "AssertionError: False is not true"
+    }
+   ]
+  },
+  "test_admet_standard_outputs": {
+   "exit": 1,
+   "seconds": 3,
+   "ran": 6,
+   "failures": 7,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_disabled_rules_and_alert_catalogs_do_not_generate_extra_csvs (test_admet_standard_outputs.StandardADMETOutputsTests.test_disabled_rules_and_alert_catalogs_do_not_generate_extra_csvs)",
+     "error": "AssertionError: 6 != 4"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_each_input_has_only_four_barrier_partitions_one_named_rule_and_one_alert_table (test_admet_standard_outputs.StandardADMETOutputsTests.test_each_input_has_only_four_barrier_partitions_one_named_rule_and_one_alert_table)",
+     "error": "AssertionError: 32 != 24"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_rule_names_and_publication_survive_short_names_and_reopening (test_admet_standard_outputs.StandardADMETOutputsTests.test_rule_names_and_publication_survive_short_names_and_reopening)",
+     "error": "AssertionError: 8 != 6"
+    }
+   ]
+  },
+  "test_analysis_handoff": {
+   "exit": 1,
+   "seconds": 2,
+   "ran": 5,
+   "errors": 6,
+   "failed": []
+  },
+  "test_analysis_origins": {
+   "exit": 1,
+   "seconds": 3,
+   "ran": 4,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_three_old_pubchem_selections_expand_to_six_real_graphs_with_exact_origins (test_analysis_origins.AnalysisOriginsIntegrationTests.test_three_old_pubchem_selections_expand_to_six_real_graphs_with_exact_origins)",
+     "error": "ValueError: O arquivo escolhido não está nos resultados da etapa (ausente ou ambíguo). Revise a seleção da origem."
+    }
+   ]
+  },
+  "test_application": {
+   "exit": 1,
+   "seconds": 6,
+   "ran": 17,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_admet_excludes_flagged_compounds_and_handles_empty (test_application.ApplicationTests.test_admet_excludes_flagged_compounds_and_handles_empty)",
+     "error": "+ ['safe']"
+    }
+   ]
+  },
+  "test_automatic_result_sync": {
+   "exit": 1,
+   "seconds": 9,
+   "ran": 11,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_cancel_restores_configuration_in_memory_and_database (test_automatic_result_sync.AutomaticConfirmationTests.test_cancel_restores_configuration_in_memory_and_database)",
+     "error": "Diff is 1993 characters long. Set self.maxDiff to None to see it."
+    }
+   ]
+  },
+  "test_canvas_drag_regression": {
+   "exit": 1,
+   "seconds": 2,
+   "ran": 6,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_unexecuted_source_connects_without_requiring_result_metadata (test_canvas_drag_regression.CanvasDragRegressionTests.test_unexecuted_source_connects_without_requiring_result_metadata)",
+     "error": "? ++++++++++++++++++++"
+    }
+   ]
+  },
+  "test_chembl_rest": {
+   "exit": 1,
+   "seconds": 1,
+   "ran": 11,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_chembl220_ic50_full_retrieval (test_chembl_rest.ChEMBLRestTests.test_chembl220_ic50_full_retrieval)",
+     "error": "AssertionError: False is not true"
+    }
+   ]
+  },
+  "test_chimera_charge_replacement": {
+   "exit": 1,
+   "seconds": 3,
+   "ran": 7,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_legacy_conversion_routes_am1_to_direct_antechamber (test_chimera_charge_replacement.ChargeOnlyTests.test_legacy_conversion_routes_am1_to_direct_antechamber)",
+     "error": "AssertionError: 0 != 1"
+    }
+   ]
+  },
+  "test_configuration_loading": {
+   "exit": 1,
+   "seconds": 7,
+   "ran": 14,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_restart_shows_splash_through_save_and_result_validation_then_reuse_menu (test_configuration_loading.ExecutionPreparationTests.test_restart_shows_splash_through_save_and_result_validation_then_reuse_menu)",
+     "error": "TimeoutError"
+    }
+   ]
+  },
+  "test_connection_matrix": {
+   "exit": 1,
+   "seconds": 0,
+   "ran": 5,
+   "failures": 1,
+   "failed": []
+  },
+  "test_curated_redocking": {
+   "exit": 1,
+   "seconds": 10,
+   "ran": 11,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_1p0i_bua_saved_after_first_run_is_docked_and_accumulated (test_curated_redocking.CuratedRedockingExecutionTests.test_1p0i_bua_saved_after_first_run_is_docked_and_accumulated)",
+     "error": "ValueError: Confirme a invalidação dos resultados antes de salvar esta alteração."
+    }
+   ]
+  },
+  "test_docking_handoffs": {
+   "exit": 1,
+   "seconds": 8,
+   "ran": 13,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_consensus_singleton_and_equal_scores_are_finite_and_importable (test_docking_handoffs.DockingHandoffTests.test_consensus_singleton_and_equal_scores_are_finite_and_importable)",
+     "error": "+ [-7.0]"
+    }
+   ]
+  },
+  "test_docking_interoperability": {
+   "exit": 1,
+   "seconds": 5,
+   "ran": 9,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_both_engines_accept_actual_poses_and_keep_compound_identity (test_docking_interoperability.DockingInteroperabilityTests.test_both_engines_accept_actual_poses_and_keep_compound_identity)",
+     "error": "AssertionError: Posix[152 chars]e762cc3845059/base_selected_mols/poses/1_conformer_file.pdbqt') != Posix[152 chars]e762cc3845059/base_selected_mols/poses/0_conformer_file.pdbqt')"
+    }
+   ]
+  },
+  "test_docking_preparation": {
+   "exit": 1,
+   "seconds": 5,
+   "ran": 8,
+   "failures": 1,
+   "failed": []
+  },
+  "test_execution_cancellation": {
+   "exit": 1,
+   "seconds": 3,
+   "ran": 3,
+   "failures": 1,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_file_selection_cancel_updates_without_polling_and_discards_draft (test_execution_cancellation.CancellationUITests.test_file_selection_cancel_updates_without_polling_and_discards_draft)",
+     "error": "RuntimeError: coroutine raised StopIteration"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_settings_cancel_button_cancels_pending_execution (test_execution_cancellation.CancellationUITests.test_settings_cancel_button_cancels_pending_execution)",
+     "error": "+ Cancelar execução"
+    }
+   ]
+  },
+  "test_file_selection": {
+   "exit": 1,
+   "seconds": 5,
+   "ran": 10,
+   "failures": 2,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_deferring_then_configuring_keeps_files_and_processing_mode (test_file_selection.FileSelectionTests.test_deferring_then_configuring_keeps_files_and_processing_mode)",
+     "error": " : Configure o bloco “Avaliar ADMET” e escolha os arquivos de entrada para continuar o pipeline."
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_popup_resumes_same_run_and_only_passes_checked_files (test_file_selection.FileSelectionTests.test_popup_resumes_same_run_and_only_passes_checked_files)",
+     "error": " : Configure o bloco “Avaliar ADMET” e escolha os arquivos de entrada para continuar o pipeline."
+    }
+   ]
+  },
+  "test_frontend_navigation": {
+   "exit": 1,
+   "seconds": 3,
+   "ran": 7,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_complete_summary_counts_unique_files_and_reuse (test_frontend_navigation.FrontendNavigationTests.test_complete_summary_counts_unique_files_and_reuse)",
+     "error": "AssertionError: '3' not found in ['Concluído', 'Explore os resultados de cada etapa abaixo.', '2 / 2', 'Etapas concluídas', '0', 'Arquivos registrados', '1', 'Etapas reaproveitadas', '00:02:05', 'Dura"
+    }
+   ]
+  },
+  "test_global_artifact_names": {
+   "exit": 1,
+   "seconds": 3,
+   "ran": 12,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_immediate_source_not_ancestral_hierarchy_and_real_targets (test_global_artifact_names.GlobalNamesTests.test_immediate_source_not_ancestral_hierarchy_and_real_targets)",
+     "error": "+ ['ChEMBL', 'MOL', 'BBB+', 'Fingerprints-Morgan']"
+    }
+   ]
+  },
+  "test_guided_input_preservation": {
+   "exit": 1,
+   "seconds": 1,
+   "ran": 7,
+   "failures": 3,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_new_connection_replaces_configured_folder (test_guided_input_preservation.GuidedInputPreservationTests.test_new_connection_replaces_configured_folder)",
+     "error": "? ++++++++++++++++++++"
+    }
+   ]
+  },
+  "test_guided_ui": {
+   "exit": 1,
+   "seconds": 0,
+   "ran": 9,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_undo_restores_removed_block_and_connection (test_guided_ui.GuidedUITests.test_undo_restores_removed_block_and_connection)",
+     "error": "TypeError: GuidedUITests.setUp.<locals>.<lambda>() takes 0 positional arguments but 3 were given"
+    }
+   ]
+  },
+  "test_import_files": {
+   "exit": 1,
+   "seconds": 4,
+   "ran": 9,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_add_disk_files_validate_table_remove_and_reopen (test_import_files.ImportFilesTests.test_add_disk_files_validate_table_remove_and_reopen)",
+     "error": "'receptor_pdb'"
+    }
+   ]
+  },
+  "test_input_processing": {
+   "exit": 1,
+   "seconds": 39,
+   "ran": 12,
+   "failures": 1,
+   "errors": 2,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_both_reuses_individual_jobs_and_merges_vectors_without_a_worker (test_input_processing.InputProcessingTests.test_both_reuses_individual_jobs_and_merges_vectors_without_a_worker)",
+     "error": "ValueError: Confirme a invalidação dos resultados antes de salvar esta alteração."
+    },
+    {
+     "kind": "ERROR",
+     "test": "test_redocking_curated_pair_repairs_stale_retrieval_metadata (test_input_processing.InputProcessingTests.test_redocking_curated_pair_repairs_stale_retrieval_metadata)",
+     "error": "ValueError: Os arquivos selecionados não possuem registros PDB compatíveis nos metadados."
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_real_fingerprints_similarity_and_graphs_keep_each_dataset_separate (test_input_processing.InputProcessingTests.test_real_fingerprints_similarity_and_graphs_keep_each_dataset_separate)",
+     "error": "'B02__fingerprint__morgan.csv'"
+    }
+   ]
+  },
+  "test_lazy_run_configuration": {
+   "exit": 1,
+   "seconds": 0,
+   "ran": 5,
+   "errors": 2,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_prefetch_failure_does_not_change_run_or_open_ui (test_lazy_run_configuration.LazyPreparationTests.test_prefetch_failure_does_not_change_run_or_open_ui)",
+     "error": "AttributeError: 'WorkspaceUI' object has no attribute 'page'"
+    },
+    {
+     "kind": "ERROR",
+     "test": "test_prefetch_is_single_flight_off_loop_and_configuration_scoped (test_lazy_run_configuration.LazyPreparationTests.test_prefetch_is_single_flight_off_loop_and_configuration_scoped)",
+     "error": "AttributeError: 'WorkspaceUI' object has no attribute 'page'"
+    }
+   ]
+  },
+  "test_ligand_preparation_performance": {
+   "exit": 1,
+   "seconds": 3,
+   "ran": 12,
+   "failures": 1,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_corrupt_and_missing_cached_outputs_are_recomputed (test_ligand_preparation_performance.PreparationPerformanceTests.test_corrupt_and_missing_cached_outputs_are_recomputed)",
+     "error": "KeyError: 'cwd'"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_scientific_settings_and_smiles_invalidate_cache (test_ligand_preparation_performance.PreparationPerformanceTests.test_scientific_settings_and_smiles_invalidate_cache)",
+     "error": "AssertionError: 5 != 6"
+    }
+   ]
+  },
+  "test_localization": {
+   "exit": 1,
+   "seconds": 1,
+   "ran": 11,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_literal_validation_messages_have_translations_in_both_directions (test_localization.LocalizationCoverageTests.test_literal_validation_messages_have_translations_in_both_directions)",
+     "error": "AssertionError: 'Resolva o modo DOCK6 antes de gerar o arquivo de execução.' == 'Resolva o modo DOCK6 antes de gerar o arquivo de execução.' : dock6_protocol.py:23: Resolva o modo DOCK6 antes de gerar"
+    }
+   ]
+  },
+  "test_localization_catalogs": {
+   "exit": 1,
+   "seconds": 1,
+   "ran": 4,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_source_and_all_dictionary_namespaces_pass_audit (test_localization_catalogs.LocalizationCatalogTests.test_source_and_all_dictionary_namespaces_pass_audit)",
+     "error": "Diff is 12469 characters long. Set self.maxDiff to None to see it."
+    }
+   ]
+  },
+  "test_mcs_ranking_refinements": {
+   "exit": 1,
+   "seconds": 3,
+   "ran": 17,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_parameter_changes_remove_stale_highlights_and_have_distinct_cache_entries (test_mcs_ranking_refinements.MCSConfigurationTests.test_parameter_changes_remove_stale_highlights_and_have_distinct_cache_entries)",
+     "error": "AssertionError: True is not false"
+    }
+   ]
+  },
+  "test_molecule_quality": {
+   "exit": 1,
+   "seconds": 2,
+   "ran": 9,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_invalid_admet_input_is_removed_before_property_calculation (test_molecule_quality.MoleculeQualityTests.test_invalid_admet_input_is_removed_before_property_calculation)",
+     "error": "StopIteration"
+    }
+   ]
+  },
+  "test_native_structures": {
+   "exit": 1,
+   "seconds": 0,
+   "ran": 1,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_native_structures (unittest.loader._FailedTest.test_native_structures)",
+     "error": "ImportError: cannot import name 'MINIMIZATION' from 'biomolexplorer.amber_preparation' (<repo>/…"
+    }
+   ]
+  },
+  "test_pipeline_failure_recovery": {
+   "exit": 1,
+   "seconds": 5,
+   "ran": 11,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_vina_does_not_rerun_scripts_from_previously_processed_pairs (test_pipeline_failure_recovery.PairFailureIsolationTests.test_vina_does_not_rerun_scripts_from_previously_processed_pairs)",
+     "error": "AssertionError: 0 != 1"
+    }
+   ]
+  },
+  "test_pipeline_guidance": {
+   "exit": 1,
+   "seconds": 5,
+   "ran": 9,
+   "failures": 1,
+   "errors": 3,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_every_block_has_information_and_popup_is_available_to_viewers (test_pipeline_guidance.ConnectionGuidanceTests.test_every_block_has_information_and_popup_is_available_to_viewers)",
+     "error": "AssertionError: 'Poses de ligantes MOL2 com coordenadas, tipos e cargas.' == 'Poses de ligantes MOL2 com coordenadas, tipos e cargas.'"
+    }
+   ]
+  },
+  "test_pubchem_workflow": {
+   "exit": 1,
+   "seconds": 3,
+   "ran": 9,
+   "failures": 3,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_real_worker_accepts_an_uploaded_csv_without_a_retrieval_block (test_pubchem_workflow.PubChemPipelineTests.test_real_worker_accepts_an_uploaded_csv_without_a_retrieval_block)",
+     "error": " : Recuperar PubChem: Command '['<conda>/envs/BioMolExplorer/bin/python3.12', '<repo>/…"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_real_worker_manual_reference_produces_shared_compound_contract (test_pubchem_workflow.PubChemPipelineTests.test_real_worker_manual_reference_produces_shared_compound_contract)",
+     "error": " : Recuperar PubChem: Command '['<conda>/envs/BioMolExplorer/bin/python3.12', '<repo>/…"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_real_workers_curate_one_reference_and_analyze_sources_separately_or_merged (test_pubchem_workflow.PubChemPipelineTests.test_real_workers_curate_one_reference_and_analyze_sources_separately_or_merged)",
+     "error": " : Importar meus arquivos: Command '['<conda>/envs/BioMolExplorer/bin/python3.12', '<repo>/…"
+    }
+   ]
+  },
+  "test_ranking_scopes": {
+   "exit": 1,
+   "seconds": 3,
+   "ran": 20,
+   "failures": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_betweenness_sampling_is_repeatable_and_covers_nontrivial_components (test_ranking_scopes.CentralityFeasibilityTests.test_betweenness_sampling_is_repeatable_and_covers_nontrivial_components)",
+     "error": "AssertionError: 0.0021692254300870913 != 0.0022308041099965295 within 7 places (6.157867990943828e-05 difference)"
+    }
+   ]
+  },
+  "test_redocking_chimera_repair": {
+   "exit": 1,
+   "seconds": 1,
+   "ran": 17,
+   "failures": 1,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_chimera_charge_failure_retries_once_with_explicit_types (test_redocking_chimera_repair.ChimeraChargeRepairTests.test_chimera_charge_failure_retries_once_with_explicit_types)",
+     "error": "biomolexplorer.processes.ScientificToolError: Failure running ANTECHAMBER"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_engine_is_validated_and_exposed_in_operation_schema (test_redocking_chimera_repair.Dock6RedockingTests.test_engine_is_validated_and_exposed_in_operation_schema)",
+     "error": "AssertionError: \"Motor\" does not match \"Método de redocking inválido.\""
+    }
+   ]
+  },
+  "test_redocking_receptor_outputs": {
+   "exit": 1,
+   "seconds": 0,
+   "ran": 2,
+   "failures": 1,
+   "failed": []
+  },
+  "test_restart_reuse": {
+   "exit": 1,
+   "seconds": 10,
+   "ran": 8,
+   "failures": 4,
+   "errors": 2,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_changed_processing_mode_after_restart_requires_new_selection (test_restart_reuse.RestartReuseTests.test_changed_processing_mode_after_restart_requires_new_selection)",
+     "error": "ValueError: Confirme a invalidação dos resultados antes de salvar esta alteração."
+    },
+    {
+     "kind": "ERROR",
+     "test": "test_changed_uploaded_input_invalidates_consumer_after_upgrade (test_restart_reuse.RestartReuseTests.test_changed_uploaded_input_invalidates_consumer_after_upgrade)",
+     "error": "ValueError: Confirme a invalidação dos resultados antes de salvar esta alteração."
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_declining_reuse_runs_collection_and_waits_for_new_file_selection (test_restart_reuse.RestartReuseTests.test_declining_reuse_runs_collection_and_waits_for_new_file_selection)",
+     "error": "+ awaiting_input"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_modified_consumer_output_cannot_be_reused_after_upgrade (test_restart_reuse.RestartReuseTests.test_modified_consumer_output_cannot_be_reused_after_upgrade)",
+     "error": "+ awaiting_input"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_restart_restores_only_the_previously_selected_file (test_restart_reuse.RestartReuseTests.test_restart_restores_only_the_previously_selected_file)",
+     "error": "AssertionError: 3 != 2"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_tampered_original_cache_key_is_not_adopted_after_upgrade (test_restart_reuse.RestartReuseTests.test_tampered_original_cache_key_is_not_adopted_after_upgrade)",
+     "error": "AssertionError: True is not false"
+    }
+   ]
+  },
+  "test_result_persistence": {
+   "exit": 1,
+   "seconds": 38,
+   "ran": 26,
+   "failures": 4,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_real_changed_dataset_reuses_other_fingerprints_similarity_and_graphs (test_result_persistence.PersistentBatchTests.test_real_changed_dataset_reuses_other_fingerprints_similarity_and_graphs)",
+     "error": "ValueError: Confirme a invalidação dos resultados antes de salvar esta alteração."
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_death_after_commit_finishes_file_cleanup (test_result_persistence.CrashRecoveryTests.test_death_after_commit_finishes_file_cleanup)",
+     "error": "Diff is 9019 characters long. Set self.maxDiff to None to see it."
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_death_before_commit_restores_files_and_metadata (test_result_persistence.CrashRecoveryTests.test_death_before_commit_restores_files_and_metadata)",
+     "error": "Diff is 14658 characters long. Set self.maxDiff to None to see it."
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_v1_batches_are_adopted_when_new_sources_are_added_immediately (test_result_persistence.PersistentBatchTests.test_v1_batches_are_adopted_when_new_sources_are_added_immediately)",
+     "error": "AssertionError: 3 != 2"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_verified_v1_cache_survives_migration_and_growth_without_recomputation (test_result_persistence.PersistentBatchTests.test_verified_v1_cache_survives_migration_and_growth_without_recomputation)",
+     "error": "AssertionError: 3 != 2"
+    }
+   ]
+  },
+  "test_result_visualizations": {
+   "exit": 1,
+   "seconds": 3,
+   "ran": 11,
+   "errors": 2,
+   "failed": []
+  },
+  "test_run_progress": {
+   "exit": 1,
+   "seconds": 5,
+   "ran": 18,
+   "failures": 1,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_single_chembl220_block_uses_all_catalog_defaults_in_real_worker (test_run_progress.WorkerRetrievalTests.test_single_chembl220_block_uses_all_catalog_defaults_in_real_worker)",
+     "error": "+ 0"
+    }
+   ]
+  },
+  "test_stage_cache": {
+   "exit": 1,
+   "seconds": 15,
+   "ran": 12,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_curation_reuses_collection_but_recalculates_consumers (test_stage_cache.StageCacheTests.test_curation_reuses_collection_but_recalculates_consumers)",
+     "error": "ValueError: Confirme a invalidação dos resultados antes de salvar esta alteração."
+    }
+   ]
+  },
+  "test_workspace": {
+   "exit": 1,
+   "seconds": 16,
+   "ran": 21,
+   "failures": 2,
+   "failed": [
+    {
+     "kind": "FAIL",
+     "test": "test_catalog_matches_all_operations (test_workspace.WorkspaceTests.test_catalog_matches_all_operations)",
+     "error": "'md_cache_epoch'"
+    },
+    {
+     "kind": "FAIL",
+     "test": "test_consensus_accepts_independent_vina_and_dock6_directories (test_workspace.WorkspaceTests.test_consensus_accepts_independent_vina_and_dock6_directories)",
+     "error": "-5.0"
+    }
+   ]
+  },
+  "test_workspace_actions": {
+   "exit": 1,
+   "seconds": 4,
+   "ran": 6,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_old_errors_are_inside_collapsed_history_while_current_run_is_running (test_workspace_actions.WorkspaceActionsTests.test_old_errors_are_inside_collapsed_history_while_current_run_is_running)",
+     "error": "StopIteration"
+    }
+   ]
+  },
+  "test_zinc_tranches": {
+   "exit": 1,
+   "seconds": 2,
+   "ran": 14,
+   "errors": 1,
+   "failed": [
+    {
+     "kind": "ERROR",
+     "test": "test_library_conformations_are_centered_for_dock6_without_changing_source (test_zinc_tranches.ZincTrancheTests.test_library_conformations_are_centered_for_dock6_without_changing_source)",
+     "error": "IndexError: list index out of range"
+    }
+   ]
+  }
+ },
+ "final_totals": {
+  "modules": 169,
+  "modules_failed": 45,
+  "modules_timed_out": [
+   "test_run_reuse_ui"
+  ],
+  "tests_ran": 1663,
+  "failures": 50,
+  "errors": 38,
+  "skipped": 1,
+  "parallel_only_failures": [],
+  "hangs": 1
+ },
+ "method": "Each module run with unittest, timeout 600 s, 6 in parallel; failing modules re-run serially (same results). test_run_reuse_ui re-run per test with timeout 90 s.",
+ "commit": "2b3d910",
+ "python": "3.12.3 (envs/BioMolExplorer)"
+}
