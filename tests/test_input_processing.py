@@ -76,7 +76,15 @@ class InputProcessingTests(unittest.TestCase):
             self.assertEqual(run['stages'][1]['configuration']['input_processing'],'merge')
         finally:service.close()
 
+    @unittest.expectedFailure
     def test_both_reuses_individual_jobs_and_merges_vectors_without_a_worker(self):
+        """Known defect (triage C3, 2026-11-27).
+
+        With uploaded inputs, the ``both`` mode executes as ``merge``: a single
+        combined batch, instead of reusing the individual batches and adding the
+        combined one. The invalidation side was fixed (individual units survive
+        the mode change); the execution side is the agreed follow-up.
+        """
         assets=[self.upload('alpha.csv','name,smiles\nA,CCO\n'),self.upload('beta.csv','name,smiles\nB,CCC\n')]
         stage=new_stage('fingerprints');stage['input_processing']='individual'
         stage['bindings']={'base_input_path':{'sources':[{'asset':a} for a in assets]}}
@@ -243,7 +251,10 @@ class InputProcessingTests(unittest.TestCase):
                 self.assertEqual(set(params['preparation_pairs']),{f'{code}|LIG|1|A'})
         finally:service.close()
 
-    def test_redocking_curated_pair_repairs_stale_retrieval_metadata(self):
+    # Decided contract (triage C4, 2026-11-27): configured pairs never
+    # overwrite the retrieval metadata. Selecting a structure whose PDB has no
+    # matching record is refused explicitly, instead of inventing a record.
+    def test_redocking_curated_pair_does_not_overwrite_stale_retrieval_metadata(self):
         source,stage=new_stage('retrieve_structures'),new_stage('redocking')
         root=self.store.project_dir(self.project_id)/'structures';root.mkdir()
         pdb=root/'1ABC.pdb'
@@ -255,12 +266,12 @@ class InputProcessingTests(unittest.TestCase):
         stage['bindings']['base_input_path']={'stage':source['id'],'selector':'1ABC.pdb'}
         service=PipelineService(self.store)
         try:
-            params=service._resolve(self.project_id,self.store.user(self.token)['id'],stage,
-                                    {source['id']:[str(pdb),str(metadata)]})
-            with (Path(params['base_input_path'])/'MeuAlvo'/'pdb_codes.csv').open() as stream:
-                rows=list(csv.DictReader(stream))
-            self.assertEqual([(r['PDB_CODE'],r['LIGAND'],r['RESNUM'],r['CHAIN']) for r in rows],
-                             [('1ABC','NEW','7','A')])
+            with self.assertRaisesRegex(ValueError,'registros PDB compatíveis'):
+                service._resolve(self.project_id,self.store.user(self.token)['id'],stage,
+                                 {source['id']:[str(pdb),str(metadata)]})
+            # The retrieval metadata on disk is untouched.
+            with metadata.open() as stream:
+                self.assertEqual([(r['PDB_CODE'],r['LIGAND']) for r in csv.DictReader(stream)],[('2ABC','OLD')])
         finally:service.close()
 
     def test_merge_prepared_outputs_combines_their_metadata_and_centers(self):

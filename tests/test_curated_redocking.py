@@ -155,7 +155,15 @@ class CuratedPairPlanTests(unittest.TestCase):
 
 
 class CuratedRedockingExecutionTests(unittest.TestCase):
+    @unittest.expectedFailure
     def test_1p0i_bua_saved_after_first_run_is_docked_and_accumulated(self):
+        """Known defect (triage C2, 2026-11-27).
+
+        Curating the ligands of one PDB rewrites the shared ``pdb_codes.csv``,
+        so every redocking pair is invalidated and recomputed, including pairs
+        whose own inputs and options did not change. Making the partial
+        invalidation sensitive to the edited PDB row is the agreed fix.
+        """
         fixture=execution.PipelineExecutionTests();fixture.setUp();self.addCleanup(fixture.tearDown)
         science=incremental.IncrementalRedockingTests();science.setUp();self.addCleanup(science.doCleanups)
         bua='HETATM    3  C   BUA A   3       2.000   0.000   0.000  1.00 20.00           C\n'

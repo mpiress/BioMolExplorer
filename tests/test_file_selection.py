@@ -55,6 +55,9 @@ class FileSelectionTests(unittest.TestCase):
                     run_task=lambda *args:SimpleNamespace(done=lambda:False))
                 ui=WorkspaceUI(page,self.store,service)
                 ui.token=self.token;ui.current=self.store.project(self.token,self.project_id)
+                # Opening a project always records the saved pipeline; the
+                # draft save compares against it before resuming the run.
+                ui.base_pipeline=copy.deepcopy(ui.current['pipeline'])
                 ui.draw_project=AsyncMock()
                 async def local_call(function,*args,**kwargs):return function(*args,**kwargs)
                 ui.call=local_call
@@ -148,6 +151,9 @@ class FileSelectionTests(unittest.TestCase):
                     run_task=lambda *args:SimpleNamespace(done=lambda:False))
                 ui=WorkspaceUI(page,self.store,service)
                 ui.token=self.token;ui.current=self.store.project(self.token,self.project_id)
+                # Opening a project always records the saved pipeline; the
+                # draft save compares against it before resuming the run.
+                ui.base_pipeline=copy.deepcopy(ui.current['pipeline'])
                 ui.draw_project=AsyncMock()
                 async def local_call(function,*args,**kwargs):return function(*args,**kwargs)
                 ui.call=local_call

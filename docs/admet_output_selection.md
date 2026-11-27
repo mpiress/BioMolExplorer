@@ -10,7 +10,8 @@ O bloco publica as seguintes tabelas:
 | HIA+ | Compostos classificados como HIA+ |
 | HIA− | Compostos classificados como HIA− |
 | Regras · Lipinski, Veber, Lipinski + Veber ou Fragmentos | Um arquivo da regra configurada, com os compostos que passam pelo limite de violações |
-| Alertas químicos | Uma tabela de todos os compostos válidos, com flags `Alert_PAINS`, `Alert_BRENK` etc. em `true`/`false`, descrições dos alertas e os descritores avaliados |
+| Alertas químicos | Uma tabela de todos os compostos válidos, com flags `Alert_PAINS`, `Alert_BRENK` etc. booleanos, descrições dos alertas e os descritores avaliados |
+| Avaliados | Todos os compostos válidos da entrada, com os descritores, a classificação BBB/HIA e as colunas `ADMET_selected` e `ADMET_reasons` |
 
 BBB/HIA são partições independentes da mesma entrada: a combinação de hipóteses
 não remove compostos de uma classificação diferente. `ADMET_selected` e
@@ -19,12 +20,23 @@ No modo combinado oral, Veber exige zero violações e o limite informado se
 aplica a Lipinski. O arquivo de regras não depende de BBB/HIA nem dos alertas.
 
 As quatro tabelas BBB/HIA são publicadas mesmo vazias, mantendo seus cabeçalhos.
-Sem regra ou sem catálogos selecionados, o arquivo correspondente não é gerado.
-Não são criadas cópias genéricas `compounds`, `evaluated`, `selected` ou
-`rejected` nas novas execuções. Os compostos válidos e os descritores continuam
-nas partições e na tabela de alertas; exclusões de estruturas inválidas seguem
-no relatório de qualidade. O relatório JSON registra critérios, métodos,
-versões, entrada e os caminhos exatos das saídas, inclusive após publicação.
+Sem regra configurada, o arquivo de regras não é gerado. A tabela de avaliados é
+sempre publicada: ela é a única visão com todos os compostos válidos e o motivo
+de cada exclusão da hipótese, e por isso é a referência para auditoria e para os
+blocos seguintes. Não são criadas cópias genéricas `compounds`, `selected` ou
+`rejected`. Exclusões de estruturas inválidas seguem no relatório de qualidade.
+O relatório JSON registra critérios, métodos, versões, entrada e os nomes das
+saídas, relativos ao diretório da execução, inclusive após a publicação.
+
+### Limites conhecidos
+
+Dois pontos foram decididos e aguardam a correção no código, registrados na
+[triagem da suíte de testes](validation/test_suite_triage_2026-11-27/README.md):
+a tabela de alertas é gravada mesmo sem catálogos selecionados, e a tabela de
+regras é gravada duas vezes (`_rules-<regra>` canônica e `_rules_<regra>`
+legada, esta última também filtrada pela hipótese BBB/HIA). A publicação renomeia
+a tabela legada para `compounds` e aponta o papel da regra, no relatório, para
+esse arquivo. Use `_rules-<regra>` como a tabela da regra configurada.
 
 A interface mostra BBB+/BBB− e HIA+/HIA−. Os nomes físicos curtos seguem o padrão
 do projeto, por exemplo `B04__admet__bbb-pos.csv`,

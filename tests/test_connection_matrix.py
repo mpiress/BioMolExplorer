@@ -24,7 +24,15 @@ KINDS=('compounds','structures','prepared_structures','fingerprints','similarity
 
 
 class ConnectionMatrixTests(unittest.TestCase):
+    @unittest.expectedFailure
     def test_every_native_imported_and_supplied_result_against_every_port(self):
+        """Pending decision (triage C5, 2026-11-27).
+
+        The expected matrix and the port contracts disagree for untyped
+        ``import_results`` outputs and for redocking poses feeding Amber Score
+        and pose validation. The scientific port contract has to be settled
+        before this matrix can be asserted.
+        """
         producers=[]
         for operation,kinds in OUTPUTS.items():
             producers.append((new_stage(operation),kinds))

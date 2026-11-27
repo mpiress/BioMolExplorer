@@ -122,13 +122,26 @@ class ResearchAdmetTests(unittest.TestCase):
         self.assertEqual(len(evaluated),3);self.assertEqual(evaluated['ML_hERG'].tolist(),[.8]*3)
         self.assertTrue(evaluated['BBB'].str.startswith('BBB').all())
 
-    def test_operation_outputs_are_registered_and_primary_csv_respects_hypothesis(self):
+    def test_operation_outputs_are_registered_and_partitions_respect_hypothesis(self):
         output=self.root/'worker'
         operation=execute_operation('admet',dict(base_input_path=str(self.source),input_file='compounds.csv',
             admet_profile='peripheral',admet_mode='filter'),output)
         names={Path(p).name for p in operation.artifacts}
-        self.assertTrue({'compounds_INPUT.csv','compounds_INPUT_evaluated.csv','compounds_INPUT_admet_report.json'}<=names)
-        self.assertTrue((pd.read_csv(output/'compounds_INPUT.csv')['BBB']=='BBB-').all())
+        # No generic compounds/selected/rejected copy: the partitions and the
+        # evaluated table carry the data (docs/admet_output_selection.md).
+        self.assertTrue({'compounds_INPUT_BBB+.csv','compounds_INPUT_BBB-.csv','compounds_INPUT_evaluated.csv',
+                         'compounds_INPUT_admet_report.json'}<=names)
+        self.assertNotIn('compounds_INPUT.csv',names)
+        # The peripheral hypothesis selects BBB-; each partition holds only its
+        # own class, and both together keep every evaluated molecule.
+        negative=pd.read_csv(output/'compounds_INPUT_BBB-.csv')
+        positive=pd.read_csv(output/'compounds_INPUT_BBB+.csv')
+        self.assertTrue((negative['BBB']=='BBB-').all())
+        self.assertTrue((positive['BBB']=='BBB+').all())
+        evaluated=pd.read_csv(output/'compounds_INPUT_evaluated.csv')
+        self.assertEqual(set(negative.molecule_chembl_id)|set(positive.molecule_chembl_id),
+                         set(evaluated.molecule_chembl_id))
+        self.assertTrue(evaluated.loc[evaluated['BBB']=='BBB+','ADMET_selected'].eq(False).all())
 
     def test_egg_resize_uses_full_viewport_and_preserves_hit_testing_and_outliers(self):
         from biomolexplorer.ui.results_viewer import ResultsViewer

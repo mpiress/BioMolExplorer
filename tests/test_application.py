@@ -98,16 +98,22 @@ class ApplicationTests(unittest.TestCase):
     def test_admet_excludes_flagged_compounds_and_handles_empty(self):
         with tempfile.TemporaryDirectory() as temp:
             root = Path(temp)
-            pd.DataFrame({'molecule_chembl_id': ['safe', 'flagged'], 'canonical_smiles': ['CCO', 'CCO']}).to_csv(root / 'input.csv', index=False)
+            # Distinct structures: descriptors and the legacy structural verdict
+            # are cached per SMILES, so identical inputs share one verdict.
+            pd.DataFrame({'molecule_chembl_id': ['safe', 'flagged'], 'canonical_smiles': ['CCO', 'CCCO']}).to_csv(root / 'input.csv', index=False)
             wrapper = ADMETWrapper(str(root / 'out'), str(root), 'input.csv')
             with patch.object(wrapper.evaluator, 'is_toxic', side_effect=[False, True]), patch.object(wrapper, 'generate_plot'):
                 result = wrapper.run_pipeline()
             self.assertEqual(result['molecule_chembl_id'].tolist(), ['safe'])
             self.assertEqual(wrapper.excluded_count, 1)
-            with patch.object(wrapper.evaluator, 'is_toxic', return_value=True), patch.object(wrapper, 'generate_plot'):
-                result = wrapper.run_pipeline()
+            # A fresh output directory means a fresh descriptor cache, so the
+            # structural verdict is evaluated again for the same molecules.
+            retry = ADMETWrapper(str(root / 'all-flagged'), str(root), 'input.csv')
+            with patch.object(retry.evaluator, 'is_toxic', return_value=True), patch.object(retry, 'generate_plot'):
+                result = retry.run_pipeline()
             self.assertTrue(result.empty)
             self.assertIn('BBB', result.columns)
+            self.assertEqual(retry.excluded_count, 2)
 
     def test_commands_handle_spaces_failures_and_timeout(self):
         self.assertTrue(run_command([sys.executable, '-c', 'import sys; assert sys.argv[1] == "a b"', 'a b']))

@@ -54,6 +54,13 @@ Cada falha foi classificada em uma de quatro categorias:
 | Tipos de importação (`receptor_pdb`), parâmetros internos ocultos e saídas ADMET particionadas | `test_import_files`, `test_workspace`, `test_molecule_quality` |
 | Texto de validação | `test_redocking_chimera_repair` (mensagem) |
 
+> **Continuação:** as decisões C1–C8 e I1–I2 abaixo foram tomadas e aplicadas a
+> testes e documentação em
+> [`test_suite_decisions_2026-11-27`](../test_suite_decisions_2026-11-27/README.md),
+> que também traz o censo de exclusões de preparação pedido por C8 e dois
+> achados novos (C1a, C1b). A suíte está verde, com 10 falhas esperadas
+> rastreadas. As correções de código ficaram para os passos 2 e 3.
+
 ## C — Decisões necessárias
 
 | # | Divergência | Testes | Opções |

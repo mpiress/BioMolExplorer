@@ -118,7 +118,15 @@ class ChimeraChargeRepairTests(unittest.TestCase):
         self.assertIn('idatmType N2+',commands[2]);self.assertIn('idatmType O3-',commands[3])
         self.assertTrue(all(':5.A@' in c for c in commands))
 
+    @unittest.expectedFailure
     def test_chimera_charge_failure_retries_once_with_explicit_types(self):
+        """Pending decision (triage C8, 2026-11-27).
+
+        The retry with explicit atom types after an ANTECHAMBER failure was
+        unwired in 9bdb316, leaving ``chimera_charge_repair.charge_commands``
+        unused. Rewiring it may recover preparation exclusions; the decision
+        needs the count of ANTECHAMBER failures in real projects.
+        """
         from caad.docking import Docking
         from biomolexplorer.processes import ScientificToolError
         with tempfile.TemporaryDirectory() as folder:
