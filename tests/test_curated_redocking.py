@@ -192,6 +192,10 @@ class CuratedRedockingExecutionTests(unittest.TestCase):
             args=(fixture.token,fixture.project_id,first['id'],producer['id'],raw)
             context=results.pdb_ligands(*args);self.assertEqual(context['ligands'],[])
             results.set_pdb_ligands(*args,[dict(LIGAND='BUA',RESNUM=3,CHAIN='A')],context['revision'])
+            # The curated metadata makes dependent results obsolete: the user
+            # confirms their invalidation before executing (as in the UI).
+            project=fixture.store.project(fixture.token,fixture.project_id)
+            fixture.store.save_pipeline(fixture.token,fixture.project_id,project['pipeline'],project['revision'],prune_results=True)
             second=fixture.finish_selected(service,service.submit(fixture.token,fixture.project_id))
         self.assertEqual(second['status'],'succeeded',second.get('error'))
         self.assertEqual(science.docked,[('1ABC','LIG'),('1P0I','BUA')])

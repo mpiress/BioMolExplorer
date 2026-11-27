@@ -44,11 +44,17 @@ os._exit(17)
         result=subprocess.run([sys.executable,'-c',script,str(self.store.root),self.token,self.pid,self.rid,str(self.generated),str(committed)],capture_output=True,text=True)
         self.assertEqual(result.returncode,17,result.stderr)
         reopened=WorkspaceStore(self.store.root)
-        stages=reopened.get_run(self.token,self.rid)['stages']
+        # Reopening backfills derived index fields (execution manifests and
+        # artifact records); recovery is judged on the authoritative run data.
+        derived={'execution_manifest','artifact_records'}
+        def authoritative(items):return [{k:v for k,v in item.items() if k not in derived} for item in items]
+        stages=authoritative(reopened.get_run(self.token,self.rid)['stages'])
         self.assertEqual(self.generated.exists(),not committed)
-        self.assertEqual(stages,[dict(s,artifacts=[]) for s in self.stages] if committed else self.stages)
+        self.assertEqual(stages,authoritative([dict(s,artifacts=[]) for s in self.stages] if committed else self.stages))
         self.assertTrue(self.original.is_file())
-        expected=[] if committed else self.pipeline
+        # Reopening also migrates connections to typed semantic references.
+        from biomolexplorer.semantic_references import migrate_pipeline_references
+        expected=[] if committed else migrate_pipeline_references(self.pipeline)[0]
         self.assertEqual(reopened.project(self.token,self.pid)['pipeline'],expected)
         self.assertEqual(json.loads((self.root/'project.json').read_text())['pipeline'],expected)
         self.assertEqual(list((self.root/'.history/.result-transactions').glob('*.json')),[])

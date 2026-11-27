@@ -49,7 +49,9 @@ class InputProcessingTests(unittest.TestCase):
             for item in run['stages'][1:]:self.assertEqual(len(item['batches']),2)
             fingerprints=[Path(p) for p in run['stages'][1]['artifacts'] if p.endswith('.csv')]
             self.assertEqual(len(fingerprints),2)
-            self.assertEqual({p.name for p in fingerprints},{'B02__fingerprint__morgan.csv'})
+            # Physical names are native per dataset; the global public name is
+            # an alias recorded in the artifact descriptor (docs/artifact_naming.md).
+            self.assertEqual({p.name for p in fingerprints},{'morgan_alpha.csv','morgan_beta.csv'})
             datasets=[]
             for path in fingerprints:
                 with path.open() as stream:datasets.append({r['molecule_chembl_id'] for r in csv.DictReader(stream)})

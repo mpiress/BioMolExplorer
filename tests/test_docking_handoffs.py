@@ -8,6 +8,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock,patch
+import numpy as np
 import pandas as pd
 import test_pipeline_execution as execution
 from biomolexplorer.catalog import new_stage
@@ -211,8 +212,10 @@ class DockingHandoffTests(unittest.TestCase):
             path=out/'example.csv';validate_file(path,'scores')
             frame=pd.read_csv(path)
             self.assertEqual(len(frame),size)
-            self.assertEqual(frame['vina'].tolist(),[-7.]*size);self.assertEqual(frame['dock6'].tolist(),[-5.]*size)
-            self.assertTrue((frame[['z-score','min-max']]==0).all().all())
+            # target-balanced-ecr-v1 keeps raw scores in *_raw and finite relevances.
+            self.assertEqual(frame['vina_raw'].tolist(),[-7.]*size);self.assertEqual(frame['dock6_raw'].tolist(),[-5.]*size)
+            self.assertTrue(np.isfinite(frame[['vina','dock6','consensus']].to_numpy()).all())
+            self.assertEqual(set(frame['consensus_model']),{'target-balanced-ecr-v1'})
 
     def test_consensus_missing_pose_and_nonfinite_scores_fail_clearly(self):
         root=self.store.project_dir(self.project_id);vina=root/'vina';dock6=root/'dock6';out=root/'out'

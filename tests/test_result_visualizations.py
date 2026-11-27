@@ -63,12 +63,13 @@ class VisualizationTests(unittest.TestCase):
                 source=Path(temp)/'source';output=Path(temp)/'output';source.mkdir()
                 dataset.to_csv(source/'compounds.csv',index=False)
                 ADMETWrapper(str(output),str(source),input_file='compounds.csv').run_pipeline()
-                model=load_view((output/('compounds_egg'+SUFFIX)).read_bytes())
+                # Output stems carry the dataset origin tag (dataset_identity.output_stem).
+                model=load_view((output/('compounds_INPUT_egg'+SUFFIX)).read_bytes())
                 self.assertEqual(len(model['nodes']),len(dataset))
                 if not dataset.empty:
                     self.assertEqual(model['nodes'][0]['properties']['source'],'Imported')
                     self.assertIn('MW',model['nodes'][0]['properties'])
-                self.assertTrue((output/'compounds_egg.png').read_bytes().startswith(b'\x89PNG'))
+                self.assertTrue((output/'compounds_INPUT_egg.png').read_bytes().startswith(b'\x89PNG'))
 
     def test_empty_graph_and_equal_components_have_consistent_mcc(self):
         empty=nx.Graph()

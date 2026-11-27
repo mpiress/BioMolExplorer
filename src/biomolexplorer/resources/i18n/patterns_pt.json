@@ -628,5 +628,16 @@
   "{0} suggestions": "{0} sugestões",
   "{0} targets": "{0} targets",
   "{0} without a pose on the target": "{0} sem pose no target",
-  "{0} {1} in the source · {2} available to include{3}": "{0} {1} na origem · {2} disponíveis para incluir{3}"
+  "{0} {1} in the source · {2} available to include{3}": "{0} {1} na origem · {2} disponíveis para incluir{3}",
+  "The Vina conformation has no score: {0}": "A conformação Vina não contém um score: {0}",
+  "Test code: {0}": "Código de teste: {0}",
+  "Enter the code sent to {0}.": "Informe o código enviado para {0}.",
+  "Invalid DOCK6 operation mode: {0}": "Modo de operação DOCK6 inválido: {0}",
+  "New test code: {0}": "Novo código de teste: {0}",
+  "The {0} mode requires a structural input pose; SMILES does not define reference coordinates.": "O modo {0} requer uma pose estrutural de entrada; SMILES não define coordenadas de referência.",
+  "The PDBQT contains multiple ROOT fragments incompatible with Vina; review the counterions without discarding components automatically: {0}": "PDBQT contém múltiplos fragmentos ROOT incompatíveis com Vina; revise os contraíons sem descartar componentes automaticamente: {0}",
+  "Receptor–compound pairs: {0} / {1} · No result: {2} · Unique compounds: {3}": "Pares receptor–composto: {0} / {1} · Sem resultado: {2} · Compostos únicos: {3}",
+  "Invalid Vina score: {0}": "Score Vina inválido: {0}",
+  "Non-finite Vina score: {0}": "Score Vina não finito: {0}",
+  "Your BioMolExplorer recovery code is: {0}": "Seu código de recuperação do BioMolExplorer é: {0}"
 }

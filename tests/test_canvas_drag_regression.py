@@ -75,7 +75,7 @@ class CanvasDragRegressionTests(unittest.TestCase):
         field=next(f for f in operation_fields('admet') if f['name']=='base_input_path')
         editor=InputEditor(self.ui,self.target,field,[],True)
         self.assertIsNone(editor.selection)
-        self.assertEqual(editor.read(),{'stage':self.source['id'],'selector':'auto'})
+        self.assertEqual(editor.read(),{'stage':self.source['id'],'selector':'auto','output_port':'compounds'})
 
 
 class ExecutedPipelineEditingTests(unittest.TestCase):

@@ -214,7 +214,8 @@ class WorkspaceTests(unittest.TestCase):
 
     def test_catalog_matches_all_operations(self):
         for operation,spec in OPERATIONS.items():
-            hidden={'verbose','dataset_origin'}
+            # Same internal parameters that catalog.operation_fields never exposes.
+            hidden={'verbose','dataset_origin','md_cache_epoch','pose_inputs'}
             if operation=='retrieve_compounds':hidden.update({'include_pubchem','pubchem_threshold','pubchem_max_records'})
             if operation=='docking_dock6':hidden.add('base_vina_path')
             self.assertEqual({f['name'] for f in operation_fields(operation)},set(spec.required+spec.optional)-hidden)
@@ -307,7 +308,9 @@ class WorkspaceTests(unittest.TestCase):
         with (output/'Target.csv').open() as stream:
             rows=list(csv.DictReader(stream))
         self.assertEqual(len(rows),3)
-        self.assertEqual({float(row['vina']) for row in rows},{-5.,-6.,-7.})
+        # target-balanced-ecr-v1: raw scores in *_raw; 'vina'/'dock6' hold rank relevances.
+        self.assertEqual({float(row['vina_raw']) for row in rows},{-5.,-6.,-7.})
+        self.assertEqual({float(row['dock6_raw']) for row in rows},{-20.,-22.,-24.})
 
     def test_selected_csv_and_expansion_resolve_correct_sources(self):
         root=self.store.project_dir(self.pid)/'source'

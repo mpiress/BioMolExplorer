@@ -1535,7 +1535,10 @@ class PipelineService:
                 params['base_input_path']=str(seed)
         manager = JobManager(AppConfig(workspace=stage_dir, cpu_workers=self.cpu_workers,
             worker_python=self.worker_python, job_timeout=self.job_timeout, resource_dir=resource,
-            cache_dir=self.store.project_dir(project_id)/'.biomolexplorer/cache',reuse_results=state.get('reuse_results',True)))
+            cache_dir=self.store.project_dir(project_id)/'.biomolexplorer/cache',reuse_results=state.get('reuse_results',True),
+            # Declining reuse also disables verified preparation/calculation
+            # checkpoints (CalculationCache, LigandCache), not only result caches.
+            reuse_preparations=state.get('reuse_results',True)))
         try:
             with self._lock:
                 state['manager'] = manager

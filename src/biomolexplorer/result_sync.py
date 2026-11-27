@@ -141,7 +141,11 @@ def plan(db,pid,pipeline,project_root=None,*,history=None):
                 for batch in units:
                     old_config=batch.get('configuration',config);oldrefs=refs(old_config)
                     unit=copy.deepcopy(new)
-                    same_mode=config.get('input_processing','merge')==new.get('input_processing','merge')
+                    old_mode,new_mode=config.get('input_processing','merge'),new.get('input_processing','merge')
+                    # One input processed alone is the same request in the
+                    # 'individual' and 'both' modes; combined units are not.
+                    individual_unit=old_mode in ('individual','both') and not old_config.get('_combined_input')
+                    same_mode=old_mode==new_mode or individual_unit and {old_mode,new_mode}=={'individual','both'}
                     if same_mode:unit['input_processing']=old_config.get('input_processing','merge')
                     invalid=not same_mode or incompatible(old_config,unit) or inputs_changed(batch) or oldrefs and any(not retained(r,new) for r in oldrefs)
                     if invalid:

@@ -174,7 +174,13 @@ class ZincTrancheTests(unittest.TestCase):
             write_csv(dataset,[dict(molecule_chembl_id='ZINC2',canonical_smiles='CCO',
                 conformer_file=str(source),conformer_origin='library')])
             def convert(source,destination,**kwargs):shutil.copy2(source,destination)
-            with patch('biomolexplorer.docking_data.convert_structure',side_effect=convert):
+            # Candidates are charged by Chimera; this test checks DOCK6 centering,
+            # so the tool returns the library conformation unchanged.
+            def chimera(command,cwd=None,**kwargs):shutil.copy2(Path(cwd)/'input.mol2',Path(cwd)/'prepared.mol2')
+            # docking_preparation imports convert_structure directly: patch both bindings.
+            with patch('biomolexplorer.docking_data.convert_structure',side_effect=convert) as converter,\
+                 patch('biomolexplorer.docking_preparation.convert_structure',converter),\
+                 patch('biomolexplorer.processes.run_command',side_effect=chimera):
                 outputs=prepare_ligands(dataset,root/'direct','mol2',center=[10.,20.,30.])
             def center(path):
                 atoms=Path(path).read_text().split('@<TRIPOS>ATOM\n')[1].split('@<TRIPOS>')[0].strip().splitlines()
@@ -183,7 +189,8 @@ class ZincTrancheTests(unittest.TestCase):
             self.assertEqual(source.read_text(),MOL2)
             write_csv(dataset,[dict(molecule_chembl_id='ZINC2',canonical_smiles='CCO',
                 prepared_mol2=str(source),prepared_origin='library',docking_engines='dock6')])
-            with patch('biomolexplorer.docking_data.convert_structure') as convert:
+            with patch('biomolexplorer.docking_data.convert_structure') as convert,\
+                 patch('biomolexplorer.docking_preparation.convert_structure',convert):
                 outputs=prepare_ligands(dataset,root/'reused','mol2',center=[5.,6.,7.])
                 convert.assert_not_called()
             for actual,expected in zip(center(outputs[0]),[5.,6.,7.]):self.assertAlmostEqual(actual,expected,places=3)

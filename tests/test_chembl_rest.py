@@ -130,7 +130,9 @@ class ChEMBLRestTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as folder,patch('crawlers.chembl_client.requests.Session',return_value=session):
             result=retrieve_compounds('CHEMBL220',folder,include_pubchem=False,chembl_filters={'bioactivity':{'standard_type__in':['IC50'],'standard_units':'nM','max_value_ref':5000}})
             self.assertEqual(result['molecule_chembl_id'].tolist(),['CHEMBL1'])
-            self.assertTrue((Path(folder)/'compounds/CHEMBL220/compounds.csv').exists())
+            # The dataset is published under its native name; no generic compounds.csv copy.
+            self.assertTrue((Path(folder)/'ChEMBL/DrugBank/CHEMBL220_MOLS.csv').exists())
+            self.assertFalse((Path(folder)/'compounds/CHEMBL220/compounds.csv').exists())
             activity=pd.read_csv(Path(folder)/'ChEMBL/bioactivity/CHEMBL220/CHEMBL220.csv')
             self.assertEqual(activity['standard_type'].tolist(),['IC50'])
             self.assertEqual(activity['standard_value'].tolist(),[10])

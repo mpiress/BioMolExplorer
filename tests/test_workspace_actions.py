@@ -94,17 +94,15 @@ class WorkspaceActionsTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Cancele a execução'): self.store.delete_project(self.owner, self.pid)
         self.assertEqual(len(self.store.list_projects(self.owner)), 1)
 
-    def test_old_errors_are_inside_collapsed_history_while_current_run_is_running(self):
+    def test_old_errors_are_not_rendered_while_current_run_is_running(self):
         self.run_record('failed', 'OLD ERROR <html>server page</html>', 100)
         current_id = self.run_record('running', None, 200)
         from biomolexplorer.ui.run_progress import RunProgress
         self.ui.run_progress = RunProgress(self.ui, self.store.get_run(self.owner, current_id))
         view = asyncio.run(self.ui.runs_view(True))
-        history = next(c for c in view.controls if isinstance(c, ft.ExpansionTile))
-        self.assertEqual(history.title.value, 'Execuções anteriores (1)')
-        self.assertFalse(history.expanded)
-        self.assertNotIn('OLD ERROR', str(view.controls[1]))
-        self.assertTrue(any(isinstance(c, ft.Text) and 'OLD ERROR' in (c.value or '') for c in controls(history)))
+        # The runs tab is now the consolidated results review: superseded runs
+        # (and their errors) are not rendered while the current run is active.
+        self.assertNotIn('OLD ERROR', str(view.controls))
         self.assertEqual(self.ui.run_progress.run['id'], current_id)
 
     def test_error_page_is_not_rendered_as_a_giant_interface_message(self):

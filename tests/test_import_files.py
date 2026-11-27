@@ -36,7 +36,8 @@ class ImportFilesTests(unittest.TestCase):
         self.assertEqual([c.label.value for c in panel.table.columns],['Tipo','Arquivo','Ações'])
         saved=form.read()
         self.assertEqual(saved['parameters']['asset_types'],{csv:'compounds',pdb:'structures'})
-        self.assertEqual(output_types(saved),{'compounds','structures'})
+        # Imported structures also satisfy receptor inputs, like retrieved PDB structures.
+        self.assertEqual(output_types(saved),{'compounds','structures','receptor_pdb'})
         self.assertTrue(compatible(saved,new_stage('admet'),'base_input_path'))
         self.assertTrue(compatible(saved,new_stage('prepare_structures'),'base_input_path'))
         reopened=self.form(saved).import_files

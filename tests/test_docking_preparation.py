@@ -67,7 +67,9 @@ class ReceptorOutputTests(unittest.TestCase):
                 (work/'prepared.mol2').write_text(mol2)
                 return SimpleNamespace(returncode=0,stdout='',stderr='')
             settings={'preparation_backend':'legacy_chimera','ligand':{'charge_type':'am1','minimize':False}}
-            for engine,formats in (('vina',{'pdbqt'}),('dock6',{'mol2'}),('both',{'pdbqt','mol2'})):
+            # Chimera's native MOL2 is always kept (and cached) so a later DOCK6
+            # run reuses the same conformation; Vina additionally gets PDBQT.
+            for engine,formats in (('vina',{'pdbqt','mol2'}),('dock6',{'mol2'}),('both',{'pdbqt','mol2'})):
                 with self.subTest(engine=engine),patch('biomolexplorer.docking_preparation.convert_structure',side_effect=convert),patch('biomolexplorer.docking_preparation.subprocess.run',side_effect=prepare) as runner:
                     output=prepare_candidates(dataset,root/engine,settings,engines=engine)
                     row=read_compounds(output)[0]

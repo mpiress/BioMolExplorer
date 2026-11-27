@@ -172,7 +172,10 @@ class CompoundSelectionPipelineTests(unittest.TestCase):
                     ref={'stage':source['id'],'selector':'compounds.csv' if explicit else 'auto'}
                     if explicit:ref['compound_id']='B'
                     stage['bindings']['base_selected_mols']=ref
-                    self.save([source,stage]);manager,calls=self.immediate_manager()
+                    # Replacing the previous subtest's blocks removes their results: confirm it.
+                    revision=self.store.project(self.token,self.project_id)['revision']
+                    self.store.save_pipeline(self.token,self.project_id,[source,stage],revision,prune_results=True)
+                    manager,calls=self.immediate_manager()
                     with patch('biomolexplorer.pipeline.JobManager',manager):
                         service=PipelineService(self.store,dock6_path=dock6)
                         try:

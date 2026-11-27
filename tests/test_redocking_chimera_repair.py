@@ -86,7 +86,7 @@ class Dock6RedockingTests(unittest.TestCase):
         fields={f['name']:f for f in operation_fields('redocking')}
         self.assertIn('redocking_engine',fields)
         self.assertEqual(fields['redocking_engine']['default'],'vina')
-        with self.assertRaisesRegex(ValueError,'Motor'):
+        with self.assertRaisesRegex(ValueError,'Método de redocking inválido'):
             validate_operation('redocking',{'base_input_path':'/tmp','target':'Target','pdb_codes':[['1ABC','LIG',1,'A']], 'redocking_engine':'bad'})
 
 

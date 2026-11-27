@@ -1844,7 +1844,10 @@ class WorkspaceUI(ProjectTools):
         cached=getattr(self,'_selection_preparation',None)
         if cached and cached[0]==key:return cached[1]
         snapshot=copy.deepcopy(run);selection=copy.deepcopy(pending)
+        from .processing import background
+        @background
         async def prepare():
+            # A prefetch never shows processing feedback or steals focus.
             # Route blocking work through the UI's single async adapter.  A
             # nested ``to_thread`` left its completion future orphaned when a
             # short-lived event loop opened this dialog (and on repeated test

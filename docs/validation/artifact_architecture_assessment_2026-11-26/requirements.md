@@ -201,5 +201,5 @@ sub-issue. Each criterion lists the requirements it verifies.
 | REQ-PERF-001 | `IN_PROGRESS` | Baseline done; final measurement in PHASE-08 |
 | REQ-PERF-003 | `IN_PROGRESS` | Thresholds proposed in `README.md`, pending review |
 | REQ-ARCH-004 | `IN_PROGRESS` | ADR process and template published; no ADR yet |
-| REQ-TEST-001 | `BLOCKED` | Baseline suite fails: 45/169 modules, 50 failures, 38 errors, 1 hang (`tests.json`). Triage is required as separate work. |
+| REQ-TEST-001 | `BLOCKED` | Baseline suite fails: 45/169 modules, 50 failures, 38 errors, 1 hang (`tests.json`). Triage in [`test_suite_triage_2026-11-27`](../test_suite_triage_2026-11-27/README.md): 156/169 modules pass, the hang is fixed, and 13 modules wait for maintainer decisions (C1–C8) or investigation (I1–I2). |
 | All other REQ-* and AC-* | `PENDING` | — |

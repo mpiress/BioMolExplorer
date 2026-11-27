@@ -1,0 +1,1087 @@
+{
+ "baseline": "docs/validation/artifact_architecture_assessment_2026-11-26/tests.json",
+ "modules": {
+  "test_ambertools_execution": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 4,
+   "failed": []
+  },
+  "test_admet_output_selection": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 3,
+   "failed": []
+  },
+  "test_artifact_publication": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 7,
+   "failed": []
+  },
+  "test_analysis_origins": {
+   "exit": 1,
+   "baseline_exit": null,
+   "ran": 4,
+   "errors": 1,
+   "failed": [
+    "ERROR test_three_old_pubchem_selections_expand_to_six_real_graphs_with_exact_origins"
+   ]
+  },
+  "test_analysis_handoff": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 5,
+   "failed": []
+  },
+  "test_admet_research": {
+   "exit": 1,
+   "baseline_exit": null,
+   "ran": 14,
+   "failures": 1,
+   "failed": [
+    "FAIL test_operation_outputs_are_registered_and_primary_csv_respects_hypothesis"
+   ]
+  },
+  "test_admet_standard_outputs": {
+   "exit": 1,
+   "baseline_exit": null,
+   "ran": 6,
+   "failures": 7,
+   "failed": [
+    "FAIL test_disabled_rules_and_alert_catalogs_do_not_generate_extra_csvs",
+    "FAIL test_each_input_has_only_four_barrier_partitions_one_named_rule_and_one_alert_table",
+    "FAIL test_each_supported_rule_uses_one_named_file_and_its_own_violation_limit",
+    "FAIL test_each_supported_rule_uses_one_named_file_and_its_own_violation_limit",
+    "FAIL test_each_supported_rule_uses_one_named_file_and_its_own_violation_limit",
+    "FAIL test_each_supported_rule_uses_one_named_file_and_its_own_violation_limit",
+    "FAIL test_rule_names_and_publication_survive_short_names_and_reopening"
+   ]
+  },
+  "test_application": {
+   "exit": 1,
+   "baseline_exit": null,
+   "ran": 17,
+   "failures": 1,
+   "failed": [
+    "FAIL test_admet_excludes_flagged_compounds_and_handles_empty"
+   ]
+  },
+  "test_auth_recovery": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 8,
+   "failed": []
+  },
+  "test_chembl_rest": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 11,
+   "failed": []
+  },
+  "test_canvas_scaling": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 7,
+   "failed": []
+  },
+  "test_chimera_preparation": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 7,
+   "failed": []
+  },
+  "test_canvas_drag_regression": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 6,
+   "failed": []
+  },
+  "test_chimera_only_preparation": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 8,
+   "failed": []
+  },
+  "test_complex_classification": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 4,
+   "skipped": 1,
+   "failed": []
+  },
+  "test_compound_retrieval": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 4,
+   "failed": []
+  },
+  "test_chimera_charge_replacement": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 6,
+   "failed": []
+  },
+  "test_compound_inspection": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 10,
+   "failed": []
+  },
+  "test_configured_handoff": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 3,
+   "failed": []
+  },
+  "test_artifact_registry": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 10,
+   "failed": []
+  },
+  "test_connection_matrix": {
+   "exit": 1,
+   "baseline_exit": null,
+   "ran": 5,
+   "failures": 1,
+   "failed": [
+    "FAIL test_every_native_imported_and_supplied_result_against_every_port"
+   ]
+  },
+  "test_consensus_completion": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 8,
+   "failed": []
+  },
+  "test_clear_all_results": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 6,
+   "failed": []
+  },
+  "test_consensus_model": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 14,
+   "failed": []
+  },
+  "test_automatic_result_sync": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 11,
+   "failed": []
+  },
+  "test_consensus_automation": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 6,
+   "failed": []
+  },
+  "test_consolidated_docking_sources": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 3,
+   "failed": []
+  },
+  "test_configuration_loading": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 14,
+   "failed": []
+  },
+  "test_consensus_optional_structures": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 6,
+   "failed": []
+  },
+  "test_diagnostics": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 2,
+   "failed": []
+  },
+  "test_compound_tables": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 14,
+   "failed": []
+  },
+  "test_dock6_failures": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 8,
+   "failed": []
+  },
+  "test_dock6_installation": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 4,
+   "failed": []
+  },
+  "test_dock6_operation_modes": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 5,
+   "failed": []
+  },
+  "test_dock6_incremental": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 3,
+   "failed": []
+  },
+  "test_docking_accounting": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 8,
+   "failed": []
+  },
+  "test_docking_completed_reuse": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 7,
+   "failed": []
+  },
+  "test_consensus_target_actions": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 23,
+   "failed": []
+  },
+  "test_docking_configuration": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 6,
+   "failed": []
+  },
+  "test_docking_interactions": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 5,
+   "failed": []
+  },
+  "test_curated_redocking": {
+   "exit": 1,
+   "baseline_exit": null,
+   "ran": 11,
+   "failures": 1,
+   "failed": [
+    "FAIL test_1p0i_bua_saved_after_first_run_is_docked_and_accumulated"
+   ]
+  },
+  "test_dataset_identity": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 11,
+   "failed": []
+  },
+  "test_docking_performance": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 6,
+   "failed": []
+  },
+  "test_docking_handoffs": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 13,
+   "failed": []
+  },
+  "test_docking_reference_regressions": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 6,
+   "failed": []
+  },
+  "test_docking_incremental": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 21,
+   "failed": []
+  },
+  "test_docking_interoperability": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 9,
+   "failed": []
+  },
+  "test_docking_preparation": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 8,
+   "failed": []
+  },
+  "test_execution_cancellation": {
+   "exit": 1,
+   "baseline_exit": null,
+   "ran": 3,
+   "failures": 1,
+   "errors": 1,
+   "failed": [
+    "ERROR test_file_selection_cancel_updates_without_polling_and_discards_draft",
+    "FAIL test_settings_cancel_button_cancels_pending_execution"
+   ]
+  },
+  "test_docking_scene": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 9,
+   "failed": []
+  },
+  "test_flexible_retrieval": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 11,
+   "failed": []
+  },
+  "test_footprints": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 2,
+   "failed": []
+  },
+  "test_consensus_history": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 24,
+   "failed": []
+  },
+  "test_execution_order_pause": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 10,
+   "failed": []
+  },
+  "test_file_selection": {
+   "exit": 1,
+   "baseline_exit": null,
+   "ran": 10,
+   "failures": 2,
+   "failed": [
+    "FAIL test_deferring_then_configuring_keeps_files_and_processing_mode",
+    "FAIL test_popup_resumes_same_run_and_only_passes_checked_files"
+   ]
+  },
+  "test_frontend_navigation": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 7,
+   "failed": []
+  },
+  "test_global_artifact_names": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 12,
+   "failed": []
+  },
+  "test_graph_layout_fragments": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 11,
+   "failed": []
+  },
+  "test_footprint_popup": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 11,
+   "failed": []
+  },
+  "test_graph_scaffold_scope": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 18,
+   "failed": []
+  },
+  "test_guided_dependencies": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 8,
+   "failed": []
+  },
+  "test_guided_input_preservation": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 7,
+   "failed": []
+  },
+  "test_editor_responsiveness": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 13,
+   "failed": []
+  },
+  "test_guided_ui": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 9,
+   "failed": []
+  },
+  "test_graph_navigation_gephi": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 21,
+   "failed": []
+  },
+  "test_graph_subset_exports": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 3,
+   "failed": []
+  },
+  "test_lazy_run_configuration": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 5,
+   "failed": []
+  },
+  "test_graph_input_contract": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 8,
+   "failed": []
+  },
+  "test_installation_guide": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 3,
+   "failed": []
+  },
+  "test_ligand_preparation_performance": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 12,
+   "failed": []
+  },
+  "test_localization_catalogs": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 4,
+   "failed": []
+  },
+  "test_login_experience": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 7,
+   "failed": []
+  },
+  "test_localization": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 11,
+   "failed": []
+  },
+  "test_md_analysis": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 5,
+   "failed": []
+  },
+  "test_import_files": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 9,
+   "failed": []
+  },
+  "test_login_processing_lifecycle": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 5,
+   "failed": []
+  },
+  "test_md_dashboard": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 4,
+   "failed": []
+  },
+  "test_mcs_ranking_refinements": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 17,
+   "failed": []
+  },
+  "test_md_residue_support": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 14,
+   "failed": []
+  },
+  "test_md_pair_selection": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 9,
+   "failed": []
+  },
+  "test_md_downstream_persistence": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 3,
+   "failed": []
+  },
+  "test_md_result_deletion": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 5,
+   "failed": []
+  },
+  "test_md_semantic_inputs": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 7,
+   "failed": []
+  },
+  "test_molecular_inspector_presentation": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 8,
+   "failed": []
+  },
+  "test_md_configuration_performance": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 16,
+   "failed": []
+  },
+  "test_molecular_parsing": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 4,
+   "failed": []
+  },
+  "test_graph_explorer": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 18,
+   "failed": []
+  },
+  "test_molecule_quality": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 9,
+   "failed": []
+  },
+  "test_native_structures": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 10,
+   "skipped": 1,
+   "failed": []
+  },
+  "test_molecular_core": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 11,
+   "failed": []
+  },
+  "test_network_analysis": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 14,
+   "failed": []
+  },
+  "test_molecular_surface": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 4,
+   "failed": []
+  },
+  "test_pdb_ligand_triage": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 17,
+   "failed": []
+  },
+  "test_network_refinement": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 32,
+   "failed": []
+  },
+  "test_molecular_dynamics": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 16,
+   "failed": []
+  },
+  "test_pipeline_editor_regressions": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 11,
+   "failed": []
+  },
+  "test_pdb_viewer": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 15,
+   "failed": []
+  },
+  "test_pipeline_png": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 6,
+   "failed": []
+  },
+  "test_pipeline_failure_recovery": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 11,
+   "failed": []
+  },
+  "test_pose_validation": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 18,
+   "failed": []
+  },
+  "test_molecular_network_dashboard": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 36,
+   "failed": []
+  },
+  "test_preparation_resources": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 5,
+   "failed": []
+  },
+  "test_preparation_settings": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 15,
+   "failed": []
+  },
+  "test_processing_feedback": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 7,
+   "failed": []
+  },
+  "test_preparation_failures": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 8,
+   "failed": []
+  },
+  "test_pipeline_guidance": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 9,
+   "failed": []
+  },
+  "test_input_processing": {
+   "exit": 1,
+   "baseline_exit": null,
+   "ran": 12,
+   "failures": 1,
+   "errors": 1,
+   "failed": [
+    "ERROR test_redocking_curated_pair_repairs_stale_retrieval_metadata",
+    "FAIL test_both_reuses_individual_jobs_and_merges_vectors_without_a_worker"
+   ]
+  },
+  "test_pubchem": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 4,
+   "failed": []
+  },
+  "test_pipeline_execution": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 22,
+   "failed": []
+  },
+  "test_project_folders": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 12,
+   "failed": []
+  },
+  "test_project_tools_ui": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 16,
+   "failed": []
+  },
+  "test_ranking_scopes": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 20,
+   "failed": []
+  },
+  "test_redocking_chimera_repair": {
+   "exit": 1,
+   "baseline_exit": null,
+   "ran": 17,
+   "errors": 1,
+   "failed": [
+    "ERROR test_chimera_charge_failure_retries_once_with_explicit_types"
+   ]
+  },
+  "test_redocking_apply": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 6,
+   "failed": []
+  },
+  "test_redocking_completed_reuse": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 4,
+   "failed": []
+  },
+  "test_redocking_configuration": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 12,
+   "failed": []
+  },
+  "test_redocking_curated_handoff": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 5,
+   "failed": []
+  },
+  "test_redocking_file_table": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 9,
+   "failed": []
+  },
+  "test_redocking_execution_review": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 5,
+   "failed": []
+  },
+  "test_published_results": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 8,
+   "failed": []
+  },
+  "test_redocking_methods": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 13,
+   "failed": []
+  },
+  "test_redocking_receptor_outputs": {
+   "exit": 1,
+   "baseline_exit": null,
+   "ran": 2,
+   "failures": 1,
+   "failed": [
+    "FAIL test_redocking_cannot_connect_to_any_compound_or_score_input"
+   ]
+  },
+  "test_pubchem_workflow": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 9,
+   "failed": []
+  },
+  "test_pose_validation_flow": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 47,
+   "failed": []
+  },
+  "test_removal_progress": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 7,
+   "failed": []
+  },
+  "test_report_performance": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 2,
+   "failed": []
+  },
+  "test_report_toolbar": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 3,
+   "failed": []
+  },
+  "test_project_portability": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 18,
+   "failed": []
+  },
+  "test_redocking_viewer_navigation": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 8,
+   "failed": []
+  },
+  "test_restarted_cancellation": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 1,
+   "failed": []
+  },
+  "test_redocking_results": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 8,
+   "failed": []
+  },
+  "test_result_io_performance": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 5,
+   "failed": []
+  },
+  "test_redocking_partial_failures": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 11,
+   "failed": []
+  },
+  "test_result_sorting": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 5,
+   "failed": []
+  },
+  "test_result_visualizations": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 11,
+   "failed": []
+  },
+  "test_restart_reuse": {
+   "exit": 1,
+   "baseline_exit": null,
+   "ran": 8,
+   "failures": 4,
+   "errors": 2,
+   "failed": [
+    "ERROR test_changed_processing_mode_after_restart_requires_new_selection",
+    "ERROR test_changed_uploaded_input_invalidates_consumer_after_upgrade",
+    "FAIL test_declining_reuse_runs_collection_and_waits_for_new_file_selection",
+    "FAIL test_modified_consumer_output_cannot_be_reused_after_upgrade",
+    "FAIL test_restart_restores_only_the_previously_selected_file",
+    "FAIL test_tampered_original_cache_key_is_not_adopted_after_upgrade"
+   ]
+  },
+  "test_result_index": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 19,
+   "failed": []
+  },
+  "test_run_reuse_ui": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 8,
+   "failed": []
+  },
+  "test_run_progress": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 18,
+   "failed": []
+  },
+  "test_runtime_messages": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 15,
+   "failed": []
+  },
+  "test_scientific_preparation_failures": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 5,
+   "failed": []
+  },
+  "test_retrieval_usability": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 11,
+   "failed": []
+  },
+  "test_scientific_report": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 9,
+   "failed": []
+  },
+  "test_runs_pipeline_controls": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 9,
+   "failed": []
+  },
+  "test_settings_layout": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 5,
+   "failed": []
+  },
+  "test_semantic_alzheimer_pipeline": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 2,
+   "failed": []
+  },
+  "test_stable_artifact_selectors": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 4,
+   "failed": []
+  },
+  "test_stage_default_isolation": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 2,
+   "failed": []
+  },
+  "test_strict_pipeline_ports": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 26,
+   "failed": []
+  },
+  "test_structured_diagnostics": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 7,
+   "failed": []
+  },
+  "test_ui_layout": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 3,
+   "failed": []
+  },
+  "test_semantic_artifacts": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 11,
+   "failed": []
+  },
+  "test_ui_startup": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 4,
+   "failed": []
+  },
+  "test_results_display": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 29,
+   "failed": []
+  },
+  "test_unbounded_execution": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 6,
+   "failed": []
+  },
+  "test_update_notifications": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 11,
+   "failed": []
+  },
+  "test_vina_dock6_pose_handoff": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 3,
+   "failed": []
+  },
+  "test_vina_multiple_inputs": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 7,
+   "failed": []
+  },
+  "test_ui_permissions": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 9,
+   "failed": []
+  },
+  "test_visual_flow": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 8,
+   "failed": []
+  },
+  "test_unified_results_review": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 11,
+   "failed": []
+  },
+  "test_vina_reuse": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 12,
+   "failed": []
+  },
+  "test_workspace_actions": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 6,
+   "failed": []
+  },
+  "test_zoom_visualizations": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 5,
+   "failed": []
+  },
+  "test_zinc_tranches": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 14,
+   "failed": []
+  },
+  "test_stage_cache": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 12,
+   "failed": []
+  },
+  "test_redocking_incremental": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 19,
+   "failed": []
+  },
+  "test_workspace": {
+   "exit": 0,
+   "baseline_exit": null,
+   "ran": 21,
+   "failed": []
+  },
+  "test_result_persistence": {
+   "exit": 1,
+   "baseline_exit": null,
+   "ran": 26,
+   "failures": 2,
+   "failed": [
+    "FAIL test_v1_batches_are_adopted_when_new_sources_are_added_immediately",
+    "FAIL test_verified_v1_cache_survives_migration_and_growth_without_recomputation"
+   ]
+  }
+ },
+ "totals": {
+  "modules": 169,
+  "passing": 156,
+  "ran": 1671,
+  "failures": 22,
+  "errors": 6,
+  "skipped": 2,
+  "discover": "completed in 756 s"
+ }
+}

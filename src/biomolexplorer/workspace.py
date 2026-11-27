@@ -371,7 +371,11 @@ class WorkspaceStore:
         with self.connect() as db:
             existing=db.execute('SELECT pipeline,revision FROM projects WHERE id=?',(project_id,)).fetchone()
         if expected_revision>0 and existing and existing['revision']==expected_revision and json.loads(existing['pipeline'])==stages:
-            return self.project(token,project_id)
+            # An unchanged pipeline is a no-op, unless the caller confirmed the
+            # invalidation of results made obsolete by disk changes (curation,
+            # edited inputs). Those must still be pruned here.
+            if not prune_results or not self.result_removal_plan(token,project_id,stages)['affected']:
+                return self.project(token,project_id)
         # MD and pose validation configuration never need to inflate immutable
         # docking execution JSON into the audit snapshot. Keep exact native
         # blobs and rollback semantics while limiting this optimization to a

@@ -180,7 +180,9 @@ class AutomaticConfirmationTests(unittest.TestCase):
         return pipeline
 
     def test_cancel_restores_configuration_in_memory_and_database(self):
-        pipeline=self.seed()
+        self.seed()
+        # Saving migrates references (typed output ports); cancel restores that saved state.
+        pipeline=copy.deepcopy(self.store.project(self.token,self.pid)['pipeline'])
         async def scenario():
             pending=asyncio.create_task(self.ui.save_draft(silent=True))
             await asyncio.sleep(0)

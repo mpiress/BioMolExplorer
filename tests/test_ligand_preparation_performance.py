@@ -1,6 +1,7 @@
 """Preparation reuse must preserve science, partial work, and failure isolation."""
 from contextlib import ExitStack, nullcontext
 import os
+import subprocess
 from pathlib import Path
 import tempfile
 import threading
@@ -42,7 +43,12 @@ class PreparationPerformanceTests(unittest.TestCase):
         destination=Path(destination)
         destination.write_text(PreparationPerformanceTests.PDBQT if destination.suffix=='.pdbqt' else Path(source).read_text())
 
+    _run=subprocess.run
+
     def prepare(self,command,**kwargs):
+        # The patch replaces subprocess.run globally: only the Chimera job (run
+        # in its work folder) is stubbed; tool/version probes run unchanged.
+        if not kwargs.get('cwd'):return PreparationPerformanceTests._run(command,**kwargs)
         work=Path(kwargs['cwd'])
         self.calls.append((work/'prepare.com').read_text())
         (work/'prepared.mol2').write_text(self.MOL2)
@@ -68,10 +74,14 @@ class PreparationPerformanceTests(unittest.TestCase):
         self.write([('A','CCO')])
         self.run_batch('original')
         for name,kwargs in [('ph',{'ph':6.5}),('charge',{'config':{'ligand':{'charge_type':'am1'}}}),
-                            ('minimize',{'config':{'ligand':{'minimize':False}}}),('format',{'engines':'dock6'})]:
+                            ('minimize',{'config':{'ligand':{'minimize':False}}})]:
             with self.subTest(name=name):self.run_batch(name,**kwargs)
+        # The engine only selects the export: the shared Chimera preparation
+        # (and its cached MOL2) is reused instead of being repeated.
+        before=self.runner.call_count;self.run_batch('format',engines='dock6')
+        self.assertEqual(self.runner.call_count,before)
         self.write([('A','CCN')]);self.run_batch('changed-smiles')
-        self.assertEqual(self.runner.call_count,6)
+        self.assertEqual(self.runner.call_count,5)
         self.assertTrue(any('method am1' in command for command in self.calls))
         self.assertTrue(any('minimize spec #0' not in command for command in self.calls))
 
