@@ -15,6 +15,18 @@ ATOM='ATOM      1  C   UNL A   1       0.000   0.000   0.000  1.00  0.00     0.0
 POSE='REMARK VINA RESULT: -7.0 0.0 0.0\nROOT\n'+ATOM+'ENDROOT\nTORSDOF 0\n'
 
 
+def tamper(path,content):
+    """Corrupt a stored object in place, keeping its inode.
+
+    A stored object is read-only, so the kernel refuses a consumer that writes
+    to it.  Its owner can still unlock it, which is what an external actor with
+    access to the directory does, and what the cache must detect.
+    """
+    path=Path(path);os.chmod(path,0o600)
+    try:path.write_text(content)
+    finally:os.chmod(path,0o444)
+
+
 class IndexedCacheTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup)
@@ -43,7 +55,7 @@ class IndexedCacheTests(unittest.TestCase):
         cache.remember('one',{'pose':source})
         with cache.connect() as db:
             digest=db.execute('SELECT sha256 FROM objects').fetchone()[0]
-        cache.object_path(digest).write_text('partial')
+        tamper(cache.object_path(digest),'partial')
         self.assertIsNone(cache.restore('one',{'pose':self.root/'out'}))
         self.assertFalse((self.root/'out').exists())
         self.assertIsNone(cache.restore('missing',{'pose':self.root/'out'}))
@@ -69,7 +81,7 @@ class IndexedCacheTests(unittest.TestCase):
         with cache.connect() as db:
             digest=db.execute('SELECT sha256 FROM objects').fetchone()[0]
         obj=cache.object_path(digest);stamp=obj.stat()
-        obj.write_text('tampered')
+        tamper(obj,'tampered')
         os.utime(obj,ns=(stamp.st_atime_ns,stamp.st_mtime_ns))
         self.assertIsNone(cache.restore('one',{'pose':self.root/'out'}))
 

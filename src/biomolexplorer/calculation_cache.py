@@ -8,9 +8,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import shutil
 import sqlite3
-import tempfile
 
 from .stage_cache import file_digest
 
@@ -20,21 +18,14 @@ def identity(value):
 
 
 def copy_artifact(source, destination):
-    """Use copy-on-write where supported, otherwise an independent copy."""
-    import fcntl
-    source, destination = Path(source), Path(destination)
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(dir=destination.parent, delete=False) as stream:
-        temporary = Path(stream.name)
-    try:
-        try:
-            with source.open('rb') as src, temporary.open('wb') as dst:
-                fcntl.ioctl(dst.fileno(), 0x40049409, src.fileno())  # FICLONE
-        except OSError:
-            shutil.copyfile(source, temporary)
-        temporary.replace(destination)
-    finally:
-        temporary.unlink(missing_ok=True)
+    """Use copy-on-write where supported, otherwise an independent copy.
+
+    The implementation lives in ``content_store``, which is the single place
+    that writes immutable scientific bytes.  The name is kept because the
+    scientific wrappers materialize their own outputs through it.
+    """
+    from .content_store import clone_or_copy
+    clone_or_copy(source, destination)
 
 
 class CalculationCache:
@@ -113,8 +104,14 @@ class CalculationCache:
             fcntl.flock(stream, fcntl.LOCK_EX)
             yield
 
+    @property
+    def store(self):
+        """The one content-addressed store, rooted where this cache already is."""
+        from .content_store import ContentStore
+        return ContentStore(self.root)
+
     def object_path(self, digest):
-        return self.root / 'objects' / digest[:2] / digest
+        return self.store.object_path(digest)
 
     def metadata(self, key):
         if not self.reuse:
@@ -160,7 +157,11 @@ class CalculationCache:
                         return None
                     if target.is_file() and self._fingerprint(target, db) == digest:
                         continue
-                    copy_artifact(source, target)
+                    # The checkpoint belongs to the job that receives it: an
+                    # isolated copy, so nothing the engine does to its inputs
+                    # can reach the stored object.  The source was verified
+                    # above, so the store does not hash it a second time.
+                    self.store.materialize(digest, target, 'isolated', verify=False)
                     # Register the materialized bytes, not an assumed copy result.
                     if self._fingerprint(target, db) != digest:
                         return None
@@ -185,11 +186,11 @@ class CalculationCache:
                 validate(role, source)
             with self.connect() as db:
                 digest = self._fingerprint(source, db)
-                target = self.object_path(digest)
-                if not target.is_file() or self._fingerprint(target, db) != digest:
-                    copy_artifact(source, target)
-                    if self._fingerprint(target, db) != digest:
-                        raise ValueError('Cache object changed during publication: '+str(target))
+                # The store publishes atomically and verifies the bytes it
+                # wrote; the stamp cache of this index decides whether an
+                # object already present may be trusted without rehashing it.
+                self.store.put(source, digest=digest,
+                               fingerprint=lambda path: self._fingerprint(path, db))
             entries.append((role, digest, source.stat().st_size))
         with self.connect() as db:
             db.execute('INSERT OR REPLACE INTO experiments VALUES (?,?,?)',

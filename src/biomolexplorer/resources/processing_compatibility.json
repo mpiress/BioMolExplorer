@@ -68,7 +68,18 @@
     "534cbe1c7b015b367972261f7ec51124debbdde96985414ea1656328b4a4bc06": "f051d5a358d049a66a44ae646c5d1750c5e76a4cc55e8bca788235d47fd67de6",
     "85b17a4315b2a1251a868ad0463c70b5b06a8bf38b6713e2037325033d51f44f": "c056cfae46653b087e506a3c2d64acb308ea8a37d50d6d8845d03acd9ecc80fe",
     "ff21e41a2ada9340ecf62b2f411fde598efe1eb8484121091750198e1dfbaf0b": "77d159a981b81b010debd1d7e50436c0364e4233dab853859c6fbe0d543344a3",
-    "a64bf78f0edddafd6d945f73a44817266278f7933b7197304543ae8bae1d1565": "e7d7613f8944fde06bd230790c2753567db8393f3e6d0235bcfed42b9e5a372f"
+    "a64bf78f0edddafd6d945f73a44817266278f7933b7197304543ae8bae1d1565": "e7d7613f8944fde06bd230790c2753567db8393f3e6d0235bcfed42b9e5a372f",
+    "174b98b69fdfe26112aa0cf853668584111d35544ada068054a3dec95f0f51c6": "67655a01df1ddaeeedb11d57dfb729af0841150e6ca501d2d903611e3d741880",
+    "2938eb64bb6d294757f1fb9eaa6063fdc84bf131696d94a7e351ce362c5b13b1": "83bdad5ef740ea15fbf2b68acecec6f56c07da185b341d0bce32fa352d07e3b0",
+    "36bf2f1f49732c2646c67b98ef959047fdbc0e1c240da4a4a0d5a828d10ecbd8": "31fa4d51da474f860352bdf17775a2e74ef8d799c5441f3288a04c7e9731390e",
+    "3809775695eb02d59e8be9cada935447feaae767c56addfd84d9a5e88c304a4f": "f051d5a358d049a66a44ae646c5d1750c5e76a4cc55e8bca788235d47fd67de6",
+    "5c59c544f4bc9061dc87d3b56d966d98c62d940610e67327d91b4088990b0d4a": "1fe29bccc55de4d6b1e3f6825c82135394135b0323300b9188e35ef82ab04838",
+    "76088e39ad0b3ce6928c80a79740466bef6b3eba251666a30d86ff4dfe94f363": "c056cfae46653b087e506a3c2d64acb308ea8a37d50d6d8845d03acd9ecc80fe",
+    "76edaedaefd349fbc4e3ca7a37c16117ff3cba307d8faab13cb45e46fb471522": "77d159a981b81b010debd1d7e50436c0364e4233dab853859c6fbe0d543344a3",
+    "c61637187393f331f57ebae3443e54c16884825aab465e9d94db01a48739f4f8": "e4c079acc10905a0df5eeb37d5b23900dfe66c86e19c73b7f100913b9972c752",
+    "cedf8b9bcfb11c784808ed780fd14d730e28add054219f8fc6fef72957f2e8c6": "cabeee8d0327ee2ba80ba9f0f7005cd142e14ac12f3d7164ef6448ffecb81155",
+    "f742d2b94ee450150539e2be4373b5830ea2e5ec24f1108b18e4343a6f0259a3": "8eb259526f6ae1cd96a9a598727575d573c5ab1214bbd14f9f66def62d6562ee",
+    "f7e1fea9b5ff461847531b2a1d485ecec266f4b1d9c1f2e171b978c331188e60": "49c413164b6c2b434bc3fb437d197385a8e34b2da9640ce777cd989310dc8106"
   },
   "operations": [
     "prepare_structures",
@@ -484,6 +495,107 @@
         "file": "biomolexplorer/chimera_charge_repair.py",
         "current": "a64bf78f0edddafd6d945f73a44817266278f7933b7197304543ae8bae1d1565",
         "previous": "e7d7613f8944fde06bd230790c2753567db8393f3e6d0235bcfed42b9e5a372f"
+      }
+    ]
+  },
+  "audit_2026_11_28_content_store": {
+    "reason": "PHASE-02 (#9) routes the object storage of calculation_cache through the single content store. copy_artifact delegates to content_store.clone_or_copy with the same copy-on-write attempt, the same independent-copy fallback and the same atomic replace; object_path returns the same objects/<prefix>/<digest> path; remember publishes the same digest of the same bytes, trusting an object already present through the same stamp cache of this index; restore materializes the same isolated copy and keeps the same post-copy verification. New objects are additionally verified against their digest before the rename and stored read-only, which protects content and computes nothing. No recipe, parameter, engine setting, validation rule or scientific byte changes, so no preparation, docking, redocking, consensus, dynamics, retrieval, ADMET, graph or pose-validation result can differ. calculation_cache.py is read directly by stage_cache.implementation_digest and reaches the operation closures through it, which is why these identities moved and are aliased.",
+    "entries": [
+      {
+        "scope": "operation",
+        "operation": "expand_similar_compounds",
+        "current": "174b98b69fdfe26112aa0cf853668584111d35544ada068054a3dec95f0f51c6",
+        "previous": "67655a01df1ddaeeedb11d57dfb729af0841150e6ca501d2d903611e3d741880"
+      },
+      {
+        "scope": "operation",
+        "operation": "retrieve_compounds",
+        "current": "174b98b69fdfe26112aa0cf853668584111d35544ada068054a3dec95f0f51c6",
+        "previous": "67655a01df1ddaeeedb11d57dfb729af0841150e6ca501d2d903611e3d741880"
+      },
+      {
+        "scope": "operation",
+        "operation": "retrieve_structures",
+        "current": "174b98b69fdfe26112aa0cf853668584111d35544ada068054a3dec95f0f51c6",
+        "previous": "67655a01df1ddaeeedb11d57dfb729af0841150e6ca501d2d903611e3d741880"
+      },
+      {
+        "scope": "operation",
+        "operation": "retrieve_zinc",
+        "current": "174b98b69fdfe26112aa0cf853668584111d35544ada068054a3dec95f0f51c6",
+        "previous": "67655a01df1ddaeeedb11d57dfb729af0841150e6ca501d2d903611e3d741880"
+      },
+      {
+        "scope": "operation",
+        "operation": "pose_validation",
+        "current": "2938eb64bb6d294757f1fb9eaa6063fdc84bf131696d94a7e351ce362c5b13b1",
+        "previous": "83bdad5ef740ea15fbf2b68acecec6f56c07da185b341d0bce32fa352d07e3b0"
+      },
+      {
+        "scope": "operation",
+        "operation": "graphs",
+        "current": "36bf2f1f49732c2646c67b98ef959047fdbc0e1c240da4a4a0d5a828d10ecbd8",
+        "previous": "31fa4d51da474f860352bdf17775a2e74ef8d799c5441f3288a04c7e9731390e"
+      },
+      {
+        "scope": "operation",
+        "operation": "consensus",
+        "current": "3809775695eb02d59e8be9cada935447feaae767c56addfd84d9a5e88c304a4f",
+        "previous": "f051d5a358d049a66a44ae646c5d1750c5e76a4cc55e8bca788235d47fd67de6"
+      },
+      {
+        "scope": "operation",
+        "operation": "retrieve_pubchem",
+        "current": "5c59c544f4bc9061dc87d3b56d966d98c62d940610e67327d91b4088990b0d4a",
+        "previous": "1fe29bccc55de4d6b1e3f6825c82135394135b0323300b9188e35ef82ab04838"
+      },
+      {
+        "scope": "operation",
+        "operation": "docking_dock6",
+        "current": "76088e39ad0b3ce6928c80a79740466bef6b3eba251666a30d86ff4dfe94f363",
+        "previous": "c056cfae46653b087e506a3c2d64acb308ea8a37d50d6d8845d03acd9ecc80fe"
+      },
+      {
+        "scope": "operation",
+        "operation": "docking_vina",
+        "current": "76088e39ad0b3ce6928c80a79740466bef6b3eba251666a30d86ff4dfe94f363",
+        "previous": "c056cfae46653b087e506a3c2d64acb308ea8a37d50d6d8845d03acd9ecc80fe"
+      },
+      {
+        "scope": "operation",
+        "operation": "prepare_structures",
+        "current": "76edaedaefd349fbc4e3ca7a37c16117ff3cba307d8faab13cb45e46fb471522",
+        "previous": "77d159a981b81b010debd1d7e50436c0364e4233dab853859c6fbe0d543344a3"
+      },
+      {
+        "scope": "operation",
+        "operation": "redocking",
+        "current": "76edaedaefd349fbc4e3ca7a37c16117ff3cba307d8faab13cb45e46fb471522",
+        "previous": "77d159a981b81b010debd1d7e50436c0364e4233dab853859c6fbe0d543344a3"
+      },
+      {
+        "scope": "operation",
+        "operation": "admet",
+        "current": "c61637187393f331f57ebae3443e54c16884825aab465e9d94db01a48739f4f8",
+        "previous": "e4c079acc10905a0df5eeb37d5b23900dfe66c86e19c73b7f100913b9972c752"
+      },
+      {
+        "scope": "implementation",
+        "operation": "implementation_digest",
+        "current": "cedf8b9bcfb11c784808ed780fd14d730e28add054219f8fc6fef72957f2e8c6",
+        "previous": "cabeee8d0327ee2ba80ba9f0f7005cd142e14ac12f3d7164ef6448ffecb81155"
+      },
+      {
+        "scope": "operation",
+        "operation": "dynamics_dock6",
+        "current": "f742d2b94ee450150539e2be4373b5830ea2e5ec24f1108b18e4343a6f0259a3",
+        "previous": "8eb259526f6ae1cd96a9a598727575d573c5ab1214bbd14f9f66def62d6562ee"
+      },
+      {
+        "scope": "operation",
+        "operation": "import_results",
+        "current": "f7e1fea9b5ff461847531b2a1d485ecec266f4b1d9c1f2e171b978c331188e60",
+        "previous": "49c413164b6c2b434bc3fb437d197385a8e34b2da9640ce777cd989310dc8106"
       }
     ]
   }

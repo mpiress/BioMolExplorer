@@ -3138,5 +3138,10 @@
   "BIOMOL_PASSWORD_RESET_DELIVERY deve ser smtp ou log.": "BIOMOL_PASSWORD_RESET_DELIVERY must be smtp or log.",
   "Poses de ligantes MOL2 com coordenadas, tipos e cargas.": "Ligand poses in MOL2 with coordinates, atom types and charges.",
   "A execução continua pausada, aguardando sua configuração.": "The execution is still paused, awaiting your configuration.",
-  "A execução continua pausada, aguardando sua seleção.": "The execution is still paused, awaiting your selection."
+  "A execução continua pausada, aguardando sua seleção.": "The execution is still paused, awaiting your selection.",
+  "A materialização não reproduziu o conteúdo do artefato.": "The materialization did not reproduce the artifact content.",
+  "O objeto armazenado não corresponde ao seu identificador de conteúdo.": "The stored object does not match its content identifier.",
+  "A materialização não reproduziu o conteúdo armazenado.": "The materialization did not reproduce the stored content.",
+  "Coordenadas atômicas inválidas.": "Invalid atomic coordinates.",
+  "Coordenadas atômicas não finitas.": "Atomic coordinates are not finite."
 }

@@ -23,12 +23,12 @@ desvios da especificação de referência.
 | --- | --- | --- | --- |
 | ADR-001 | [Modelo de identidade dos artefatos científicos](adr/0001-artifact-identity-model.md) | PHASE-01 | Aceita |
 | ADR-002 | [Tecnologia do catálogo persistente de metadados](adr/0002-catalog-technology.md) | PHASE-01 | Aceita |
-| ADR-003 | Estratégia de armazenamento endereçado por conteúdo | PHASE-02 | Não iniciado |
+| ADR-003 | [Estratégia de armazenamento endereçado por conteúdo](adr/0003-content-addressable-storage.md) | PHASE-02 | Aceita |
 | ADR-004 | Modelo de assinatura do cache computacional | PHASE-03 | Não iniciado |
 | ADR-005 | Rastreamento de dependências e invalidação | PHASE-04 | Não iniciado |
 | ADR-006 | Armazenamento de conjuntos de dados analíticos | PHASE-05 | Não iniciado |
 | ADR-007 | Interfaces unificadas de acesso a dados | PHASE-05 | Não iniciado |
-| ADR-008 | Publicação transacional e recuperação | PHASE-02 | Não iniciado |
+| ADR-008 | [Publicação transacional e recuperação](adr/0008-transactional-publication.md) | PHASE-02 | Aceita |
 | ADR-009 | Migração de projetos e compatibilidade retroativa | PHASE-07 | Não iniciado |
 | ADR-010 | Ciclo de vida e retenção de artefatos | PHASE-07 | Não iniciado |
 | ADR-011 | Recuperação de dados para visualização | PHASE-06 | Não iniciado |

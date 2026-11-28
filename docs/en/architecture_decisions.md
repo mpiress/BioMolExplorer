@@ -23,12 +23,12 @@ deviations from the reference specification.
 | --- | --- | --- | --- |
 | ADR-001 | [Scientific artifact identity model](adr/0001-artifact-identity-model.md) | PHASE-01 | Accepted |
 | ADR-002 | [Persistent metadata catalog technology](adr/0002-catalog-technology.md) | PHASE-01 | Accepted |
-| ADR-003 | Content-addressable storage strategy | PHASE-02 | Not started |
+| ADR-003 | [Content-addressable storage strategy](adr/0003-content-addressable-storage.md) | PHASE-02 | Accepted |
 | ADR-004 | Computational cache signature model | PHASE-03 | Not started |
 | ADR-005 | Dependency tracking and invalidation | PHASE-04 | Not started |
 | ADR-006 | Analytical dataset storage | PHASE-05 | Not started |
 | ADR-007 | Unified data access interfaces | PHASE-05 | Not started |
-| ADR-008 | Transactional publication and recovery | PHASE-02 | Not started |
+| ADR-008 | [Transactional publication and recovery](adr/0008-transactional-publication.md) | PHASE-02 | Accepted |
 | ADR-009 | Project migration and backward compatibility | PHASE-07 | Not started |
 | ADR-010 | Artifact lifecycle and retention | PHASE-07 | Not started |
 | ADR-011 | Visualization data retrieval | PHASE-06 | Not started |
