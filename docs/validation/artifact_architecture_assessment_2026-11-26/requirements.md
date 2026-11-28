@@ -224,3 +224,22 @@ and are not renumbered. PHASE-01 is reported in
 | REQ-MIG-001, REQ-MIG-004 | `IN_PROGRESS` | Additive migration and idempotent, resumable backfill, verified against legacy rows; project migration as a whole is PHASE-07 |
 | REQ-PERF-003 | `IMPLEMENTED` | Thresholds reviewed and approved on 2026-11-28 |
 | REQ-TEST-001, REQ-TEST-002 | `IMPLEMENTED` for this phase | Suite green with 22 new tests, no new failure and no tracked item turned into an unexpected success |
+
+## Status at the end of PHASE-02
+
+Reported in
+[phase_02_content_store_2026-11-28](../phase_02_content_store_2026-11-28/README.md).
+
+| Identifier | State | Evidence |
+| --- | --- | --- |
+| AC-02-01, AC-02-02, AC-02-03, AC-02-04 | `IMPLEMENTED` | `tests/test_content_store.py`; `R_storage` = 0.333 for one receptor published by three blocks, with three hard-linked materializations costing 0 extra blocks |
+| REQ-STO-001, REQ-STO-002, REQ-STO-003, REQ-STO-004 | `IMPLEMENTED` | One object per content; verification on read and before reuse; isolated writable materialization; temporary file, fsync, digest check, atomic rename |
+| REQ-STO-005 | `IMPLEMENTED` for this phase | Recovery never deletes referenced content |
+| REQ-STO-006 | `IN_PROGRESS` | Published results stay in the run folders; ADR-010 (PHASE-07) decides the move, with retention |
+| REQ-INT-002 | `IN_PROGRESS` | Interrupted publications recover; rebuilding the catalog belongs to PHASE-07 |
+| REQ-CAT-005 | `IN_PROGRESS` | `R_storage` measured; the `artifact_instances` duplication goes to PHASE-05 |
+| REQ-ARCH-002 | `IMPLEMENTED` | One store, generalized from `calculation_cache` rather than duplicated |
+| REQ-ARCH-004 | `IN_PROGRESS` | Four of the twelve ADRs accepted (ADR-001, ADR-002, ADR-003, ADR-008) |
+| REQ-MIG-004 | `IN_PROGRESS` | 16 identities moved by routing `calculation_cache`, registered as an audited equivalence and measured back to their previous values |
+| REQ-TEST-003 | `IMPLEMENTED` for this phase | Crash injection at four points and concurrent publication |
+| REQ-TEST-001, REQ-TEST-002 | `IMPLEMENTED` for this phase | Suite green with 28 new tests, no new failure and no tracked item turned into an unexpected success |

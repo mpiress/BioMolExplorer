@@ -509,7 +509,24 @@ pelos índices, sem percorrer diretórios. `catalog_schema.py` aplica as mudanç
 de esquema em ordem, uma vez, de forma idempotente e não destrutiva, registradas
 em `schema_migrations`; o modelo está em
 [ADR-001](adr/0001-artifact-identity-model.md) e
-[ADR-002](adr/0002-catalog-technology.md). A publicação indexa automaticamente
+[ADR-002](adr/0002-catalog-technology.md).
+
+`content_store.py` é a única implementação do armazenamento endereçado por
+conteúdo: publica em temporário, verifica o digest dos bytes escritos, marca o
+objeto como somente-leitura e só então renomeia. `objects/<prefixo>/<digest>` é
+o layout que `calculation_cache` já usava, que passa a delegar a ele sem mudar
+tabelas, leitores nem endereços. `artifact_manager.py` é a fronteira entre o
+catálogo e os bytes: registra um artefato publicado, resolve conteúdo com o
+digest verificado, entrega-o a um job compartilhado e somente-leitura — um hard
+link, que não custa bytes onde não há copy-on-write — ou como cópia isolada e
+gravável para um motor que reescreve a própria entrada, e explica a procedência
+a partir das operações. `artifact_validation.py` aplica o contrato de conteúdo
+de cada tipo, declarado em `artifact_contracts.CONTENT_CONTRACTS`: conteúdo que
+falha nele não é publicado nem reusado. Os bytes chegam ao armazenamento antes
+de qualquer linha os referenciar, de modo que uma interrupção pode deixar bytes
+inertes, nunca uma referência pendente; as decisões estão em
+[ADR-003](adr/0003-content-addressable-storage.md) e
+[ADR-008](adr/0008-transactional-publication.md). A publicação indexa automaticamente
 compostos, estruturas/cadeias, receptores, poses, comunidades e pares. Uma
 seleção como `pdb:4M0E, chain:A` pode ser configurada antes da recuperação; após
 a publicação, ela é conferida contra o índice e materializada apenas na

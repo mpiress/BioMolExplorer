@@ -380,5 +380,19 @@
   "Pares receptor–composto: {0} / {1} · Sem resultado: {2} · Compostos únicos: {3}": "Receptor–compound pairs: {0} / {1} · No result: {2} · Unique compounds: {3}",
   "Score Vina inválido: {0}": "Invalid Vina score: {0}",
   "Score Vina não finito: {0}": "Non-finite Vina score: {0}",
-  "Seu código de recuperação do BioMolExplorer é: {0}": "Your BioMolExplorer recovery code is: {0}"
+  "Seu código de recuperação do BioMolExplorer é: {0}": "Your BioMolExplorer recovery code is: {0}",
+  "A ocorrência não está no catálogo do projeto: {0}": "The occurrence is not in the project catalog: {0}",
+  "O conteúdo do artefato não está disponível: {0}": "The artifact content is not available: {0}",
+  "O artefato publicado não está disponível: {0}": "The published artifact is not available: {0}",
+  "O objeto armazenado divergiu do seu identificador de conteúdo: {0}": "The stored object diverged from its content identifier: {0}",
+  "O conteúdo a publicar está ausente ou vazio: {0}": "The content to publish is absent or empty: {0}",
+  "O conteúdo mudou durante a publicação: {0}": "The content changed during publication: {0}",
+  "Modo de materialização desconhecido: {0}": "Unknown materialization mode: {0}",
+  "O conteúdo está ausente ou vazio: {0}": "The content is absent or empty: {0}",
+  "A tabela não contém cabeçalho: {0}": "The table has no header: {0}",
+  "A tabela não declara as colunas do seu tipo ({0}): {1}": "The table does not declare the columns of its type ({0}): {1}",
+  "O arquivo mmCIF não declara posições atômicas: {0}": "The mmCIF file declares no atomic positions: {0}",
+  "O arquivo MOL2 não contém a seção de átomos: {0}": "The MOL2 file has no atom section: {0}",
+  "O arquivo não contém registros atômicos: {0}": "The file contains no atom records: {0}",
+  "Contrato de conteúdo desconhecido: {0}": "Unknown content contract: {0}"
 }

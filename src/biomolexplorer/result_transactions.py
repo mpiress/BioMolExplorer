@@ -19,9 +19,21 @@ class ResultTransaction:
     def __init__(self,store,db,pid):
         self.store,self.pid=store,pid
         self.root=store.project_dir(pid,db).resolve();self.id=uuid4().hex;self.moves=[]
-        self.planned=set()
+        self.planned=set();self.objects=[]
         self.journal=self.root/'.history/.result-transactions'/(self.id+'.json')
         db.execute('INSERT INTO result_file_transactions VALUES (?,?)',(self.id,pid))
+
+    def record_objects(self,digests):
+        """Name the content this transaction publishes, before it is written.
+
+        The bytes reach the store before any row references them, so an
+        interruption can leave content nothing points at.  The journal says
+        which content this transaction introduced, so the recovery can tell it
+        apart from content that was already under management.
+        """
+        for digest in digests:
+            if digest not in self.objects:self.objects.append(digest)
+        self._write()
 
     def prepare(self,moves):
         for source,destination in moves:
@@ -30,9 +42,13 @@ class ResultTransaction:
                 raise ValueError('Arquivo fora do projeto.')
             pair=(str(source),str(destination))
             if pair not in self.planned:self.moves.append(pair);self.planned.add(pair)
+        self._write()
+
+    def _write(self):
         self.journal.parent.mkdir(parents=True,exist_ok=True)
         with NamedTemporaryFile(dir=self.journal.parent,mode='w',encoding='utf-8',delete=False) as stream:
-            temp=Path(stream.name);json.dump(dict(id=self.id,project_id=self.pid,moves=self.moves),stream)
+            temp=Path(stream.name)
+            json.dump(dict(id=self.id,project_id=self.pid,moves=self.moves,objects=self.objects),stream)
             stream.flush();os.fsync(stream.fileno())
         temp.replace(self.journal);sync(self.journal.parent);sync(self.journal.parent.parent);sync(self.root)
 
@@ -55,6 +71,29 @@ class ResultTransaction:
         except (OSError,sqlite3.Error):
             from .diagnostics import get_logger
             get_logger('backend').exception('Result cleanup journal retained for recovery')
+
+
+def discard_unreferenced(db,store,pid,digests):
+    """Remove content an interrupted publication left that nothing references.
+
+    Conservative by design: bytes that a logical artifact still claims, or that
+    a registered content object points at, are kept.  Recovery never deletes
+    scientific content in order to make the catalog consistent; it only drops
+    bytes no row refers to.
+    """
+    if not digests:return 0
+    from .artifact_manager import STORE_FOLDER
+    from .content_store import ContentStore
+    content=ContentStore(store.project_dir(pid,db).resolve().joinpath(*STORE_FOLDER))
+    removed=0
+    for digest in digests:
+        if not isinstance(digest,str) or len(digest)!=64 or not digest.isalnum():continue
+        if db.execute('''SELECT 1 FROM artifact_instances WHERE project_id=? AND content_sha256=?
+            LIMIT 1''',(pid,digest)).fetchone():continue
+        if db.execute('''SELECT 1 FROM content_objects WHERE sha256=? AND storage_ref IS NOT NULL
+            LIMIT 1''',(digest,)).fetchone():continue
+        if content.discard(digest):removed+=1
+    return removed
 
 
 def recover(store):
@@ -81,6 +120,10 @@ def recover(store):
                     else:
                         if original.exists():raise ValueError('Conflito ao recuperar arquivos de resultados.')
                         original.parent.mkdir(parents=True,exist_ok=True);saved.replace(original);sync(original.parent)
+                # Content reaches the store before any row references it, so an
+                # uncommitted publication can only have left bytes nothing
+                # points at.
+                if not committed:discard_unreferenced(db,store,pid,value.get('objects',[]))
                 # project.json is a portable mirror; SQLite remains authoritative
                 # if termination interrupted its publication around the commit.
                 from .project_state import mirror

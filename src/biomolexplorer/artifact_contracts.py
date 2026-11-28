@@ -43,6 +43,23 @@ TYPES = {
 }
 
 
+# The content contract of each type, implemented in ``artifact_validation``.
+# Declared here, beside the types, and named rather than imported: this module
+# is read by the canvas, the validator and the executor, and must stay free of
+# scientific dependencies.  ``other`` is the untyped import, which is checked
+# for presence only — a file whose type the user did not declare has no schema
+# to check it against.
+CONTENT_CONTRACTS = {
+    'compounds': 'table', 'chembl': 'table', 'fingerprints': 'table',
+    'similarity': 'table', 'scores': 'table',
+    'structures': 'structure', 'receptor_pdb': 'structure',
+    'prepared_structures': 'prepared',
+    'molecular_poses': 'pose', 'vina': 'pose', 'dock6': 'pose',
+    'zinc_urls': 'download_list',
+    'dynamics': 'present', 'other': 'present',
+}
+
+
 OUTPUT_PORTS = {
     'retrieve_pubchem': {'compounds': ('compounds',)},
     'retrieve_compounds': {'compounds': ('compounds','chembl')},

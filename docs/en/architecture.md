@@ -494,7 +494,24 @@ alone, without walking directories. `catalog_schema.py` applies schema changes
 in order, once, idempotently and non-destructively, recorded in
 `schema_migrations`; the model is in
 [ADR-001](adr/0001-artifact-identity-model.md) and
-[ADR-002](adr/0002-catalog-technology.md). Publication automatically indexes
+[ADR-002](adr/0002-catalog-technology.md).
+
+`content_store.py` is the single implementation of content-addressed storage:
+it publishes to a temporary file, verifies the digest of the written bytes,
+marks the object read-only and only then renames.
+`objects/<prefix>/<digest>` is the layout `calculation_cache` already used, and
+it now delegates to the store without changing tables, readers or addresses.
+`artifact_manager.py` is the boundary between the catalog and the bytes: it
+registers a published artifact, resolves content with its digest verified, hands
+it to a job shared and read-only — a hard link, which costs no bytes where there
+is no copy-on-write — or as an isolated writable copy for an engine that
+rewrites its own input, and explains provenance from the operations.
+`artifact_validation.py` applies each type's content contract, declared in
+`artifact_contracts.CONTENT_CONTRACTS`: content that fails it is neither
+published nor reused. The bytes reach the store before any row references them,
+so an interruption can leave inert bytes, never a dangling reference; the
+decisions are in [ADR-003](adr/0003-content-addressable-storage.md) and
+[ADR-008](adr/0008-transactional-publication.md). Publication automatically indexes
 compounds, structures/chains, receptors, poses, communities and molecular
 pairs. A selection such as `pdb:4M0E, chain:A` can be configured before
 retrieval; after publication it is checked against the entity index and only

@@ -1,6 +1,7 @@
 """Multi-file Vina preparation remains bounded, incremental and cancellable."""
 import copy
 import csv
+import os
 import tempfile
 import threading
 import time
@@ -84,7 +85,12 @@ class MultipleInputTests(unittest.TestCase):
                 from biomolexplorer.calculation_cache import CalculationCache
                 cache=CalculationCache('docking-compound-tables',root/'.input-cache')
                 with cache.connect() as db:sha=db.execute('select sha256 from artifacts where namespace=? order by experiment_key',('docking-compound-tables',)).fetchall()
-                for row in sha:cache.object_path(row[0]).write_text('corrupt')
+                # A stored object is read-only; its owner can still unlock and
+                # corrupt it, which is what the checkpoint must detect.
+                for row in sha:
+                    obj=cache.object_path(row[0]);os.chmod(obj,0o600)
+                    try:obj.write_text('corrupt')
+                    finally:os.chmod(obj,0o444)
                 service._materialize_docking_compounds(pid,stage,'base_selected_mols',refs,results,None)
                 self.assertEqual(normalizer.call_count,3)
             self.assertEqual(read_compounds(a)[0]['canonical_smiles'],'CCC')
