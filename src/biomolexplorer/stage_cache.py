@@ -216,9 +216,29 @@ def path_manifest(path):
             if p.is_file() and not (set(p.relative_to(path).parts) & ignored)}
 
 
+def request_bindings(bindings):
+    """Drop derived reference metadata, keeping the requested data identity.
+
+    ``output_port`` is a typed label computed from the producer operation and
+    the consumer input contract (``artifact_contracts.output_port``); it is
+    never chosen by the user. Reopening a project created before typed
+    references adds it to every legacy binding
+    (``semantic_references.migrate_pipeline_references``), which otherwise
+    changed every key and recomputed a whole pipeline that had not changed.
+    The data itself stays pinned by ``stage``/``asset``, by the selector and by
+    the resolved input manifest. A user-selectable port would have to be kept.
+    """
+    def scrub(value):
+        if isinstance(value,list):return [scrub(item) for item in value]
+        if not isinstance(value,dict):return value
+        if 'sources' in value:return {k:(scrub(v) if k=='sources' else v) for k,v in value.items()}
+        return {k:v for k,v in value.items() if k!='output_port'}
+    return {field:scrub(group) for field,group in (bindings or {}).items()}
+
+
 def stage_key(stage, parameters, inputs, software):
     config = {'version': 2, 'operation': stage['operation'], 'parameters': dict(parameters),
-              'bindings': stage.get('bindings',{}), 'provided_results':stage.get('provided_results'),
+              'bindings': request_bindings(stage.get('bindings',{})), 'provided_results':stage.get('provided_results'),
               'inputs': dict(inputs), 'processing_version':operation_digest(stage['operation']),
               'runtime':runtime_signature(stage['operation'],software.split(':',1)[-1],parameters), 'templates': {},
               'input_processing':stage.get('input_processing','merge')}
@@ -286,14 +306,17 @@ def stage_key(stage, parameters, inputs, software):
     return hashlib.sha256(encoded).hexdigest()
 
 
+def selected_identity(path):
+    """The stable name a materialized input keeps across runs."""
+    parts=Path(path).parts
+    if 'artifacts' in parts:return '/'.join(parts[len(parts)-list(reversed(parts)).index('artifacts'):])
+    return '/'.join(parts[-2:])
+
+
 def input_manifests(stage, results, selected=None):
     inputs = {}
     if selected:
-        def identity(path):
-            parts=Path(path).parts
-            if 'artifacts' in parts:return '/'.join(parts[len(parts)-list(reversed(parts)).index('artifacts'):])
-            return '/'.join(parts[-2:])
-        return {'selected:'+field:sorted((identity(p),file_digest(p)) for p in paths)
+        return {'selected:'+field:sorted((selected_identity(p),file_digest(p)) for p in paths)
                 for field,paths in selected.items()}
     for identifier in sorted(dependencies(stage)):
         files = []

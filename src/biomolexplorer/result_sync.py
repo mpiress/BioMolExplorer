@@ -8,7 +8,23 @@ from collections import defaultdict,deque
 
 from .bindings import sources,pack
 from .clear_results import unregistered_original
-from .result_state import incompatible,signature,digest,inputs_changed,input_digest,removed_axes,fingerprint_units,preparation
+from .result_state import incompatible,signature,digest,inputs_changed,changed_input_names,input_digest,removed_axes,fingerprint_units,preparation
+
+# Every redocking pair of one structure shares this index, so a hash of the
+# whole file condemns pairs whose own row and structure did not change.
+PAIR_INDEX={'pdb_codes.csv'}
+
+
+def pair_index_only(entry):
+    """True when the pair index is the only materialized input that changed.
+
+    ``pair_removals`` then decides pair by pair, from the index persisted with
+    the results, keeping the files of pairs that remain selected with the same
+    preparation. The pair key carries the whole scientific request of a pair,
+    so an edit to another PDB's rows cannot change this one.
+    """
+    names=changed_input_names(entry)
+    return bool(names) and names<=PAIR_INDEX
 
 
 def refs(stage):
@@ -149,14 +165,15 @@ def plan(db,pid,pipeline,project_root=None,*,history=None):
                     if same_mode:unit['input_processing']=old_config.get('input_processing','merge')
                     invalid=not same_mode or incompatible(old_config,unit) or inputs_changed(batch) or oldrefs and any(not retained(r,new) for r in oldrefs)
                     if invalid:
-                        partial=(config['operation']=='redocking' and same_mode and not incompatible(old_config,unit,include_axes=False) and not inputs_changed(batch) and all(retained(r,new) for r in oldrefs))
+                        index_only=config['operation']=='redocking' and pair_index_only(batch)
+                        partial=(config['operation']=='redocking' and same_mode and not incompatible(old_config,unit,include_axes=False) and (not inputs_changed(batch) or index_only) and all(retained(r,new) for r in oldrefs))
                         lost.update(pair_removals(batch,unit) if partial else batch.get('artifacts',[]))
                         if partial and batch.get('artifacts'):batches.append(batch)
                     else:batches.append(batch)
                 item['batches']=batches
                 lost.difference_update(p for batch in batches for p in batch.get('artifacts',[]))
                 if any(b.get('partial_results') for b in batches):item['partial_results']=True
-            elif config['operation']=='redocking' and not parameter_change and not changed_inputs and all(retained(r,new) for r in refs(config)):
+            elif config['operation']=='redocking' and not parameter_change and (not changed_inputs or pair_index_only(item)) and all(retained(r,new) for r in refs(config)):
                 lost.update(pair_removals(item,new))
             elif parameter_change or changed_inputs or refs(config) and not any(retained(r,new) for r in refs(config)) or config['operation'] not in ('import_results','redocking','prepare_structures') and not config.get('provided_results') and incompatible(config,new):
                 lost.update(item.get('artifacts',[]))

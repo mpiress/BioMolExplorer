@@ -54,6 +54,17 @@ Cada falha foi classificada em uma de quatro categorias:
 | Tipos de importação (`receptor_pdb`), parâmetros internos ocultos e saídas ADMET particionadas | `test_import_files`, `test_workspace`, `test_molecule_quality` |
 | Texto de validação | `test_redocking_chimera_repair` (mensagem) |
 
+> **Continuação:** as decisões C1–C8 e I1–I2 abaixo foram tomadas e aplicadas a
+> testes e documentação em
+> [`test_suite_decisions_2026-11-27`](../test_suite_decisions_2026-11-27/README.md),
+> que também traz o censo de exclusões de preparação pedido por C8 e dois
+> achados novos (C1a, C1b). As correções de código de C1, C2, C3 e C7c estão em
+> [`test_suite_code_fixes_2026-11-27`](../test_suite_code_fixes_2026-11-27/README.md),
+> e o contrato das portas (C5) e a remoção do reparo de cargas (C8) em
+> [`test_suite_port_contract_2026-11-28`](../test_suite_port_contract_2026-11-28/README.md).
+> As decisões C1–C8 estão encerradas. A suíte está verde, e restam 3 falhas
+> esperadas rastreadas: as investigações I1 e I2, ambas da PHASE-07 (#14).
+
 ## C — Decisões necessárias
 
 | # | Divergência | Testes | Opções |

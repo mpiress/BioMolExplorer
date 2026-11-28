@@ -1,0 +1,20 @@
+{
+ "scope": "Read-only census of preparation_failures.csv in the reference Alzheimer project, for triage decision C8 (2026-11-27).",
+ "method": "Every preparation_failures.csv under the project was read; one row is one compound/receptor attempt, so rows exceed distinct compounds. Reasons were normalized by dropping paths and identifiers. No file was written in the project and no engine ran.",
+ "files": 77,
+ "rows": 12254,
+ "by_cause": {
+  "mol2_topology_or_atom_types": {"rows": 10521, "compounds": 694,
+   "reason": "ValueError: Topologia ou tipos atômicos MOL2 inválidos para o docking."},
+  "pdbqt_multiple_root_fragments": {"rows": 576, "compounds": 48,
+   "reason": "ValueError: PDBQT contém múltiplos fragmentos ROOT incompatíveis com Vina"},
+  "tool_failure_antechamber_or_chimera": {"rows": 108, "compounds": 6,
+   "reason": "ScientificToolError / ANTECHAMBER"},
+  "pdbqt_invalid_coordinates_charges_or_types": {"rows": 90, "compounds": 5,
+   "reason": "ValueError: PDBQT do ligante contém coordenadas, cargas ou tipos atômicos inválidos"}
+ },
+ "conclusions": {
+  "C8": "Rewiring the Chimera charge repair would address 6 of 809 excluded compounds (<1%); it is not a priority. Rewiring or removing the dead code both remain acceptable.",
+  "new_finding": "The dominant exclusion cause is MOL2 topology/atom types (694 compounds). It is unrelated to C8 and deserves separate investigation, outside issue #6."
+ }
+}

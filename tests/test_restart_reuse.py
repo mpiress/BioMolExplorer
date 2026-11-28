@@ -71,21 +71,22 @@ class RestartReuseTests(unittest.TestCase):
         self.assertTrue(all(stage['cache_key']!=old['cache_key'] for stage,old in zip(second['stages'],first['stages'])))
         self.assertTrue(all(stage['cache_software'].startswith('release-b:') for stage in second['stages']))
 
-    def test_declining_reuse_runs_collection_and_waits_for_new_file_selection(self):
-        self.connected()
+    # Decided contract (triage C7, 2026-11-27): the curated input selection is
+    # durable project configuration, so a recomputation reuses it instead of
+    # pausing for the same choice again.
+    def test_declining_reuse_recomputes_the_chain_with_the_saved_selection(self):
+        source,consumer=self.connected()
         manager,calls=self.immediate_manager()
         with patch('biomolexplorer.pipeline.JobManager',manager),patch('biomolexplorer.pipeline.implementation_digest',return_value='release-a'):
-            self.first_run()
+            first=self.first_run()
             service=self.reopen()
-            try:
-                second=self.wait(service.submit(self.token,self.project_id,reuse_results=False))
-                self.assertEqual(second['status'],'awaiting_input')
-                self.assertEqual(len(calls),3)
-                self.assertFalse(any(stage.get('reused') for stage in second['stages']))
-                finished=self.finish_selected(service,second)
+            try:second=self.wait(service.submit(self.token,self.project_id,reuse_results=False))
             finally:service.close()
-        self.assertEqual(finished['status'],'succeeded',finished['error'])
+        self.assertEqual(second['status'],'succeeded',second['error'])
         self.assertEqual(len(calls),4)
+        self.assertFalse(any(stage.get('reused') for stage in second['stages']))
+        self.assertEqual(second['stages'][1]['configuration']['bindings']['base_input_path']['selector'],
+                         first['stages'][1]['configuration']['bindings']['base_input_path']['selector'])
 
     def test_changed_processing_mode_after_restart_requires_new_selection(self):
         source,consumer=self.connected()
@@ -93,10 +94,14 @@ class RestartReuseTests(unittest.TestCase):
         with patch('biomolexplorer.pipeline.JobManager',manager),patch('biomolexplorer.pipeline.implementation_digest',return_value='release-a'):
             self.first_run()
             consumer['input_processing']='individual'
-            self.save([source,consumer])
+            # The mode change invalidates the consumer's result: confirm it.
+            project=self.store.project(self.token,self.project_id)
+            self.store.save_pipeline(self.token,self.project_id,[source,consumer],project['revision'],prune_results=True)
             service=self.reopen()
             try:second=self.wait(service.submit(self.token,self.project_id,reuse_results=True))
             finally:service.close()
+        # Switching to individual mode changes what each batch consumes, so the
+        # selection is asked again; a plain recomputation is not.
         self.assertEqual(second['status'],'awaiting_input')
         self.assertTrue(second['stages'][0]['reused'])
         self.assertEqual(second['stages'][1]['status'],'awaiting_input')
@@ -113,10 +118,12 @@ class RestartReuseTests(unittest.TestCase):
                 service=self.reopen()
                 try:second=self.wait(service.submit(self.token,self.project_id,reuse_results=True))
                 finally:service.close()
-        self.assertEqual(second['status'],'awaiting_input')
+        # The altered output fails its hash check, so the consumer is recomputed
+        # with the saved selection; the intact producer is still reused.
+        self.assertEqual(second['status'],'succeeded',second['error'])
         self.assertTrue(second['stages'][0]['reused'])
         self.assertFalse(second['stages'][1].get('reused',False))
-        self.assertEqual(len(calls),2)
+        self.assertEqual(len(calls),3)
 
     def test_changed_uploaded_input_invalidates_consumer_after_upgrade(self):
         asset=self.upload()
@@ -129,15 +136,22 @@ class RestartReuseTests(unittest.TestCase):
             with patch('biomolexplorer.pipeline.implementation_digest',return_value='release-a'):
                 self.first_run()
             self.store.asset_path(self.token,self.project_id,asset).write_text('name,smiles\nWATER,O\n')
+            # The uploaded input changed on disk: confirm the invalidation.
+            project=self.store.project(self.token,self.project_id)
+            self.store.save_pipeline(self.token,self.project_id,project['pipeline'],project['revision'],prune_results=True)
             with patch('biomolexplorer.pipeline.implementation_digest',return_value='release-b'):
                 service=self.reopen()
                 try:second=self.wait(service.submit(self.token,self.project_id,reuse_results=True))
                 finally:service.close()
-        self.assertEqual(second['status'],'awaiting_input')
+        self.assertEqual(second['status'],'succeeded',second['error'])
         self.assertFalse(any(stage.get('reused') for stage in second['stages']))
-        self.assertEqual(len(calls),1)
+        self.assertEqual(len(calls),2)
 
-    def test_tampered_original_cache_key_is_not_adopted_after_upgrade(self):
+    # Decided contract (triage C7, 2026-11-27): the stored cache_key is derived
+    # metadata. Reuse recomputes the expected signature from the saved request
+    # and verifies the artifact hashes, so a tampered key neither enables nor
+    # blocks reuse on its own.
+    def test_tampered_cache_key_does_not_decide_reuse_which_verifies_request_and_hashes(self):
         stage=new_stage('retrieve_compounds')
         self.save([stage])
         manager,calls=self.immediate_manager()
@@ -152,10 +166,20 @@ class RestartReuseTests(unittest.TestCase):
                 try:second=self.wait(service.submit(self.token,self.project_id,reuse_results=True))
                 finally:service.close()
         self.assertEqual(second['status'],'succeeded',second['error'])
-        self.assertFalse(second['stages'][0].get('reused',False))
-        self.assertEqual(len(calls),2)
+        self.assertTrue(second['stages'][0]['reused'])
+        self.assertEqual(second['stages'][0]['reuse_provenance']['policy'],'verified_completed_request_v1')
+        self.assertEqual(len(calls),1)
+        # The recomputed key replaces the tampered one in the new run.
+        self.assertNotEqual(second['stages'][0]['cache_key'],'0'*64)
 
     def test_restart_restores_only_the_previously_selected_file(self):
+        """Regression for triage C7c, 2026-11-27.
+
+        Reopening the project migrated the legacy binding to a typed reference,
+        adding ``output_port``. The cache key hashed the raw bindings, so the
+        consumer was recomputed although its resolved input was byte-identical.
+        This is the redundant recomputation measured in PHASE-00.
+        """
         source,consumer=self.connected()
         base,calls=self.immediate_manager()
         class MultipleFiles(base):

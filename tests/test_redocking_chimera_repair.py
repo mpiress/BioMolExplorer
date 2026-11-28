@@ -107,38 +107,12 @@ class ChimeraMol2Tests(unittest.TestCase):
 
 
 class ChimeraChargeRepairTests(unittest.TestCase):
-    def test_ccd_confirmed_nitrone_changes_types_without_changing_charge_method(self):
-        from biomolexplorer.chimera_charge_repair import charge_commands
-        from rdkit import Chem
-        molecule=Chem.MolFromSmiles('C=[N+]([O-])C')
-        for atom in molecule.GetAtoms():atom.SetProp('_TriposAtomName',atom.GetSymbol()+str(atom.GetIdx()))
-        with patch('biomolexplorer.structure_selection.component_path',return_value=Path('/chemistry/LIG.cif')),patch('biomolexplorer.structure_selection.chemical_template',return_value=(molecule,{})):
-            commands=charge_commands('/tmp',['1ABC','LIG',5,'A'],{})
-        self.assertEqual(len(commands),4)
-        self.assertIn('idatmType N2+',commands[2]);self.assertIn('idatmType O3-',commands[3])
-        self.assertTrue(all(':5.A@' in c for c in commands))
-
-    def test_chimera_charge_failure_retries_once_with_explicit_types(self):
-        from caad.docking import Docking
-        from biomolexplorer.processes import ScientificToolError
-        with tempfile.TemporaryDirectory() as folder:
-            dock=Docking(complex_input_path=folder,output_path=folder)
-            name='prepare_ligand_1ABC_LIG_5A.com';path=Path(folder)/name
-            path.write_text('open complex.pdb\naddh\naddcharge all spec #0 chargeModel 14sb method am1\nclose all\n')
-            dock._chimera_ligand_settings={name:(['1ABC','LIG',5,'A'],{})}
-            error=ScientificToolError('Failure running ANTECHAMBER','TOOL_REPORTED_ERROR','Inspect log')
-            observed=[]
-            def run(*args):
-                observed.append(path.read_text())
-                if len(observed)==1:raise error
-                return True
-            with patch.object(dock,'perform_subprocess',side_effect=run),patch('biomolexplorer.chimera_charge_repair.charge_commands',return_value=['setattr a idatmType N2+ :5.A@N1']):
-                self.assertTrue(dock.prepare_on_chimera(name))
-            self.assertEqual(len(observed),2)
-            self.assertIn('idatmType N2+',observed[1])
-            self.assertIn('method am1',observed[1])
-            self.assertNotIn('method gas',observed[1])
-
+    # The IDATM command repair was removed on 2026-11-28, by decision C8 of the
+    # triage: never wired after 9bdb316, and superseded by the two-phase
+    # preparation,
+    # which reads the formal charge from the hydrogenated graph and reports an
+    # open-shell one instead of rewriting atom types. Only the cache identity
+    # of the local chemical definition remains.
     def test_available_chemical_definition_changes_cache_identity_without_network(self):
         from biomolexplorer.chimera_charge_repair import local_definition
         with tempfile.TemporaryDirectory() as folder:
@@ -166,15 +140,6 @@ class CanonicalExportTests(unittest.TestCase):
             self.assertEqual(Chem.GetFormalCharge(molecule),0)
             self.assertTrue(all(a.GetNumRadicalElectrons()==0 for a in molecule.GetAtoms()))
             self.assertEqual(json.loads(path.with_suffix('.export.json').read_text())['scope'],'complete_component')
-
-    def test_oxime_hydroxyl_type_is_recovered_from_ccd(self):
-        from rdkit import Chem
-        from biomolexplorer.chimera_charge_repair import charge_commands
-        molecule=Chem.MolFromSmiles('C=NO')
-        for atom in molecule.GetAtoms():atom.SetProp('_TriposAtomName',atom.GetSymbol()+str(atom.GetIdx()))
-        with patch('biomolexplorer.structure_selection.component_path',return_value=Path('/chemistry/LIG.cif')),patch('biomolexplorer.structure_selection.chemical_template',return_value=(molecule,{})):
-            commands=charge_commands('/tmp',['1ABC','LIG',5,'A'],{})
-        self.assertIn('setattr a idatmType O3 :5.A@O2',commands)
 
     def test_dock6_rmsd_uses_fixed_receptor_frame(self):
         from biomolexplorer.dock6_redocking import heavy_atom_rmsd
@@ -231,14 +196,3 @@ class PreparedPhosphorusStateTests(unittest.TestCase):
             self.assertEqual(metadata['missing_heavy_atoms'],['O2P'])
             self.assertTrue(metadata['prepared_phosphorus_bonds_preserved'])
             self.assertEqual(mol.GetNumAtoms(),10)
-
-
-class PrimeAtomNameTests(unittest.TestCase):
-    def test_ccd_prime_names_are_preserved_in_chimera_atom_selectors(self):
-        from rdkit import Chem
-        from biomolexplorer.chimera_charge_repair import charge_commands
-        molecule=Chem.MolFromSmiles('CC')
-        for atom,name in zip(molecule.GetAtoms(),("C1'","C2'")):atom.SetProp('_TriposAtomName',name)
-        with patch('biomolexplorer.structure_selection.component_path',return_value=Path('/chemistry/LIG.cif')),patch('biomolexplorer.structure_selection.chemical_template',return_value=(molecule,{})):
-            commands=charge_commands('/tmp',['1ABC','LIG',5,'A'],{})
-        self.assertIn("setattr a idatmType C3 :5.A@C1'",commands)

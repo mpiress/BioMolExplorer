@@ -5575,5 +5575,7 @@
   "It expires in 10 minutes. If you did not request this change, ignore this message.": "Ele expira em 10 minutos. Se você não solicitou a alteração, ignore esta mensagem.",
   "BIOMOL_SMTP_SECURITY must be starttls, ssl or plain.": "BIOMOL_SMTP_SECURITY deve ser starttls, ssl ou plain.",
   "BIOMOL_PASSWORD_RESET_DELIVERY must be smtp or log.": "BIOMOL_PASSWORD_RESET_DELIVERY deve ser smtp ou log.",
-  "Ligand poses in MOL2 with coordinates, atom types and charges.": "Poses de ligantes MOL2 com coordenadas, tipos e cargas."
+  "Ligand poses in MOL2 with coordinates, atom types and charges.": "Poses de ligantes MOL2 com coordenadas, tipos e cargas.",
+  "The execution is still paused, awaiting your configuration.": "A execução continua pausada, aguardando sua configuração.",
+  "The execution is still paused, awaiting your selection.": "A execução continua pausada, aguardando sua seleção."
 }

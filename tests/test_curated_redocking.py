@@ -156,6 +156,14 @@ class CuratedPairPlanTests(unittest.TestCase):
 
 class CuratedRedockingExecutionTests(unittest.TestCase):
     def test_1p0i_bua_saved_after_first_run_is_docked_and_accumulated(self):
+        """Regression for triage C2, 2026-11-27.
+
+        Curating the ligands of one PDB rewrites the ``pdb_codes.csv`` shared by
+        every pair. A hash of the whole file counted as an input change, so the
+        partial invalidation was skipped and every pair was recomputed, 1ABC/LIG
+        included. The index is now compared by name, and ``pair_removals``
+        decides pair by pair.
+        """
         fixture=execution.PipelineExecutionTests();fixture.setUp();self.addCleanup(fixture.tearDown)
         science=incremental.IncrementalRedockingTests();science.setUp();self.addCleanup(science.doCleanups)
         bua='HETATM    3  C   BUA A   3       2.000   0.000   0.000  1.00 20.00           C\n'

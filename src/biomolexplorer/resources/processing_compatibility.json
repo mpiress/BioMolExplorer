@@ -64,7 +64,11 @@
     "ffc573d7895ee3f64514c2160247c9c9f869798a9030eb5b78bf8dbe9de8ef74": "8bd62e322da333b855dcbe7f300d754698a85f4aa2cf3dce026e5cd3555a2e14",
     "ec711ba260631d0bcbe19d69c0a8f2eba287e08b976f142f6d483d1ca36f3321": "bc65d1bf30d64f6e89d5111f56b91a4cd66658bf547e534823cf8a2ab767b64a",
     "7e3065cc6bf55d4fb9da06729f1b4f7c00ef5cdab444b3530c6197c9c0444f41": "4e672e3c3d6b1fd2e70498571856baf331735a87e54ec32ed85997cb6186ba81",
-    "ca458f2b7795ca1c32cfa68f0b3c735d8b148f4fac3ff672be82b5d4d8b246df": "8bd62e322da333b855dcbe7f300d754698a85f4aa2cf3dce026e5cd3555a2e14"
+    "ca458f2b7795ca1c32cfa68f0b3c735d8b148f4fac3ff672be82b5d4d8b246df": "8bd62e322da333b855dcbe7f300d754698a85f4aa2cf3dce026e5cd3555a2e14",
+    "534cbe1c7b015b367972261f7ec51124debbdde96985414ea1656328b4a4bc06": "f051d5a358d049a66a44ae646c5d1750c5e76a4cc55e8bca788235d47fd67de6",
+    "85b17a4315b2a1251a868ad0463c70b5b06a8bf38b6713e2037325033d51f44f": "c056cfae46653b087e506a3c2d64acb308ea8a37d50d6d8845d03acd9ecc80fe",
+    "ff21e41a2ada9340ecf62b2f411fde598efe1eb8484121091750198e1dfbaf0b": "77d159a981b81b010debd1d7e50436c0364e4233dab853859c6fbe0d543344a3",
+    "a64bf78f0edddafd6d945f73a44817266278f7933b7197304543ae8bae1d1565": "e7d7613f8944fde06bd230790c2753567db8393f3e6d0235bcfed42b9e5a372f"
   },
   "operations": [
     "prepare_structures",
@@ -443,6 +447,43 @@
         "operation": "consensus",
         "current": "ca458f2b7795ca1c32cfa68f0b3c735d8b148f4fac3ff672be82b5d4d8b246df",
         "previous": "8bd62e322da333b855dcbe7f300d754698a85f4aa2cf3dce026e5cd3555a2e14"
+      }
+    ]
+  },
+  "audit_2026_11_28_charge_repair_removal": {
+    "reason": "Removal of the never-called chimera_charge_repair.charge_commands (triage C8). The IDATM command generator was unwired in 9bdb316 and had no caller in src, so no preparation, charge assignment, docking, redocking or consensus result can differ. The two-phase preparation keeps reading the formal charge from the hydrogenated graph and reporting an open-shell one. Only the file digest of the module moved, which reaches the operation closures through caad/docking.py and the ligand preparation adapter identity; both are aliased so existing preparations stay reusable.",
+    "operations": [
+      {
+        "operation": "consensus",
+        "current": "534cbe1c7b015b367972261f7ec51124debbdde96985414ea1656328b4a4bc06",
+        "previous": "f051d5a358d049a66a44ae646c5d1750c5e76a4cc55e8bca788235d47fd67de6"
+      },
+      {
+        "operation": "docking_dock6",
+        "current": "85b17a4315b2a1251a868ad0463c70b5b06a8bf38b6713e2037325033d51f44f",
+        "previous": "c056cfae46653b087e506a3c2d64acb308ea8a37d50d6d8845d03acd9ecc80fe"
+      },
+      {
+        "operation": "docking_vina",
+        "current": "85b17a4315b2a1251a868ad0463c70b5b06a8bf38b6713e2037325033d51f44f",
+        "previous": "c056cfae46653b087e506a3c2d64acb308ea8a37d50d6d8845d03acd9ecc80fe"
+      },
+      {
+        "operation": "prepare_structures",
+        "current": "ff21e41a2ada9340ecf62b2f411fde598efe1eb8484121091750198e1dfbaf0b",
+        "previous": "77d159a981b81b010debd1d7e50436c0364e4233dab853859c6fbe0d543344a3"
+      },
+      {
+        "operation": "redocking",
+        "current": "ff21e41a2ada9340ecf62b2f411fde598efe1eb8484121091750198e1dfbaf0b",
+        "previous": "77d159a981b81b010debd1d7e50436c0364e4233dab853859c6fbe0d543344a3"
+      }
+    ],
+    "preparation_files": [
+      {
+        "file": "biomolexplorer/chimera_charge_repair.py",
+        "current": "a64bf78f0edddafd6d945f73a44817266278f7933b7197304543ae8bae1d1565",
+        "previous": "e7d7613f8944fde06bd230790c2753567db8393f3e6d0235bcfed42b9e5a372f"
       }
     ]
   }

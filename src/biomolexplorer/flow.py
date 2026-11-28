@@ -42,8 +42,10 @@ INPUTS = {
 # The typed contract is authoritative.  These legacy-shaped views keep the
 # existing editor API stable while the UI and executor consume one definition.
 from .artifact_contracts import OUTPUT_PORTS as _OUTPUT_PORTS, INPUT_PORTS as _INPUT_PORTS
-OUTPUTS={operation:{kind for kinds in ports.values() for kind in kinds}
-         for operation,ports in _OUTPUT_PORTS.items()}
+from .artifact_contracts import output_types as _declared_types
+# Internal ports publish results for inspection, not for another block to
+# consume, so they are absent from the types the canvas may connect.
+OUTPUTS={operation:_declared_types(operation,connectable=True) for operation in _OUTPUT_PORTS}
 INPUTS={operation:{field:set(kinds) for field,kinds in ports.items()}
         for operation,ports in _INPUT_PORTS.items()}
 # These inputs are configured with uploaded files, never with canvas connections.
