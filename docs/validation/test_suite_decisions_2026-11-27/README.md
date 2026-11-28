@@ -139,7 +139,17 @@ unittest acusa "unexpected success".
   migração para referências tipadas mudava a chave de cache de todo consumidor
   ao reabrir o projeto. Inclui o aviso explícito quando a execução não é
   retomada.
-- **Passo 3:** C5 (contrato das portas) e C8 (religar ou remover).
+- **Passo 3: concluído** em
+  [`test_suite_port_contract_2026-11-28`](../test_suite_port_contract_2026-11-28/README.md).
+  C5 divergia em uma única célula por teste: uma importação sem tipo
+  alimentando a recuperação ZINC (o código estava certo, o teste e a
+  documentação errados) e as poses do redocking alimentando dinâmica e
+  validação de poses. Decidiu-se que o redocking entrega apenas os receptores
+  que preparou e validou, declarados por `INTERNAL_PORTS` — alinhando o
+  contrato tipado a três documentos que já diziam isso. C8 foi removido: o
+  redesenho em duas fases já **detecta** o grafo de camada aberta que o reparo
+  contornava, e a remoção foi registrada como equivalência auditada para não
+  invalidar preparações já calculadas.
 
 ## Reprodução
 

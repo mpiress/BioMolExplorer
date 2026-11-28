@@ -346,7 +346,7 @@ See the [frontend guide](frontend.md) for scientific interpretation and limits.
 
 ## Contract review and localization
 
-`flow.input_types` shares redocking's variable contract across canvas, selector and form. Consensus synchronizes its Vina alias and merges all selections before intersecting receptor and compound identities. `docking_inputs.py` restricts DOCK6 to corresponding candidates and references. Materialization preserves prepared auxiliary files and filters centers/metadata by the same reference. Degenerate consensus scores receive finite normalization.
+`flow.input_types` shares redocking's variable contract across canvas, selector and form. `artifact_contracts.INTERNAL_PORTS` declares the ports that publish results without being an input to another block — today the redocking poses, whose RMSD control is not a dataset — and `flow` excludes them from the connectable types, leaving provenance and each artifact's role intact. Consensus synchronizes its Vina alias and merges all selections before intersecting receptor and compound identities. `docking_inputs.py` restricts DOCK6 to corresponding candidates and references. Materialization preserves prepared auxiliary files and filters centers/metadata by the same reference. Degenerate consensus scores receive finite normalization.
 
 `ui/localization.py` uses a session-owned translator and packaged JSON catalogs. It translates controls and recognized messages during rendering/updates without changing editable values, selection keys or persisted data. `verbatim` protects user-provided content and scientific identifiers. Selection is available at login and the initial language through `--language`; no shared global user-language state exists. Scientific logs retain their original language.
 

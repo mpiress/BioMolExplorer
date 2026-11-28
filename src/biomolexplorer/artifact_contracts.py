@@ -135,8 +135,23 @@ ROLE_PORTS = {
 }
 
 
-def output_types(operation):
-    return {kind for kinds in OUTPUT_PORTS.get(operation,{}).values() for kind in kinds}
+INTERNAL_PORTS = {
+    # Redocking repositions the crystal ligand of each pair to measure the RMSD
+    # of its own protocol.  That pose is the control of the measurement, not a
+    # dataset: the handoff is the receptor the redocking validated, so docking,
+    # Amber Score and dynamics reuse it instead of preparing it again.  The
+    # pose files stay published, downloadable and listed with their RMSD; only
+    # the canvas connection is refused, as artifact_choices.redocking_receptors
+    # has always done for the file selectors.
+    'redocking': ('redocking_results',),
+}
+
+
+def output_types(operation, connectable=False):
+    """Declared output types; ``connectable`` drops the internal ports."""
+    internal=INTERNAL_PORTS.get(operation,()) if connectable else ()
+    return {kind for port,kinds in OUTPUT_PORTS.get(operation,{}).items()
+            if port not in internal for kind in kinds}
 
 
 def output_port(operation, accepted_types):

@@ -15,6 +15,8 @@ The criteria follow the PoseBusters formulation (Buttenschoen, Morris and Deane,
 | `base_input_path` | Receptors prepared by redocking or preparation (`receptor_pdb`, `prepared_structures`, `structures`) | Steric context of the intermolecular test |
 | `base_selected_mols` | Poses and tables from Vina, DOCK6 or consensus (`vina`, `dock6`, `molecular_poses`, `scores`) | Poses to validate |
 
+Redocking enters through `base_input_path`, with the receptors it prepared and validated; its poses are **not** accepted in `base_selected_mols`, because the repositioned ligand is the control for that protocol's RMSD and not a prospective pose to validate (`artifact_contracts.INTERNAL_PORTS`). The crystal ligand of the site, in turn, is excluded from the steric test by `exclude_residues`, as described in 3.4.
+
 Poses arrive from the connected blocks. The editor lists targets by the `receptor_id` of the prepared receptors and compounds by the molecules that actually produced docking results, read from the artifact registry and the published score tables — the form never loads execution JSON and never walks the pose tree. With no explicit selection, every received pose is validated.
 
 | Selection | Effect |
