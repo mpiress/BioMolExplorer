@@ -203,3 +203,24 @@ sub-issue. Each criterion lists the requirements it verifies.
 | REQ-ARCH-004 | `IN_PROGRESS` | ADR process and template published; no ADR yet |
 | REQ-TEST-001 | `IN_PROGRESS` | Baseline suite failed: 45/169 modules, 50 failures, 38 errors, 1 hang (`tests.json`). After the [triage](../test_suite_triage_2026-11-27/README.md), the [decisions](../test_suite_decisions_2026-11-27/README.md), the [code fixes](../test_suite_code_fixes_2026-11-27/README.md) and the [port contract](../test_suite_port_contract_2026-11-28/README.md), the suite is green: 169/169 modules, 0 failures, 3 tracked `expectedFailure` tests. Decisions C1–C8 are closed; the two remaining items are the I1 and I2 investigations, both PHASE-07 (#14). A phase passes when it adds no failure and turns no tracked item into an unexpected success without updating it. |
 | All other REQ-* and AC-* | `PENDING` | — |
+
+## Review and status at the end of PHASE-01
+
+The register was approved on 2026-11-28, together with the acceptance thresholds
+proposed in `README.md`. The identifiers above are therefore permanent (02.3)
+and are not renumbered. PHASE-01 is reported in
+[phase_01_identity_catalog_2026-11-28](../phase_01_identity_catalog_2026-11-28/README.md).
+
+| Identifier | State | Evidence |
+| --- | --- | --- |
+| AC-01-01, AC-01-02, AC-01-03, AC-01-04 | `IMPLEMENTED` | `tests/test_artifact_catalog.py`, query plans and ADR-001/ADR-002 in both languages |
+| REQ-ID-001, REQ-ID-002, REQ-ID-003 | `IMPLEMENTED` | `content_objects`; logical identities unchanged; entity queries served by an index |
+| REQ-ID-004 | `IN_PROGRESS` | Operation identity recorded; the signature is provisional until ADR-004 (PHASE-03) |
+| REQ-CAT-001, REQ-CAT-002, REQ-CAT-003, REQ-CAT-004 | `IMPLEMENTED` | Content, operations and edges as rows; ordered migrations; no plan contains a table scan |
+| REQ-CAT-005 | `IN_PROGRESS` | Overhead measured at 670 B per artifact and independent of reuse in the new tables; the `artifact_instances` duplication goes to PHASE-02 |
+| REQ-DEP-001 | `IN_PROGRESS` | Edges recorded for operations that publish artifacts; runs without output belong to PHASE-04 |
+| REQ-ARCH-002, REQ-ARCH-003 | `IMPLEMENTED` | One catalog generalized, not duplicated; no external service (ADR-002) |
+| REQ-ARCH-004 | `IN_PROGRESS` | Two of the twelve ADRs accepted |
+| REQ-MIG-001, REQ-MIG-004 | `IN_PROGRESS` | Additive migration and idempotent, resumable backfill, verified against legacy rows; project migration as a whole is PHASE-07 |
+| REQ-PERF-003 | `IMPLEMENTED` | Thresholds reviewed and approved on 2026-11-28 |
+| REQ-TEST-001, REQ-TEST-002 | `IMPLEMENTED` for this phase | Suite green with 22 new tests, no new failure and no tracked item turned into an unexpected success |

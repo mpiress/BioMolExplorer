@@ -78,11 +78,13 @@ class WorkspaceStore:
                     PRIMARY KEY(project_id,indexed_run_id,occurrence_id));
                 CREATE INDEX IF NOT EXISTS artifacts_project_stage ON artifact_instances(project_id,stage_id,indexed_run_id);
                 CREATE INDEX IF NOT EXISTS artifacts_content ON artifact_instances(project_id,content_sha256);
+                -- The index of this table is declared in catalog_schema: an
+                -- index created here as well would come back after a migration
+                -- replaced it.
                 CREATE TABLE IF NOT EXISTS artifact_entities(
                     project_id TEXT NOT NULL,occurrence_id TEXT NOT NULL,artifact_id TEXT NOT NULL,entity_type TEXT NOT NULL,
                     entity_id TEXT NOT NULL,qualifiers TEXT NOT NULL,metadata TEXT NOT NULL,
                     PRIMARY KEY(project_id,occurrence_id,entity_type,entity_id,qualifiers));
-                CREATE INDEX IF NOT EXISTS artifact_entities_lookup ON artifact_entities(project_id,entity_type,entity_id);
                 CREATE TABLE IF NOT EXISTS artifact_entity_indexes(
                     project_id TEXT NOT NULL,occurrence_id TEXT NOT NULL,artifact_id TEXT NOT NULL,content_sha256 TEXT,
                     state TEXT NOT NULL,error TEXT,updated REAL NOT NULL,
@@ -96,7 +98,13 @@ class WorkspaceStore:
             create_schema(db)
             from .artifact_registry import backfill,migrate_schema
             migrate_schema(db)
+            # Ordered catalog migrations run before any indexing, so the
+            # backfill below writes into the current schema.
+            from .catalog_schema import apply as apply_catalog_schema
+            apply_catalog_schema(db)
             backfill(db)
+            from .artifact_catalog import backfill_operations
+            backfill_operations(db)
             from .semantic_references import migrate_project_references
             for row in db.execute('SELECT id,pipeline FROM projects WHERE deleted=0').fetchall():
                 migrate_project_references(db,row['id'],json.loads(row['pipeline']))
