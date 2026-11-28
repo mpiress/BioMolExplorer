@@ -201,5 +201,5 @@ sub-issue. Each criterion lists the requirements it verifies.
 | REQ-PERF-001 | `IN_PROGRESS` | Baseline done; final measurement in PHASE-08 |
 | REQ-PERF-003 | `IN_PROGRESS` | Thresholds proposed in `README.md`, pending review |
 | REQ-ARCH-004 | `IN_PROGRESS` | ADR process and template published; no ADR yet |
-| REQ-TEST-001 | `IN_PROGRESS` | Baseline suite failed: 45/169 modules, 50 failures, 38 errors, 1 hang (`tests.json`). After the [triage](../test_suite_triage_2026-11-27/README.md) and the [decisions](../test_suite_decisions_2026-11-27/README.md), the suite is green: 169/169 modules, 0 failures, 10 tracked `expectedFailure` tests. A phase passes when it adds no failure and turns no tracked item into an unexpected success without updating it. |
+| REQ-TEST-001 | `IN_PROGRESS` | Baseline suite failed: 45/169 modules, 50 failures, 38 errors, 1 hang (`tests.json`). After the [triage](../test_suite_triage_2026-11-27/README.md), the [decisions](../test_suite_decisions_2026-11-27/README.md) and the [code fixes](../test_suite_code_fixes_2026-11-27/README.md), the suite is green: 169/169 modules, 0 failures, 6 tracked `expectedFailure` tests (C5, C8, I1, I2). A phase passes when it adds no failure and turns no tracked item into an unexpected success without updating it. |
 | All other REQ-* and AC-* | `PENDING` | — |

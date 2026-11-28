@@ -132,7 +132,7 @@ class ADMETWrapper:
             self.df_results=results;self.evaluated=evaluated
             # Preserve every valid molecule and each failed criterion even when filtering.
             evaluated.to_csv(Path(self.base_output_path)/(filename+'_evaluated.csv'),index=False)
-            self.export_results(results,filename);self.generate_plot(results,filename)
+            self.generate_plot(results,filename)
             from biomolexplorer.admet_outputs import export_standard,SCHEMA_VERSION
             outputs=export_standard(evaluated,self.config,self.base_output_path,filename)
             metadata=dict(schema_version=SCHEMA_VERSION,outputs=outputs,dataset_origin=origin,output_stem=filename,
@@ -173,32 +173,6 @@ class ADMETWrapper:
         self.structure_cache.remember(key,{},cached)
         self.structure_results[key]=cached
         return dict(result)
-
-    def export_results(self, evaluated, filename):
-        if evaluated is None:raise ValueError('Execute a avaliação ADMET antes de exportar.')
-        self.output_files={}
-        def write(role,frame):
-            path=Path(self.base_output_path)/(filename+'_'+role+'.csv')
-            frame.to_csv(path,index=False);self.output_files[role]=str(path)
-        for field,label in [('BBB','BBB+'),('BBB','BBB-'),('HIA','HIA+'),('HIA','HIA-')]:
-            write(label,evaluated[evaluated[field]==label])
-        rule=self.config['rule_set']
-        if rule!='none':
-            names={'lipinski':['Lipinski'],'veber':['Veber'],'oral':['Lipinski','Veber'],'fragment':['Fragment']}[rule]
-            passed=pd.Series(True,index=evaluated.index,dtype=bool)
-            for name in names:
-                allowed=0 if rule=='oral' and name=='Veber' else self.config['max_rule_violations']
-                passed &= evaluated[name+'_violations']<=allowed
-            rule_label='lipinski-veber' if rule=='oral' else rule
-            table=evaluated[passed].copy();table['Rule_set']=rule_label
-            write('rules_'+rule_label,table)
-        if self.config['alert_catalogs']:
-            table=evaluated.copy()
-            for catalog in self.config['alert_catalogs']:
-                column='Alert_'+catalog
-                table[column]=table[column].map(lambda value:'true' if value is True or str(value).lower()=='true' else 'false')
-            write('alerts',table)
-
 
     def generate_plot(self, results, filename):
         if results is None:

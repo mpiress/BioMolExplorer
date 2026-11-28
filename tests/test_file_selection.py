@@ -97,6 +97,52 @@ class FileSelectionTests(unittest.TestCase):
                 self.assertFalse(dialog.open)
             finally:service.close()
 
+    def test_unsaved_selection_leaves_the_run_paused_and_says_so(self):
+        """A refused draft save cannot resume the run, so it must be reported.
+
+        Found while applying decision C7 (2026-11-27): the dialog closed, the
+        draft was discarded and the run stayed paused with no message, which
+        looks exactly like an execution that continued.
+        """
+        source=new_stage('retrieve_compounds');stage=new_stage('admet')
+        stage['bindings']['base_input_path']={'stage':source['id']}
+        self.save([source,stage])
+        manager,calls=self.immediate_manager()
+        class MultipleFiles(manager):
+            def submit(manager,operation,parameters):
+                job=super().submit(operation,parameters)
+                if operation=='retrieve_compounds':
+                    extra=manager.config.workspace/'B01__chembl__mol.csv'
+                    extra.write_text('molecule_chembl_id,canonical_smiles\nCHEMBL2,CCC\n')
+                    job['result']['artifacts'].append(str(extra))
+                return job
+        with patch('biomolexplorer.pipeline.JobManager',MultipleFiles):
+            service=PipelineService(self.store)
+            try:
+                run=self.wait(service.submit(self.token,self.project_id))
+                self.assertEqual(run['status'],'awaiting_input')
+                dialogs=[];messages=[]
+                def show(dialog):dialog.open=True;dialogs.append(dialog)
+                page=SimpleNamespace(width=1440,height=1000,update=lambda:None,show_dialog=show,
+                    run_task=lambda *args:SimpleNamespace(done=lambda:False))
+                ui=WorkspaceUI(page,self.store,service)
+                ui.token=self.token;ui.current=self.store.project(self.token,self.project_id)
+                ui.base_pipeline=copy.deepcopy(ui.current['pipeline'])
+                ui.draw_project=AsyncMock();ui.notify=messages.append
+                async def local_call(function,*args,**kwargs):return function(*args,**kwargs)
+                ui.call=local_call
+                ui.save_draft=AsyncMock(return_value=False)
+                asyncio.run(ui.configure_pending(run['id']))
+                dialog=dialogs[-1]
+                checks=[flag for c in dialog.content.content.controls if hasattr(c,'_artifact_picker')
+                        for flag,_ in c._artifact_picker.rows]
+                for check in checks:check.value=check.label=='B01__chembl__mol.csv'
+                asyncio.run(dialog.actions[-1].on_click(None))
+                ui.save_draft.assert_awaited()
+                self.assertEqual(self.store.get_run(self.token,run['id'])['status'],'awaiting_input')
+                self.assertTrue(any('pausada' in str(m) for m in messages),messages)
+            finally:service.close()
+
     def test_duplicate_filenames_have_distinct_selectors_and_empty_selection_is_rejected(self):
         source,stage=new_stage('retrieve_compounds'),new_stage('admet')
         stage['bindings']['base_input_path']={'stage':source['id']}

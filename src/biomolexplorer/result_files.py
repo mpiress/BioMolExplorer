@@ -372,7 +372,7 @@ class ResultFiles:
         import re
         from .artifact_naming import publication_metadata
         stem=Path(publication_metadata(path).get('legacy_name',Path(path).name)).stem
-        return re.sub(r'_(?:evaluated|selected|rejected|alerts|BBB[+-]|HIA[+-]|rules_(?:lipinski-veber|lipinski|veber|fragment))$','',stem)
+        return re.sub(r'_(?:evaluated|selected|rejected|alerts|BBB[+-]|HIA[+-]|rules[-_](?:lipinski-veber|lipinski|veber|fragment))$','',stem)
 
     def admet_alert_page(self,token,pid,rid,sid,filename,offset=0,limit=25,query=''):
         """One authorized, bounded review table per ADMET input, including history."""
@@ -524,7 +524,8 @@ class ResultFiles:
         from .artifact_naming import publication_metadata
         original=publication_metadata(path).get('legacy_name',path.name)
         stems=[Path(original).stem]
-        for suffix in ('_evaluated','_selected','_rejected','_alerts','_rules_lipinski','_rules_veber','_rules_lipinski-veber','_rules_fragment','_BBB+','_BBB-','_HIA+','_HIA-'):
+        rules=[p+r for r in ('lipinski','veber','lipinski-veber','fragment') for p in ('_rules-','_rules_')]
+        for suffix in ('_evaluated','_selected','_rejected','_alerts',*rules,'_BBB+','_BBB-','_HIA+','_HIA-'):
             if Path(original).stem.endswith(suffix):stems.append(Path(original).stem[:-len(suffix)])
         for stem in stems:
             for candidate in stage.get('artifacts',[]):

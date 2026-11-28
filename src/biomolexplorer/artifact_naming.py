@@ -49,7 +49,9 @@ def output_role(operation,path,parameters):
     if operation=='similarity':return slug(parameters.get('metric','tanimoto'))
     if operation=='admet':
         if name.endswith('_alerts'):return 'alerts'
-        rule=re.search(r'_rules_(lipinski-veber|lipinski|veber|fragment)$',name)
+        # The canonical name separates the rule with a hyphen; ``_rules_`` is
+        # the retired duplicate, still read when a legacy project is reopened.
+        rule=re.search(r'_rules[-_](lipinski-veber|lipinski|veber|fragment)$',name)
         if rule:return 'rules-'+rule[1]
         if name.endswith('_admet_report'):return 'report'
         for key,label in (('bbb+','bbb-pos'),('bbb-','bbb-neg'),('hia+','hia-pos'),('hia-','hia-neg'),
@@ -499,6 +501,11 @@ def name_records(entries):
         # Structure identifiers belong to TIPO; SRC is their immediate category.
         source='REC' if source.startswith('Receptor') else 'PDB' if source.startswith(('Complex','Structure')) else 'LIG' if source.startswith(('Ligand','Pose')) else source
         if len(source)>24:source='MIX-'+hashlib.sha256(source.encode()).hexdigest()[:8]
+        # The combined batch of the 'both' mode covers every selected input. It
+        # shares the SRC category of the individual batches beside it, so
+        # without this qualifier the three results are indistinguishable.
+        if batch.get('configuration',{}).get('_combined_input'):
+            source='ALL' if source=='INPUT' else source+'-ALL'
         operation=PUBLIC_OPERATIONS.get(op,component(op))
         target='+'.join(targets) if targets else 'NA'
         if len(target)>24:target='MULTI-'+hashlib.sha256(target.encode()).hexdigest()[:8]

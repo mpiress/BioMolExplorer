@@ -1294,7 +1294,9 @@ class PipelineService:
             raise ValueError('Selecione resultados Vina e DOCK6 com os mesmos identificadores de receptor e composto.')
 
     def _work_units(self,project_id,stage,results):
-        variants=self._variants(project_id,stage,results) if stage.get('input_processing')=='individual' else [(stage,stage['name'])]
+        # 'both' adds the combined batch to the individual ones; the dispatch
+        # must enumerate variants for it too, as _cache_key already does.
+        variants=self._variants(project_id,stage,results) if stage.get('input_processing') in ('individual','both') else [(stage,stage['name'])]
         from .result_state import FINGERPRINTS
         for variant,label in variants:
             if stage['operation']=='fingerprints':
@@ -1308,7 +1310,7 @@ class PipelineService:
     def _execute_stage(self, run_id, project_id, user_id, item, stages, run_dir, results, state):
         stage=execution_stage(item['configuration'],item.get('input_mode'))
         if stage['operation']=='consensus':stage['input_processing']='merge'
-        if stage.get('input_processing')!='individual' and stage['operation']!='fingerprints' or stage.get('provided_results') or stage['operation']=='import_results':
+        if stage.get('input_processing') not in ('individual','both') and stage['operation']!='fingerprints' or stage.get('provided_results') or stage['operation']=='import_results':
             return self._execute_single(run_id,project_id,user_id,item,stages,run_dir,results,state)
         artifacts=[];inputs={};excluded=0;redocking_failures=0;redocking_reused=0;docking_failures=0;excluded_inputs={}
         completed_batches=list(item.get('batches',[]))

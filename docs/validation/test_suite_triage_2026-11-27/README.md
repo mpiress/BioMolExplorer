@@ -58,8 +58,9 @@ Cada falha foi classificada em uma de quatro categorias:
 > testes e documentação em
 > [`test_suite_decisions_2026-11-27`](../test_suite_decisions_2026-11-27/README.md),
 > que também traz o censo de exclusões de preparação pedido por C8 e dois
-> achados novos (C1a, C1b). A suíte está verde, com 10 falhas esperadas
-> rastreadas. As correções de código ficaram para os passos 2 e 3.
+> achados novos (C1a, C1b). As correções de código de C1, C2, C3 e C7c estão em
+> [`test_suite_code_fixes_2026-11-27`](../test_suite_code_fixes_2026-11-27/README.md).
+> A suíte está verde, e restam 6 falhas esperadas rastreadas: C5, C8 e I1–I2.
 
 ## C — Decisões necessárias
 

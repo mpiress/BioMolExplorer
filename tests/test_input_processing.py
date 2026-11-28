@@ -76,14 +76,14 @@ class InputProcessingTests(unittest.TestCase):
             self.assertEqual(run['stages'][1]['configuration']['input_processing'],'merge')
         finally:service.close()
 
-    @unittest.expectedFailure
-    def test_both_reuses_individual_jobs_and_merges_vectors_without_a_worker(self):
-        """Known defect (triage C3, 2026-11-27).
+    def test_both_reuses_the_individual_jobs_and_adds_only_the_combined_one(self):
+        """Regression for triage C3, 2026-11-27.
 
-        With uploaded inputs, the ``both`` mode executes as ``merge``: a single
-        combined batch, instead of reusing the individual batches and adding the
-        combined one. The invalidation side was fixed (individual units survive
-        the mode change); the execution side is the agreed follow-up.
+        ``both`` means 'individual + conjunto completo (ALL)', as the mode is
+        labelled in the interface. The execution dispatch only enumerated
+        variants for ``individual``, so ``both`` ran as a single combined batch
+        and discarded the individual ones, even though the cache key already
+        enumerated all three.
         """
         assets=[self.upload('alpha.csv','name,smiles\nA,CCO\n'),self.upload('beta.csv','name,smiles\nB,CCC\n')]
         stage=new_stage('fingerprints');stage['input_processing']='individual'
@@ -96,9 +96,12 @@ class InputProcessingTests(unittest.TestCase):
             with patch.object(service,'_execute_single',wraps=service._execute_single) as execute:
                 run=self.wait(service.submit(self.token,self.project_id))
                 self.assertEqual(run['status'],'succeeded',run.get('error'))
-                self.assertEqual(execute.call_count,0)
+                # Only the combined batch is new work; neither individual
+                # batch is recomputed when the mode changes.
+                self.assertEqual(execute.call_count,1)
             item=run['stages'][0];self.assertEqual(len(item['batches']),3)
             self.assertEqual([b['reused'] for b in item['batches']],[True,True,False])
+            self.assertEqual([b['label'].split(' · ')[0] for b in item['batches'][:2]],['alpha','beta'])
             combined=item['batches'][-1]
             self.assertTrue(combined['configuration']['_combined_input'])
             path=next(Path(p) for p in combined['artifacts'] if p.endswith('.csv'))

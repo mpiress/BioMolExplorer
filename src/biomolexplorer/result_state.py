@@ -149,6 +149,26 @@ def inputs_changed(entry):
     return False
 
 
+def changed_input_names(entry):
+    """Filenames of the materialized inputs whose content no longer matches.
+
+    ``None`` when no comparison is possible, which old unversioned manifests
+    and unreadable inputs must keep treating as a complete change.
+    """
+    from collections import Counter
+    from .stage_cache import selected_identity
+    manifest=entry.get('input_manifest',{});names=set()
+    for field,paths in entry.get('input_files',{}).items():
+        expected=manifest.get('selected:'+field)
+        if not isinstance(expected,list):return None
+        if any(not (isinstance(value,(list,tuple)) and len(value)==2) for value in expected):return None
+        try:actual=Counter((selected_identity(p),input_digest(p)) for p in paths)
+        except OSError:return None
+        recorded=Counter((value[0],value[1]) for value in expected)
+        for identity,_ in ((actual-recorded)+(recorded-actual)):names.add(Path(identity).name)
+    return names
+
+
 def incompatible(previous,current,*,include_axes=True):
     """Can this earlier input/action unit still be requested unchanged?"""
     old,new=request(previous),request(current)

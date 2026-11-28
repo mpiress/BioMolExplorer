@@ -131,10 +131,14 @@ unittest acusa "unexpected success".
 
 ## Próximos passos combinados
 
-- **Passo 2, correções de código:** C1a e C1b (remover a tabela legada e os
-  alertas sem catálogo), C2 (invalidação por linha do PDB), C3 (execução do modo
-  `both`) e C7c, cada uma com teste e, em C2, uma execução real de redocking em
-  dois PDBs.
+- **Passo 2, correções de código: concluído** em
+  [`test_suite_code_fixes_2026-11-27`](../test_suite_code_fixes_2026-11-27/README.md).
+  C1a e C1b (tabela legada e alertas sem catálogo removidos), C2 (invalidação
+  por par, com execução real de redocking em dois PDBs), C3 (execução do modo
+  `both`) e C7c, cujo diagnóstico apontou uma causa diferente da suposta: a
+  migração para referências tipadas mudava a chave de cache de todo consumidor
+  ao reabrir o projeto. Inclui o aviso explícito quando a execução não é
+  retomada.
 - **Passo 3:** C5 (contrato das portas) e C8 (religar ou remover).
 
 ## Reprodução
