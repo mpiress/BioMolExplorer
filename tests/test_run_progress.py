@@ -58,7 +58,7 @@ class WorkerRetrievalTests(unittest.TestCase):
                         time.sleep(.05)
                     self.assertEqual(run['status'], 'succeeded', run.get('error'))
                     result = run['stages'][0]
-                    dataset = next(path for path in result['artifacts'] if Path(path).name=='B01__chembl__mol.csv')
+                    dataset = next(path for path in result['artifacts'] if Path(path).name=='CHEMBL220_MOLS.csv')
                     self.assertFalse(any(Path(p).stem.endswith('_FULL') or Path(p).name=='compounds.csv' for p in result['artifacts']))
                     import pandas as pd
                     compounds = pd.read_csv(dataset)
@@ -117,7 +117,7 @@ class WorkerRetrievalTests(unittest.TestCase):
                             if failure:
                                 self.assertIn('tempo limite' if failure == 'timeout' else 'HTTP 500', run['error'])
                             else:
-                                dataset = next(p for p in result['artifacts'] if Path(p).name=='B01__chembl__mol.csv')
+                                dataset = next(p for p in result['artifacts'] if Path(p).name=='CHEMBL220_MOLS.csv')
                                 self.assertIn('CHEMBL4087364', Path(dataset).read_text())
                 finally:
                     service.close()

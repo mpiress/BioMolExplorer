@@ -48,10 +48,12 @@ class GlobalNamesTests(unittest.TestCase):
         self.assertEqual(parse_filename('B01__admet__bbb-neg.csv')['scheme'],0)
         with self.assertRaises(ValueError):public_filename('ACHE','MOL','ADMET','BBB+','../csv')
 
-    def test_immediate_source_not_ancestral_hierarchy_and_real_targets(self):
+    def test_semantic_source_route_not_block_hierarchy_and_real_targets(self):
         stages=self.flow();before={p:Path(p).read_bytes() for s in stages for p in s['artifacts']}
         index_run(stages,'run');tags=[parse_filename(s['artifact_records'][0]['public_name']) for s in stages]
-        self.assertEqual([p['source'] for p in tags],['ChEMBL','MOL','BBB+','Fingerprints-Morgan'])
+        # Analytical SRC keeps the category route (95f1b10); routes over 24 chars become MIX-hash.
+        route=hashlib.sha256('MOL-BBB+-Fingerprints-Morgan'.encode()).hexdigest()[:8]
+        self.assertEqual([p['source'] for p in tags],['ChEMBL','MOL','MOL-BBB+','MIX-'+route])
         self.assertEqual({p['target'] for p in tags},{'ACHE'})
         self.assertEqual(tags[1]['result_type'],'BBB+');self.assertEqual(tags[2]['result_type'],'Fingerprints-Morgan')
         self.assertTrue(tags[3]['result_type'].startswith('Similarity-'))

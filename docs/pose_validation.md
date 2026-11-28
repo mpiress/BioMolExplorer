@@ -15,6 +15,8 @@ Os critérios seguem a formulação de PoseBusters (Buttenschoen, Morris e Deane
 | `base_input_path` | Receptores preparados do redocking ou da preparação (`receptor_pdb`, `prepared_structures`, `structures`) | Contexto estérico do teste intermolecular |
 | `base_selected_mols` | Poses e tabelas de Vina, DOCK6 ou consenso (`vina`, `dock6`, `molecular_poses`, `scores`) | Poses a validar |
 
+O redocking entra por `base_input_path`, com os receptores que ele preparou e validou; suas poses **não** são aceitas em `base_selected_mols`, porque o ligante reposicionado é o controle do RMSD daquele protocolo, e não uma pose prospectiva a validar (`artifact_contracts.INTERNAL_PORTS`). O ligante cristalográfico do sítio, por sua vez, é excluído do teste estérico por `exclude_residues`, como descrito em 3.4.
+
 As poses chegam pelos blocos conectados. O editor lista alvos pelo `receptor_id` dos receptores preparados e compostos pelas moléculas que efetivamente produziram resultados de docking, lidos do registro de artefatos e das tabelas de score já publicadas — o formulário não carrega o JSON de execução nem percorre a árvore de poses. Sem seleção explícita, todas as poses recebidas são validadas.
 
 | Seleção | Efeito |

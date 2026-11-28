@@ -76,7 +76,9 @@ class MCSConfigurationTests(unittest.TestCase):
                 self.assertEqual(compute.call_count,3)
                 self.assertEqual(compute.call_args.args[1:3],(1,4))
                 await inspector.calculate();self.assertEqual(compute.call_count,3)
-            self.assertFalse(view.ui.page.show_dialog.called)
+            # Only the untitled processing splash may appear; no message popup.
+            self.assertEqual([call.args[0] for call in view.ui.page.show_dialog.call_args_list
+                              if getattr(call.args[0],'title',None) is not None],[])
         asyncio.run(scenario())
 
     def test_new_scope_cancels_pending_search_and_only_latest_result_is_displayed(self):

@@ -28,6 +28,10 @@ class AnalysisHandoffTests(unittest.TestCase):
             path=self.store.project_dir(self.project_id)/(name+'.csv')
             path.write_text(content);paths.append(str(path))
         stage['bindings'][field]={'sources':[{'stage':producer['id'],'selector':name+'.csv'} for name in ('alpha','beta')]}
+        # A run executes the project pipeline: its blocks must be saved there,
+        # otherwise automatic result sync treats them as removed blocks.
+        project=self.store.project(self.token,self.project_id)
+        self.store.save_pipeline(self.token,self.project_id,project['pipeline']+[producer,stage],project['revision'])
         stages=[dict(id=producer['id'],name=producer['name'],operation=producer['operation'],
                      configuration=producer,status='succeeded',artifacts=paths),
                 dict(id=stage['id'],name=stage['name'],operation=operation,

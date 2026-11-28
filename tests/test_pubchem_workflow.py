@@ -136,6 +136,9 @@ class PubChemPipelineTests(unittest.TestCase):
     wait=execution.PipelineExecutionTests.wait
 
     def launch_fixture(self,args,**kwargs):
+        # The patch replaces subprocess.Popen globally: only the worker launch is
+        # redirected; other probes (e.g. runtime package versions) run unchanged.
+        if list(args[1:3])!=['-m','biomolexplorer.worker']:return self.original_launch(args,**kwargs)
         fixture=Path(__file__).parent/'fixtures/chembl_worker.py'
         return self.original_launch([args[0],str(fixture),*args[3:]],**kwargs)
 
@@ -148,7 +151,14 @@ class PubChemPipelineTests(unittest.TestCase):
             form.refresh_references();form.selection_mode.value='single'
             form.selection_mode.on_select(SimpleNamespace(control=form.selection_mode));form.compound_id.value=compound_id
         if processing:form.processing.value=processing
-        return self.wait(service.resume(self.token,run['id'],form.read()))
+        updated=form.read()
+        # As in the UI, persist the new configuration first, confirming the
+        # invalidation of results it makes obsolete, then resume the run.
+        project=self.store.project(self.token,self.project_id)
+        proposed=[updated if stage['id']==updated['id'] else stage for stage in project['pipeline']]
+        if self.store.result_removal_plan(self.token,self.project_id,proposed)['affected']:
+            self.store.save_pipeline(self.token,self.project_id,proposed,project['revision'],prune_results=True)
+        return self.wait(service.resume(self.token,run['id'],updated))
 
     def test_real_worker_manual_reference_produces_shared_compound_contract(self):
         stage=new_stage('retrieve_pubchem');stage['parameters'].update(reference_source='manual',reference='CCO')
@@ -172,7 +182,7 @@ class PubChemPipelineTests(unittest.TestCase):
             try:
                 run=self.wait(service.submit(self.token,self.project_id))
                 self.assertEqual(run['status'],'succeeded',run['error'])
-                report=next(Path(p) for p in run['stages'][0]['artifacts'] if p.endswith('__pubchem__report.json'))
+                report=next(Path(p) for p in run['stages'][0]['artifacts'] if p.endswith('retrieval_report.json'))
                 self.assertEqual([r['molecule_chembl_id'] for r in json.loads(report.read_text())['references']],['B'])
             finally:service.close()
 
@@ -187,12 +197,15 @@ class PubChemPipelineTests(unittest.TestCase):
             service=PipelineService(self.store,worker_python=sys.executable,cpu_workers=1)
             try:
                 for processing,count in (('individual',2),('merge',1)):
-                    self.save(stages)
+                    # Each round restarts from the original configuration: confirm
+                    # that results saved by the previous round are invalidated.
+                    revision=self.store.project(self.token,self.project_id)['revision']
+                    self.store.save_pipeline(self.token,self.project_id,stages,revision,prune_results=True)
                     run=self.wait(service.submit(self.token,self.project_id,reuse_results=False))
                     self.assertEqual(run['status'],'awaiting_input',run['error'])
                     run=self.confirm(service,run,compound_id='B')
                     self.assertEqual(run['status'],'awaiting_input',run['error'])
-                    report=next(Path(p) for p in run['stages'][1]['artifacts'] if p.endswith('__pubchem__report.json'))
+                    report=next(Path(p) for p in run['stages'][1]['artifacts'] if p.endswith('retrieval_report.json'))
                     self.assertEqual([r['molecule_chembl_id'] for r in json.loads(report.read_text())['references']],['B'])
                     run=self.confirm(service,run,processing=processing)
                     self.assertEqual(run['status'],'succeeded',run['error'])

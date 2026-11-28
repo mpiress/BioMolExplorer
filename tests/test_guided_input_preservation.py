@@ -1,4 +1,5 @@
 """The visual editor preserves configured inputs until their source is changed."""
+import copy
 from types import SimpleNamespace
 import unittest
 
@@ -69,7 +70,10 @@ class GuidedInputPreservationTests(unittest.TestCase):
                 suffix='.dockprep.pdbqt' if operation in ('docking_vina','docking_dock6','prepare_structures') and field=='base_input_path' else '.csv'
                 expected[field]={'sources':[{'stage':source['id'],'selector':'first/selected'+suffix},
                                            {'stage':source['id'],'selector':'second/selected'+suffix}]}
-            stage['bindings']=expected
+            stage['bindings']=copy.deepcopy(expected)
+            # Typed producers record their output port in semantic references.
+            if operation=='graphs':
+                for ref in expected['similarity_path']['sources']:ref['output_port']='similarity'
             for mode in ('individual','merge'):
                 with self.subTest(operation=operation,mode=mode):
                     stage['input_processing']=mode
@@ -89,7 +93,7 @@ class GuidedInputPreservationTests(unittest.TestCase):
         dropdown.on_select(None)
         result = form.read()
         self.assertNotIn('base_input_path',result['parameters'])
-        self.assertEqual(result['bindings']['base_input_path'],{'stage':source['id'],'selector':'auto'})
+        self.assertEqual(result['bindings']['base_input_path'],{'stage':source['id'],'selector':'auto','output_port':'compounds'})
 
     def test_clearing_source_removes_the_configured_folder(self):
         stage = new_stage('admet')

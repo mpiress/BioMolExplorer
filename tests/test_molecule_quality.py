@@ -81,8 +81,11 @@ class MoleculeQualityTests(unittest.TestCase):
         result=execute_operation('admet',{'base_input_path':str(path.parent),'input_file':path.name},self.root/'admet')
         report=json.loads(Path(result.details['exclusion_report']).read_text())
         self.assertEqual(report['excluded_records'],1)
-        dataset=pd.read_csv(next(p for p in result.artifacts if Path(p).name=='compounds_INPUT.csv'))
-        self.assertNotIn('BAD',set(dataset['molecule_chembl_id']))
+        # BBB+/BBB- are independent partitions of every valid input molecule.
+        partitions=[p for p in result.artifacts if Path(p).name in ('compounds_INPUT_BBB+.csv','compounds_INPUT_BBB-.csv')]
+        self.assertEqual(len(partitions),2)
+        evaluated=set().union(*(set(pd.read_csv(p)['molecule_chembl_id']) for p in partitions))
+        self.assertIn('A',evaluated);self.assertNotIn('BAD',evaluated)
 
     def test_orphan_edges_and_invalid_smiles_are_removed_together(self):
         compounds=self.source('compounds.csv','molecule_chembl_id,canonical_smiles\nA,CCO\nB,CCCO\nBAD,invalid\n')

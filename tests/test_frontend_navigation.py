@@ -147,9 +147,15 @@ class FrontendNavigationTests(unittest.TestCase):
                 self.assertTrue(abs(p['x']-q['x'])>=flow.NODE_WIDTH+24 or abs(p['y']-q['y'])>=flow.node_height(original)+24)
 
     def test_complete_summary_counts_unique_files_and_reuse(self):
+        import tempfile
+        from pathlib import Path
+        # The metric counts files still available on disk, once each.
+        folder=tempfile.TemporaryDirectory();self.addCleanup(folder.cleanup)
+        a,b,c=(str(Path(folder.name)/name) for name in ('a.csv','b.png','c.csv'))
+        for path in (a,b,c):Path(path).write_text('x')
         run=dict(id='test-run',status='succeeded',created=100,updated=225,stages=[
-            dict(status='succeeded',artifacts=['a.csv','b.png'],reused=True),
-            dict(status='succeeded',artifacts=['b.png','c.csv'])])
+            dict(status='succeeded',artifacts=[a,b],reused=True),
+            dict(status='succeeded',artifacts=[b,c])])
         values=[c.value for c in walk(outcome_overview(run,[])) if isinstance(c,ft.Text)]
         self.assertIn('2 / 2',values);self.assertIn('3',values);self.assertIn('1',values)
         self.assertIn('00:02:05',values);self.assertIn('Explore os resultados de cada etapa abaixo.',values)

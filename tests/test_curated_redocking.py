@@ -156,6 +156,14 @@ class CuratedPairPlanTests(unittest.TestCase):
 
 class CuratedRedockingExecutionTests(unittest.TestCase):
     def test_1p0i_bua_saved_after_first_run_is_docked_and_accumulated(self):
+        """Regression for triage C2, 2026-11-27.
+
+        Curating the ligands of one PDB rewrites the ``pdb_codes.csv`` shared by
+        every pair. A hash of the whole file counted as an input change, so the
+        partial invalidation was skipped and every pair was recomputed, 1ABC/LIG
+        included. The index is now compared by name, and ``pair_removals``
+        decides pair by pair.
+        """
         fixture=execution.PipelineExecutionTests();fixture.setUp();self.addCleanup(fixture.tearDown)
         science=incremental.IncrementalRedockingTests();science.setUp();self.addCleanup(science.doCleanups)
         bua='HETATM    3  C   BUA A   3       2.000   0.000   0.000  1.00 20.00           C\n'
@@ -192,6 +200,10 @@ class CuratedRedockingExecutionTests(unittest.TestCase):
             args=(fixture.token,fixture.project_id,first['id'],producer['id'],raw)
             context=results.pdb_ligands(*args);self.assertEqual(context['ligands'],[])
             results.set_pdb_ligands(*args,[dict(LIGAND='BUA',RESNUM=3,CHAIN='A')],context['revision'])
+            # The curated metadata makes dependent results obsolete: the user
+            # confirms their invalidation before executing (as in the UI).
+            project=fixture.store.project(fixture.token,fixture.project_id)
+            fixture.store.save_pipeline(fixture.token,fixture.project_id,project['pipeline'],project['revision'],prune_results=True)
             second=fixture.finish_selected(service,service.submit(fixture.token,fixture.project_id))
         self.assertEqual(second['status'],'succeeded',second.get('error'))
         self.assertEqual(science.docked,[('1ABC','LIG'),('1P0I','BUA')])

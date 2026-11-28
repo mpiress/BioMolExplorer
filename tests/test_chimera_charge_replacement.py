@@ -97,22 +97,9 @@ class ChargeOnlyTests(unittest.TestCase):
             charge_existing_mol2(self.path)
             self.assertEqual(calculate.call_count,2)
 
-    def test_legacy_conversion_routes_am1_to_direct_antechamber(self):
-        from biomolexplorer.docking_data import prepare_ligands
-        dataset=self.root/'compounds.csv'
-        dataset.write_text('molecule_chembl_id,canonical_smiles,conformer_file\nTEST,CCO,'+str(self.path)+'\n')
-        def convert(source,destination,**kwargs):
-            destination.write_text(self.original)
-            return destination
-        with patch('biomolexplorer.docking_data.convert_structure',side_effect=convert), \
-             patch('biomolexplorer.ligand_cache.preparation_identity',return_value={}), \
-             patch('biomolexplorer.molecular_adapters.AM1BCCEngine.calculate',return_value=self.prepared.partial_charges) as calculate:
-            outputs=prepare_ligands(dataset,self.root/'output','mol2',charge_type='am1')
-            self.assertEqual(len(outputs),1)
-            self.assertEqual(calculate.call_count,1)
-            prepare_ligands(dataset,self.root/'output','mol2',charge_type='am1')
-            self.assertEqual(calculate.call_count,1)
-            self.assertFalse(list((self.root/'output').glob('*.com')))
+    # test_legacy_conversion_routes_am1_to_direct_antechamber was removed: ligand
+    # preparation is Chimera-only since 2026-10-26 (docs/validation/chimera_return_2026-10-26.md);
+    # the direct Antechamber AM1-BCC route it covered no longer exists.
 
 
 if __name__=='__main__':unittest.main()

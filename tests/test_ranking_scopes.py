@@ -49,7 +49,10 @@ class CentralityFeasibilityTests(unittest.TestCase):
         data=model(nx.disjoint_union(nx.cycle_graph(501),nx.empty_graph(5001)))
         analysis=NetworkAnalysis(data);values,notice=analysis.metrics('full','betweenness')
         self.assertIn('aproximada',notice);self.assertIn('64',notice)
-        raw=nx.betweenness_centrality(analysis.graph.subgraph(map(str,range(501))),k=64,normalized=False,seed=42)
+        # Reference with the same stable node order (a subgraph view iterates in hash order).
+        cycle=nx.Graph();cycle.add_nodes_from(map(str,range(501)))
+        cycle.add_edges_from(analysis.graph.subgraph(map(str,range(501))).edges())
+        raw=nx.betweenness_centrality(cycle,k=64,normalized=False,seed=42)
         scale=2/(5501*5500)
         for node,value in raw.items():self.assertAlmostEqual(values[node],value*scale)
         self.assertEqual(values,NetworkAnalysis(data).metrics('full','betweenness')[0])

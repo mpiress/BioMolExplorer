@@ -12,7 +12,10 @@ OUTPUTS={'retrieve_compounds':{'compounds','chembl'},'expand_similar_compounds':
     'retrieve_structures':{'structures'},'retrieve_zinc':{'compounds'},'prepare_structures':{'prepared_structures','compounds'},
     'admet':{'compounds'},'fingerprints':{'fingerprints','compounds'},'similarity':{'similarity'},'graphs':{'compounds'},
     'redocking':{'structures','prepared_structures'},'docking_vina':{'vina','compounds'},'docking_dock6':{'dock6','compounds'},'consensus':{'scores','compounds'}}
-INPUTS={'expand_similar_compounds':{'base_input_path':{'chembl'}},'retrieve_zinc':{'base_input_path':{'other','zinc_urls'}},
+# A ZINC download list is only accepted under its own type: ``other`` skips
+# validation entirely, so it would reach the retrieval unparsed.  The expected
+# pattern for ``other`` already directs the user to the ZINC type.
+INPUTS={'expand_similar_compounds':{'base_input_path':{'chembl'}},'retrieve_zinc':{'base_input_path':{'zinc_urls'}},
     'retrieve_pubchem':{'base_input_path':{'compounds'}},
     'prepare_structures':{'base_input_path':{'structures','prepared_structures'},'base_selected_mols':{'compounds'}},'admet':{'base_input_path':{'compounds'}},
     'fingerprints':{'base_input_path':{'compounds'}},'similarity':{'base_input_path':{'fingerprints'}},
@@ -25,6 +28,13 @@ KINDS=('compounds','structures','prepared_structures','fingerprints','similarity
 
 class ConnectionMatrixTests(unittest.TestCase):
     def test_every_native_imported_and_supplied_result_against_every_port(self):
+        """Port contract settled in triage C5 (2026-11-27).
+
+        The matrix is asserted against the typed contract: an untyped ``other``
+        import does not reach the ZINC retrieval, and redocking offers only the
+        receptors it validated (``test_redocking_receptor_outputs`` covers its
+        internal pose port).
+        """
         producers=[]
         for operation,kinds in OUTPUTS.items():
             producers.append((new_stage(operation),kinds))

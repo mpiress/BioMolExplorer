@@ -13,7 +13,7 @@ from biomolexplorer.templates import validate_templates
 class GuidedUITests(unittest.TestCase):
     def setUp(self):
         self.ui=SimpleNamespace(current={'pipeline':[new_stage(k) for k in TITLES]},selected=None,service=SimpleNamespace(dock6_path=None),
-            page=SimpleNamespace(update=lambda:None),event=lambda *args:None,save_draft=None,preset_dialog=None,run_pipeline=None)
+            page=SimpleNamespace(update=lambda *controls:None),event=lambda *args:None,save_draft=None,preset_dialog=None,run_pipeline=None)
     def test_all_operations_construct_and_generate_valid_templates(self):
         FlowCanvas(self.ui,True).build()
         for stage in self.ui.current['pipeline']:

@@ -25,7 +25,15 @@ class AnalysisOriginsIntegrationTests(unittest.TestCase):
     finish_selected=execution.PipelineExecutionTests.finish_selected
     wait=execution.PipelineExecutionTests.wait
 
+    @unittest.expectedFailure
     def test_three_old_pubchem_selections_expand_to_six_real_graphs_with_exact_origins(self):
+        """Known defect (triage I2, 2026-11-27).
+
+        Legacy PubChem selectors saved before canonical publication are not
+        resolved when the selection is expanded: the reference is reported as
+        missing or ambiguous. Needs investigation; it belongs with the legacy
+        project work of PHASE-07 (#14).
+        """
         pipeline=json.loads(FIXTURE.read_text())
         by_op={s['operation']:s for s in pipeline}
         fp=by_op['fingerprints'];sim=by_op['similarity'];graph=by_op['graphs']

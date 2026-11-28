@@ -54,7 +54,10 @@ class CancellationUITests(unittest.TestCase):
         ui.notify.assert_called_with('Execução cancelada.')
         self.assertEqual([op for op,_ in calls],['retrieve_compounds'])
 
-    def test_settings_cancel_button_cancels_pending_execution(self):
+    # Decided contract (triage C6, 2026-11-27): closing a configuration dialog
+    # is never destructive. Cancelling a run is an explicit action, available
+    # from the execution panel, and it goes through WorkspaceUI.cancel_run.
+    def test_settings_dialog_close_keeps_the_run_awaiting_input(self):
         manager,calls=self.immediate_manager()
         with patch('biomolexplorer.pipeline.JobManager',manager):
             service=PipelineService(self.store);self.addCleanup(service.close)
@@ -62,13 +65,17 @@ class CancellationUITests(unittest.TestCase):
             async def scenario():
                 await ui.open_stage_dialog(pending['id'],waiting_run_id=run['id'])
                 dialog=ui.page.dialogs[-1]
-                self.assertEqual(dialog.actions[0].content,'Cancelar execução')
-                await dialog.actions[0].on_click(SimpleNamespace(control=dialog.actions[0]))
-                self.assert_cancelled(ui,run,dialog,calls)
+                self.assertEqual(dialog.actions[0].content,'Cancelar')
+                dialog.actions[0].on_click(SimpleNamespace(control=dialog.actions[0]))
+                self.assertFalse(dialog.open)
                 self.assertIsNone(ui.settings_body)
+                self.assertFalse(ui.editing_stage)
+                self.assertEqual(self.store.get_run(self.token,run['id'])['status'],'awaiting_input')
+                self.assertEqual(ui.current_run,run['id'])
+                self.assertEqual([op for op,_ in calls],['retrieve_compounds'])
             asyncio.run(scenario())
 
-    def test_file_selection_cancel_updates_without_polling_and_discards_draft(self):
+    def test_cancel_run_closes_the_selection_dialog_without_polling_and_discards_draft(self):
         manager,calls=self.immediate_manager()
         with patch('biomolexplorer.pipeline.JobManager',manager):
             service=PipelineService(self.store);self.addCleanup(service.close)
@@ -76,13 +83,28 @@ class CancellationUITests(unittest.TestCase):
             async def scenario():
                 await ui.configure_pending(run['id'])
                 dialog=ui.selection_dialog;key=ui.selection_dialog_key
-                cancel=next(action for action in dialog.actions if action.content=='Cancelar execução')
-                await cancel.on_click(SimpleNamespace(control=cancel))
+                await ui.cancel_run(run['id'])
                 self.assert_cancelled(ui,run,dialog,calls)
+                self.assertIsNone(ui.polling)
                 self.assertNotIn(key,ui.pending_file_selections)
                 # A delayed Flutter dismissal must not resurrect cancelled drafts.
                 dialog.on_dismiss(None)
                 self.assertNotIn(key,ui.pending_file_selections)
+            asyncio.run(scenario())
+
+    def test_selecting_later_keeps_the_run_awaiting_input(self):
+        manager,calls=self.immediate_manager()
+        with patch('biomolexplorer.pipeline.JobManager',manager):
+            service=PipelineService(self.store);self.addCleanup(service.close)
+            run,_=self.pending_run(service);ui=self.ui(service,run)
+            async def scenario():
+                await ui.configure_pending(run['id'])
+                dialog=ui.selection_dialog
+                later=next(action for action in dialog.actions if action.content=='Selecionar depois')
+                later.on_click(SimpleNamespace(control=later))
+                self.assertFalse(dialog.open)
+                self.assertEqual(self.store.get_run(self.token,run['id'])['status'],'awaiting_input')
+                self.assertEqual([op for op,_ in calls],['retrieve_compounds'])
             asyncio.run(scenario())
 
     def test_running_cancel_restarts_monitoring_until_terminal_state(self):

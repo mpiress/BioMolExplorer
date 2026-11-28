@@ -24,10 +24,13 @@ def export_standard(evaluated, configuration, destination, stem):
         selected=[not selection_reasons(row,config) for row in evaluated.to_dict('records')]
         role='rules-'+label;name=stem+'_'+role+'.csv'
         evaluated.loc[selected].to_csv(destination/name,index=False);outputs[role]=name
-    alerts=evaluated.copy()
-    for catalog in configuration['alert_catalogs']:
-        alerts['Alert_'+catalog]=alerts['StructuralAlerts'].fillna('').map(lambda value:catalog+': ' in str(value))
-    name=stem+'_alerts.csv';alerts.to_csv(destination/name,index=False);outputs['alerts']=name
+    # Without a selected catalog the review table carries no alert column, so
+    # it would only duplicate the evaluated table; it is not written.
+    if configuration['alert_catalogs']:
+        alerts=evaluated.copy()
+        for catalog in configuration['alert_catalogs']:
+            alerts['Alert_'+catalog]=alerts['StructuralAlerts'].fillna('').map(lambda value:catalog+': ' in str(value))
+        name=stem+'_alerts.csv';alerts.to_csv(destination/name,index=False);outputs['alerts']=name
     return outputs
 
 

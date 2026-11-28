@@ -16,7 +16,9 @@ class ReusePromptTests(unittest.TestCase):
         self.dialogs=[]
         self.ui=object.__new__(WorkspaceUI)
         ui=self.ui
-        ui.token='token';ui.current={'id':'project'};ui.selected='stage';ui.submitting=False
+        ui.token='token';ui.current={'id':'project','pipeline':[{'id':'stage'}]};ui.selected='stage';ui.submitting=False
+        # Submission first confirms the saved execution order (no dialog here).
+        ui.store=SimpleNamespace(execution_order=lambda *args:{'confirmed':True,'order':['stage']})
         ui.save_draft=AsyncMock();ui.force_execution=False
         def show(dialog):dialog.open=True;self.dialogs.append(dialog)
         ui.page=SimpleNamespace(show_dialog=show,update=lambda:None,pop_dialog=lambda:None)
@@ -50,7 +52,8 @@ class ReusePromptTests(unittest.TestCase):
     def test_repeated_execute_clicks_keep_only_one_prompt(self):
         asyncio.run(self.ui.run_pipeline())
         asyncio.run(self.ui.run_pipeline())
-        self.assertEqual(len(self.dialogs),1)
+        # The loading splash is also a dialog; only one reuse prompt may exist.
+        self.assertEqual([d for d in self.dialogs if d.title is not None],[self.ui.reuse_dialog])
         self.ui.save_draft.assert_awaited_once()
         self.ui.service.submit.assert_not_called()
 
@@ -116,6 +119,9 @@ class ReusePromptTests(unittest.TestCase):
                 async def scenario():
                     started=asyncio.Event();finish=asyncio.Event()
                     async def lookup(function,*args,**kwargs):
+                        # Only the result lookup is slow; the execution-order
+                        # check that precedes it answers immediately.
+                        if function is not self.ui.service.existing_results:return function(*args,**kwargs)
                         started.set()
                         await finish.wait()
                         return 2
@@ -127,6 +133,8 @@ class ReusePromptTests(unittest.TestCase):
                     finish.set()
                     await pending
                 asyncio.run(scenario())
-                self.assertEqual(self.dialogs,[])
+                # Only the (closed) loading splash may have been shown: no reuse prompt.
+                self.assertEqual([d for d in self.dialogs if d.title is not None],[])
+                self.assertFalse(any(d.open for d in self.dialogs))
                 self.assertFalse(self.ui.submitting)
                 self.ui.service.submit.assert_not_called()

@@ -266,6 +266,12 @@ class ExecutionPreparationTests(unittest.TestCase):
     setUp=fixtures.PipelineEditorRegressionTests.setUp
 
     def test_restart_shows_splash_through_save_and_result_validation_then_reuse_menu(self):
+        # A confirmed execution order lets submission go straight from saving
+        # and validation to the reuse menu (no execution-order dialog).
+        project=self.store.project(self.token,self.pid)
+        self.store.save_pipeline(self.token,self.pid,self.ui.current['pipeline'],project['revision'])
+        self.store.save_execution_order(self.token,self.pid,[self.stage['id']])
+        self.ui.current.update(self.store.project(self.token,self.pid));self.ui.dirty=True
         async def scenario():
             for language in ('en','pt'):
                 self.ui.page.set_language(language)

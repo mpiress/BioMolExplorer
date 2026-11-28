@@ -46,6 +46,13 @@ def betweenness(graph,components):
                 branches=[sizes[other] if parent.get(other)==node else size-sizes[node] for other in sub[node]]
                 values[node]=((size-1)**2-sum(s*s for s in branches))/2*scale
         else:
+            if k is not None:
+                # Seeded pivot sampling draws from list(sub): a subgraph view
+                # iterates its node set in hash order, which changes between
+                # processes. Rebuild it in the parent graph's stable order.
+                order={node:index for index,node in enumerate(graph)}
+                stable=nx.Graph();stable.add_nodes_from(sorted(sub,key=order.__getitem__))
+                stable.add_edges_from(sub.edges());sub=stable
             raw=nx.betweenness_centrality(sub,k=k,normalized=False,weight=None,seed=42)
             values.update({node:value*scale for node,value in raw.items()})
     notice=(f'Betweenness aproximada: {pivots} pivôs em {approximate} componentes, até 64 por componente; semente 42. Demais componentes exatos.'

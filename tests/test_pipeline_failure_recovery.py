@@ -145,10 +145,12 @@ class PairFailureIsolationTests(unittest.TestCase):
         from unittest.mock import Mock
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder);(root/'previous.vina').write_text('old');(root/'current.vina').write_text('new')
-            dock=object.__new__(DockVina);dock.outputpath=folder;dock.perform_subprocess=Mock()
-            dock.perform_vina_evaluation(files=['current.vina'])
-            self.assertEqual(dock.perform_subprocess.call_count,1)
-            self.assertEqual(dock.perform_subprocess.call_args.args[0],['vina','--config','current.vina'])
+            dock=object.__new__(DockVina);dock.outputpath=folder
+            # Vina now runs through the crash-isolated, checkpointed batch runner.
+            with patch('biomolexplorer.vina_batch.run_resilient') as runner:
+                dock.perform_vina_evaluation(files=['current.vina'])
+            runner.assert_called_once()
+            self.assertEqual(runner.call_args.args[0],[root/'current.vina'])
 
 
 class TerminalRunHistoryTests(unittest.TestCase):

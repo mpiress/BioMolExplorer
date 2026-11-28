@@ -62,10 +62,16 @@ class DockingInteroperabilityTests(unittest.TestCase):
                 for row in rows:
                     self.assertEqual(Path(row['conformer_file']).read_text(),'pose '+row['molecule_chembl_id']+'\n')
                 from biomolexplorer.docking_data import prepare_ligands
-                with patch('biomolexplorer.docking_data.convert_structure') as convert,patch('biomolexplorer.visualizations.molecule_sdf') as generate:
+                # docking_preparation imports convert_structure directly: patch both bindings.
+                with patch('biomolexplorer.docking_data.convert_structure') as convert,\
+                     patch('biomolexplorer.docking_preparation.convert_structure',convert),\
+                     patch('biomolexplorer.visualizations.molecule_sdf') as generate:
                     prepare_ligands(path/(stem+'.csv'),root/('prepared_'+target_engine),'mol2' if target_engine=='dock6' else 'pdbqt')
                     self.assertEqual(convert.call_count,2);generate.assert_not_called()
-                    self.assertEqual(convert.call_args_list[0].args[0],Path(rows[0]['conformer_file']))
+                    # Candidates are prepared concurrently: compare the converted
+                    # poses as a set; each actual pose is converted exactly once.
+                    self.assertEqual(sorted(call.args[0] for call in convert.call_args_list),
+                                     sorted(Path(row['conformer_file']) for row in rows))
             finally:service.close()
 
     def test_independent_user_compounds_accept_aliases_for_both_engines(self):

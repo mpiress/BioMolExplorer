@@ -12,7 +12,7 @@ from rdkit import Chem
 from biomolexplorer.structure_selection import read_selected,subset,write_structure,crystal_molecule,gemmi_module
 from biomolexplorer.molecular_core import MolecularPreparationCore
 from biomolexplorer.molecular_adapters import Dock6Adapter,AutoDockAdapter
-from biomolexplorer.amber_preparation import protonation,MINIMIZATION
+from biomolexplorer.amber_preparation import protonation
 
 
 class StructuralTests(unittest.TestCase):
@@ -103,10 +103,9 @@ class StructuralTests(unittest.TestCase):
                                               {'chain':'A','number':30,'insertion_code':''}],
                                  'amber_residues':[1,2]}])
 
-    def test_minimization_is_explicitly_minimization_not_a_dynamics_step(self):
-        self.assertEqual(MINIMIZATION['imin'],1)
-        self.assertEqual((MINIMIZATION['ncyc'],MINIMIZATION['maxcyc']),(100,110))
-        self.assertEqual((MINIMIZATION['igb'],MINIMIZATION['ntb']),(0,0))
+    def test_minimized_preparation_selects_explicit_charge_strategy(self):
+        # The sander/Amber minimization protocol was removed in 5220ebe; ligand
+        # minimization now runs through chimera_minimization (Chimera only).
         from biomolexplorer.molecular_core import charge_strategy
         self.assertEqual(charge_strategy('am1','vina','fast',minimize=True)['effective'],'am1bcc')
         self.assertEqual(charge_strategy('gas','vina','fast',minimize=True)['engine'],'antechamber')
@@ -134,22 +133,6 @@ class StructuralTests(unittest.TestCase):
 
 @unittest.skipUnless(Path('/tmp/biomol-md-validation/bin/sander').is_file(),'AmberTools validation environment unavailable')
 class AmberNativeTests(unittest.TestCase):
-    def test_minimization_reuses_charge_topology_and_sander_results(self):
-        with tempfile.TemporaryDirectory() as folder,patch.dict(os.environ,BIOMOL_PREPARATION_CACHE=str(Path(folder)/'shared/preparations')):
-            core=MolecularPreparationCore(folder,'/tmp/biomol-md-validation')
-            initial=core.prepare(Chem.MolFromSmiles('CCO'),minimize=True)
-            self.assertLessEqual(initial.metadata['minimization']['final_energy'],initial.metadata['minimization']['initial_energy'])
-            with patch('biomolexplorer.molecular_adapters.run_command',side_effect=AssertionError('Repeated parameterization')), \
-                 patch('biomolexplorer.amber_preparation.run_command',side_effect=AssertionError('Repeated minimization')):
-                again=core.prepare(Chem.MolFromSmiles('CCO'),minimize=True)
-            np.testing.assert_array_equal(initial.coordinates,again.coordinates)
-            from biomolexplorer import amber_preparation
-            with patch('biomolexplorer.molecular_adapters.run_command',side_effect=AssertionError('Repeated topology')), \
-                 patch.dict(amber_preparation.MINIMIZATION,maxcyc=111), \
-                 patch('biomolexplorer.amber_preparation.run_command',wraps=amber_preparation.run_command) as sander:
-                core.prepare(Chem.MolFromSmiles('CCO'),minimize=True)
-                self.assertEqual(sander.call_count,1)
-
     def test_receptor_preserves_altloc_and_reuses_ff14sb_parameters(self):
         from biomolexplorer.amber_preparation import receptor_parameters,export_receptor
         source=Path('/home/michel/progs/dock6/install/test/amber_score_1lgu/1lgu.pdb')
