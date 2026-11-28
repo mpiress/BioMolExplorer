@@ -497,7 +497,19 @@ antigos. `artifact_contracts.py` é a definição compartilhada de tipos,
 cardinalidade e compatibilidade usada pelo canvas, validador e executor.
 
 O registry SQLite registra manifestos, ocorrências imutáveis, hashes,
-dependências, proveniência e entidades. A publicação indexa automaticamente
+dependências, proveniência e entidades. `artifact_catalog.py` separa as quatro
+identidades de um artefato em linhas consultáveis: o conteúdo em
+`content_objects`, identificado pelo SHA-256 dos bytes; o artefato lógico em
+`artifact_instances`, inalterado; a entidade científica em `artifact_entities`;
+e a operação — uma execução de um bloco — em `operations`, com suas entradas e
+saídas como arestas. Uma execução que reaproveita um resultado em cache aponta
+para a operação que o produziu, de modo que o reuso é referência e não cópia. As
+consultas por entidade, conteúdo, produtor, montante e jusante respondem apenas
+pelos índices, sem percorrer diretórios. `catalog_schema.py` aplica as mudanças
+de esquema em ordem, uma vez, de forma idempotente e não destrutiva, registradas
+em `schema_migrations`; o modelo está em
+[ADR-001](adr/0001-artifact-identity-model.md) e
+[ADR-002](adr/0002-catalog-technology.md). A publicação indexa automaticamente
 compostos, estruturas/cadeias, receptores, poses, comunidades e pares. Uma
 seleção como `pdb:4M0E, chain:A` pode ser configurada antes da recuperação; após
 a publicação, ela é conferida contra o índice e materializada apenas na

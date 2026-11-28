@@ -12,16 +12,32 @@ def execution_manifest(stage):
     return {'schema_version':1,'stage_id':stage['id'],'outputs':outputs}
 
 
+def _published(path):
+    """Size of a published regular file, or ``None`` when it is not available."""
+    import stat as modes
+    try:
+        info=Path(path).stat()
+    except OSError:
+        return None
+    return info.st_size if modes.S_ISREG(info.st_mode) else None
+
+
 def register_run(db,project_id,run_id,stages):
     """Replace the index for one run in the caller's open transaction."""
     db.execute('DELETE FROM artifact_instances WHERE project_id=? AND indexed_run_id=?',(project_id,run_id))
     db.execute('DELETE FROM execution_manifests WHERE project_id=? AND run_id=?',(project_id,run_id))
-    now=time.time()
+    from .artifact_catalog import forget_run,index_operations
+    forget_run(db,project_id,run_id)
+    now=time.time();sizes={}
     for stage in stages:
         manifest=execution_manifest(stage);stage['execution_manifest']=manifest
         db.execute('INSERT INTO execution_manifests(project_id,run_id,stage_id,schema_version,manifest,updated) VALUES (?,?,?,?,?,?)',
             (project_id,run_id,stage['id'],1,json.dumps(manifest,sort_keys=True),now))
         for record in stage.get('artifact_records',[]):
+            # One stat answers both whether the file is available and how large
+            # its content is, so the content object costs no extra filesystem
+            # call on a run that publishes thousands of poses.
+            sizes[record['path']]=_published(record['path'])
             # A cache hit in another block can reference the same immutable
             # occurrence.  The per-stage execution manifest holds that second
             # logical reference; the physical instance is stored only once.
@@ -31,9 +47,10 @@ def register_run(db,project_id,run_id,stages):
                 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)''',(
                 record['occurrence_id'],record['artifact_id'],project_id,run_id,record.get('run_id'),stage['id'],record.get('block_id'),
                 record.get('output_port') or record.get('output'),record.get('artifact_type') or 'other',1,record['path'],
-                record.get('content_sha256'),'available' if Path(record['path']).is_file() else 'unavailable',json.dumps(record.get('context',{}),sort_keys=True),
+                record.get('content_sha256'),'available' if sizes[record['path']] is not None else 'unavailable',json.dumps(record.get('context',{}),sort_keys=True),
                 json.dumps(record.get('parent_artifact_ids',[]),sort_keys=True),json.dumps(record.get('provenance',{}),sort_keys=True),now))
             ensure_entities(db,project_id,record)
+    index_operations(db,project_id,run_id,stages,sizes)
 
 
 def list_artifacts(db,project_id,*,stage_id=None,run_id=None):
@@ -126,8 +143,9 @@ def migrate_schema(db):
             INSERT INTO artifact_entities SELECT project_id,artifact_id,artifact_id,entity_type,entity_id,qualifiers,metadata
                 FROM artifact_entities_legacy;
             DROP TABLE artifact_entities_legacy;
-            CREATE INDEX artifact_entities_lookup ON artifact_entities(project_id,entity_type,entity_id);
         ''')
+        # The entity index is declared in catalog_schema, whose migrations run
+        # right after this upgrade on the same connection.
     index_columns={row['name'] for row in db.execute('PRAGMA table_info(artifact_entity_indexes)')}
     if index_columns and 'occurrence_id' not in index_columns:
         db.executescript('''

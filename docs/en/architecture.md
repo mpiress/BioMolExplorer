@@ -482,7 +482,19 @@ compatibility. `artifact_contracts.py` is the shared definition of types,
 cardinality and compatibility used by the canvas, validator and executor.
 
 The SQLite registry stores manifests, immutable occurrences, hashes,
-dependencies, provenance and entities. Publication automatically indexes
+dependencies, provenance and entities. `artifact_catalog.py` separates an
+artifact's four identities into queryable rows: content in `content_objects`,
+identified by the SHA-256 of its bytes; the logical artifact in
+`artifact_instances`, unchanged; the scientific entity in `artifact_entities`;
+and the operation — one execution of one block — in `operations`, with its
+inputs and outputs as edges. A run that reuses a cached result points at the
+operation that produced it, so reuse is a reference and not a copy. Queries by
+entity, content, producer, upstream and downstream answer from the indexes
+alone, without walking directories. `catalog_schema.py` applies schema changes
+in order, once, idempotently and non-destructively, recorded in
+`schema_migrations`; the model is in
+[ADR-001](adr/0001-artifact-identity-model.md) and
+[ADR-002](adr/0002-catalog-technology.md). Publication automatically indexes
 compounds, structures/chains, receptors, poses, communities and molecular
 pairs. A selection such as `pdb:4M0E, chain:A` can be configured before
 retrieval; after publication it is checked against the entity index and only
