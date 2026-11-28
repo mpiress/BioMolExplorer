@@ -39,16 +39,15 @@ class StandardADMETOutputsTests(unittest.TestCase):
 
     # Decided contract (triage C1, 2026-11-27): per input, four independent
     # BBB/HIA partitions, the configured rule table, the alert table and the
-    # evaluated table, which keeps every valid molecule with its reasons.
-    # Two cleanups are still pending in the code (documented in the triage):
-    # the duplicated legacy rule file (``_rules_<label>``) and the alert table
-    # written even when no catalog is selected. The role sets below record the
-    # current behavior so that removing them shows up as an explicit change.
+    # evaluated table, which keeps every valid molecule with its reasons. The
+    # retired duplicate ``_rules_<label>`` table and the alert table written
+    # without any selected catalog were removed in the C1 cleanup, so the role
+    # sets below are exactly the documented contract.
     def test_each_input_has_four_partitions_named_rule_alerts_and_evaluated(self):
         for name in ('B01__chembl__sim','pubchem_BACE1','zinc_BCHE'):
             self.data.to_csv(self.source/(name+'.csv'),index=False)
         wrapper=self.run_admet(bbb_target='BBB+',hia_target='HIA+',admet_mode='filter',rule_set='lipinski',alert_catalogs=['PAINS','BRENK'])
-        roles=('BBB+','BBB-','HIA+','HIA-','rules-lipinski','rules_lipinski','alerts','evaluated')
+        roles=('BBB+','BBB-','HIA+','HIA-','rules-lipinski','alerts','evaluated')
         files=list((self.root/'output').glob('*.csv'))
         self.assertEqual(len(files),4*len(roles))
         for source in self.source.glob('*.csv'):
@@ -84,11 +83,11 @@ class StandardADMETOutputsTests(unittest.TestCase):
         self.assertIn('B01__admet__rules-lipinski-veber.csv',names)
         self.assertIn('B01__admet__alerts.csv',names)
         item=dict(stage,configuration=stage,artifacts=published)
-        # Published roles: four partitions, the rule table, alerts, evaluated
-        # and the filtered primary table.
+        # Published roles: four partitions, the rule table, alerts and
+        # evaluated. Nothing is published as a generic ``compounds`` table.
         self.assertEqual({p.name for p in produced_files(item) if p.suffix=='.csv'},
             {'B01__admet__'+role+'.csv' for role in ('bbb-pos','bbb-neg','hia-pos','hia-neg',
-                'rules-lipinski-veber','alerts','evaluated','compounds')})
+                'rules-lipinski-veber','alerts','evaluated')})
         labels=[r['output'] for r in records(item)]
         self.assertIn('rules-lipinski-veber',labels)
         report=json.loads(next(Path(p) for p in published if p.endswith('.json') and 'report' in p).read_text())
@@ -100,29 +99,35 @@ class StandardADMETOutputsTests(unittest.TestCase):
              'HIA+':'B01__admet__hia-pos.csv','HIA-':'B01__admet__hia-neg.csv',
              'alerts':'B01__admet__alerts.csv'})
 
-    @unittest.expectedFailure
     def test_published_report_points_the_rule_role_at_the_rule_table(self):
-        """Known defect (triage C1, 2026-11-27).
+        """Regression for triage C1b, 2026-11-27.
 
-        The legacy ``_rules_<label>.csv`` table is published as
-        ``compounds.csv``, and the report's rule role is remapped to that file
-        instead of the canonical ``rules-<label>.csv``. Removing the duplicated
-        legacy table is the agreed fix; this test then passes.
+        ``output_role`` only recognized the retired ``_rules_<label>`` name, so
+        the canonical table fell through to the generic ``compounds`` role and
+        the report's rule role was remapped to it.
         """
         self.run_admet(rule_set='oral')
-        stage=new_stage('admet');assign_block_ids([stage])
         output=self.root/'output'
+        base=self.stem('B01__chembl__mol')
+        rules=pd.read_csv(output/(base+'_rules-lipinski-veber.csv'))
+        stage=new_stage('admet');assign_block_ids([stage])
         published=publish(stage,[str(p) for p in output.iterdir()],output)
         report=json.loads(next(Path(p) for p in published if p.endswith('.json') and 'report' in p).read_text())
         self.assertEqual(report['outputs']['rules-lipinski-veber'],'B01__admet__rules-lipinski-veber.csv')
+        # The declared file is the canonical rule table, not a hypothesis-filtered copy.
+        declared=pd.read_csv(output/report['outputs']['rules-lipinski-veber'])
+        self.assertTrue(declared.equals(rules))
+        self.assertNotIn('Rule_set',declared.columns)
 
-    def test_disabled_rules_do_not_generate_a_rule_file(self):
+    def test_disabled_rules_and_catalogs_generate_neither_table(self):
         self.run_admet(rule_set='none',alert_catalogs=[])
         base=self.stem('B01__chembl__mol')
-        # No rule table without a configured rule. The alert table is still
-        # written without catalogs; its removal is the pending C1 cleanup.
+        # No rule table without a configured rule, and no alert review table
+        # without a selected catalog, as documented (C1 cleanup).
         self.assertEqual({p.name for p in (self.root/'output').glob('*.csv')},
-            {base+'_'+role+'.csv' for role in ('BBB+','BBB-','HIA+','HIA-','alerts','evaluated')})
+            {base+'_'+role+'.csv' for role in ('BBB+','BBB-','HIA+','HIA-','evaluated')})
+        report=json.loads((self.root/'output'/(base+'_admet_report.json')).read_text())
+        self.assertEqual(set(report['outputs']),{'BBB+','BBB-','HIA+','HIA-'})
 
     def test_each_supported_rule_uses_one_named_file_and_its_own_violation_limit(self):
         for rule,label,columns in [('lipinski','lipinski',['Lipinski']),('veber','veber',['Veber']),
@@ -135,17 +140,12 @@ class StandardADMETOutputsTests(unittest.TestCase):
                 base=self.stem('B01__chembl__mol')
                 self.assertEqual({p.name for p in output.glob('*.csv')},
                     {base+'_'+role+'.csv' for role in ('BBB+','BBB-','HIA+','HIA-',
-                        'rules-'+label,'rules_'+label,'alerts','evaluated')})
+                        'rules-'+label,'evaluated')})
                 frame=pd.read_csv(output/(base+'_rules-'+label+'.csv'))
                 self.assertFalse(frame.empty)
-                # The canonical table depends on the rule only, as documented;
-                # the legacy one also applies the BBB/HIA hypothesis and adds
-                # Rule_set, so its rows are a subset. Keeping only the
-                # canonical table is the pending C1 cleanup.
-                legacy=pd.read_csv(output/(base+'_rules_'+label+'.csv'))
-                self.assertEqual(set(legacy.Rule_set),{label})
+                # One table per rule, depending on the rule only: no Rule_set
+                # column and no BBB/HIA hypothesis applied, as documented.
                 self.assertNotIn('Rule_set',frame.columns)
-                self.assertTrue(set(legacy.molecule_chembl_id)<=set(frame.molecule_chembl_id))
                 for column in columns:
                     allowed=0 if rule=='oral' and column=='Veber' else 1
                     self.assertTrue((frame[column+'_violations']<=allowed).all())

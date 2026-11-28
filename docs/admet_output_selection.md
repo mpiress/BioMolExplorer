@@ -20,7 +20,8 @@ No modo combinado oral, Veber exige zero violações e o limite informado se
 aplica a Lipinski. O arquivo de regras não depende de BBB/HIA nem dos alertas.
 
 As quatro tabelas BBB/HIA são publicadas mesmo vazias, mantendo seus cabeçalhos.
-Sem regra configurada, o arquivo de regras não é gerado. A tabela de avaliados é
+Sem regra configurada, o arquivo de regras não é gerado; sem catálogo
+selecionado, a tabela de alertas também não. A tabela de avaliados é
 sempre publicada: ela é a única visão com todos os compostos válidos e o motivo
 de cada exclusão da hipótese, e por isso é a referência para auditoria e para os
 blocos seguintes. Não são criadas cópias genéricas `compounds`, `selected` ou
@@ -28,15 +29,16 @@ blocos seguintes. Não são criadas cópias genéricas `compounds`, `selected` o
 O relatório JSON registra critérios, métodos, versões, entrada e os nomes das
 saídas, relativos ao diretório da execução, inclusive após a publicação.
 
-### Limites conhecidos
+### Uma tabela por papel
 
-Dois pontos foram decididos e aguardam a correção no código, registrados na
-[triagem da suíte de testes](validation/test_suite_triage_2026-11-27/README.md):
-a tabela de alertas é gravada mesmo sem catálogos selecionados, e a tabela de
-regras é gravada duas vezes (`_rules-<regra>` canônica e `_rules_<regra>`
-legada, esta última também filtrada pela hipótese BBB/HIA). A publicação renomeia
-a tabela legada para `compounds` e aponta o papel da regra, no relatório, para
-esse arquivo. Use `_rules-<regra>` como a tabela da regra configurada.
+Cada papel é gravado uma única vez. A tabela da regra é `_rules-<regra>` e
+depende apenas da regra configurada: não aplica a hipótese BBB/HIA nem
+acrescenta a coluna `Rule_set`. A tabela de alertas só é gravada quando há
+catálogos selecionados. A duplicata legada `_rules_<regra>`, que também
+filtrava pela hipótese, foi removida, assim como o alerta sem catálogo; as
+correções estão registradas nas
+[decisões da suíte de testes](validation/test_suite_decisions_2026-11-27/README.md).
+Projetos antigos que ainda têm o nome legado em disco continuam sendo lidos.
 
 A interface mostra BBB+/BBB− e HIA+/HIA−. Os nomes físicos curtos seguem o padrão
 do projeto, por exemplo `B04__admet__bbb-pos.csv`,

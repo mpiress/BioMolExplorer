@@ -172,14 +172,13 @@ class RestartReuseTests(unittest.TestCase):
         # The recomputed key replaces the tampered one in the new run.
         self.assertNotEqual(second['stages'][0]['cache_key'],'0'*64)
 
-    @unittest.expectedFailure
     def test_restart_restores_only_the_previously_selected_file(self):
-        """Known defect (triage C7c, 2026-11-27).
+        """Regression for triage C7c, 2026-11-27.
 
-        After a restart, with nothing changed, the consumer is recomputed
-        instead of reused when its producer published more than one file and a
-        specific one was selected. This is the redundant recomputation measured
-        in PHASE-00; it needs investigation before being fixed.
+        Reopening the project migrated the legacy binding to a typed reference,
+        adding ``output_port``. The cache key hashed the raw bindings, so the
+        consumer was recomputed although its resolved input was byte-identical.
+        This is the redundant recomputation measured in PHASE-00.
         """
         source,consumer=self.connected()
         base,calls=self.immediate_manager()

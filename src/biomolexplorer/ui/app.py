@@ -982,6 +982,9 @@ class WorkspaceUI(ProjectTools):
             self.current['pipeline']=candidate; self.dirty=True
             if await self.save_draft(silent=True) is False:
                 self.editing_stage=False;close_dialog(self.page,dialog)
+                # Without the save there is no resume. Closing the dialog in
+                # silence would look like the execution had continued.
+                if waiting_run_id:self.notify('A execução continua pausada, aguardando sua configuração.')
                 return
             if waiting_run_id:
                 resumed=await self.call(self.service.resume,token,waiting_run_id,updated)
@@ -1938,6 +1941,9 @@ class WorkspaceUI(ProjectTools):
             self.dirty=True
             if await self.save_draft(silent=True) is False:
                 dismiss();drafts.pop(key,None)
+                # Without the save there is no resume, and the draft selection
+                # is discarded: the user must be told, not left guessing.
+                self.notify('A execução continua pausada, aguardando sua seleção.')
                 return
             updated=next(stage for stage in self.current['pipeline'] if stage['id']==pending['id'])
             resumed=await self.call(self.service.resume,token,run_id,updated)
