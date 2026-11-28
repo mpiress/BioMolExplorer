@@ -16,13 +16,13 @@ A revisão cobre o catálogo de operações, contratos de arquivos, relações e
 | Recuperar PubChem | Referência manual, arquivo ou compostos conectados | Novos similares PubChem com código e SMILES |
 | Expandir similares | Recuperação com os downloads ChEMBL originais | Compostos |
 | Recuperar estruturas | Critérios PDB e consulta externa | Estruturas brutas e metadados |
-| Recuperar ZINC | Lista de tranches do tipo `zinc_urls` ou `other` | `compounds.csv`, conformações MOL2 e relatório |
+| Recuperar ZINC | Lista de tranches do tipo `zinc_urls` | `compounds.csv`, conformações MOL2 e relatório |
 | Preparar para docking | Receptor PDB bruto ou do redocking; uma ou mais fontes de compostos | Receptores, centros, metadados e candidatos preparados para Vina, DOCK6 ou ambos |
 | ADMET | Compostos | Compostos avaliados/filtrados e visualizações |
 | Fingerprints | Compostos | Fingerprints com tipo e largura determinados |
 | Similaridade | Fingerprints compatíveis | Relações `source,target,value` e linhagem molecular |
 | Grafos | Relações de blocos de similaridade; dados externos pelo formulário | Compostos do MCC e visualizações |
-| Redocking | Brutos se `prepare_complex=true`; preparados se `false` | Estruturas, metadados de avaliação e preparados |
+| Redocking | Brutos se `prepare_complex=true`; preparados se `false` | Apenas os receptores preparados e validados, com centros e metadados |
 | Vina | Preparados e compostos | Poses identificadas pela referência completa e composto |
 | DOCK6 | Preparados e candidatos de qualquer origem molecular; poses Vina opcionais | Scores MOL2 e demais resultados do protocolo |
 | Consenso | Poses Vina e DOCK6 com identificadores correspondentes | Tabela de scores e comparação |
@@ -31,7 +31,13 @@ A revisão cobre o catálogo de operações, contratos de arquivos, relações e
 
 `tests/test_connection_matrix.py` percorre todos os produtores nativos, saídas prontas e tipos de importação contra todas as portas, inclusive as duas configurações de redocking. Ligações permitidas são aplicadas e submetidas à ordenação do pipeline. Ligações recusadas não alteram a configuração. Também são verificadas fontes desativadas, autorrelações e o alias interno usado pelo consenso. Os testes de fluxo existentes verificam ciclos, exclusão, duplicação e normalização de projetos antigos.
 
-A compatibilidade de tipos não substitui o contrato dos arquivos: a execução verifica cabeçalhos, conteúdos, caminhos e dependências. Grafos só recebem uma conexão de bloco **Calcular similaridade**, para manter a linhagem; CSVs externos podem ser selecionados diretamente no formulário. A expansão ChEMBL exige os downloads originais; resultados prontos genéricos não publicam esse contexto.
+A compatibilidade de tipos não substitui o contrato dos arquivos: a execução verifica cabeçalhos, conteúdos, caminhos e dependências. Grafos só recebem uma conexão de bloco **Calcular similaridade**, para manter a linhagem; CSVs externos podem ser selecionados diretamente no formulário. A expansão ChEMBL exige os downloads originais; resultados prontos genéricos não publicam esse contexto. Uma lista de tranches ZINC só é aceita sob o tipo `zinc_urls`, que a valida; o tipo `other` não é verificado e chegaria à recuperação sem leitura.
+
+### Portas internas
+
+Uma operação pode publicar resultados que não são entrada de outro bloco. Essas portas estão declaradas em `artifact_contracts.INTERNAL_PORTS` e ficam fora dos tipos que o canvas pode conectar.
+
+O redocking é o caso existente. Ele reposiciona o ligante cristalográfico de cada par para medir o RMSD do próprio protocolo, e esse resultado é o controle da medida, não um conjunto de dados. O que o bloco entrega adiante são **os receptores que ele preparou e validou**, para que docking, Amber Score e dinâmica os reaproveitem sem prepará-los de novo. Os arquivos das poses continuam publicados, baixáveis e listados com seu RMSD na tabela de resultados; apenas a conexão no canvas é recusada, como `artifact_choices.redocking_receptors` já fazia nos seletores de arquivo. `tests/test_redocking_receptor_outputs.py` percorre todas as portas de compostos e scores para confirmar a recusa, e verifica que a entrega dos receptores continua aberta.
 
 ## Correções e regressões cobertas
 

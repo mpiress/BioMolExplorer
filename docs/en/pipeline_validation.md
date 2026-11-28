@@ -16,13 +16,13 @@ The review covers the operation catalog, file contracts, block relationships, in
 | Retrieve PubChem | Manual reference, file or connected compounds | New PubChem similar compounds with identifiers and SMILES |
 | Expand similar compounds | Retrieval with original ChEMBL downloads | Compounds |
 | Retrieve structures | PDB criteria and external query | Raw structures and metadata |
-| Retrieve ZINC | Tranche list of type `zinc_urls` or `other` | `compounds.csv`, MOL2 conformations and report |
+| Retrieve ZINC | Tranche list of type `zinc_urls` | `compounds.csv`, MOL2 conformations and report |
 | Prepare for docking | Raw or redocking PDB receptor; one or more compound sources | Receptors, centers, metadata and prepared candidates for Vina, DOCK6 or both |
 | ADMET | Compounds | Evaluated/filtered compounds and visualizations |
 | Fingerprints | Compounds | Fingerprints with a determined type and width |
 | Similarity | Compatible fingerprints | `source,target,value` relationships and molecular lineage |
 | Graphs | Relationships from similarity blocks; external data through the form | MCC compounds and visualizations |
-| Redocking | Raw if `prepare_complex=true`; prepared if `false` | Structures, evaluation metadata and prepared files |
+| Redocking | Raw if `prepare_complex=true`; prepared if `false` | Only the prepared, validated receptors, with centers and metadata |
 | Vina | Prepared structures and compounds | Poses identified by full reference and compound |
 | DOCK6 | Prepared structures and candidates from any molecular source; optional Vina poses | MOL2 scores and other protocol results |
 | Consensus | Vina poses and DOCK6 results with matching identifiers | Score table and comparison |
@@ -31,7 +31,13 @@ The review covers the operation catalog, file contracts, block relationships, in
 
 `tests/test_connection_matrix.py` iterates over every native producer, ready-made output and import type against every port, including both redocking configurations. Permitted connections are applied and submitted to pipeline ordering. Rejected connections leave configuration unchanged. Disabled sources, self-links and the internal consensus alias are also checked. Existing flow tests verify cycles, deletion, duplication and normalization of older projects.
 
-Type compatibility does not replace file contracts: execution checks headers, content, paths and dependencies. Graphs only receive a canvas connection from **Calculate similarity**, preserving lineage; external CSVs can be selected directly in the form. ChEMBL expansion requires original downloads; generic ready-made results do not publish this context.
+Type compatibility does not replace file contracts: execution checks headers, content, paths and dependencies. Graphs only receive a canvas connection from **Calculate similarity**, preserving lineage; external CSVs can be selected directly in the form. ChEMBL expansion requires original downloads; generic ready-made results do not publish this context. A ZINC tranche list is only accepted under its own `zinc_urls` type, which validates it; the `other` type is not checked and would reach the retrieval unparsed.
+
+### Internal ports
+
+An operation may publish results that are not an input to another block. Those ports are declared in `artifact_contracts.INTERNAL_PORTS` and stay out of the types the canvas may connect.
+
+Redocking is the existing case. It repositions the crystal ligand of each pair to measure the RMSD of its own protocol, and that result is the control of the measurement, not a dataset. What the block hands downstream are **the receptors it prepared and validated**, so that docking, Amber Score and dynamics reuse them instead of preparing them again. The pose files stay published, downloadable and listed with their RMSD in the results table; only the canvas connection is refused, as `artifact_choices.redocking_receptors` already did for the file selectors. `tests/test_redocking_receptor_outputs.py` iterates over every compound and score port to confirm the refusal, and checks that the receptor handoff stays open.
 
 ## Corrections and covered regressions
 

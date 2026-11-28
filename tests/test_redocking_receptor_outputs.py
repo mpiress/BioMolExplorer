@@ -10,17 +10,17 @@ from biomolexplorer.ui.file_selection import FileSelection
 
 
 class RedockingReceptorOutputsTests(unittest.TestCase):
-    @unittest.expectedFailure
     def test_redocking_cannot_connect_to_any_compound_or_score_input(self):
-        """Pending decision (triage C5, 2026-11-27).
+        """Port contract settled in triage C5 (2026-11-27).
 
-        Redocking pose outputs currently connect to ``dynamics_dock6`` and
-        ``pose_validation`` selected-molecule ports. Reevaluating a redocked
-        pose is legitimate practice, so the port contract is what needs to be
-        settled, not necessarily the code.
+        What a redocking hands downstream is the receptor it validated, so that
+        docking, Amber Score and dynamics reuse it instead of preparing it
+        again. The repositioned crystal ligand is the control of the RMSD
+        measurement, not a dataset: ``redocking_results`` is an internal port
+        (``artifact_contracts.INTERNAL_PORTS``) and reaches no input.
         """
         source=new_stage('redocking')
-        for operation in ('dynamics_dock6','docking_vina','docking_dock6','prepare_structures','admet','fingerprints','retrieve_pubchem','consensus'):
+        for operation in ('dynamics_dock6','pose_validation','docking_vina','docking_dock6','prepare_structures','admet','fingerprints','retrieve_pubchem','consensus'):
             target=new_stage(operation)
             for port in flow.input_ports(target):
                 if port['types'] & {'structures','prepared_structures','receptor_pdb'}:continue
@@ -30,7 +30,8 @@ class RedockingReceptorOutputsTests(unittest.TestCase):
                     target['bindings'][port['field']]={'stage':source['id']}
                     with self.assertRaises(ValueError):validate_pipeline([source,target])
                     target['bindings'].clear()
-        for operation in ('dynamics_dock6','docking_vina','docking_dock6','prepare_structures'):
+        # The receptor handoff is the point of the block and must stay open.
+        for operation in ('dynamics_dock6','pose_validation','docking_vina','docking_dock6','prepare_structures'):
             self.assertTrue(flow.compatible(source,new_stage(operation),'base_input_path'))
 
     def test_public_choices_contain_only_receptors_and_hide_crystal_ligands(self):
